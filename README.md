@@ -1,10 +1,11 @@
-# PvNRocqLib
+# PnVRocqLib
 
-A Coq library written by members of PvN Discord Server
+A Coq library written by members of PnV Discord Server
 
 ## Quick Start
 
 ```
+git clone https://github.com/PnVDiscord/PnVRocqLib.git
 eval `opam env`
 coq_makefile -f _CoqProject -o Makefile
 make -j4 -k
@@ -24,7 +25,7 @@ The Coq Proof Assistant, version 8.18.0
 
 ### Prelude
 
-- `Notations.v` : Reserves notations to avoid the conflict.
+- `Notations.v` : Reserves all notations to avoid the conflict.
 
 - `SfLib.v` : The copy of `snu-sf/sflib.v`. See `References`.
 
