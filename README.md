@@ -1,10 +1,11 @@
-# PvNRocqLib
+# PnVRocqLib
 
-A Coq library written by members of PvN Discord Server
+A Coq library written by members of PnV Discord Server
 
 ## Quick Start
 
 ```
+git clone https://github.com/PnVDiscord/PnVRocqLib.git
 eval `opam env`
 coq_makefile -f _CoqProject -o Makefile
 make -j4 -k
