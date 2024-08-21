@@ -18,7 +18,13 @@ The Coq Proof Assistant, version 8.18.0
 
 ## Contents
 
+### Data
+
+- `Aczel.v` : Aczel's Type Theoretic Interpretation of Set Theory
+
 ### Prelude
+
+- `Notations.v` : Reserves notations to avoid the conflict.
 
 - `SfLib.v` : The copy of `snu-sf/sflib.v`. See `References`.
 
@@ -26,7 +32,7 @@ The Coq Proof Assistant, version 8.18.0
 
 ### Index
 
-- `Index.v` : Gathers all source files and check their consistency.
+- `Index.v` : Accumulates all source files and check their consistency.
 
 ## References
 
