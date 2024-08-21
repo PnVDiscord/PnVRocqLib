@@ -24,7 +24,7 @@ The Coq Proof Assistant, version 8.18.0
 
 ### Prelude
 
-- `Notations.v` : Reserves notations to avoid the conflict.
+- `Notations.v` : Reserves all notations to avoid the conflict.
 
 - `SfLib.v` : The copy of `snu-sf/sflib.v`. See `References`.
 
