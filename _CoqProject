@@ -1,0 +1,5 @@
+-Q theories PvN #
+# Please sort in lexicographical order
+theories/Index/Index.v #
+theories/Prelude/Prelude.v #
+theories/Prelude/SfLib.v #
