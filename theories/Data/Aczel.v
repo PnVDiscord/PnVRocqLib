@@ -363,6 +363,24 @@ Proof.
   ii; eapply eqTree_intro; ii; rewrite union_spec in *; [rewrite <- x_EQ, <- y_EQ | rewrite -> x_EQ, -> y_EQ]; eauto with *.
 Qed.
 
+Definition intersection (x : Tree) (y : Tree) : Tree :=
+  filter (fun z => z \in x) y.
+
+Theorem intersection_spec x y
+  : forall z, z \in intersection x y <-> z \in x /\ z \in y.
+Proof.
+  intros z. unfold intersection. rewrite filter_good.
+  - done.
+  - intros a IN b EQ. rewrite <- EQ. exact IN.
+Qed.
+
+#[global]
+Instance intersection_eqPropCompatible2
+  : eqPropCompatible2 intersection.
+Proof.
+  ii; eapply eqTree_intro; ii; rewrite intersection_spec in *; [rewrite <- x_EQ, <- y_EQ | rewrite -> x_EQ, -> y_EQ]; done.
+Qed.
+
 Definition singlton (x : Tree) : Tree :=
   upair x x.
 
@@ -580,11 +598,20 @@ Qed.
 
 End STRONG_COLLECTION.
 
-Fixpoint rLe (lhs : Tree) (rhs : Tree) : Prop :=
-  match lhs, rhs with
-  | mkNode cs1 ts1, mkNode cs2 ts2 => forall c1, exists c2, ts1 c1 ≦ᵣ ts2 c2
-  end
-where " lhs ≦ᵣ rhs " := (rLe lhs rhs) : type_scope.
+Inductive rLt (lhs : Tree) (rhs : Tree) : Prop :=
+  | rLt_intro c
+    (H_rLe : rLe lhs (childnodes rhs c))
+    : rLt lhs rhs
+with rLe (lhs : Tree) (rhs : Tree) : Prop :=
+  | rLe_intro
+    (H_rLt : forall c, rLt (childnodes lhs c) rhs)
+    : rLe lhs rhs.
+
+#[global] Hint Constructors rLt rLe : aczel_hints.
+
+Infix "≦ᵣ" := rLe (at level 70, no associativity) : type_scope.
+
+Infix "<ᵣ" := rLt (at level 70, no associativity) : type_scope.
 
 Lemma rLe_refl x
   : x ≦ᵣ x.
@@ -598,8 +625,10 @@ Lemma rLe_trans x y z
   : x ≦ᵣ z.
 Proof.
   revert x y z LE1 LE2.
-  induction x as [nx tsnx IH], y as [ny tsny], z as [nz tsnz]; simpl. intros x2y y2z c.
-  pose proof (x2y c) as [c' LE']. pose proof (y2z c') as [c'' LE'']. eauto with *.
+  induction x as [csx tsnx IH], y as [csy tsy], z as [csz tsz]; simpl.
+  intros [H_rLt1] [H_rLt2]. econs. intros c. simpl in *.
+  pose proof (H_rLt1 c) as [c' H_rLe1]. simpl in *.
+  pose proof (H_rLt2 c') as [c'' H_rLe2]. simpl in *. eauto with *.
 Qed.
 
 #[global]
@@ -614,14 +643,9 @@ Definition rEq_asSetoid : isSetoid Tree :=
 Definition rEq (lhs : Tree) (rhs : Tree) : Prop :=
   rEq_asSetoid.(eqProp) lhs rhs.
 
-Definition rLt (lhs : Tree) (rhs : Tree) : Prop :=
-  exists witness : children rhs, lhs ≦ᵣ childnodes rhs witness.
-
 Infix "=ᵣ" := rEq (at level 70, no associativity) : type_scope.
 
-Infix "<ᵣ" := rLt (at level 70, no associativity) : type_scope.
-
-#[global] Hint Unfold rEq rLt : aczel_hints.
+#[global] Hint Unfold rEq : aczel_hints.
 
 #[global]
 Instance rEq_Equivalence : Equivalence rEq :=
@@ -637,8 +661,8 @@ Lemma rLe_eqTree_rLe x y z
   : x ≦ᵣ z.
 Proof.
   revert y z H_rLe EQ. induction x as [csx tsx IH].
-  intros [csy tsy] [csz tsz] H_rLe [y2z z2y] cx. simpl in *.
-  pose proof (H_rLe cx) as [cy ?]. pose proof (y2z cy) as [cz ?]. eauto with *.
+  intros [csy tsy] [csz tsz] [H_rLt] [y_subseteq_z z_subseteq_y]. econs; intros cx. simpl in *.
+  pose proof (H_rLt cx) as [cy ?]. pose proof (y_subseteq_z cy) as [cz ?]. eauto with *.
 Qed.
 
 Lemma eqTree_rLe_rLe x y z
@@ -647,8 +671,8 @@ Lemma eqTree_rLe_rLe x y z
   : x ≦ᵣ z.
 Proof.
   revert y z H_rLe EQ. induction x as [csx tsx IH].
-  intros [csy tsy] [csz tsz] H_rLe [x2y y2x] cx. simpl in *.
-  pose proof (x2y cx) as [cy ?]. pose proof (H_rLe cy) as [cz ?]. eauto with *.
+  intros [csy tsy] [csz tsz] [H_rLt] [x2y y2x]. econs; intros cx. simpl in *.
+  pose proof (x2y cx) as [cy ?]. pose proof (H_rLt cy) as [cz ?]. eauto with *.
 Qed.
 
 #[global] Hint Resolve rLe_eqTree_rLe eqTree_rLe_rLe : aczel_hints.
@@ -697,7 +721,7 @@ Proof.
   induction y as [csy tsy IH]. simpl in *.
   specialize IH with (c := cy).
   destruct (tsy cy) as [csz tsz] eqn: cy_EQ_z.
-  intros cz. specialize IH with (cy := cz).
+  econs. intros cz. specialize IH with (cy := cz).
   rewrite <- cy_EQ_z in IH. eauto with *.
 Qed.
 
@@ -707,6 +731,8 @@ Lemma member_implies_rLt x y
 Proof.
   destruct IN as [c EQ]. exists c. eauto with *.
 Qed.
+
+#[global] Hint Resolve rLt_implies_rLe member_implies_rLt : aczel_hints.
 
 Lemma rLe_rLt_rLt x y z
   (x_rLe_y : x ≦ᵣ y)
@@ -721,8 +747,8 @@ Lemma rLt_rLe_rLt x y z
   (y_rLe_z : y ≦ᵣ z)
   : x <ᵣ z.
 Proof.
-  destruct y as [csy tsy]. destruct x_rLt_y as [cy x_rLe_cy]. destruct z as [csz tsz].
-  simpl in *. unnw. pose proof (y_rLe_z cy) as [cz cy_rLe_cz]. exists cz. transitivity (tsy cy); eauto with *.
+  destruct y as [csy tsy]. destruct x_rLt_y as [cy x_rLe_cy]. destruct z as [csz tsz]. destruct y_rLe_z as [H_rLt].
+  simpl in *. unnw. pose proof (H_rLt cy) as [cz cy_rLe_cz]. exists cz. transitivity (tsy cy); eauto with *.
 Qed.
 
 #[local] Hint Resolve rLe_rLt_rLt rLt_rLe_rLt : core.
@@ -747,8 +773,8 @@ Proof.
   assert (lhs_rLe_rhs : lhs ≦ᵣ rhs) by now rewrite lhs_EQ_rhs.
   clear lhs_EQ_rhs. rename lhs into x, rhs into y, lhs_rLe_rhs into x_rLe_y.
   revert y x x_rLe_y. induction y as [csy tsy IH].
-  intros [csx tsx] x_rLe_y. simpl in x_rLe_y. unnw.
-  econstructor. intros z [c z_rLe_cx]. simpl in *.
+  intros [csx tsx] [x_rLe_y]. simpl in x_rLe_y. unnw.
+  econstructor. intros z [c [z_rLe_cx]]. simpl in *.
   pose proof (x_rLe_y c) as [c' H_rLe]. eapply IH; transitivity (tsx c); eauto with *.
 Qed.
 
@@ -783,12 +809,52 @@ Proof.
   rewrite fromAcc_unfold. exists (@exist _ _ x R_x_x'). simpl. eapply fromAcc_pirrel.
 Qed.
 
-Corollary fromAcc_rLt_fromAcc_intro (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (x' : A) (ACC : Acc R x) (ACC' : Acc R x')
-  (R_x_x' : R x x')
-  : fromAcc x ACC <ᵣ fromAcc x' ACC'.
-Proof.
-  eapply member_implies_rLt. eapply fromAcc_member_fromAcc_intro. exact R_x_x'.
-Qed.
-
 Definition fromWf {A : Type@{Set_u}} {R : A -> A -> Prop} (Wf : well_founded R) : Tree :=
   indexed_union A (fun i => @fromAcc A R i (Wf i)).
+
+Definition isTransitiveSet (x : Tree) : Prop :=
+  forall y, y \in x -> forall z, z \in y -> z \in x.
+
+#[global] Hint Unfold isTransitiveSet : aczel_hints.
+
+Lemma isTransitiveSet_compatWith_eqTree
+  : isCompatibleWith_eqProp isTransitiveSet.
+Proof.
+  intros alpha alpha_isTranstiveSet beta alpha_eq_beta.
+  unfold isTransitiveSet in *; ii; des.
+  rewrite <- alpha_eq_beta in *; eauto with *.
+Qed.
+
+Variant isOrdinal (x : Tree) : Prop :=
+  | transitive_set_of_transitive_sets_isOrdinal
+    (TRANS : isTransitiveSet x)
+    (TRANS' : forall y, y \in x -> isTransitiveSet y)
+    : isOrdinal x.
+
+#[global] Hint Constructors isOrdinal : aczel_hints.
+
+Lemma every_member_of_Ordinal_isOrdinal (x : Tree)
+  (ORDINAL : isOrdinal x)
+  : forall y, y \in x -> isOrdinal y.
+Proof.
+  inv ORDINAL; eauto with *.
+Qed.
+
+Lemma isOrdinal_compatWith_eqTree
+  : isCompatibleWith_eqProp isOrdinal.
+Proof with eauto with *.
+  intros alpha [? ?] beta alpha_eq_beta. split.
+  - eapply isTransitiveSet_compatWith_eqTree...
+  - intros gamma gamm_in_beta; unnw.
+    rewrite <- alpha_eq_beta in gamm_in_beta...
+Qed.
+
+Lemma member_implies_subseteq_forOrdinal alpha beta
+  (ORDINAL : isOrdinal alpha)
+  (IN : beta \in alpha)
+  : beta \subseteq alpha.
+Proof.
+  inv ORDINAL; eauto with *.
+Qed.
+
+#[global] Hint Resolve every_member_of_Ordinal_isOrdinal member_implies_subseteq_forOrdinal : aczel_hints.
