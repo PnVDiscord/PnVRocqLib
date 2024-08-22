@@ -219,27 +219,6 @@ Proof.
   firstorder.
 Qed.
 
-Class isClosureOperator {A : Type} `{POSET : isPoset A} (cl : A -> A) : Prop :=
-  { cl_op_increasing : forall x, x =< cl x
-  ; cl_op_idemponent : forall x, cl (cl x) == cl x
-  ; cl_op_monotonic : isMonotonic1 cl
-  }.
-
-Lemma isClosureOperator_iff {A : Type} `{POSET : isPoset A} (cl : A -> A)
-  : isClosureOperator cl <-> (forall x, forall y, x =< cl y <-> cl x =< cl y).
-Proof.
-  split.
-  - intros [INCREASING IDEMPONENT MONOTONIC] x y. split; intros LE.
-    + rewrite <- IDEMPONENT with (x := y). eapply MONOTONIC. exact LE.
-    + transitivity (cl x). eapply INCREASING. exact LE.
-  - intros IFF. split; ii.
-    + rewrite -> IFF. reflexivity.
-    + eapply leProp_antisymmetry.
-      * rewrite <- IFF. reflexivity.
-      * rewrite -> IFF. reflexivity.
-    + rewrite <- IFF. transitivity x2. exact x_LE. rewrite -> IFF. reflexivity.
-Qed.
-
 Class isSetoid1 (F : Type -> Type) : Type :=
   liftSetoid1 (X : Type) `(SETOID : isSetoid X) : isSetoid (F X).
 
@@ -258,9 +237,7 @@ Class isFunctor (F : Type -> Type) : Type :=
 #[global] Arguments fmap {F} {isFunctor} {A} {B} f.
 
 Class FunctorLaws (F : Type -> Type) `{SETOID1 : isSetoid1 F} `{FUNCTOR : isFunctor F} : Prop :=
-  { fmap_compatWith_eqProp {A : Type} {B : Type} (f : A -> B) (x : F A) (y : F A)
-    (EQ : x == y)
-    : fmap f x == fmap f y
+  { fmap_compatWith_eqProp {A : Type} {B : Type} (f : A -> B) :: eqPropCompatible1 (fmap f)
   ; fmap_compose {A : Type} {B : Type} {C : Type} (f : A -> B) (g : B -> C)
     : fmap (@compose A B C g f) == compose (fmap g) (fmap f)
   ; fmap_id {A : Type}
@@ -320,7 +297,7 @@ Lemma mkFunctorFromMonad_good {M : Type -> Type} `{SETOID1 : isSetoid1 M} `{MONA
   : @FunctorLaws M SETOID1 (mkFunctorFromMonad MONAD).
 Proof.
   split; ii.
-  - unfold fmap. unfold mkFunctorFromMonad. rewrite EQ. reflexivity.
+  - unfold fmap. unfold mkFunctorFromMonad. rewrite x_EQ. reflexivity.
   - unfold compose. unfold fmap. unfold mkFunctorFromMonad. symmetry.
     rewrite <- bind_assoc. eapply bind_compatWith_eqProp_r. intros i.
     rewrite bind_pure_l. reflexivity.
@@ -431,6 +408,30 @@ Notation ensemble := E.t.
 #[local] Infix "\in" := E.In : type_scope.
 
 #[local] Infix "\subseteq" := E.subset : type_scope.
+
+Class isCommutative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
+  comm x y : f x y == f y x.
+
+Class isClosureOperator {A : Type} `{POSET : isPoset A} (cl : A -> A) : Prop :=
+  { cl_op_increasing : forall x, x =< cl x
+  ; cl_op_idemponent : forall x, cl (cl x) == cl x
+  ; cl_op_monotonic : isMonotonic1 cl
+  }.
+
+Lemma isClosureOperator_iff {A : Type} `{POSET : isPoset A} (cl : A -> A)
+  : isClosureOperator cl <-> (forall x, forall y, x =< cl y <-> cl x =< cl y).
+Proof.
+  split.
+  - intros [INCREASING IDEMPONENT MONOTONIC] x y. split; intros LE.
+    + rewrite <- IDEMPONENT with (x := y). eapply MONOTONIC. exact LE.
+    + transitivity (cl x). eapply INCREASING. exact LE.
+  - intros IFF. split; ii.
+    + rewrite -> IFF. reflexivity.
+    + eapply leProp_antisymmetry.
+      * rewrite <- IFF. reflexivity.
+      * rewrite -> IFF. reflexivity.
+    + rewrite <- IFF. transitivity x2. exact x_LE. rewrite -> IFF. reflexivity.
+Qed.
 
 Definition eqProp_cl {A : Type} `{SETOID : isSetoid A} (X : ensemble A) : ensemble A :=
   fun z => exists x, z == x /\ x \in X.
