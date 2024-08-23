@@ -2,7 +2,9 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Math.OrderTheory.
 
 Universe Set_u.
+
 Universe Set_V.
+
 Constraint Set_u < Set_V.
 
 Create HintDb aczel_hints.
@@ -209,7 +211,7 @@ Definition filterc (x : Tree) (P : children x -> Prop) : Tree :=
   mkNode (@sig (children x) P) (fun c => childnodes x (proj1_sig c)).
 
 Theorem filterc_spec x P
-  : forall z, z \in filterc x P <-> exists cx : children x, z == childnodes x cx /\ P cx.
+  : forall z, z \in filterc x P <-> (exists cx : children x, z == childnodes x cx /\ P cx).
 Proof.
   intros z. split.
   - intros [[cx H_P] EQ]. simpl in *; eauto with *.
@@ -217,7 +219,7 @@ Proof.
 Qed.
 
 Corollary subset_filterc x
-  : forall z, z \subseteq x <-> exists P, z == filterc x P.
+  : forall z, z \subseteq x <-> (exists P, z == filterc x P).
 Proof.
   intros z. split.
   - intros SUBSET. exists (fun cx => childnodes x cx \in z). eapply eqTree_intro.
@@ -230,14 +232,14 @@ Definition filter (P : Tree -> Prop) (x : Tree) : Tree :=
   filterc x (fun c => P (childnodes x c)).
 
 Theorem filter_spec P x
-  : forall z, z \in filter P x <-> exists c, P (childnodes x c) /\ z == childnodes x c.
+  : forall z, z \in filter P x <-> (exists c, P (childnodes x c) /\ z == childnodes x c).
 Proof.
   intros z. unfold filter. rewrite filterc_spec. done.
 Qed.
 
 Corollary filter_good P x
   (COMPAT : isCompatibleWith_eqProp P)
-  : forall z, z \in filter P x <-> z \in x /\ P z.
+  : forall z, z \in filter P x <-> (z \in x /\ P z).
 Proof.
   intros z. rewrite filter_spec. split.
   - intros [c [H_P EQ]]. split.
@@ -274,7 +276,7 @@ Definition indexed_union (I : Type@{Set_u}) (x_i : I -> Tree) : Tree :=
   mkNode { i : I & children (x_i i) } (fun c => childnodes (x_i (projT1 c)) (projT2 c)).
 
 Theorem indexed_union_spec I x_i
-  : forall z, z \in indexed_union I x_i <-> exists i, z \in x_i i.
+  : forall z, z \in indexed_union I x_i <-> (exists i, z \in x_i i).
 Proof.
   intros z. split.
   - intros [[i c] EQ]; simpl in *; eauto with *.
@@ -293,7 +295,7 @@ Definition unions (x : Tree) : Tree :=
   indexed_union (children x) (childnodes x).
 
 Theorem unions_spec x
-  : forall z, z \in unions x <-> exists y, z \in y /\ y \in x.
+  : forall z, z \in unions x <-> (exists y, z \in y /\ y \in x).
 Proof.
   intros z. unfold unions. rewrite indexed_union_spec. split.
   - intros [i [c EQ]]; simpl in *; exists (childnodes x i); split; eauto with *.
@@ -322,7 +324,7 @@ Definition upair (x1 : Tree) (x2 : Tree) : Tree :=
   mkNode bool (fun b => if b then x1 else x2).
 
 Theorem upair_spec x1 x2
-  : forall z, z \in upair x1 x2 <-> z == x1 \/ z == x2.
+  : forall z, z \in upair x1 x2 <-> (z == x1 \/ z == x2).
 Proof.
   intros z. split.
   - intros [[ | ] EQ]; simpl in *; eauto with *.
@@ -347,7 +349,7 @@ Definition union (x1 : Tree) (x2 : Tree) : Tree :=
   unions (upair x1 x2).
 
 Theorem union_spec x1 x2
-  : forall z, z \in union x1 x2 <-> z \in x1 \/ z \in x2.
+  : forall z, z \in union x1 x2 <-> (z \in x1 \/ z \in x2).
 Proof.
   intros z. unfold union. rewrite unions_spec. split.
   - intros [y [IN IN']]; rewrite upair_spec in IN'.
@@ -366,7 +368,7 @@ Definition intersection (x : Tree) (y : Tree) : Tree :=
   filter (fun z => z \in x) y.
 
 Theorem intersection_spec x y
-  : forall z, z \in intersection x y <-> z \in x /\ z \in y.
+  : forall z, z \in intersection x y <-> (z \in x /\ z \in y).
 Proof.
   intros z. unfold intersection. rewrite filter_good.
   - done.
@@ -580,7 +582,7 @@ Section STRONG_COLLECTION.
   > 문제는 AC가 Coq에서 작동할 것 같지 않다는 거네요.
 *)
 
-Hypothesis AC : forall A : Type@{Set_u}, forall B : Type@{Set_V}, forall P : A -> B -> Prop, (forall x, exists y, P x y) -> (exists f, forall x, P x (f x)).
+Hypothesis AC : forall A : Type, forall B : Type, forall P : A -> B -> Prop, (forall x, exists y, P x y) -> (exists f, forall x, P x (f x)).
 
 Theorem AxiomOfChoice_implies_StrongCollection (P : Tree -> Tree -> Prop)
   (COMPAT1 : forall y, isCompatibleWith_eqProp (fun x => P x y))
@@ -792,7 +794,7 @@ Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x)
   end.
 
 Lemma fromAcc_unfold {A : Type@{Set_u}} {R : A -> A -> Prop} x ACC
-  : forall z, z \in @fromAcc A R x ACC <-> exists c : { y : A | R y x }, z == fromAcc (proj1_sig c) (Acc_inv ACC (proj2_sig c)).
+  : forall z, z \in @fromAcc A R x ACC <-> (exists c : { y : A | R y x }, z == fromAcc (proj1_sig c) (Acc_inv ACC (proj2_sig c))).
 Proof.
   intros z. destruct ACC as [ACC_INV]; simpl in *.
   split; intros [[c H_R] EQ]; rewrite eqTree_unfold in *; now exists (@exist _ _ c H_R).
@@ -883,12 +885,32 @@ Proof.
     rewrite EQ in IN. clear y EQ. rewrite fromAcc_unfold in IN.
     destruct IN as [[y H_LT] EQ]. simpl in EQ. rewrite eqTree_unfold in EQ.
     rewrite EQ. rewrite fromAcc_pirrel with (ACC' := wltProp_well_founded y).
-    exact (member_intro A (fun c : A => fromAcc c (wltProp_well_founded c)) y).
+    exact (member_intro A (fun c => fromAcc c (wltProp_well_founded c)) y).
   - intros x IN y IN' z IN''. destruct IN as [c EQ]. simpl in *. rewrite eqTree_unfold in EQ.
     rewrite EQ in IN'. rewrite fromAcc_unfold in IN'. destruct IN' as [[c' H_LT] EQ'].
     simpl in *. rewrite eqTree_unfold in *. rewrite EQ' in IN''. rewrite fromAcc_unfold in IN''.
     destruct IN'' as [[c'' H_LT'] EQ'']. simpl in *. rewrite eqTree_unfold in *.
     rewrite EQ, EQ''. eapply fromAcc_member_fromAcc_intro. transitivity c'; trivial.
+Qed.
+
+Lemma sup_C_isOrdinal C
+  (ORDINAL : forall alpha, alpha \in C -> isOrdinal alpha)
+  : isOrdinal (unions C).
+Proof.
+  split; ii; rewrite unions_spec in *; des.
+  - pose proof (ORDINAL y0 H1) as [? ?]. eauto with *.
+  - pose proof (ORDINAL y1 H2) as [? ?]. eapply TRANS'; eauto with *.
+Qed.
+
+Lemma inf_C_isOrdinal C inf_C
+  (NONEMPTY : exists d, d \in C)
+  (ORDINAL : forall alpha, alpha \in C -> isOrdinal alpha)
+  (SPEC : forall z, z \in inf_C <-> (forall alpha, alpha \in C -> z \in alpha))
+  : isOrdinal inf_C.
+Proof.
+  destruct NONEMPTY as [d IN]. split; ii; rewrite SPEC in *; ii.
+  - pose proof (ORDINAL alpha H1) as [? ?]. eauto with *.
+  - pose proof (ORDINAL d IN) as [? ?]. eapply TRANS'; eauto with *.
 Qed.
 
 Lemma empty_isOrdinal
@@ -900,8 +922,8 @@ Qed.
 Definition succ (x : Tree) : Tree :=
   union x (singlton x).
 
-Lemma succ_spec x
-  : forall z, z \in succ x <-> z \in x \/ z == x.
+Theorem succ_spec x
+  : forall z, z \in succ x <-> (z \in x \/ z == x).
 Proof.
   unfold succ. intros z. rewrite union_spec. rewrite singlton_spec. reflexivity.
 Qed.
@@ -926,6 +948,13 @@ Proof.
     + rewrite H. eapply TRANS with (y := y0); trivial. rewrite <- H; trivial.
 Qed.
 
+Lemma unions_isOrdinal x
+  (ORDINAL : isOrdinal x)
+  : isOrdinal (unions x).
+Proof.
+  eapply sup_C_isOrdinal; eauto with *.
+Qed.
+
 Lemma indexed_union_isOrdinal {I : Type@{Set_u}} (x : I -> Tree)
   (ORDINAL : forall i, isOrdinal (x i))
   : isOrdinal (indexed_union I x).
@@ -935,28 +964,4 @@ Proof.
     pose proof (ORDINAL i) as [? ?]. eauto with *.
   - rewrite indexed_union_spec in *. des.
     pose proof (ORDINAL i) as [? ?]. eapply TRANS'; eauto with *.
-Qed.
-
-Lemma unions_isOrdinal x
-  (ORDINAL : isOrdinal x)
-  : isOrdinal (unions x).
-Proof.
-  inv ORDINAL. split; ii.
-  - rewrite unions_spec in *. des. exists y. eauto with *.
-  - rewrite unions_spec in *. des. eapply TRANS'; eauto with *.
-Qed.
-
-Lemma intersections_isOrdinal intersections x
-  (NONEMPTY : exists d, d \in x)
-  (ORDINAL : isOrdinal x)
-  (SPEC : forall z, z \in intersections <-> forall y, y \in x -> z \in y)
-  : isOrdinal intersections.
-Proof.
-  destruct NONEMPTY as [d IN]. inv ORDINAL. split; ii.
-  - rewrite SPEC in *. ii; eapply TRANS'; trivial.
-    eapply H; trivial. trivial.
-  - rewrite SPEC in *. eapply TRANS'.
-    + eapply TRANS; eauto with *.
-    + eassumption.
-    + eassumption.
 Qed.

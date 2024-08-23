@@ -270,6 +270,16 @@ Proof.
     + exact (proj2 H_EQ).
 Defined.
 
+Lemma relation_on_image_liftsWellFounded {A : Type} {B : Type} (R : B -> B -> Prop) (f : A -> B)
+  (WF : well_founded R)
+  : well_founded (binary_relation_on_image R f).
+Proof.
+  intros x. remember (f x) as y eqn: y_eq_f_x.
+  revert x y_eq_f_x. induction (WF y) as [y' _ IH].
+  intros x' hyp_eq. econstructor. intros x f_x_R_f_x'.
+  subst y'. eapply IH; [exact f_x_R_f_x' | reflexivity].
+Defined.
+
 (** Section FUNCTOR. *)
 
 Class isFunctor (F : Type -> Type) : Type :=
@@ -284,15 +294,6 @@ Class FunctorLaws (F : Type -> Type) `{SETOID1 : isSetoid1 F} `{FUNCTOR : isFunc
   ; fmap_id {A : Type}
     : fmap (@id A) == id
   }.
-
-#[global]
-Add Parametric Morphism {F : Type -> Type} `{SETOID1 : isSetoid1 F} `{FUNCTOR : isFunctor F} {A : Type} {B : Type}
-  `(FUNCTOR_LAWS : @FunctorLaws F SETOID1 FUNCTOR)
-  : (@fmap F FUNCTOR A B) with signature (eq ==> eqProp ==> eqProp)
-  as fmap_eq_eqProp_eqProp.
-Proof.
-  intros f x y EQ. exact (fmap_compatWith_eqProp f x y EQ).
-Defined.
 
 (** End FUNCTOR. *)
 
@@ -364,7 +365,6 @@ Definition subset@{u} {A : Type@{u}} (X1 : t@{u} A) (X2 : t@{u} A) : Prop :=
   forall x, In@{u} x X1 -> In@{u} x X2.
 
 #[local] Infix "\in" := In : type_scope.
-
 #[local] Infix "\subseteq" := subset : type_scope.
 
 #[global]
@@ -447,25 +447,27 @@ End E.
 Notation ensemble := E.t.
 
 #[local] Infix "\in" := E.In : type_scope.
-
 #[local] Infix "\subseteq" := E.subset : type_scope.
+
+Class isAssociative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
+  assoc x y z : f x (f y z) == f (f x y) z.
 
 Class isCommutative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
   comm x y : f x y == f y x.
 
 Class isClosureOperator {A : Type} `{POSET : isPoset A} (cl : A -> A) : Prop :=
-  { cl_op_increasing : forall x, x =< cl x
-  ; cl_op_idemponent : forall x, cl (cl x) == cl x
-  ; cl_op_monotonic : isMonotonic1 cl
+  { cl_op_extensive : forall x, x =< cl x
+  ; cl_op_idempotent : forall x, cl (cl x) == cl x
+  ; cl_op_monotonic :: isMonotonic1 cl
   }.
 
 Lemma isClosureOperator_iff {A : Type} `{POSET : isPoset A} (cl : A -> A)
   : isClosureOperator cl <-> (forall x, forall y, x =< cl y <-> cl x =< cl y).
 Proof.
   split.
-  - intros [INCREASING IDEMPONENT MONOTONIC] x y. split; intros LE.
-    + rewrite <- IDEMPONENT with (x := y). eapply MONOTONIC. exact LE.
-    + transitivity (cl x). eapply INCREASING. exact LE.
+  - intros [EXTENSIVE IDEMPOTENT MONOTONIC] x y. split; intros LE.
+    + rewrite <- IDEMPOTENT with (x := y). eapply MONOTONIC. exact LE.
+    + transitivity (cl x). eapply EXTENSIVE. exact LE.
   - intros IFF. split; ii.
     + rewrite -> IFF. reflexivity.
     + eapply leProp_antisymmetry.
