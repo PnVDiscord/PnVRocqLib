@@ -6,12 +6,13 @@ A Coq library written by members of PnV Discord Server
 
 ```
 git clone https://github.com/PnVDiscord/PnVRocqLib.git
+cd PnVRocqLib
 eval `opam env`
 coq_makefile -f _CoqProject -o Makefile
 make -j4 -k
 ```
 
-## `coqc -v`
+### `coqc -v`
 
 ```
 The Coq Proof Assistant, version 8.18.0
@@ -22,6 +23,10 @@ The Coq Proof Assistant, version 8.18.0
 ### Data
 
 - `Aczel.v` : Aczel's Type Theoretic Interpretation of Set Theory
+
+### Math
+
+- `OrderTheory.v` : Basic Order Theory
 
 ### Prelude
 

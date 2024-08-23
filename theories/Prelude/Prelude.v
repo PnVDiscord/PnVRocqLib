@@ -1,5 +1,5 @@
-Require Export PvN.Prelude.Notations.
-Require Export PvN.Prelude.SfLib.
+Require Export PnV.Prelude.Notations.
+Require Export PnV.Prelude.SfLib.
 Require Export Coq.Arith.Compare_dec.
 Require Export Coq.Arith.PeanoNat.
 Require Export Coq.Bool.Bool.
@@ -228,6 +228,13 @@ Definition mkSetoid_from_eq {A : Type} : isSetoid A :=
 #[global]
 Instance fromSetoid1 {F : Type -> Type} {A : Type} `(SETOID1 : isSetoid1 F) : isSetoid (F A) :=
   liftSetoid1 A mkSetoid_from_eq.
+
+Class hasSimulation (Src : Type) (Tgt : Type) {Src_isPoset : isPoset Src} {Tgt_isPoset : isPoset Tgt} : Type :=
+  { simulation : Src -> Tgt
+  ; simulation_compatWith_eqProp :: eqPropCompatible1 simulation
+  ; simulation_spec s t'
+    : (exists t, simulation s =< t /\ t == t') <-> (exists s', s =< s' /\ simulation s' == t')
+  }.
 
 (** Section FUNCTOR. *)
 
