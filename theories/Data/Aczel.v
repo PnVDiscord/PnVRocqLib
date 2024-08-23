@@ -2,9 +2,7 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Math.OrderTheory.
 
 Universe Set_u.
-
 Universe Set_V.
-
 Constraint Set_u < Set_V.
 
 Create HintDb aczel_hints.
@@ -820,7 +818,7 @@ Proof.
 Qed.
 
 Definition fromWf {A : Type@{Set_u}} {R : A -> A -> Prop} (Wf : well_founded R) : Tree :=
-  indexed_union A (fun i => @fromAcc A R i (Wf i)).
+  mkNode A (fun c => @fromAcc A R c (Wf c)).
 
 Definition isTransitiveSet (x : Tree) : Prop :=
   forall y, y \in x -> forall z, z \in y -> z \in x.

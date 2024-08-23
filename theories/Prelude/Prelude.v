@@ -229,6 +229,47 @@ Definition mkSetoid_from_eq {A : Type} : isSetoid A :=
 Instance fromSetoid1 {F : Type -> Type} {A : Type} `(SETOID1 : isSetoid1 F) : isSetoid (F A) :=
   liftSetoid1 A mkSetoid_from_eq.
 
+#[universes(polymorphic=yes)]
+Definition binary_relation_on_image@{u_A u_B} {A : Type@{u_A}} {B : Type@{u_B}} (R : B -> B -> Prop) (f : A -> B) lhs rhs : Prop :=
+  R (f lhs) (f rhs).
+
+#[local]
+Instance relation_on_image_liftsEquivalence {A : Type} {B : Type} {eqProp : B -> B -> Prop}
+  (isEquivalence : Equivalence eqProp)
+  : forall f : A -> B, Equivalence (binary_relation_on_image eqProp f).
+Proof.
+  intros f. constructor.
+  - intros x1. exact (Equivalence_Reflexive (f x1)).
+  - intros x1 x2 H_1EQ2. exact (Equivalence_Symmetric (f x1) (f x2) H_1EQ2).
+  - intros x1 x2 x3 H_1EQ2 H_2EQ3. exact (Equivalence_Transitive (f x1) (f x2) (f x3) H_1EQ2 H_2EQ3).
+Defined.
+
+#[local]
+Instance relation_on_image_liftsPreOrder {A : Type} {B : Type} {leProp : B -> B -> Prop}
+  (isPreOrder : PreOrder leProp)
+  : forall f : A -> B, PreOrder (binary_relation_on_image leProp f).
+Proof.
+  intros f. constructor.
+  - intros x1. exact (PreOrder_Reflexive (f x1)).
+  - intros x1 x2 x3 H_1LE2 H_2LE3. exact (PreOrder_Transitive (f x1) (f x2) (f x3) H_1LE2 H_2LE3).
+Defined.
+
+#[local]
+Instance relation_on_image_liftsPartialOrder {A : Type} {B : Type} {eqProp : B -> B -> Prop} {leProp : B -> B -> Prop}
+  `{isEquivalence : @Equivalence B eqProp}
+  `{isPreOrder : @PreOrder B leProp}
+  (isPartialOrder : PartialOrder eqProp leProp)
+  : forall f : A -> B, PartialOrder (binary_relation_on_image eqProp f) (binary_relation_on_image leProp f).
+Proof.
+  intros f x1 x2. constructor.
+  - intros H_EQ. constructor.
+    + exact (proj1 (proj1 (partial_order_equivalence (f x1) (f x2)) H_EQ)).
+    + exact (proj2 (proj1 (partial_order_equivalence (f x1) (f x2)) H_EQ)).
+  - intros H_EQ. apply (proj2 (partial_order_equivalence (f x1) (f x2))). constructor.
+    + exact (proj1 H_EQ).
+    + exact (proj2 H_EQ).
+Defined.
+
 (** Section FUNCTOR. *)
 
 Class isFunctor (F : Type -> Type) : Type :=
@@ -454,3 +495,62 @@ Lemma eqProp_cl_isCompatibleWith_eqProp {A : Type} `{SETOID : isSetoid A} (X : e
 Proof.
   intros x [a [EQ IN]] y EQ'. exists a. split. rewrite <- EQ'. exact EQ. exact IN.
 Qed.
+
+Module B.
+
+#[local] Open Scope program_scope.
+
+#[universes(polymorphic=yes)]
+Definition dollar@{u v} {A : Type@{u}} {B : Type@{v}} (f : A -> B) (x : A) : B := f x.
+
+#[local] Infix "$" := dollar.
+#[local] Infix ">>=" := bind.
+
+Definition kcompose {M} {MONAD : isMonad M} {A} {B} {C} (k1 : A -> M B) (k2 : B -> M C) : A -> M C :=
+  fun x => k1 x >>= k2.
+
+#[local] Infix ">=>" := kcompose : program_scope.
+
+Record stateT (S : Type) (M : Type -> Type) (X : Type) : Type :=
+  StateT { runStateT : S -> M (X * S)%type }.
+
+#[global] Arguments StateT {S} {M} {X}.
+#[global] Arguments runStateT {S} {M} {X}.
+
+#[global]
+Instance stateT_isMonad {S} {M} `(M_isMonad : isMonad M) : isMonad (B.stateT S M) :=
+  { pure {A} (x : A) := B.StateT $ curry pure x
+  ; bind {A} {B} (m : B.stateT S M A) (k : A -> B.stateT S M B) := B.StateT $ B.runStateT m >=> uncurry (B.runStateT ∘ k)
+  }.
+
+Definition stateT_isSetoid {S} {M} `{SETOID1 : isSetoid1 M} X : isSetoid (B.stateT S M X) :=
+  {|
+    eqProp lhs rhs := forall s, B.runStateT lhs s == B.runStateT rhs s;
+    eqProp_Equivalence := relation_on_image_liftsEquivalence (pi_isSetoid (fun _ => fromSetoid1 SETOID1)).(eqProp_Equivalence) B.runStateT;
+  |}.
+
+#[local]
+Instance stateT_isSetoid1 {S} {M} `{SETOID1 : isSetoid1 M} : isSetoid1 (B.stateT S M) :=
+  fun X : Type => fun _ : isSetoid X => @stateT_isSetoid S M SETOID1 X.
+
+#[local]
+Instance stateT_satisfiesMonadLaws {S} {M} `{SETOID1 : isSetoid1 M} `{MONAD : isMonad M}
+  `(MONAD_LAWS : @MonadLaws M SETOID1 MONAD)
+  : MonadLaws (B.stateT S M).
+Proof.
+  split; i.
+  - destruct m1 as [m1], m2 as [m2]; simpl in *. intros s. eapply bind_compatWith_eqProp_l. exact (m_EQ s).
+  - destruct m as [m]; simpl in *. intros s. eapply bind_compatWith_eqProp_r. intros [x s']. exact (k_EQ x s').
+  - destruct m as [m]; simpl in *. intros s. unfold kcompose. rewrite <- bind_assoc.
+    eapply bind_compatWith_eqProp_r. intros [x s']. reflexivity.
+  - destruct (k x) as [m] eqn: H_OBS. simpl in *. intros s. unfold kcompose. unfold curry. rewrite bind_pure_l. simpl.
+    unfold compose. rewrite H_OBS. reflexivity.
+  - destruct m as [m]; simpl in *. intros s. unfold kcompose. rewrite <- bind_pure_r with (m := m s) at 2.
+    eapply bind_compatWith_eqProp_r. intros [x s']. reflexivity.
+Qed.
+
+End B.
+
+Infix "$" := B.dollar.
+Infix ">>=" := bind.
+Infix ">=>" := B.kcompose : program_scope.
