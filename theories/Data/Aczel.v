@@ -2,9 +2,7 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Math.OrderTheory.
 
 Universe Set_u.
-
 Universe Set_V.
-
 Constraint Set_u < Set_V.
 
 Create HintDb aczel_hints.
@@ -779,6 +777,15 @@ Proof.
   pose proof (x_rLe_y c) as [c' H_rLe]. eapply IH; transitivity (tsx c); eauto with *.
 Qed.
 
+#[global]
+Instance rLt_StrictOrder
+  : StrictOrder rLt.
+Proof.
+  split.
+  - eapply well_founded_implies_Irreflexive. eapply rLt_wf.
+  - intros x y z H_rLt1 H_rLt2. eapply rLe_rLt_rLt with (y := y); trivial. eapply rLt_implies_rLe; trivial.
+Qed.
+
 Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x) {struct ACC} : Tree :=
   match ACC with
   | Acc_intro _ ACC_INV => mkNode { y : A | R y x } (fun c => @fromAcc A R (proj1_sig c) (ACC_INV (proj1_sig c) (proj2_sig c)))
@@ -811,7 +818,7 @@ Proof.
 Qed.
 
 Definition fromWf {A : Type@{Set_u}} {R : A -> A -> Prop} (Wf : well_founded R) : Tree :=
-  indexed_union A (fun i => @fromAcc A R i (Wf i)).
+  mkNode A (fun c => @fromAcc A R c (Wf c)).
 
 Definition isTransitiveSet (x : Tree) : Prop :=
   forall y, y \in x -> forall z, z \in y -> z \in x.

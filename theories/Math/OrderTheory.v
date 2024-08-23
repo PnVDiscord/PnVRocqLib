@@ -1,19 +1,22 @@
 Require Import PnV.Prelude.Prelude.
 
-Class isWellPreOrderedSet (A : Type) (leProp : A -> A -> Prop) {PREORDER : PreOrder leProp} : Type :=
-  wellorder (x : nat -> A) : { '(i, j) : nat * nat | i < j /\ leProp (x i) (x j) }.
+#[local] Infix "\in" := E.In.
+#[local] Infix "\subseteq" := E.subset.
+#[local] Obligation Tactic := i.
 
-Class isToset (A : Type) : Type :=
-  { leToset (lhs : A) (rhs : A) : Prop
-  ; leToset_PreOrder :: PreOrder leToset
-  ; leToset_PartialOrder :: PartialOrder eq leToset
-  ; leToset_total x y
-    : leToset x y \/ leToset y x
-  }.
+Lemma well_founded_implies_Irreflexive {A : Type} (R : A -> A -> Prop)
+  (WF : well_founded R)
+  : Irreflexive R.
+Proof.
+  intros x H_R. induction (WF x) as [x _ IH]. eapply IH with (y := x); exact H_R.
+Qed.
 
-Infix "≦" := leToset : type_scope.
-
-Class isWoset (A : Type) : Type :=
-  { Woset_isToset :: isToset A
-  ; Woset_wellfounded :: isWellPreOrderedSet A leToset
-  }.
+#[program]
+Definition mkPosetFrom_ltProp {A : Type} (ltProp : A -> A -> Prop) (ltProp_StrictOrder : StrictOrder ltProp) : isPoset A :=
+  {| leProp x y := ltProp x y \/ x = y; Poset_isSetoid := mkSetoid_from_eq; |}.
+Next Obligation.
+  split; ii; firstorder try congruence.
+Qed.
+Next Obligation.
+  intros x y. cbn. unfold flip. split; firstorder try congruence. contradiction (StrictOrder_Irreflexive x). firstorder.
+Qed.
