@@ -460,7 +460,7 @@ Proof.
     simpl. rewrite cp_spec in H_OBS. apply cpInv_inj in H_OBS. destruct H_OBS as [<- <-]. congruence.
 Qed.
 
-Section SECOND_CITIZEN_EQUALITY.
+Section HEQ.
 
 Context {A : Type}.
 
@@ -569,7 +569,7 @@ Proof.
   destruct HEQ. reflexivity.
 Qed.
 
-End SECOND_CITIZEN_EQUALITY.
+End HEQ.
 
 Fixpoint snoc {A : Type} {n : nat} (xs : Vector.t A n) (x : A) {struct xs} : Vector.t A (S n) :=
   match xs with
