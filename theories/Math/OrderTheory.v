@@ -21,8 +21,20 @@ Next Obligation.
   intros x y. cbn. unfold flip. split; firstorder try congruence. contradiction (StrictOrder_Irreflexive x). firstorder.
 Qed.
 
+Class has_ltProp (A : Type) : Type :=
+  ltProp (lhs : A) (rhs : A) : Prop.
+
+Infix "≨" := ltProp : type_scope.
+
+Class hasStrictOrder (A : Type) : Type :=
+  { lt :: has_ltProp A
+  ; lt_StrictOrder :: StrictOrder lt
+  }.
+
+Infix "≦" := ((mkPosetFrom_ltProp lt lt_StrictOrder).(leProp)) : type_scope.
+
 Class isWellOrderedSet (A : Type) : Type :=
-  { wltProp (lhs : A) (rhs : A) : Prop
+  { wltProp : has_ltProp A
   ; wltProp_Transitive :: Transitive wltProp
   ; wltProp_well_founded : well_founded wltProp
   }.
