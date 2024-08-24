@@ -24,9 +24,13 @@ The Coq Proof Assistant, version 8.18.0
 
 - `Aczel.v` : Aczel's Type Theoretic Interpretation of Set Theory.
 
+- `Vector.v` : Replaces `Coq.Vectors.VectorDef.t`.
+
 ### Math
 
 - `OrderTheory.v` : Basic Order Theory.
+
+- `ThN.v` : Basic facts on the natural numbers.
 
 ### Prelude
 
