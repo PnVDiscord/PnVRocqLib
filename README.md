@@ -12,7 +12,7 @@ coq_makefile -f _CoqProject -o Makefile
 make -j4 -k
 ```
 
-### `coqc -v`
+### coqc -v
 
 ```
 The Coq Proof Assistant, version 8.18.0
@@ -22,13 +22,21 @@ The Coq Proof Assistant, version 8.18.0
 
 ### Data
 
-- `Aczel.v` : Aczel's Type Theoretic Interpretation of Set Theory
+- `Aczel.v` : Aczel's Type Theoretic Interpretation of Set Theory.
+
+- `Vector.v` : Replaces `Coq.Vectors.VectorDef.t`.
 
 ### Math
 
-- `OrderTheory.v` : Basic Order Theory
+- `OrderTheory.v` : Basic Order Theory.
+
+- `ThN.v` : Basic facts on the natural numbers.
 
 ### Prelude
+
+- `Classical.v` : Facts about classical logic.
+
+- `ConstructiveFacts.v` : Facts on CIC.
 
 - `Notations.v` : Reserves all notations to avoid the conflict.
 
@@ -43,3 +51,5 @@ The Coq Proof Assistant, version 8.18.0
 ## References
 
 1. [sflib](https://github.com/snu-sf/sflib)
+
+2. [stdpp](https://plv.mpi-sws.org/coqdoc/stdpp)

@@ -1,8 +1,12 @@
 -Q theories PnV #
 # Please sort in lexicographical order
 theories/Data/Aczel.v #
+theories/Data/Vector.v #
 theories/Math/OrderTheory.v #
+theories/Math/ThN.v #
 theories/Index/Index.v #
+theories/Prelude/ClassicalFacts.v #
+theories/Prelude/ConstructiveFacts.v #
 theories/Prelude/Notations.v #
 theories/Prelude/Prelude.v #
 theories/Prelude/SfLib.v #

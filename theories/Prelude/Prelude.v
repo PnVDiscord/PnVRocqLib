@@ -643,8 +643,210 @@ Proof.
     eapply bind_compatWith_eqProp_r. intros [x s']. reflexivity.
 Qed.
 
+Lemma Some_ne_None {A : Type} (x : A)
+  : Some x <> None.
+Proof.
+  assert (TRUE : option_rect (fun _ : option A => Prop) (fun _ : A => True) (False) (Some x)) by exact I.
+  intros EQ. rewrite EQ in TRUE. exact TRUE.
+Defined.
+
+Definition maybe {A : Type} {B : Type} (d : B) (f : A -> B) (m : option A) : B :=
+  match m with
+  | None => d
+  | Some x => f x
+  end.
+
+Definition either {A : Type} {B : Type} {C : Type} (f : A -> C) (g : B -> C) (z : A + B) : C :=
+  match z with
+  | inl x => f x
+  | inr y => g y
+  end.
+
+Definition Some_dec {A : Type} (x : option A)
+  : { x' : A | x = Some x' } + { x = None }.
+Proof.
+  destruct x as [x' | ].
+  - left. exists x'. reflexivity.
+  - right. reflexivity.
+Defined.
+
 End B.
 
 Infix "$" := B.dollar.
 Infix ">>=" := bind.
 Infix ">=>" := B.kcompose : program_scope.
+
+Class hasEqDec (A : Type) : Type :=
+  eq_dec (x : A) (y : A) : {x = y} + {x <> y}.
+
+#[global]
+Instance nat_hasEqDec : hasEqDec nat :=
+  Nat.eq_dec.
+
+#[global]
+Instance pair_hasEqdec {A : Type} {B : Type}
+  `(A_hasEqDec : hasEqDec A)
+  `(B_hasEqDec : hasEqDec B)
+  : hasEqDec (A * B).
+Proof.
+  red in A_hasEqDec, B_hasEqDec. red. decide equality.
+Defined.
+
+#[global]
+Instance option_hasEqDec {A : Type}
+  `(EQ_DEC : hasEqDec A)
+  : hasEqDec (option A).
+Proof.
+  exact (fun x : option A => fun y : option A =>
+    match x as a, y as b return {a = b} + {a <> b} with
+    | None, None => left eq_refl
+    | None, Some y' => right (fun EQ : None = Some y' => B.Some_ne_None y' (Equivalence_Symmetric None (Some y') EQ))
+    | Some x', None => right (fun EQ : Some x' = None => B.Some_ne_None x' EQ)
+    | Some x', Some y' =>
+      match EQ_DEC x' y' with
+      | left EQ => left (f_equal (@Some A) EQ)
+      | right NE => right (fun EQ : Some x' = Some y' => NE (f_equal (B.maybe x' id) EQ))
+      end
+    end
+  ).
+Defined.
+
+Class Similarity (A : Type) (B : Type) : Type :=
+  is_similar_to (x : A) (y : B) : Prop.
+
+#[global]
+Instance forall_liftsSimilarity {I : Type} {A : I -> Type} {B : I -> Type} (SIMILARITY : forall i, Similarity (A i) (B i)) : Similarity (forall i, A i) (forall i, B i) :=
+  fun f : forall i, A i => fun g : forall i, B i => forall i, is_similar_to (f i) (g i).
+
+Class isEnumerable (A : Type) : Type :=
+  { enum : nat -> A
+  ; enum_spec : forall x : A, { n : nat | enum n = x }
+  }.
+
+Lemma enum_spec_injective {A : Type} `{ENUMERABLE : isEnumerable A}
+  (inj := fun x : A => proj1_sig (enum_spec x))
+  : forall x1 : A, forall x2 : A, inj x1 = inj x2 -> x1 = x2.
+Proof.
+  unfold inj. intros x1 x2 inj_EQ.
+  destruct (enum_spec x1) as [n1 EQ1], (enum_spec x2) as [n2 EQ2].
+  simpl in *. congruence.
+Qed.
+
+Class isCountable (A : Type) : Type :=
+  { encode : A -> nat
+  ; decode : nat -> option A
+  ; decode_encode (x : A)
+    : decode (encode x) = Some x 
+  }.
+
+#[local]
+Instance isCountable_if_isEnumerable {A : Type} `(ENUMERABLE : isEnumerable A) : isCountable A :=
+  { encode (x : A) := proj1_sig (enum_spec x)
+  ; decode (n : nat) := Some (enum n)
+  ; decode_encode (x : A) := f_equal (@Some A) (proj2_sig (enum_spec x))
+  }.
+
+Module L.
+
+Include Coq.Lists.List.
+
+Lemma in_remove_iff {A : Type} `(EQ_DEC : hasEqDec A) (x1 : A) (xs2 : list A)
+  : forall z, In z (remove Prelude.eq_dec x1 xs2) <-> (In z xs2 /\ z <> x1).
+Proof.
+  i; split.
+  { intros H_IN. eapply in_remove. exact H_IN. }
+  { intros [H_IN H_NE]. eapply in_in_remove; [exact H_NE | exact H_IN]. }
+Qed.
+
+Lemma rev_inj {A : Type} (xs1 : list A) (xs2 : list A)
+  (rev_EQ : rev xs1 = rev xs2)
+  : xs1 = xs2.
+Proof.
+  rewrite <- rev_involutive with (l := xs1).
+  rewrite <- rev_involutive with (l := xs2).
+  now f_equal.
+Qed.
+
+Lemma list_rev_dual {A : Type} (phi : list A -> Prop)
+  (H_rev : forall n, phi (L.rev n))
+  : forall n, phi n.
+Proof.
+  intros n. induction n as [ | d n _] using @List.rev_ind.
+  - eapply H_rev with (n := []%list).
+  - rewrite <- List.rev_involutive with (l := n).
+    eapply H_rev with (n := (d :: List.rev n)%list).
+Qed.
+
+Lemma list_rev_rect {A : Type} (P : list A -> Type)
+  (NIL : P [])
+  (TAIL : forall x, forall xs, P xs -> P (xs ++ [x]))
+  : forall xs, P xs.
+Proof.
+  intros xs'. rewrite <- rev_involutive with (l := xs').
+  generalize (rev xs') as xs. clear xs'.
+  induction xs as [ | x xs IH]; simpl.
+  - exact NIL.
+  - eapply TAIL. exact IH.
+Qed.
+
+Lemma last_cons {A : Type} (x0 : A) (x1 : A) (xs : list A)
+  : last (x0 :: xs) x1 = last xs x0.
+Proof.
+  symmetry. revert x0 x1. induction xs as [ | x xs IH]; simpl; i.
+  - reflexivity.
+  - destruct xs as [ | x' xs'].
+    + reflexivity.
+    + erewrite IH with (x1 := x1). reflexivity.
+Qed.
+
+Fixpoint mk_edge_seq {V : Type} (v : V) (vs : list V) : list (V * V) :=
+  match vs with
+  | [] => []
+  | v' :: vs' => (v, v') :: mk_edge_seq v' vs'
+  end.
+
+Lemma mk_edge_seq_last {V : Type} (v0 : V) (v' : V) (vs : list V)
+  : mk_edge_seq v0 (vs ++ [v']) = mk_edge_seq v0 vs ++ [(last vs v0, v')].
+Proof.
+  revert v0 v'. induction vs as [ | v vs IH]; i.
+  - simpl. reflexivity.
+  - erewrite -> last_cons. simpl. f_equal. eauto.
+Qed.
+
+Lemma in_mk_edge_seq_inv {V : Type} (v0 : V) (v1 : V) (vs : list V)
+  (IN : In (v0, v1) (mk_edge_seq v1 vs))
+  : In v1 vs.
+Proof.
+  revert v0 v1 IN. induction vs as [ | v vs IH] using List.rev_ind; simpl; i.
+  - exact IN.
+  - rewrite in_app_iff. rewrite mk_edge_seq_last in IN.
+    rewrite in_app_iff in IN. destruct IN as [IN | [EQ | []]].
+    + left. eapply IH; exact IN.
+    + inv EQ. right. repeat constructor.
+Qed.
+
+Lemma no_dup_mk_edge_seq {V : Type} (v : V) (vs : list V)
+  (NO_DUP : NoDup vs)
+  : NoDup (mk_edge_seq v vs).
+Proof.
+  revert v. induction NO_DUP as [ | v vs NOT_IN NO_DUP IH].
+  - econstructor 1.
+  - simpl. econstructor 2.
+    + intros CONTRA. apply in_mk_edge_seq_inv in CONTRA. contradiction.
+    + eapply IH.
+Qed.
+
+Definition ext_eq_as_finset {A : Type} (xs1 : list A) (xs2 : list A) : Prop :=
+  forall x : A, L.In x xs1 <-> L.In x xs2.
+
+Fixpoint lookup {A : Type} {B : Type} {EQ_DEC : hasEqDec A} (x : A) (zs : list (A * B)) : option B :=
+  match zs with
+  | [] => None
+  | (x', y) :: zs' => if eq_dec x x' then Some y else lookup x zs'
+  end.
+
+Notation is_finsubset_of xs X := (forall x, L.In x xs -> x \in X).
+
+Notation is_listrep_of xs X := (forall x, L.In x xs <-> x \in X).
+
+End L.
