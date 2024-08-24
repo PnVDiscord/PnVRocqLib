@@ -12,7 +12,7 @@ coq_makefile -f _CoqProject -o Makefile
 make -j4 -k
 ```
 
-### `coqc -v`
+### coqc -v
 
 ```
 The Coq Proof Assistant, version 8.18.0
@@ -29,6 +29,10 @@ The Coq Proof Assistant, version 8.18.0
 - `OrderTheory.v` : Basic Order Theory
 
 ### Prelude
+
+- `Classical.v` : Facts about classical logic.
+
+- `ConstructiveFacts.v` : Facts on CIC.
 
 - `Notations.v` : Reserves all notations to avoid the conflict.
 
