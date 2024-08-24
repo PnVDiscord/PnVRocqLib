@@ -47,6 +47,8 @@ Instance wltProp_StrictOrder {A : Type} `{WOSET : isWellOrderedSet A} : StrictOr
   ; StrictOrder_Transitive := wltProp_Transitive
   }.
 
+Infix "⪳" := ((mkPosetFrom_ltProp wltProp wltProp_StrictOrder).(leProp)) : type_scope.
+
 Class hsOrd (A : Type) {POSET : isPoset A} : Type :=
   { compare : A -> A -> comparison
   ; compare_Lt x y

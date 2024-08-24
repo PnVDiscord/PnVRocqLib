@@ -22,11 +22,11 @@ The Coq Proof Assistant, version 8.18.0
 
 ### Data
 
-- `Aczel.v` : Aczel's Type Theoretic Interpretation of Set Theory
+- `Aczel.v` : Aczel's Type Theoretic Interpretation of Set Theory.
 
 ### Math
 
-- `OrderTheory.v` : Basic Order Theory
+- `OrderTheory.v` : Basic Order Theory.
 
 ### Prelude
 
@@ -47,3 +47,5 @@ The Coq Proof Assistant, version 8.18.0
 ## References
 
 1. [sflib](https://github.com/snu-sf/sflib)
+
+2. [stdpp](https://plv.mpi-sws.org/coqdoc/stdpp)
