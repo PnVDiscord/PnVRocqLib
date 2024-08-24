@@ -203,7 +203,7 @@ Proof with eauto with *.
   - rewrite -> EQ1 in H_in...
 Qed.
 
-Section SET_CONSTRUCTIONS.
+(** Section SET_CONSTRUCTIONS. *)
 
 #[local] Opaque eqProp.
 
@@ -217,6 +217,8 @@ Proof.
   - intros [[cx H_P] EQ]. simpl in *; eauto with *.
   - intros [cx [EQ H_P]]. exists (@exist _ _ cx H_P); eauto with *.
 Qed.
+
+#[global] Hint Rewrite filterc_spec : simplication_hints.
 
 Corollary subset_filterc x
   : forall z, z \subseteq x <-> (exists P, z == filterc x P).
@@ -236,6 +238,8 @@ Theorem filter_spec P x
 Proof.
   intros z. unfold filter. rewrite filterc_spec. done.
 Qed.
+
+#[global] Hint Rewrite filter_spec : simplication_hints.
 
 Corollary filter_good P x
   (COMPAT : isCompatibleWith_eqProp P)
@@ -265,6 +269,8 @@ Proof.
   intros z. rewrite subset_filterc. unfold power. eauto with *.
 Qed.
 
+#[global] Hint Rewrite power_spec : simplication_hints.
+
 #[global]
 Instance power_eqPropCompatible1
   : eqPropCompatible1 power.
@@ -282,6 +288,8 @@ Proof.
   - intros [[i c] EQ]; simpl in *; eauto with *.
   - intros [i [c EQ]]; simpl in *; exists (@existT _ _ i c); eauto with *.
 Qed.
+
+#[global] Hint Rewrite indexed_union_spec : simplication_hints.
 
 #[global]
 Instance indexed_union_eqPropCompatible1 I
@@ -302,6 +310,8 @@ Proof.
   - intros [y [IN [c EQ]]]; simpl in *. exists c. rewrite <- EQ. exact IN.
 Qed.
 
+#[global] Hint Rewrite unions_spec : simplication_hints.
+
 #[global]
 Instance unions_eqPropCompatible1
   : eqPropCompatible1 unions.
@@ -320,6 +330,8 @@ Proof.
   - intros [].
 Qed.
 
+#[global] Hint Rewrite empty_spec : simplication_hints.
+
 Definition upair (x1 : Tree) (x2 : Tree) : Tree :=
   mkNode bool (fun b => if b then x1 else x2).
 
@@ -330,6 +342,8 @@ Proof.
   - intros [[ | ] EQ]; simpl in *; eauto with *.
   - intros [EQ | EQ]; [exists true | exists false]; eauto with *.
 Qed.
+
+#[global] Hint Rewrite upair_spec : simplication_hints.
 
 #[global]
 Instance upair_eqPropCompatible2
@@ -357,6 +371,8 @@ Proof.
   - intros [IN | IN]; [exists x1 | exists x2]; rewrite upair_spec; eauto with *.
 Qed.
 
+#[global] Hint Rewrite union_spec : simplication_hints.
+
 #[global]
 Instance union_eqPropCompatible2
   : eqPropCompatible2 union.
@@ -375,6 +391,8 @@ Proof.
   - intros a IN b EQ. rewrite <- EQ. exact IN.
 Qed.
 
+#[global] Hint Rewrite intersection_spec : simplication_hints.
+
 #[global]
 Instance intersection_eqPropCompatible2
   : eqPropCompatible2 intersection.
@@ -390,6 +408,8 @@ Theorem singlton_spec x
 Proof.
   intros z. unfold singlton. rewrite upair_spec. done.
 Qed.
+
+#[global] Hint Rewrite singlton_spec : simplication_hints.
 
 Corollary singlton_inj x y
   (EQ : singlton x == singlton y)
@@ -568,7 +588,7 @@ Proof.
   unfold t in claim at 1. now apply pair_inv in claim.
 Qed.
 
-End SET_CONSTRUCTIONS.
+(** End SET_CONSTRUCTIONS. *)
 
 Section STRONG_COLLECTION.
 
@@ -646,7 +666,13 @@ Definition rEq (lhs : Tree) (rhs : Tree) : Prop :=
 
 Infix "=ᵣ" := rEq (at level 70, no associativity) : type_scope.
 
-#[global] Hint Unfold rEq : aczel_hints.
+Lemma rEq_iff x y
+  : x =ᵣ y <-> (x ≦ᵣ y /\ y ≦ᵣ x).
+Proof.
+  reflexivity.
+Defined.
+
+#[global] Hint Rewrite rEq_iff : simplication_hints.
 
 #[global]
 Instance rEq_Equivalence : Equivalence rEq :=
@@ -694,8 +720,8 @@ Add Parametric Morphism
   as rEq_compatWith_eqProp.
 Proof.
   intros x1 x2 x_EQ y1 y2 y_EQ. split; intros H_rEq.
-  - do 4 red. do 4 red in H_rEq. rewrite -> x_EQ, -> y_EQ in H_rEq. done.
-  - do 4 red. do 4 red in H_rEq. rewrite <- x_EQ, <- y_EQ in H_rEq. done.
+  - rewrite rEq_iff in *. rewrite -> x_EQ, -> y_EQ in H_rEq. done.
+  - rewrite rEq_iff in *. rewrite <- x_EQ, <- y_EQ in H_rEq. done.
 Qed.
 
 #[global]
@@ -749,7 +775,7 @@ Lemma rLt_rLe_rLt x y z
   : x <ᵣ z.
 Proof.
   destruct y as [csy tsy]. destruct x_rLt_y as [cy x_rLe_cy]. destruct z as [csz tsz]. destruct y_rLe_z as [H_rLt].
-  simpl in *. unnw. pose proof (H_rLt cy) as [cz cy_rLe_cz]. exists cz. transitivity (tsy cy); eauto with *.
+  simpl in *. pose proof (H_rLt cy) as [cz cy_rLe_cz]. exists cz. transitivity (tsy cy); eauto with *.
 Qed.
 
 #[local] Hint Resolve rLe_rLt_rLt rLt_rLe_rLt : core.
@@ -774,7 +800,7 @@ Proof.
   assert (lhs_rLe_rhs : lhs ≦ᵣ rhs) by now rewrite lhs_EQ_rhs.
   clear lhs_EQ_rhs. rename lhs into x, rhs into y, lhs_rLe_rhs into x_rLe_y.
   revert y x x_rLe_y. induction y as [csy tsy IH].
-  intros [csx tsx] [x_rLe_y]. simpl in x_rLe_y. unnw.
+  intros [csx tsx] [x_rLe_y]. simpl in x_rLe_y.
   econstructor. intros z [c [z_rLe_cx]]. simpl in *.
   pose proof (x_rLe_y c) as [c' H_rLe]. eapply IH; transitivity (tsx c); eauto with *.
 Qed.
@@ -793,12 +819,14 @@ Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x)
   | Acc_intro _ ACC_INV => mkNode { y : A | R y x } (fun c => @fromAcc A R (proj1_sig c) (ACC_INV (proj1_sig c) (proj2_sig c)))
   end.
 
-Lemma fromAcc_unfold {A : Type@{Set_u}} {R : A -> A -> Prop} x ACC
+Lemma fromAcc_unfold (A : Type@{Set_u}) (R : A -> A -> Prop) x ACC
   : forall z, z \in @fromAcc A R x ACC <-> (exists c : { y : A | R y x }, z == fromAcc (proj1_sig c) (Acc_inv ACC (proj2_sig c))).
 Proof.
   intros z. destruct ACC as [ACC_INV]; simpl in *.
-  split; intros [[c H_R] EQ]; rewrite eqTree_unfold in *; now exists (@exist _ _ c H_R).
+  split; intros [[c H_R] EQ]; now exists (@exist _ _ c H_R).
 Qed.
+
+#[global] Hint Rewrite fromAcc_unfold : simplication_hints.
 
 Fixpoint fromAcc_pirrel (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (ACC : Acc R x) (ACC' : Acc R x) {struct ACC}
   : fromAcc x ACC == fromAcc x ACC'.
@@ -855,7 +883,7 @@ Lemma isOrdinal_compatWith_eqTree
 Proof with eauto with *.
   intros alpha [? ?] beta alpha_eq_beta. split.
   - eapply isTransitiveSet_compatWith_eqTree...
-  - intros gamma gamm_in_beta; unnw.
+  - intros gamma gamm_in_beta.
     rewrite <- alpha_eq_beta in gamm_in_beta...
 Qed.
 
@@ -881,15 +909,15 @@ Lemma fromWf_isOrdinal {A : Type@{Set_u}} `{WOSET : isWellOrderedSet A}
   : isOrdinal (fromWf wltProp_well_founded).
 Proof.
   econs.
-  - intros y [x EQ] z IN. simpl in *. rewrite eqTree_unfold in EQ.
+  - intros y [x EQ] z IN. simpl in *.
     rewrite EQ in IN. clear y EQ. rewrite fromAcc_unfold in IN.
-    destruct IN as [[y H_LT] EQ]. simpl in EQ. rewrite eqTree_unfold in EQ.
+    destruct IN as [[y H_LT] EQ]. simpl in EQ.
     rewrite EQ. rewrite fromAcc_pirrel with (ACC' := wltProp_well_founded y).
     exact (member_intro A (fun c => fromAcc c (wltProp_well_founded c)) y).
-  - intros x IN y IN' z IN''. destruct IN as [c EQ]. simpl in *. rewrite eqTree_unfold in EQ.
+  - intros x IN y IN' z IN''. destruct IN as [c EQ]. simpl in *.
     rewrite EQ in IN'. rewrite fromAcc_unfold in IN'. destruct IN' as [[c' H_LT] EQ'].
-    simpl in *. rewrite eqTree_unfold in *. rewrite EQ' in IN''. rewrite fromAcc_unfold in IN''.
-    destruct IN'' as [[c'' H_LT'] EQ'']. simpl in *. rewrite eqTree_unfold in *.
+    simpl in *. rewrite EQ' in IN''. rewrite fromAcc_unfold in IN''.
+    destruct IN'' as [[c'' H_LT'] EQ'']. simpl in *.
     rewrite EQ, EQ''. eapply fromAcc_member_fromAcc_intro. transitivity c'; trivial.
 Qed.
 
@@ -927,6 +955,8 @@ Theorem succ_spec x
 Proof.
   unfold succ. intros z. rewrite union_spec. rewrite singlton_spec. reflexivity.
 Qed.
+
+#[global] Hint Rewrite succ_spec : simplication_hints.
 
 #[global]
 Instance succ_eqPropCompatible1

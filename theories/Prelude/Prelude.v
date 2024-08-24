@@ -12,6 +12,8 @@ Require Export Coq.Relations.Relation_Definitions.
 Require Export Coq.Relations.Relation_Operators.
 Require Export Coq.Setoids.Setoid.
 
+Create HintDb simplication_hints.
+
 #[local] Obligation Tactic := idtac.
 
 (** Section SETOID. *)
@@ -288,12 +290,23 @@ Class isFunctor (F : Type -> Type) : Type :=
 #[global] Arguments fmap {F} {isFunctor} {A} {B} f.
 
 Class FunctorLaws (F : Type -> Type) `{SETOID1 : isSetoid1 F} `{FUNCTOR : isFunctor F} : Prop :=
-  { fmap_compatWith_eqProp {A : Type} {B : Type} (f : A -> B) :: eqPropCompatible1 (fmap f)
+  { fmap_eqPropCompatible1 {A : Type} {B : Type} (f : A -> B) :: eqPropCompatible1 (fmap f)
   ; fmap_compose {A : Type} {B : Type} {C : Type} (f : A -> B) (g : B -> C)
     : fmap (@compose A B C g f) == compose (fmap g) (fmap f)
   ; fmap_id {A : Type}
     : fmap (@id A) == id
+  ; fmap_lifts_ext_eq {A : Type} {B : Type} (f1 : A -> B) (f2 : A -> B)
+    (f_EQ : forall x, f1 x = f2 x)
+    : fmap f1 == fmap f2
   }.
+
+#[global]
+Add Parametric Morphism {F : Type -> Type} `{SETOID1 : isSetoid1 F} `{FUNCTOR : isFunctor F} (FUNCTOR_LAWS : FunctorLaws F) (A : Type) (B : Type)
+  : (@fmap F FUNCTOR A B) with signature (eqProp (isSetoid := pi_isSetoid (fun _ : A => @mkSetoid_from_eq B)) ==> eqProp ==> eqProp)
+  as fmap_compatWith_eqProp.
+Proof.
+  intros f1 f2 f_EQ x1 x2 x_EQ. rewrite x_EQ. eapply fmap_lifts_ext_eq. exact f_EQ.
+Qed.
 
 (** End FUNCTOR. *)
 
@@ -345,6 +358,8 @@ Proof.
     rewrite bind_pure_l. reflexivity.
   - unfold id. unfold fmap. unfold mkFunctorFromMonad.
     rewrite bind_pure_r. reflexivity.
+  - unfold fmap. unfold mkFunctorFromMonad. eapply bind_compatWith_eqProp_r.
+    intros i. rewrite f_EQ. reflexivity.
 Qed.
 
 Definition liftM2 {M : Type -> Type} {A : Type} {B : Type} {C : Type} `{MONAD : isMonad M} (f : A -> B -> C) : M A -> M B -> M C :=
@@ -408,6 +423,23 @@ Inductive unions {A : Type} (Xs : E.t (E.t A)) : E.t A :=
     (H_IN : X \in Xs)
     : x \in unions Xs.
 
+#[local] Hint Constructors unions : core.
+
+Lemma in_unions_iff (A : Type) Xs
+  : forall z, z \in @unions A Xs <-> (exists X, z \in X /\ X \in Xs).
+Proof.
+  intros z; split; [intros [? ? ? ?] | intros [? [? ?]]]; eauto.
+Qed.
+
+#[global] Hint Rewrite in_unions_iff : simplication_hints.
+
+#[global]
+Instance unions_eqPropCompatible1 (A : Type)
+  : eqPropCompatible1 (@unions A).
+Proof.
+  ii. do 2 rewrite in_unions_iff. now firstorder.
+Qed.
+
 Inductive union {A : Type} (X1 : E.t A) (X2 : E.t A) : E.t A :=
   | In_union_l x
     (H_inl : x \in X1)
@@ -416,7 +448,34 @@ Inductive union {A : Type} (X1 : E.t A) (X2 : E.t A) : E.t A :=
     (H_inr : x \in X2)
     : x \in union X1 X2.
 
+#[local] Hint Constructors union : core.
+
+Lemma in_union_iff (A : Type) X1 X2
+  : forall z, z \in @union A X1 X2 <-> (z \in X1 \/ z \in X2).
+Proof.
+  intros z; split; [intros [? ? | ? ?] | intros [? | ?]]; eauto.
+Qed.
+
+#[global] Hint Rewrite in_union_iff : simplication_hints.
+
+#[global]
+Instance union_eqPropCompatible2 (A : Type)
+  : eqPropCompatible2 (@union A).
+Proof.
+  ii. do 2 rewrite in_union_iff. now firstorder.
+Qed.
+
 Inductive empty {A : Type} : E.t A :=.
+
+#[local] Hint Constructors empty : core.
+
+Lemma in_empty_iff (A : Type)
+  : forall z, z \in @empty A <-> False.
+Proof.
+  intros z; split; [intros [] | intros []]; eauto.
+Qed.
+
+#[global] Hint Rewrite in_empty_iff : simplication_hints.
 
 Inductive intersection {A : Type} (X1 : E.t A) (X2 : E.t A) : E.t A :=
   | In_intersection x
@@ -424,21 +483,54 @@ Inductive intersection {A : Type} (X1 : E.t A) (X2 : E.t A) : E.t A :=
     (H_IN2 : x \in X2)
     : x \in intersection X1 X2.
 
+#[local] Hint Constructors intersection : core.
+
+Lemma in_intersection_iff (A : Type) X1 X2
+  : forall z, z \in @intersection A X1 X2 <-> (z \in X1 /\ z \in X2).
+Proof.
+  intros z; split; [intros [? ? ?] | intros [? ?]]; eauto.
+Qed.
+
+#[global] Hint Rewrite in_intersection_iff : simplication_hints.
+
+#[global]
+Instance intersection_eqPropCompatible2 (A : Type)
+  : eqPropCompatible2 (@intersection A).
+Proof.
+  ii. do 2 rewrite in_intersection_iff. now firstorder.
+Qed.
+
 Inductive singleton {A : Type} (x : A) : E.t A :=
   | In_singleton
     : x \in singleton x.
+
+#[local] Hint Constructors singleton : core.
+
+Lemma in_singleton_iff (A : Type) x
+  : forall z, z \in @singleton A x <-> (z = x).
+Proof.
+  intros z; split; [intros [] | intros ->]; eauto.
+Qed.
+
+#[global] Hint Rewrite in_singleton_iff : simplication_hints.
 
 #[universes(polymorphic=yes)]
 Definition fromList@{u} {A : Type@{u}} (xs : list A) : E.t@{u} A :=
   fun x => List.In x xs.
 
+#[global] Hint Unfold fromList : simplication_hints.
+
 #[universes(polymorphic=yes)]
 Definition full@{u} {A : Type@{u}} : E.t@{u} A :=
   fun x => True.
 
+#[global] Hint Unfold full : simplication_hints.
+
 #[universes(polymorphic=yes)]
 Definition insert@{u} {A : Type@{u}} (x1 : A) (X2 : E.t@{u} A) : E.t@{u} A :=
   fun x => x = x1 \/ x \in X2.
+
+#[global] Hint Unfold insert : simplication_hints.
 
 (** End SET_CONSTRUCTIONS. *)
 
