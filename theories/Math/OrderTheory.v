@@ -46,3 +46,16 @@ Instance wltProp_StrictOrder {A : Type} `{WOSET : isWellOrderedSet A} : StrictOr
   { StrictOrder_Irreflexive := well_founded_implies_Irreflexive wltProp wltProp_well_founded
   ; StrictOrder_Transitive := wltProp_Transitive
   }.
+
+Class hsOrd (A : Type) {POSET : isPoset A} : Type :=
+  { compare : A -> A -> comparison
+  ; compare_Lt x y
+    (OBS_Lt : compare x y = Lt)
+    : x =< y /\ ~ x == y
+  ; compare_Eq x y
+    (OBS_Eq : compare x y = Eq)
+    : x == y
+  ; compare_Gt x y
+    (OBS_Gt : compare x y = Gt)
+    : y =< x /\ ~ x == y
+  }.

@@ -648,3 +648,10 @@ End B.
 Infix "$" := B.dollar.
 Infix ">>=" := bind.
 Infix ">=>" := B.kcompose : program_scope.
+
+Class hasEqDec (A : Type) : Type :=
+  eq_dec (x : A) (y : A) : {x = y} + {x <> y}.
+
+#[global]
+Instance nat_hasEqDec : hasEqDec nat :=
+  Nat.eq_dec.
