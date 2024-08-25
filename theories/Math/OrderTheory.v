@@ -704,3 +704,64 @@ Next Obligation.
 Qed.
 
 End list_hsOrd.
+
+Section nat_hsOrd.
+
+#[local]
+Instance nat_isPoset : isProset nat :=
+  { leProp := Nat.le
+  ; Proset_isSetoid := mkSetoid_from_eq
+  ; leProp_PreOrder := Nat.le_preorder
+  ; leProp_PartialOrder := Nat.le_partialorder
+  }.
+
+Fixpoint nat_compare (x : nat) (y : nat) {struct x} : comparison :=
+  match x, y with
+  | O, O => Eq
+  | O, S y' => Lt
+  | S x', O => Gt
+  | S x', S y' => nat_compare x' y'
+  end.
+
+Lemma nat_compare_lt (x : nat) (y : nat)
+  (hyp_lt : nat_compare x y = Lt)
+  : x <= y /\ x <> y.
+Proof with eauto with *.
+  revert x y hyp_lt. induction x as [ | x IH], y as [ | y]; simpl; ii.
+  - inversion hyp_lt.
+  - split; lia.
+  - inversion hyp_lt.
+  - pose proof (IH y hyp_lt) as [x_le_y x_ne_y]. split; lia.
+Qed.
+
+Lemma nat_compare_eq (x : nat) (y : nat)
+  (hyp_lt : nat_compare x y = Eq)
+  : x = y.
+Proof with eauto with *.
+  revert x y hyp_lt. induction x as [ | x IH], y as [ | y]; simpl; ii.
+  - reflexivity.
+  - inversion hyp_lt.
+  - inversion hyp_lt.
+  - pose proof (IH y hyp_lt) as x_eq_y. f_equal. exact x_eq_y.
+Qed.
+
+Lemma nat_compare_gt (x : nat) (y : nat)
+  (hyp_lt : nat_compare x y = Gt)
+  : y <= x /\ x <> y.
+Proof with eauto with *.
+  cbn. revert x y hyp_lt. induction x as [ | x IH], y as [ | y]; simpl; ii.
+  - inversion hyp_lt.
+  - inversion hyp_lt.
+  - split; lia.
+  - pose proof (IH y hyp_lt) as [y_le_x x_ne_y]. split; lia.
+Qed.
+
+#[local]
+Instance nat_hsOrd : hsOrd nat (PROSET := nat_isPoset) :=
+  { compare := nat_compare
+  ; compare_Lt := nat_compare_lt
+  ; compare_Eq := nat_compare_eq
+  ; compare_Gt := nat_compare_gt
+  }.
+
+End nat_hsOrd.

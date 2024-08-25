@@ -53,3 +53,5 @@ The Coq Proof Assistant, version 8.18.0
 1. [sflib](https://github.com/snu-sf/sflib)
 
 2. [stdpp](https://plv.mpi-sws.org/coqdoc/stdpp)
+
+3. [A note written by Jayadev Misra](https://www.cs.utexas.edu/users/misra/Notes.dir/KnasterTarski.pdf)
