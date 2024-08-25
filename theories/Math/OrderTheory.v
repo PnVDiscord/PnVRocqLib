@@ -136,7 +136,7 @@ Qed.
 
 Lemma prefixedpointsOf_decreasing (f1 : D -> D) (f2 : D -> D)
   (LE : f1 =< f2)
-  : prefixedpointsOf f2 =< prefixedpointsOf f1.
+  : prefixedpointsOf f1 >= prefixedpointsOf f2.
 Proof.
   intros x. unfold prefixedpointsOf, "\in". i.
   change (forall x, f1 x =< f2 x) in LE. now rewrite -> LE.
@@ -436,7 +436,21 @@ Next Obligation.
     + exact (proj2 (proj2 EQ)).
 Defined.
 
-Module Cola.
+#[program]
+Definition dual_Poset {D : Type} `(POSET : isPoset D) : isPoset D :=
+  {| leProp lhs rhs := rhs =< lhs; Poset_isSetoid := POSET.(Poset_isSetoid) |}.
+Next Obligation.
+  split.
+  - intros x. reflexivity.
+  - intros x y z LE LE'. transitivity y; [exact LE' | exact LE].
+Defined.
+Next Obligation.
+  intros x y. unfold flip; cbn. split.
+  - intros EQ. eapply leProp_PartialOrder. symmetry. exact EQ.
+  - intros EQ. symmetry. eapply leProp_PartialOrder. exact EQ.
+Defined.
+
+Module ColaDef.
 
 #[local] Existing Instance pi_isPoset.
 
@@ -445,9 +459,9 @@ Notation "`[ A -> B ]" := { f : A -> B | isMonotonic1 f }.
 Class isCola (D : Type) {POSET : isPoset D} : Type :=
   supremum_cola (X : ensemble D) : { sup_X : D | is_supremum_of sup_X X }.
 
-End Cola.
+End ColaDef.
 
-Module Cpo.
+Module CpoDef.
 
 Import ListNotations.
 
@@ -498,7 +512,7 @@ Class isCpo (D : Type) {POSET : isPoset D} : Type :=
   ; supremum_cpo_spec (X : ensemble D) (DIRECTED : isDirected X) : is_supremum_of (supremum_cpo X DIRECTED) X
   }.
 
-End Cpo.
+End CpoDef.
 
 Class hsOrd (A : Type) `{POSET : isPoset A} : Type :=
   { compare (x : A) (y : A) : comparison
