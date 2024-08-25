@@ -2,6 +2,8 @@
 # Please sort in lexicographical order
 theories/Data/Aczel.v #
 theories/Data/Vector.v #
+theories/Math/ClassicalDomainTheory.v #
+theories/Math/DomainTheory.v #
 theories/Math/OrderTheory.v #
 theories/Math/ThN.v #
 theories/Index/Index.v #
