@@ -40,7 +40,7 @@ Defined.
 Lemma rectS (phi : forall n, Fin.t (S n) -> Type)
   (phiFZ : forall n : nat, phi n (@FZ n))
   (phiFS : forall n : nat, forall i : Fin.t (S n), phi n i -> phi (S n) (@FS (S n) i))
-  : forall n, forall (i: Fin.t (S n)), phi n i.
+  : forall n, forall i, phi n i.
 Proof.  
   exact (
     fix rectS_fix (n : nat) (i : Fin.t (S n)) {struct i} : phi n i :=
@@ -73,10 +73,10 @@ Proof.
   - pose proof (IH i1' i2') as [H_eq | H_ne]; [left | right].
     + f_equal. exact (H_eq). 
     + intros H_eq. contradiction H_ne.
-      set (f := fun i: Fin.t (S n) =>
+      set (f := fun i : Fin.t (S n) =>
         match i in Fin.t m return Fin.t (pred m) -> Fin.t (pred m) with
-        | @FZ n' => fun d: Fin.t n' => d
-        | @FS n' i' => fun d: Fin.t n' => i'
+        | @FZ n' => fun d : Fin.t n' => d
+        | @FS n' i' => fun d : Fin.t n' => i'
         end
       ).
       apply f_equal2 with (f := f) (x1 := FS i1') (y1 := FS i2') (x2 := i1') (y2 := i1') in H_eq.
@@ -104,7 +104,7 @@ Fixpoint getFin {n : nat} (m : nat) {struct n} : m < n -> Fin.t n :=
   end.
 
 Lemma runFin_getFin_id {m : nat} {n : nat} (hyp_lt : m < n)
-  : runFin (getFin m hyp_lt) = exist (gt n) m hyp_lt.
+  : runFin (getFin m hyp_lt) = @exist nat (gt n) m hyp_lt.
 Proof.
   revert n hyp_lt. induction m as [ | m IH]; intros [ | n'] hyp_lt; cbn in *.
   - exact (lt_elim_n_lt_0 hyp_lt).
@@ -146,11 +146,10 @@ Proof.
   cbn in *. subst m1. eapply f_equal. eapply le_pirrel.
 Qed.
 
-Definition incrFin {m : nat} : forall n : nat, Fin.t m -> Fin.t (n + m) :=
-  fix incrFin_fix (n : nat) (i : Fin.t m) {struct n} : Fin.t (n + m) :=
+Fixpoint incrFin {m : nat} (n : nat) (i : Fin.t m) {struct n} : Fin.t (n + m) :=
   match n as x return Fin.t (x + m) with
   | O => i
-  | S n' => FS (incrFin_fix n' i)
+  | S n' => FS (incrFin n' i)
   end.
 
 Lemma incrFin_spec {m : nat} (n : nat) (i : Fin.t m)
@@ -225,7 +224,7 @@ Unshelve.
 Qed.
 
 Lemma caseS {n' : nat} (phi : vec (S n') -> Type)
-  (phiVCons: forall x' : A, forall xs' : vec n', phi (x' :: xs'))
+  (phiVCons : forall x' : A, forall xs' : vec n', phi (x' :: xs'))
   : forall xs, phi xs.
 Proof.
   refine (
@@ -391,8 +390,8 @@ Definition vec (n : nat) (A : Type) : Type :=
 
 #[local]
 Instance vec_isMonad {n : nat} : isMonad (vec n) :=
-  { pure {A} (x: A) := replicate x
-  ; bind {A} {B} (m: vec n A) (k: A -> vec n B) := diagonal (map k m)
+  { bind {A} {B} (m : vec n A) (k : A -> vec n B) := diagonal (map k m)
+  ; pure {A} (x : A) := replicate x
   }.
 
 Definition zipWith {n : nat} {A : Type} {B : Type} {C : Type} (f : A -> B -> C) (xs : Vector.t A n) (ys : Vector.t B n) : Vector.t C n :=

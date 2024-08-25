@@ -1,5 +1,5 @@
-Require Export PnV.Prelude.Notations.
 Require Export PnV.Prelude.SfLib.
+Require Export PnV.Prelude.Notations.
 Require Export Coq.Arith.Compare_dec.
 Require Export Coq.Arith.PeanoNat.
 Require Export Coq.Bool.Bool.
@@ -171,10 +171,32 @@ Class isMonotonic2 {A : Type} {B : Type} {C : Type} `{A_isPoset : isPoset A} `{B
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} (f : A -> B)
   `(MONOTONIC : @isMonotonic1 A B A_isPoset B_isPoset f)
+  : f with signature (eqProp ==> eqProp)
+  as isMonotonic1_compatWith_eqProp.
+Proof.
+  ii. eapply leProp_antisymmetry.
+  - eapply MONOTONIC. eapply eqProp_implies_leProp. exact H.
+  - eapply MONOTONIC. eapply eqProp_implies_leProp. symmetry. exact H.
+Defined.
+
+#[global]
+Add Parametric Morphism {A : Type} {B : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} (f : A -> B)
+  `(MONOTONIC : @isMonotonic1 A B A_isPoset B_isPoset f)
   : f with signature (leProp ==> leProp)
   as compatibleWith_leProp_1'.
 Proof.
   intros x1 x2 x_LE. exact (compatibleWith_leProp_1 x1 x2 x_LE).
+Defined.
+
+#[global]
+Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} `{C_isPoset : isPoset C} (f : A -> B -> C)
+  `(MONOTONIC : @isMonotonic2 A B C A_isPoset B_isPoset C_isPoset f)
+  : f with signature (eqProp ==> eqProp ==> eqProp)
+  as isMonotonic2_compatWith_eqProp.
+Proof.
+  ii. eapply leProp_antisymmetry.
+  - eapply MONOTONIC; eapply eqProp_implies_leProp; assumption.
+  - eapply MONOTONIC; eapply eqProp_implies_leProp; symmetry; assumption.
 Defined.
 
 #[global]
@@ -393,6 +415,14 @@ Instance ensemble_isPoset {A : Type} : isPoset (E.t A) :=
   |}.
 
 #[global]
+Add Parametric Morphism {A : Type}
+  : (@In A) with signature (eq ==> eqProp ==> iff)
+  as In_compatWith_eqProp.
+Proof.
+  intros z X1 X2 X_EQ. exact (X_EQ z).
+Defined.
+
+#[global]
 Instance t_isSetoid1 : isSetoid1 E.t :=
   fun X : Type => fun _ : isSetoid X => (@ensemble_isPoset X).(Poset_isSetoid).
 
@@ -514,6 +544,56 @@ Qed.
 
 #[global] Hint Rewrite in_singleton_iff : simplication_hints.
 
+Inductive image {A : Type} {B : Type} (f : A -> B) (X : E.t A) : E.t B :=
+  | In_image y x
+    (IMAGE : y = f x)
+    (H_IN : x \in X)
+    : y \in image f X.
+
+#[local] Hint Constructors image : core.
+
+Lemma in_image_iff (A : Type) (B : Type) f X
+  : forall z, z \in @image A B f X <-> (exists x, z = f x /\ x \in X).
+Proof.
+  intros z; split; [intros [? ? ? ?] | intros [? [-> ?]]]; eauto.
+Qed.
+
+#[global] Hint Rewrite in_image_iff : simplication_hints.
+
+#[global]
+Add Parametric Morphism {A : Type} {B : Type}
+  : (@image A B) with signature (eqProp (isSetoid := pi_isSetoid (fun _ => mkSetoid_from_eq)) ==> eqProp ==> eqProp)
+  as image_compatWith_eqProp.
+Proof.
+  intros f1 f2 f_EQ X1 X2 X_EQ. intros z. do 4 red in f_EQ. do 6 red in X_EQ.
+  do 2 rewrite in_image_iff in *. now split; i; des; exists x; rewrite f_EQ, X_EQ in *.
+Qed.
+
+Inductive preimage {A : Type} {B : Type} (f : A -> B) (Y : E.t B) : E.t A :=
+  | In_preimage x y
+    (IMAGE : y = f x)
+    (H_IN : y \in Y)
+    : x \in preimage f Y.
+
+#[local] Hint Constructors preimage : core.
+
+Lemma in_preimage_iff (A : Type) (B : Type) f Y
+  : forall z, z \in @preimage A B f Y <-> (exists y, y = f z /\ y \in Y).
+Proof.
+  intros z; split; [intros [? ? ? ?] | intros [? [-> ?]]]; eauto.
+Qed.
+
+#[global] Hint Rewrite in_preimage_iff : simplication_hints.
+
+#[global]
+Add Parametric Morphism {A : Type} {B : Type}
+  : (@preimage A B) with signature (eqProp (isSetoid := pi_isSetoid (fun _ => mkSetoid_from_eq)) ==> eqProp ==> eqProp)
+  as preimage_compatWith_eqProp.
+Proof.
+  intros f1 f2 f_EQ Y1 Y2 Y_EQ. intros z. do 4 red in f_EQ. do 6 red in Y_EQ.
+  do 2 rewrite in_preimage_iff in *. now split; i; des; exists y; rewrite f_EQ, Y_EQ in *.
+Qed.
+
 #[universes(polymorphic=yes)]
 Definition fromList@{u} {A : Type@{u}} (xs : list A) : E.t@{u} A :=
   fun x => List.In x xs.
@@ -532,7 +612,75 @@ Definition insert@{u} {A : Type@{u}} (x1 : A) (X2 : E.t@{u} A) : E.t@{u} A :=
 
 #[global] Hint Unfold insert : simplication_hints.
 
+Lemma in_insert_iff (A : Type) x1 X2
+  : forall z, z \in @insert A x1 X2 <-> (z = x1 \/ z \in X2).
+Proof.
+  reflexivity.
+Qed.
+
+#[global] Hint Rewrite in_insert_iff : simplication_hints.
+
+#[global]
+Add Parametric Morphism {A : Type}
+  : (@insert A) with signature (eq ==> eqProp ==> eqProp)
+  as insert_compatWith_eqProp.
+Proof.
+  firstorder.
+Qed.
+
+#[universes(polymorphic=yes)]
+Definition complement@{u} {A : Type@{u}} (X : E.t@{u} A) : E.t@{u} A :=
+  fun x => ~ x \in X.
+
+#[global] Hint Unfold complement : simplication_hints.
+
+Lemma in_complement_iff (A : Type) X
+  : forall z, z \in @complement A X <-> (~ z \in X).
+Proof.
+  reflexivity.
+Qed.
+
+#[global] Hint Rewrite in_complement_iff : simplication_hints.
+
+#[global]
+Add Parametric Morphism {A : Type}
+  : (@complement A) with signature (eqProp ==> eqProp)
+  as complement_compatWith_eqProp.
+Proof.
+  firstorder.
+Qed.
+
+#[universes(polymorphic=yes)]
+Definition intersections@{u} {A : Type@{u}} (Xs : E.t@{u} (E.t@{u} A)) : E.t@{u} A :=
+  fun x => forall X, X \in Xs -> x \in X.
+
+#[global] Hint Unfold intersections : simplication_hints.
+
+Lemma in_intersections_iff (A : Type) Xs
+  : forall z, z \in @intersections A Xs <-> (forall X, X \in Xs -> z \in X).
+Proof.
+  reflexivity.
+Qed.
+
+#[global] Hint Rewrite in_intersections_iff : simplication_hints.
+
+#[global]
+Add Parametric Morphism {A : Type}
+  : (@intersections A) with signature (eqProp ==> eqProp)
+  as intersections_compatWith_eqProp.
+Proof.
+  firstorder.
+Qed.
+
 (** End SET_CONSTRUCTIONS. *)
+
+Ltac unfold_E := repeat
+  match goal with
+  | [ H : context[ E.In _ (fun _ => _) ] |- _ ] => unfold E.In in H
+  | [ |- context[ E.In _ (fun _ => _) ] ] => unfold E.In
+  | [ H : context[ E.subset _ (fun _ => _) ] |- _ ] => unfold E.subset in H
+  | [ |- context[ E.subset _ (fun _ => _) ] ] => unfold E.subset
+  end.
 
 End E.
 
@@ -540,6 +688,22 @@ Notation ensemble := E.t.
 
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "\subseteq" := E.subset : type_scope.
+
+Lemma unfold_ensemble_eqProp (A : Type) (X1 : ensemble A) (X2 : ensemble A)
+  : X1 == X2 <-> (X1 \subseteq X2 /\ X2 \subseteq X1).
+Proof.
+  transitivity (forall z, z \in X1 <-> z \in X2).
+  - reflexivity.
+  - firstorder.
+Qed.
+
+#[global] Hint Rewrite unfold_ensemble_eqProp : simplication_hints.
+
+Tactic Notation "s!" :=
+  repeat (autorewrite with simplication_hints in *; E.unfold_E; simpl in *; autounfold with simplication_hints in *).
+
+Tactic Notation "done!" :=
+  s!; subst; eauto with *; firstorder (try congruence).
 
 Class isAssociative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
   assoc x y z : f x (f y z) == f (f x y) z.
@@ -850,3 +1014,72 @@ Notation is_finsubset_of xs X := (forall x, L.In x xs -> x \in X).
 Notation is_listrep_of xs X := (forall x, L.In x xs <-> x \in X).
 
 End L.
+
+Class AxiomsForTopology (X : Type) (T : ensemble (ensemble X)) : Prop :=
+  { full_isOpen
+    : E.empty \in T
+  ; unions_isOpen Os
+    (OPENs : Os \subseteq T)
+    : E.unions Os \in T
+  ; intersection_isOpen O1 O2
+    (OPEN1 : O1 \in T)
+    (OPEN2 : O2 \in T)
+    : E.intersection O1 O2 \in T
+  ; isOpen_compatWith_eqProp O1 O2
+    (OPEN : O1 \in T)
+    (EQ : O1 == O2)
+    : O2 \in T
+  }.
+
+Lemma empty_isOpen {X : Type} {T : ensemble (ensemble X)} `{TOPOLOGY : AxiomsForTopology X T}
+  : E.empty \in T.
+Proof.
+  eapply isOpen_compatWith_eqProp with (O1 := E.unions E.empty).
+  - eapply unions_isOpen. ii. done!.
+  - do 6 red. i. done!.
+Qed.
+
+Class topology (A : Type) : Type :=
+  { isOpen (O : ensemble A) : Prop
+  ; topologyLaws :: AxiomsForTopology A isOpen
+  }.
+
+#[global]
+Add Parametric Morphism {A : Type} `{TOPOLOGY : topology A}
+  : (@isOpen A TOPOLOGY) with signature (eqProp ==> iff)
+  as isOpen_eqProp_iff.
+Proof.
+  ii; split; i; eapply isOpen_compatWith_eqProp; done!.
+Qed.
+
+Definition isContinuous {A : Type} {B : Type} {A_topology : topology A} {B_topology : topology B} (f : A -> B) : Prop :=
+  forall Y : ensemble B, isOpen Y -> isOpen (E.preimage f Y).
+
+Definition Kuratowski_cl_op {A : Type} (cl : ensemble A -> ensemble A) : E.t (E.t A) :=
+  fun O => E.complement O == cl (E.complement O).
+
+Theorem Kuratowski_cl_op_good {A : Type} (cl : ensemble A -> ensemble A)
+  (cl_isClosureOperator : isClosureOperator cl)
+  (cl_subadditive : forall X, forall Y, cl (E.union X Y) \subseteq E.union (cl X) (cl Y))
+  (cl_classic : forall X, cl (E.complement (E.complement X)) == E.complement (E.complement (cl X)))
+  : AxiomsForTopology A (Kuratowski_cl_op cl).
+Proof.
+  unfold Kuratowski_cl_op; ii; split; i.
+  - done!.
+  - red. eapply leProp_antisymmetry.
+    + eapply cl_op_extensive.
+    + do 2 red in OPENs. intros x IN H_in. rewrite E.in_unions_iff in H_in. destruct H_in as [X [H_in H_IN]].
+      pose proof (OPENs X H_IN) as H_EQ. revert x IN H_in. change (cl (E.complement (E.unions Os)) =< E.complement X).
+      rewrite H_EQ. eapply cl_op_monotonic. intros x H_in CONTRA.
+      eapply H_in. done!.
+  - red in OPEN1, OPEN2. red. eapply leProp_antisymmetry.
+    + eapply cl_op_extensive.
+    + transitivity (cl (E.complement (E.complement (E.union (E.complement O1) (E.complement O2))))).
+      { eapply cl_op_monotonic. intros x IN IN'. contradiction IN'. left. intros H_inl. contradiction IN'. right. intros H_inr. contradiction IN. done!. }
+      transitivity (E.complement (E.complement (E.union (E.complement O1) (E.complement O2)))).
+      { rewrite cl_classic. intros x IN IN'. contradiction IN. intros CONTRA. contradiction IN'.
+        clear IN IN'. rewrite OPEN1, OPEN2. revert x CONTRA. eapply cl_subadditive.
+      }
+      intros x IN IN'. contradiction IN; done!.
+  - red. red in OPEN. rewrite <- EQ. exact OPEN.
+Qed.

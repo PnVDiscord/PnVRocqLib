@@ -33,7 +33,7 @@ Inductive search_step (P : A -> Prop) (n : nat) : nat -> Prop :=
     : search_step P n (S n).
 
 Lemma Acc_flip_search_step_P_0 (P : A -> Prop)
-  (BOUND : exists x : A, P x)
+  (BOUND : exists x, P x)
   : Acc (flip (search_step P)) 0.
 Proof.
   destruct BOUND as [x P_x]. enough (WTS : forall i, forall p, i <= encode x -> encode x = p + i -> Acc (flip (search_step P)) p) by now ii; eapply WTS with (i := encode x); lia.
@@ -76,7 +76,7 @@ Proof.
   - eapply IH. eapply search_step_None; trivial.
 Qed.
 
-Definition search (n : nat) (BOUND : exists x : A, encode x = n) : A.
+Definition search (n : nat) (BOUND : exists x, encode x = n) : A.
 Proof.
   eapply search_go with (n := 0) (P := fun x : A => encode x = n).
   - exact (fun x : A => Nat.eq_dec (encode x) n).
@@ -84,8 +84,8 @@ Proof.
 Defined.
 
 Theorem enumeration_lemma
-  (encode_surjective : forall n : nat, exists x : A, encode x = n)
-  : { enum : nat -> A & ⟪ enumerable : forall x : A, { n : nat | enum n = x } ⟫ }.
+  (encode_surjective : forall n : nat, exists x, encode x = n)
+  : { enum : nat -> A & ⟪ enumerable : forall x, { n : nat | enum n = x } ⟫ }.
 Proof.
   exists (fun n : nat => search n (encode_surjective n)). unnw. intros x. exists (encode x).
   assert (claim : encode (search (encode x) (encode_surjective (encode x))) = encode x).
@@ -96,7 +96,7 @@ Defined.
 End SEARCH.
 
 Theorem LEM_implies_MarkovPrinciple (LEM : forall P : Prop, P \/ ~ P) (f : nat -> bool) 
-  (NOT_ALL_TRUE : ~ forall x : nat, f x = true)
+  (NOT_ALL_TRUE : ~ forall x, f x = true)
   : { n : nat | f n = false }.
 Proof.
   enough (EXISTENCE : exists n : nat, f n = false).
