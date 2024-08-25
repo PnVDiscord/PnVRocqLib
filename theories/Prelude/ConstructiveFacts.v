@@ -2,7 +2,7 @@ Require Import PnV.Prelude.Prelude.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
 
-Lemma eq_pirrel_fromEqDec {A : Type} {hasEqDec: hasEqDec A} (lhs : A) (rhs : A)
+Lemma eq_pirrel_fromEqDec {A : Type} {hasEqDec : hasEqDec A} (lhs : A) (rhs : A)
   (EQ1 : lhs = rhs)
   (EQ2 : lhs = rhs)
   : EQ1 = EQ2.

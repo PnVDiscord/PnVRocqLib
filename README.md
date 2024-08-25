@@ -28,6 +28,10 @@ The Coq Proof Assistant, version 8.18.0
 
 ### Math
 
+- `ClassicalDomainTheory.v` : Classical Domain Theory.
+
+- `DomainTheory.v` : Constructive Domain Theory.
+
 - `OrderTheory.v` : Basic Order Theory.
 
 - `ThN.v` : Basic facts on the natural numbers.

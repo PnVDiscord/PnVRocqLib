@@ -25,7 +25,7 @@ Definition reify@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} (f : f
 
 #[universes(polymorphic=yes)]
 Definition reify_lemma@{u v} {A : Type@{u}} {B : Type@{u}} {P : A -> B -> Prop} (f : forall x : A, { y : B | P x y }) : forall x, P x (proj1_sig (@reify@{u v} A B P f) x) :=
-  fun x => proj2_sig (@reify@{u v} A B P f) x.
+  proj2_sig (@reify@{u v} A B P f).
 
 (** Section SETOID. *)
 
@@ -135,7 +135,7 @@ Class isProset (A : Type) : Type :=
 Infix "=<" := leProp : type_scope.
 
 Definition Prop_isProset : isProset Prop :=
-  let impl_PreOrder : PreOrder impl := {| PreOrder_Reflexive (A : Prop) := id (A := A); PreOrder_Transitive (A : Prop) (B : Prop) (C : Prop) := flip (compose (A := A) (B := B) (C := C)); |} in
+  let impl_PreOrder : PreOrder impl := {| PreOrder_Reflexive (A : Prop) := @id A; PreOrder_Transitive (A : Prop) (B : Prop) (C : Prop) := @flip (B -> C) (A -> B) (A -> C) (@compose A B C); |} in
   {|
     leProp P Q := P -> Q;
     Proset_isSetoid := mkSetoidFromPreOrder impl_PreOrder;
