@@ -847,8 +847,26 @@ Proof.
   rewrite fromAcc_unfold. exists (@exist _ _ x R_x_x'). simpl. eapply fromAcc_pirrel.
 Qed.
 
-Definition fromWf {A : Type@{Set_u}} {R : A -> A -> Prop} (Wf : well_founded R) : Tree :=
+Definition fromWf {A : Type@{Set_u}} (R : A -> A -> Prop) (Wf : well_founded R) : Tree :=
   mkNode A (fun c => @fromAcc A R c (Wf c)).
+
+Definition succ (x : Tree) : Tree :=
+  union x (singlton x).
+
+Theorem succ_spec x
+  : forall z, z \in succ x <-> (z \in x \/ z == x).
+Proof.
+  unfold succ. intros z. rewrite union_spec. rewrite singlton_spec. reflexivity.
+Qed.
+
+#[global] Hint Rewrite succ_spec : simplication_hints.
+
+#[global]
+Instance succ_eqPropCompatible1
+  : eqPropCompatible1 succ.
+Proof.
+  ii. now eapply eqTree_intro; ii; rewrite succ_spec in *; [rewrite <- x_EQ | rewrite -> x_EQ].
+Qed.
 
 Definition isTransitiveSet (x : Tree) : Prop :=
   forall y, y \in x -> forall z, z \in y -> z \in x.
@@ -905,8 +923,8 @@ Proof.
   ii; split; i; eapply isOrdinal_compatWith_eqTree; eauto with *.
 Qed.
 
-Lemma fromWf_isOrdinal {A : Type@{Set_u}} `{WOSET : isWellOrderedSet A}
-  : isOrdinal (fromWf wltProp_well_founded).
+Lemma fromWf_isOrdinal {A : Type@{Set_u}} `{WPOSET : isWellPoset A}
+  : isOrdinal (fromWf wltProp wltProp_well_founded).
 Proof.
   econs.
   - intros y [x EQ] z IN. simpl in *.
@@ -945,24 +963,6 @@ Lemma empty_isOrdinal
   : isOrdinal empty.
 Proof.
   split; ii; rewrite empty_spec in H; done.
-Qed.
-
-Definition succ (x : Tree) : Tree :=
-  union x (singlton x).
-
-Theorem succ_spec x
-  : forall z, z \in succ x <-> (z \in x \/ z == x).
-Proof.
-  unfold succ. intros z. rewrite union_spec. rewrite singlton_spec. reflexivity.
-Qed.
-
-#[global] Hint Rewrite succ_spec : simplication_hints.
-
-#[global]
-Instance succ_eqPropCompatible1
-  : eqPropCompatible1 succ.
-Proof.
-  ii. now eapply eqTree_intro; ii; rewrite succ_spec in *; [rewrite <- x_EQ | rewrite -> x_EQ].
 Qed.
 
 Lemma succ_isOrdinal x

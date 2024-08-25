@@ -16,6 +16,9 @@ Create HintDb simplication_hints.
 
 #[local] Obligation Tactic := idtac.
 
+Ltac property X :=
+  eapply (proj2_sig X).
+
 (** Section SETOID. *)
 
 Class isSetoid (A : Type) : Type :=
@@ -56,6 +59,16 @@ Lemma mkSetoidFromPreOrder_derivesPartialOrder {A : Type} {leProp : A -> A -> Pr
   : PartialOrder SETOID.(eqProp) leProp.
 Proof.
   cbv. intros x y. split; exact (fun H => H).
+Defined.
+
+#[program]
+Definition directProduct_of_two_Setoids {A : Type} {B : Type} (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) : isSetoid (A * B) :=
+  {| eqProp lhs rhs := fst lhs == fst rhs /\ snd lhs == snd rhs |}.
+Next Obligation.
+  ii. split.
+  - intros p1. split; reflexivity.
+  - intros p1 p2 EQ. split; symmetry. exact (proj1 EQ). exact (proj2 EQ).
+  - intros p1 p2 p3 EQ EQ'. split; etransitivity. exact (proj1 EQ). exact (proj1 EQ'). exact (proj2 EQ). exact (proj2 EQ').
 Defined.
 
 Lemma eqProp_refl {A : Type} `{A_isSetoid : isSetoid A}
@@ -303,6 +316,20 @@ Proof.
   intros x' hyp_eq. econstructor. intros x f_x_R_f_x'.
   subst y'. eapply IH; [exact f_x_R_f_x' | reflexivity].
 Defined.
+
+#[global]
+Instance subSetoid {A : Type} {SETOID : isSetoid A} (P : A -> Prop) : isSetoid (@sig A P) :=
+  { eqProp (lhs : @sig A P) (rhs : @sig A P) := proj1_sig lhs == proj1_sig rhs
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence SETOID.(eqProp_Equivalence) (@proj1_sig A P)
+  }.
+
+#[global]
+Instance subPoset {A : Type} {POSET : isPoset A} (P : A -> Prop) : isPoset (@sig A P) :=
+  { leProp (lhs : @sig A P) (rhs : @sig A P) := proj1_sig lhs =< proj1_sig rhs
+  ; Poset_isSetoid := subSetoid P
+  ; leProp_PreOrder := relation_on_image_liftsPreOrder _ (@proj1_sig A P)
+  ; leProp_PartialOrder := relation_on_image_liftsPartialOrder _ (@proj1_sig A P)
+  }.
 
 (** Section FUNCTOR. *)
 
@@ -700,7 +727,12 @@ Qed.
 #[global] Hint Rewrite unfold_ensemble_eqProp : simplication_hints.
 
 Tactic Notation "s!" :=
-  repeat (autorewrite with simplication_hints in *; E.unfold_E; simpl in *; autounfold with simplication_hints in *).
+  repeat (
+    autorewrite with simplication_hints in *;
+    E.unfold_E;
+    simpl in *;
+    autounfold with simplication_hints in *
+  ).
 
 Tactic Notation "done!" :=
   s!; subst; eauto with *; firstorder (try congruence).
