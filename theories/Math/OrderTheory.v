@@ -68,7 +68,6 @@ Class isWellToset (A : Type) : Type :=
   }.
 
 #[local] Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive : poset_hints.
-
 #[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : poset_hints.
 
 Section BASIC1.
@@ -132,32 +131,28 @@ Context {D : Type} `{PROSET : isProset D}.
 Instance prefixecpointsOf_eqPropCompatible1
   : eqPropCompatible1 (@prefixedpointsOf D PROSET).
 Proof.
-  intros f1 f2 f1_eq_f2 x. unfold prefixedpointsOf. unfold "\in".
-  change (forall x, f1 x == f2 x) in f1_eq_f2. now rewrite f1_eq_f2.
+  done!.
 Qed.
 
 #[global]
 Instance postfixedpointsOf_eqPropCompatible1
   : eqPropCompatible1 (@postfixedpointsOf D PROSET).
 Proof.
-  intros f1 f2 f1_eq_f2 x. unfold postfixedpointsOf. unfold "\in".
-  change (forall x, f1 x == f2 x) in f1_eq_f2. now rewrite f1_eq_f2.
+  done!.
 Qed.
 
 Lemma prefixedpointsOf_decreasing (f1 : D -> D) (f2 : D -> D)
   (LE : f1 =< f2)
   : prefixedpointsOf f1 >= prefixedpointsOf f2.
 Proof.
-  intros x. unfold prefixedpointsOf, "\in". i.
-  change (forall x, f1 x =< f2 x) in LE. now rewrite -> LE.
+  done!.
 Qed.
 
 Lemma postfixedpointsOf_increasing (f1 : D -> D) (f2 : D -> D)
   (LE : f1 =< f2)
   : postfixedpointsOf f1 =< postfixedpointsOf f2.
 Proof.
-  intros x. unfold postfixedpointsOf, "\in". i.
-  change (forall x, f1 x =< f2 x) in LE. now rewrite <- LE.
+  done!.
 Qed.
 
 #[global]
@@ -165,7 +160,7 @@ Add Parametric Morphism
   : (@upperboundsOf D PROSET) with signature (eqProp ==> eqProp)
   as upperboundsOf_compatWith_eqProp.
 Proof.
-  intros X1 X2 X_EQ. done!.
+  done!.
 Qed.
 
 #[global]
@@ -173,7 +168,7 @@ Add Parametric Morphism
   : (@lowerboundsOf D PROSET) with signature (eqProp ==> eqProp)
   as lowerboundsOf_compatWith_eqProp.
 Proof.
-  intros X1 X2 X_EQ. done!.
+  done!.
 Qed.
 
 #[global]
@@ -182,8 +177,8 @@ Add Parametric Morphism
   as is_supremum_of_compatWith_eqProp.
 Proof.
   intros sup_X1 sup_X2 sup_EQ X1 X2 X_EQ; unfold is_supremum_of. split; intros UPPERBOUND ?.
-  - rewrite <- X_EQ, <- sup_EQ. eauto.
-  - rewrite -> X_EQ, -> sup_EQ. eauto.
+  - rewrite <- X_EQ, <- sup_EQ; eauto.
+  - rewrite -> X_EQ, -> sup_EQ; eauto.
 Qed.
 
 #[global]
@@ -192,17 +187,15 @@ Add Parametric Morphism
   as is_infimum_of_compatWith_eqProp.
 Proof.
   intros inf_X1 inf_X2 inf_EQ X1 X2 X_EQ; unfold is_infimum_of. split; intros UPPERBOUND ?.
-  - rewrite <- X_EQ, <- inf_EQ. eauto.
-  - rewrite -> X_EQ, -> inf_EQ. eauto.
+  - rewrite <- X_EQ, <- inf_EQ; eauto.
+  - rewrite -> X_EQ, -> inf_EQ; eauto.
 Qed.
 
 Lemma supremum_is_infimum_of_its_upperbounds X sup_X
   (SUPREMUM : is_supremum_of sup_X X)
   : is_infimum_of sup_X (E.singleton sup_X).
 Proof.
-  ii. split.
-  - ii. now inv IN.
-  - ii. red in H. done!.
+  ii; split; done!.
 Qed.
 
 Lemma supremum_monotonic sup_X1 sup_X2 X1 X2
@@ -211,7 +204,7 @@ Lemma supremum_monotonic sup_X1 sup_X2 X1 X2
   (SUBSET : X1 \subseteq X2)
   : sup_X1 =< sup_X2.
 Proof.
-  eapply SUPREMUM1. ii. eapply SUPREMUM2; done!.
+  eapply SUPREMUM1; ii; eapply SUPREMUM2; done!.
 Qed.
 
 #[local] Hint Resolve supremum_monotonic : poset_hints.
@@ -307,7 +300,7 @@ Proof with eauto with *.
     + rewrite H. eapply H_infimum .
       intros lower_bound lower_bound_in. unnw.
       exact (lower_bound_in x IN).
-    + unnw. eapply H_infimum...
+    + eapply H_infimum...
 Qed.
 
 Lemma infimum_monotonic (X1 : ensemble D) (X2 : ensemble D) (inf_X1 : D) (inf_X2 : D)
@@ -316,8 +309,7 @@ Lemma infimum_monotonic (X1 : ensemble D) (X2 : ensemble D) (inf_X1 : D) (inf_X2
   (SUBSETEQ : X1 \subseteq X2)
   : inf_X2 =< inf_X1.
 Proof.
-  eapply INFIMUM1; ii.
-  eapply INFIMUM2; eauto with *.
+  eapply INFIMUM1; ii; eapply INFIMUM2; eauto with *.
 Qed.
 
 #[local] Hint Resolve infimum_monotonic : poset_hints.
@@ -495,14 +487,14 @@ Proof.
     + done!.
     + intros FINSUBSET. exploit IH. done!.
       intros [y' [IN' BOUNDED']]. exploit (DIRECTED' x' y'); eauto.
-      intros (y & ? & ? & ?). exists y. split; trivial. intros x [<- | IN]; done!.
+      intros (y & ? & ? & ?). exists y; done!.
   - intros DIRECTED. split.
     + exploit (DIRECTED []); simpl.
       * done!.
-      * intros [y [IN ?]]. exists y. done!.
+      * intros [y [IN ?]]. exists y; done!.
     + ii. exploit (DIRECTED [x1; x2]); simpl. 
       * now intros ? [<- | [<- | []]].
-      * intros [y [IN ?]]. exists y. done!.
+      * intros [y [IN ?]]. exists y; done!.
 Qed.
 
 Lemma preservesDirectedness_if_isMonotonic {A : Type} {B : Type} {A_isProset : isProset A} {B_isProset : isProset B} (f : A -> B)
@@ -510,9 +502,9 @@ Lemma preservesDirectedness_if_isMonotonic {A : Type} {B : Type} {A_isProset : i
   : forall X, isDirected X -> isDirected (E.image f X).
 Proof.
   intros X [? ?]. split.
-  - destruct NONEMPTY as [x0 IN]. exists (f x0). done!.
+  - destruct NONEMPTY as [x0 IN]. exists (f x0); done!.
   - intros y1 y2 y1_IN y2_IN. s!. destruct y1_IN as [x1 [-> x1_in]], y2_IN as [x2 [-> x2_in]].
-    pose proof (DIRECTED' x1 x2 x1_in x2_in) as [x3 [x3_in [x1_le_x3 x2_le_x3]]]. exists (f x3). done!.
+    pose proof (DIRECTED' x1 x2 x1_in x2_in) as [x3 [x3_in [x1_le_x3 x2_le_x3]]]. exists (f x3); done!.
 Qed.
 
 Class isCpo (D : Type) {PROSET : isProset D} : Type :=
@@ -546,7 +538,7 @@ Lemma compare_spec {A : Type} {PROSET : isProset A} {ORD : hsOrd A (PROSET := PR
   | Gt => rhs =< lhs /\ ~ lhs == rhs
   end.
 Proof.
-  destruct (compare lhs rhs) eqn: H_compare_result; eauto with *.
+  destruct (compare lhs rhs) eqn: H_OBS; eauto with *.
 Qed.
 
 Section list_hsOrd.
@@ -579,15 +571,15 @@ Proof with discriminate || eauto with *.
   unfold lex_eq. split.
   - intros xs1; induction xs1 as [ | x1 xs1 IH]; simpl...
     pose proof (claim1 := compare_spec x1 x1).
-    destruct (compare x1 x1) eqn: H_compare_result1...
+    destruct (compare x1 x1) eqn: H_OBS1...
     all: contradiction (proj2 claim1)...
   - intros xs1 xs2; revert xs1 xs2; induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x1).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x1) eqn: H_compare_result2...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2...
     all: contradiction (proj2 claim2)...
   - intros xs1 xs2 xs3; revert xs1 xs3; induction xs2 as [ | x2 xs2 IH]; destruct xs1 as [ | x1 xs1]; destruct xs3 as [ | x3 xs3]; simpl...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x3); pose proof (claim3 := compare_spec x1 x3).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x3) eqn: H_compare_result2; destruct (compare x1 x3) eqn: H_compare_result3...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x3) eqn: H_OBS2; destruct (compare x1 x3) eqn: H_OBS3...
     all: contradiction (proj2 claim3)...
 Qed.
 
@@ -609,7 +601,7 @@ Proof with discriminate || eauto with *.
   - intros xs1 xs2 xs3; revert xs1 xs3; induction xs2 as [ | x2 xs2 IH]; destruct xs1 as [ | x1 xs1]; destruct xs3 as [ | x3 xs3]; simpl...
     intros [H_false | H_false]...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x3); pose proof (claim3 := compare_spec x1 x3); pose proof (claim4 := IH xs1 xs3).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x3) eqn: H_compare_result2; destruct (compare x1 x3) eqn: H_compare_result3...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x3) eqn: H_OBS2; destruct (compare x1 x3) eqn: H_OBS3...
     + contradiction (proj2 claim3)...
     + contradiction (proj2 claim2)...
     + contradiction (proj2 claim3); eapply lemma1; [transitivity x2 | exact (proj1 claim3)]. eapply lemma2... exact (proj1 claim2).
@@ -638,7 +630,7 @@ Proof with discriminate || eauto with *.
   assert (lemma4 : forall xs1 : list A, forall xs2 : list A, lex_compare xs1 xs2 = Lt <-> lex_compare xs2 xs1 = Gt).
   { induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl... split...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x1); pose proof (claim3 := IH xs2).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x1) eqn: H_compare_result2...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2...
     - contradiction (proj2 claim2)...
     - contradiction (proj2 claim2)...
     - contradiction (proj2 claim1)...
@@ -649,7 +641,7 @@ Proof with discriminate || eauto with *.
   assert (lemma5 : forall xs1 : list A, forall xs2 : list A, lex_compare xs1 xs2 = Eq <-> lex_compare xs2 xs1 = Eq).
   { induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl... split... split...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x1); pose proof (claim3 := IH xs2).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x1) eqn: H_compare_result2...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2...
     - contradiction (proj2 claim2)...
     - contradiction (proj2 claim2)...
     - contradiction (proj2 claim1)...
@@ -658,7 +650,7 @@ Proof with discriminate || eauto with *.
     - split...
   }
   assert (lemma6 : forall xs1 : list A, forall xs2 : list A, lex_compare xs1 xs2 = Gt <-> lex_compare xs2 xs1 = Lt) by firstorder.
-  intros lhs rhs; destruct (lex_compare lhs rhs) eqn: H_compare_result; now firstorder.
+  intros lhs rhs; destruct (lex_compare lhs rhs) eqn: H_OBS; now firstorder.
 Qed.
 
 Corollary lex_le_flip_iff lhs rhs OBS :
@@ -672,7 +664,7 @@ Proof.
   split.
   - ii; subst OBS. exact (lex_le_flip_spec lhs rhs).
   - pose proof (lex_le_flip_spec rhs lhs) as claim1. intros H_eq.
-    destruct OBS eqn: H_compare_result; now rewrite H_eq in claim1.
+    destruct OBS eqn: H_OBS; now rewrite H_eq in claim1.
 Qed.
 
 #[local]
@@ -681,7 +673,7 @@ Instance lex_le_PartialOrder
 Proof with discriminate || eauto with *.
   intros xs1 xs2; cbn. unfold flip, lex_eq, lex_le.
   pose proof (claim1 := lex_le_flip_spec xs1 xs2).
-  destruct (lex_compare xs1 xs2) eqn: H_compare_result.
+  destruct (lex_compare xs1 xs2) eqn: H_OBS.
   - split...
   - split... intros [? [H_false | H_false]].
     all: rewrite H_false in claim1...

@@ -746,7 +746,7 @@ Tactic Notation "ss!" :=
   s!; subst; eauto with *; firstorder (try congruence).
 
 Tactic Notation "done!" :=
-  now repeat ss!.
+  now ii; repeat ss!; done.
 
 Class isAssociative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
   assoc x y z : f x (f y z) == f (f x y) z.
@@ -1136,16 +1136,15 @@ Theorem Kuratowski_cl_op_good {A : Type} (cl : ensemble A -> ensemble A)
 Proof.
   unfold Kuratowski_cl_op; ii; split; i.
   - red. eapply leProp_antisymmetry.
-    + ii. done!.
+    + done!.
     + transitivity (cl E.empty).
-      { eapply cl_op_monotonic. ii; done!. }
-      rewrite cl_preserves_empty. ii; done!.
+      { eapply cl_op_monotonic. done!. }
+      rewrite cl_preserves_empty. done!.
   - red. eapply leProp_antisymmetry.
     + eapply cl_op_extensive.
     + do 2 red in OPENs. intros x IN H_in. rewrite E.in_unions_iff in H_in. destruct H_in as [X [H_in H_IN]].
       pose proof (OPENs X H_IN) as H_EQ. revert x IN H_in. change (cl (E.complement (E.unions Os)) =< E.complement X).
-      rewrite H_EQ. eapply cl_op_monotonic. intros x H_in CONTRA.
-      eapply H_in. done!.
+      rewrite H_EQ. eapply cl_op_monotonic. intros x H_in CONTRA. done!.
   - red in OPEN1, OPEN2. red. eapply leProp_antisymmetry.
     + eapply cl_op_extensive.
     + transitivity (cl (E.complement (E.complement (E.union (E.complement O1) (E.complement O2))))).
@@ -1154,9 +1153,14 @@ Proof.
       { rewrite cl_classic. intros x IN IN'. contradiction IN. intros CONTRA. contradiction IN'.
         clear IN IN'. rewrite OPEN1, OPEN2. revert x CONTRA. eapply cl_subadditive.
       }
-      intros x IN IN'. contradiction IN; done!.
+      done!.
   - red. red in OPEN. change (O1 == O2) in EXT_EQ. rewrite <- EXT_EQ. exact OPEN.
 Qed.
+
+Definition isContinuous {A : Type} {B : Type} {A_topology : topology A} {B_topology : topology B} (f : A -> B) : Prop :=
+  forall Y : ensemble B, isOpen Y -> isOpen (E.preimage f Y).
+
+Section SUBSPACE_TOPOLOGY.
 
 #[local] Opaque "\in".
 
@@ -1167,19 +1171,18 @@ Next Obligation.
   ii. split.
   - exists E.full. done!.
   - i. exists (E.unions (bind Os (fun U => fun O => (forall z, proj1_sig z \in O <-> z \in U) /\ isOpen O))). split.
-    { eapply unions_in_T. ii. done!. }
-    { ii. simpl bind. done!. }
+    { eapply unions_in_T. done!. }
+    { done!. }
   - i. s!. ss!. exists (E.intersection x x0). split.
     { eapply intersection_in_T; done!. }
-    { ii; done!. }
-  - ii. done!.
+    { done!. }
+  - done!.
 Qed.
-
-Definition isContinuous {A : Type} {B : Type} {A_topology : topology A} {B_topology : topology B} (f : A -> B) : Prop :=
-  forall Y : ensemble B, isOpen Y -> isOpen (E.preimage f Y).
 
 Lemma proj1_sig_isContinuous {A : Type} {TOPOLOGY : topology A} (P : A -> Prop)
   : @isContinuous (@sig A P) A (Subspace_topology TOPOLOGY) TOPOLOGY (@proj1_sig A P).
 Proof.
   intros Y OPEN. simpl. exists Y; done!.
 Qed.
+
+End SUBSPACE_TOPOLOGY.

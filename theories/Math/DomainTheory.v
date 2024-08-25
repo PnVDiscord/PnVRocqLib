@@ -28,24 +28,23 @@ Lemma supremum_of_monotonic_maps_isMonotonic {D : Type} {D' : Type} {PROSET : is
   : isMonotonic1 (proj1_sig (supremum_of_monotonic_maps F)).
 Proof.
   ii. property (supremum_of_monotonic_maps F). ii. rewrite E.in_image_iff in IN. destruct IN as [f [-> IN]].
-  rewrite (proj2_sig f). 2: exact x_LE. property (supremum_of_monotonic_maps F); done!.
+  etransitivity. property f; exact x_LE. property (supremum_of_monotonic_maps F); done!.
 Qed.
 
 Definition supOfMonotonicMaps {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {COLA : isCola D} {COLA' : isCola D'} (F : ensemble `[D -> D']) : `[D -> D'] :=
   @exist (D -> D') isMonotonic1 (proj1_sig (supremum_of_monotonic_maps F)) (supremum_of_monotonic_maps_isMonotonic F).
 
-Lemma supOfMonotonicMaps_isSupremum {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {COLA : isCola D} {COLA' : isCola D'}
+Lemma supOfMonotonicMaps_is_supremum {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {COLA : isCola D} {COLA' : isCola D'}
   : forall F : ensemble `[D -> D'], is_supremum_of (supOfMonotonicMaps F) F.
 Proof.
   unfold supOfMonotonicMaps. intros F f. split.
   - intros H_LE f_i f_i_in. rewrite <- H_LE.
     intros x. simpl. property (supremum_of_monotonic_maps F); done!.
-  - intros UPPERBOUND x. simpl. property (supremum_of_monotonic_maps F).
-    intros y y_IN. s!. destruct y_IN as [f_i [-> IN]]. revert x. change (f_i =< f); done!.
+  - intros UPPERBOUND x. simpl. property (supremum_of_monotonic_maps F); done!.
 Qed.
 
 #[local]
 Instance MonotonicMaps_asCola {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {COLA : isCola D} {COLA' : isCola D'} : isCola `[D -> D'] :=
-  fun F : ensemble `[D -> D'] => @exist `[D -> D'] (fun sup_F => is_supremum_of sup_F F) (supOfMonotonicMaps F) (supOfMonotonicMaps_isSupremum F).
+  fun F : ensemble `[D -> D'] => @exist `[D -> D'] (fun sup_F => is_supremum_of sup_F F) (supOfMonotonicMaps F) (supOfMonotonicMaps_is_supremum F).
 
 End COLA_THEORY.
