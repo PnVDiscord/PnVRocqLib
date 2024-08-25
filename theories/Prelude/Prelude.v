@@ -742,8 +742,11 @@ Tactic Notation "s!" :=
     autounfold with simplication_hints in *
   ).
 
-Tactic Notation "done!" :=
+Tactic Notation "ss!" :=
   s!; subst; eauto with *; firstorder (try congruence).
+
+Tactic Notation "done!" :=
+  now repeat ss!.
 
 Class isAssociative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
   assoc x y z : f x (f y z) == f (f x y) z.
@@ -1057,7 +1060,7 @@ End L.
 
 Class AxiomsForTopology (X : Type) (T : ensemble (ensemble X)) : Prop :=
   { full_isOpen
-    : E.empty \in T
+    : E.full \in T
   ; unions_isOpen Os
     (OPENs : Os \subseteq T)
     : E.unions Os \in T
@@ -1092,20 +1095,51 @@ Proof.
   ii; split; i; eapply isOpen_compatWith_ext_eq; done!.
 Qed.
 
-Definition isContinuous {A : Type} {B : Type} {A_topology : topology A} {B_topology : topology B} (f : A -> B) : Prop :=
-  forall Y : ensemble B, isOpen Y -> isOpen (E.preimage f Y).
+Lemma empty_in_T {A : Type} `{TOPOLOGY : topology A}
+  : isOpen (@E.empty A).
+Proof.
+  eapply empty_isOpen.
+Defined.
+
+Lemma full_in_T {A : Type} `{TOPOLOGY : topology A}
+  : isOpen (@E.full A).
+Proof.
+  eapply full_isOpen.
+Defined.
+
+Lemma unions_in_T {A : Type} `{TOPOLOGY : topology A} Os
+  (OPENs : forall O, O \in Os -> isOpen O)
+  : isOpen (@E.unions A Os).
+Proof.
+  eapply unions_isOpen; eauto.
+Defined.
+
+Lemma intersection_in_T {A : Type} `{TOPOLOGY : topology A} O1 O2
+  (OPEN1 : isOpen O1)
+  (OPEN2 : isOpen O2)
+  : isOpen (@E.intersection A O1 O2).
+Proof.
+  eapply intersection_isOpen; eauto.
+Defined.
+
+#[global] Hint Resolve empty_in_T unions_in_T full_in_T intersection_in_T isOpen_compatWith_eqProp : simplication_hints.
 
 Definition Kuratowski_cl_op {A : Type} (cl : ensemble A -> ensemble A) : E.t (E.t A) :=
   fun O => E.complement O == cl (E.complement O).
 
 Theorem Kuratowski_cl_op_good {A : Type} (cl : ensemble A -> ensemble A)
   (cl_isClosureOperator : isClosureOperator cl)
+  (cl_preserves_empty : cl E.empty == E.empty)
   (cl_subadditive : forall X, forall Y, cl (E.union X Y) \subseteq E.union (cl X) (cl Y))
   (cl_classic : forall X, cl (E.complement (E.complement X)) == E.complement (E.complement (cl X)))
   : AxiomsForTopology A (Kuratowski_cl_op cl).
 Proof.
   unfold Kuratowski_cl_op; ii; split; i.
-  - done!.
+  - red. eapply leProp_antisymmetry.
+    + ii. done!.
+    + transitivity (cl E.empty).
+      { eapply cl_op_monotonic. ii; done!. }
+      rewrite cl_preserves_empty. ii; done!.
   - red. eapply leProp_antisymmetry.
     + eapply cl_op_extensive.
     + do 2 red in OPENs. intros x IN H_in. rewrite E.in_unions_iff in H_in. destruct H_in as [X [H_in H_IN]].
@@ -1122,4 +1156,30 @@ Proof.
       }
       intros x IN IN'. contradiction IN; done!.
   - red. red in OPEN. change (O1 == O2) in EXT_EQ. rewrite <- EXT_EQ. exact OPEN.
+Qed.
+
+#[local] Opaque "\in".
+
+#[global, program]
+Instance Subspace_topology {A : Type} {P : A -> Prop} (TOPOLOGY : topology A) : topology (@sig A P) :=
+  { isOpen U := exists O : ensemble A, isOpen O /\ (forall z, proj1_sig z \in O <-> z \in U) }.
+Next Obligation.
+  ii. split.
+  - exists E.full. done!.
+  - i. exists (E.unions (bind Os (fun U => fun O => (forall z, proj1_sig z \in O <-> z \in U) /\ isOpen O))). split.
+    { eapply unions_in_T. ii. done!. }
+    { ii. simpl bind. done!. }
+  - i. s!. ss!. exists (E.intersection x x0). split.
+    { eapply intersection_in_T; done!. }
+    { ii; done!. }
+  - ii. done!.
+Qed.
+
+Definition isContinuous {A : Type} {B : Type} {A_topology : topology A} {B_topology : topology B} (f : A -> B) : Prop :=
+  forall Y : ensemble B, isOpen Y -> isOpen (E.preimage f Y).
+
+Lemma proj1_sig_isContinuous {A : Type} {TOPOLOGY : topology A} (P : A -> Prop)
+  : @isContinuous (@sig A P) A (Subspace_topology TOPOLOGY) TOPOLOGY (@proj1_sig A P).
+Proof.
+  intros Y OPEN. simpl. exists Y; done!.
 Qed.

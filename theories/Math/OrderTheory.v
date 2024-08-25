@@ -14,7 +14,7 @@ Proof.
 Qed.
 
 #[program]
-Definition mkPosetFrom_ltProp {A : Type} (ltProp : A -> A -> Prop) (ltProp_StrictOrder : StrictOrder ltProp) : isProset A :=
+Definition mkProsetFrom_ltProp {A : Type} (ltProp : A -> A -> Prop) (ltProp_StrictOrder : StrictOrder ltProp) : isProset A :=
   {| leProp x y := ltProp x y \/ x = y; Proset_isSetoid := mkSetoid_from_eq; |}.
 Next Obligation.
   split; ii; firstorder try congruence.
@@ -24,7 +24,14 @@ Next Obligation.
 Qed.
 
 Class isPoset (A : Type) `{PROSET : isProset A} : Prop :=
-  isPoset_intro : forall x : A, forall y : A, x == y <-> x = y.
+  poset_spec (x : A) (y : A) : x == y <-> x = y.
+
+#[global]
+Instance mkProsetFrom_ltProp_isPoset {A : Type} {ltProp : A -> A -> Prop} (ltProp_StrictOrder : StrictOrder ltProp)
+  : isPoset A (PROSET := mkProsetFrom_ltProp ltProp ltProp_StrictOrder).
+Proof.
+  red; reflexivity.
+Defined.
 
 Class has_ltProp (A : Type) : Type :=
   ltProp (lhs : A) (rhs : A) : Prop.
@@ -36,7 +43,7 @@ Class hasStrictOrder (A : Type) : Type :=
   ; lt_StrictOrder :: StrictOrder lt
   }.
 
-Infix "≦" := (leProp (isProset := mkPosetFrom_ltProp lt lt_StrictOrder)) : type_scope.
+Infix "≦" := (leProp (isProset := mkProsetFrom_ltProp lt lt_StrictOrder)) : type_scope.
 
 Class isWellPoset (A : Type) : Type :=
   { wltProp :: has_ltProp A
@@ -52,7 +59,7 @@ Instance wltProp_StrictOrder {A : Type} `{WPOSET : isWellPoset A} : StrictOrder 
   ; StrictOrder_Transitive := wltProp_Transitive
   }.
 
-Infix "⪳" := (leProp (isProset := mkPosetFrom_ltProp wltProp wltProp_StrictOrder)) : type_scope.
+Infix "⪳" := (leProp (isProset := mkProsetFrom_ltProp wltProp wltProp_StrictOrder)) : type_scope.
 
 Class isWellToset (A : Type) : Type :=
   { WellToset_isWellPoset :: isWellPoset A
