@@ -482,8 +482,8 @@ Qed.
 
 (** Section SET_CONSTRUCTIONS. *)
 
-Inductive unions {A : Type} (Xs : E.t (E.t A)) : E.t A :=
-  | In_unions x X
+Inductive unions {A : Type} (Xs : E.t (E.t A)) (x : A) : Prop :=
+  | In_unions X
     (H_in : x \in X)
     (H_IN : X \in Xs)
     : x \in unions Xs.
@@ -493,7 +493,7 @@ Inductive unions {A : Type} (Xs : E.t (E.t A)) : E.t A :=
 Lemma in_unions_iff (A : Type) Xs
   : forall z, z \in @unions A Xs <-> (exists X, z \in X /\ X \in Xs).
 Proof.
-  intros z; split; [intros [? ? ? ?] | intros [? [? ?]]]; eauto.
+  intros z; split; [intros [? ? ?] | intros [? [? ?]]]; eauto.
 Qed.
 
 #[global] Hint Rewrite in_unions_iff : simplication_hints.
@@ -505,11 +505,11 @@ Proof.
   ii. do 2 rewrite in_unions_iff. now firstorder.
 Qed.
 
-Inductive union {A : Type} (X1 : E.t A) (X2 : E.t A) : E.t A :=
-  | In_union_l x
+Inductive union {A : Type} (X1 : E.t A) (X2 : E.t A) (x : A) : Prop :=
+  | In_union_l
     (H_inl : x \in X1)
     : x \in union X1 X2
-  | In_union_r x
+  | In_union_r
     (H_inr : x \in X2)
     : x \in union X1 X2.
 
@@ -518,7 +518,7 @@ Inductive union {A : Type} (X1 : E.t A) (X2 : E.t A) : E.t A :=
 Lemma in_union_iff (A : Type) X1 X2
   : forall z, z \in @union A X1 X2 <-> (z \in X1 \/ z \in X2).
 Proof.
-  intros z; split; [intros [? ? | ? ?] | intros [? | ?]]; eauto.
+  intros z; split; [intros [? | ?] | intros [? | ?]]; eauto.
 Qed.
 
 #[global] Hint Rewrite in_union_iff : simplication_hints.
@@ -542,8 +542,8 @@ Qed.
 
 #[global] Hint Rewrite in_empty_iff : simplication_hints.
 
-Inductive intersection {A : Type} (X1 : E.t A) (X2 : E.t A) : E.t A :=
-  | In_intersection x
+Inductive intersection {A : Type} (X1 : E.t A) (X2 : E.t A) (x : A) : Prop :=
+  | In_intersection
     (H_IN1 : x \in X1)
     (H_IN2 : x \in X2)
     : x \in intersection X1 X2.
@@ -553,7 +553,7 @@ Inductive intersection {A : Type} (X1 : E.t A) (X2 : E.t A) : E.t A :=
 Lemma in_intersection_iff (A : Type) X1 X2
   : forall z, z \in @intersection A X1 X2 <-> (z \in X1 /\ z \in X2).
 Proof.
-  intros z; split; [intros [? ? ?] | intros [? ?]]; eauto.
+  intros z; split; [intros [? ?] | intros [? ?]]; eauto.
 Qed.
 
 #[global] Hint Rewrite in_intersection_iff : simplication_hints.

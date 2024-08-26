@@ -446,7 +446,7 @@ Qed.
 Lemma lemma1_of_1_2_13_aux2 X n
   : Insertion (improveFilter X n) n \subseteq E.insert (enum n) (improveFilter X n).
 Proof.
-  intros ? [? ? | ? ?]; [right | left]; trivial.
+  intros ? [? | ?]; [right | left]; trivial.
   inversion H_inr; subst. reflexivity.
 Qed.
 

@@ -495,7 +495,7 @@ Proof with eauto with *.
     { eapply eqProp_implies_leProp... }
     assert (claim9 : F (join_lattice X G_f_X) =< paco F X).
     { simpl. cofix CIH. intros z z_in. econstructor. revert z z_in. eapply mk_paco'.
-      intros z z_in. destruct z_in as [z ? | z ?]; simpl.
+      intros z z_in. destruct z_in as [? | ?]; simpl.
       - left. exact H_inl.
       - right. eapply CIH. exact (claim8 z H_inr).
     }
