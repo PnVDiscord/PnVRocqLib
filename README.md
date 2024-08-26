@@ -26,7 +26,13 @@ The Coq Proof Assistant, version 8.18.0
 
 - `Vector.v` : Replaces `Coq.Vectors.VectorDef.t`.
 
+### Index
+
+- `Index.v` : Accumulates all source files and check their consistency.
+
 ### Math
+
+- `BooleanAlgebra.v` : Basic Theory on Boolean Algebras.
 
 - `ClassicalDomainTheory.v` : Classical Domain Theory.
 
@@ -48,10 +54,6 @@ The Coq Proof Assistant, version 8.18.0
 
 - `Prelude.v` : The prelude code.
 
-### Index
-
-- `Index.v` : Accumulates all source files and check their consistency.
-
 ## References
 
 1. [sflib](https://github.com/snu-sf/sflib)
@@ -59,3 +61,5 @@ The Coq Proof Assistant, version 8.18.0
 2. [stdpp](https://plv.mpi-sws.org/coqdoc/stdpp)
 
 3. [A note written by Jayadev Misra](https://www.cs.utexas.edu/users/misra/Notes.dir/KnasterTarski.pdf)
+
+4. [Constructive Completeness Proofs and Delimited Control](https://theses.hal.science/pastel-00530424/)

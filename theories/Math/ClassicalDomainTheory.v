@@ -412,7 +412,7 @@ Proof with eauto with *.
 Qed.
 
 #[global]
-Instance pair_isCpo {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} : isCpo (D * D') :=
+Instance direct_product_of_two_Cpos {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} : isCpo (D * D') :=
   { bottom_cpo := (bottom_cpo, bottom_cpo)
   ; supremum_cpo (X : ensemble (D * D')) (X_isDirected : isDirected X) := (supremum_cpo (E.image fst X) (image_fst_preservesDirectedness X X_isDirected), supremum_cpo (E.image snd X) (image_snd_preservesDirectedness X X_isDirected))
   ; bottom_cpo_spec := bottom_of_pair_isBottom
