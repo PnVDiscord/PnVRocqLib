@@ -748,11 +748,70 @@ Tactic Notation "ss!" :=
 Tactic Notation "done!" :=
   now ii; repeat ss!; done.
 
-Class isAssociative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
+Section OPERATION_PROPS.
+
+Context {A : Type} `{SETOID : isSetoid A}.
+
+Class isAssociative (f : A -> A -> A) : Prop :=
   assoc x y z : f x (f y z) == f (f x y) z.
 
-Class isCommutative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
+Class isCommutative (f : A -> A -> A) : Prop :=
   comm x y : f x y == f y x.
+
+Class isIdempotent (f : A -> A -> A) : Prop :=
+  idem x : f x x == x.
+
+Class distributesOver (MUL : A -> A -> A) (ADD : A -> A -> A) : Prop :=
+  { left_distr x y z
+    : MUL x (ADD y z) == ADD (MUL x y) (MUL x z)
+  ; right_distr x y z
+    : MUL (ADD y z) x == ADD (MUL y x) (MUL z x)
+  }.
+
+Class isIdentityElementOf (e : A) (f : A -> A -> A) : Prop :=
+  { left_id x
+    : f e x == x
+  ; right_id x
+    : f x e == x
+  }.
+
+Class isInverseOperatorOf (INV : A -> A) (OP : A -> A -> A) {e : A} {IDENTITY : isIdentityElementOf e OP} : Prop :=
+  { left_inv x
+    : OP (INV x) x == e
+  ; right_inv x
+    : OP x (INV x) == e
+  }.
+
+Class AbsorptionLaw (OP1 : A -> A -> A) (OP2 : A -> A -> A) : Prop :=
+  { absorption_law1 x y
+    : OP1 x (OP2 x y) == x
+  ; absorption_law2 x y
+    : OP2 x (OP1 x y) == x
+  }.
+
+Class isAnnihilatorOf (a : A) (OP : A -> A -> A) : Prop :=
+  { left_ann x
+    : OP a x == a
+  ; right_ann x
+    : OP x a == a
+  }.
+
+#[local]
+Instance inverse_compatWith_eqProp (OP : A -> A -> A) (e : A) (INV : A -> A)
+  (COMPAT : eqPropCompatible2 OP)
+  (ASSOCIATIVE : isAssociative OP)
+  (IDENTITY : isIdentityElementOf e OP)
+  (INVERSE : isInverseOperatorOf INV OP)
+  : eqPropCompatible1 INV.
+Proof.
+  ii. rewrite <- right_id.
+  rewrite <- right_inv with (x := x2).
+  assert (claim : OP (INV x1) x2 == e).
+  { rewrite <- x_EQ. eapply left_inv. }
+  rewrite assoc. rewrite claim. eapply left_id.
+Qed.
+
+End OPERATION_PROPS.
 
 Class isClosureOperator {A : Type} `{PROSET : isProset A} (cl : A -> A) : Prop :=
   { cl_op_extensive : forall x, x =< cl x
