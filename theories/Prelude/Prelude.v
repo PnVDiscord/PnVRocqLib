@@ -579,8 +579,8 @@ Qed.
 
 #[global] Hint Rewrite in_singleton_iff : simplication_hints.
 
-Inductive image {A : Type} {B : Type} (f : A -> B) (X : E.t A) : E.t B :=
-  | In_image y x
+Inductive image {A : Type} {B : Type} (f : A -> B) (X : E.t A) (y : B) : Prop :=
+  | In_image x
     (IMAGE : y = f x)
     (H_IN : x \in X)
     : y \in image f X.
@@ -590,7 +590,7 @@ Inductive image {A : Type} {B : Type} (f : A -> B) (X : E.t A) : E.t B :=
 Lemma in_image_iff (A : Type) (B : Type) f X
   : forall z, z \in @image A B f X <-> (exists x, z = f x /\ x \in X).
 Proof.
-  intros z; split; [intros [? ? ? ?] | intros [? [-> ?]]]; eauto.
+  intros z; split; [intros [? ? ?] | intros [? [-> ?]]]; eauto.
 Qed.
 
 #[global] Hint Rewrite in_image_iff : simplication_hints.
@@ -604,8 +604,8 @@ Proof.
   do 2 rewrite in_image_iff in *. now split; i; des; exists x; rewrite f_EQ, X_EQ in *.
 Qed.
 
-Inductive preimage {A : Type} {B : Type} (f : A -> B) (Y : E.t B) : E.t A :=
-  | In_preimage x y
+Inductive preimage {A : Type} {B : Type} (f : A -> B) (Y : E.t B) (x : A) : Prop :=
+  | In_preimage y
     (IMAGE : y = f x)
     (H_IN : y \in Y)
     : x \in preimage f Y.
@@ -615,7 +615,7 @@ Inductive preimage {A : Type} {B : Type} (f : A -> B) (Y : E.t B) : E.t A :=
 Lemma in_preimage_iff (A : Type) (B : Type) f Y
   : forall z, z \in @preimage A B f Y <-> (exists y, y = f z /\ y \in Y).
 Proof.
-  intros z; split; [intros [? ? ? ?] | intros [? [-> ?]]]; eauto.
+  intros z; split; [intros [? ? ?] | intros [? [-> ?]]]; eauto.
 Qed.
 
 #[global] Hint Rewrite in_preimage_iff : simplication_hints.
@@ -1183,7 +1183,7 @@ Defined.
 
 #[global] Hint Resolve empty_in_T unions_in_T full_in_T intersection_in_T isOpen_compatWith_eqProp : simplication_hints.
 
-Definition Kuratowski_cl_op {A : Type} (cl : ensemble A -> ensemble A) : E.t (E.t A) :=
+Definition Kuratowski_cl_op {A : Type} (cl : ensemble A -> ensemble A) : ensemble (ensemble A) :=
   fun O => E.complement O == cl (E.complement O).
 
 Theorem Kuratowski_cl_op_good {A : Type} (cl : ensemble A -> ensemble A)
