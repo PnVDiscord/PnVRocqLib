@@ -32,7 +32,7 @@ Unshelve.
 Qed.
 
 Lemma le_case_lt {n : nat} {m : nat} (H_le : m <= n) (phi : m <= S n -> Prop)
-  (phi_lt: forall H_le' : m <= n, phi (@le_S m n H_le'))
+  (phi_lt : forall H_le' : m <= n, phi (@le_S m n H_le'))
   : forall H_lt : m <= S n, phi H_lt.
 Proof.
   intros H_lt.
@@ -52,22 +52,22 @@ Unshelve.
 Qed.
 
 Theorem le_pirrel (n : nat) (m : nat)
-  (H_le1 : n <= m)
-  (H_le2 : n <= m)
-  : H_le1 = H_le2.
+  (LE1 : n <= m)
+  (LE2 : n <= m)
+  : LE1 = LE2.
 Proof.
   assert (m = (m - n) + n)%nat as claim by lia.
   remember (m - n)%nat as k eqn: H_eq in claim.
-  clear H_eq. revert n m H_le1 H_le2 claim.
+  clear H_eq. revert n m LE1 LE2 claim.
   induction k as [ | k IH]; simpl.
   - i. subst m.
-    induction H_le1 using le_case_eq.
-    induction H_le2 using le_case_eq.
+    induction LE1 using le_case_eq.
+    induction LE2 using le_case_eq.
     reflexivity.
   - i. subst m.
     assert (n <= k + n) as LE by lia.
-    induction H_le1 using (le_case_lt LE).
-    induction H_le2 using (le_case_lt LE).
+    induction LE1 using (le_case_lt LE).
+    induction LE2 using (le_case_lt LE).
     eapply f_equal. eapply IH. reflexivity.
 Qed.
 
