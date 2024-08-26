@@ -19,6 +19,14 @@ Create HintDb simplication_hints.
 Ltac property X :=
   eapply (proj2_sig X).
 
+#[universes(polymorphic=yes)]
+Definition reify@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} (f : forall x : A, { y : B | P x y }) : { f : A -> B | forall x, P x (f x) } :=
+  @exist (A -> B) (fun f => forall x, P x (f x)) (fun x => proj1_sig (f x)) (fun x => proj2_sig (f x)).
+
+#[universes(polymorphic=yes)]
+Definition reify_lemma@{u v} {A : Type@{u}} {B : Type@{u}} {P : A -> B -> Prop} (f : forall x : A, { y : B | P x y }) : forall x, P x (proj1_sig (@reify@{u v} A B P f) x) :=
+  proj2_sig (@reify@{u v} A B P f).
+
 (** Section SETOID. *)
 
 Class isSetoid (A : Type) : Type :=
@@ -115,29 +123,29 @@ Defined.
 
 (** End SETOID. *)
 
-(** Section POSET. *)
+(** Section PROSET. *)
 
-Class isPoset (A : Type) : Type :=
+Class isProset (A : Type) : Type :=
   { leProp (lhs : A) (rhs : A) : Prop
-  ; Poset_isSetoid :: isSetoid A
+  ; Proset_isSetoid :: isSetoid A
   ; leProp_PreOrder :: PreOrder leProp
   ; leProp_PartialOrder :: PartialOrder eqProp leProp
   }.
 
 Infix "=<" := leProp : type_scope.
 
-Definition Prop_isPoset : isPoset Prop :=
-  let impl_PreOrder : PreOrder impl := {| PreOrder_Reflexive (A : Prop) := id (A := A); PreOrder_Transitive (A : Prop) (B : Prop) (C : Prop) := flip (compose (A := A) (B := B) (C := C)); |} in
+Definition Prop_isProset : isProset Prop :=
+  let impl_PreOrder : PreOrder impl := {| PreOrder_Reflexive (A : Prop) := @id A; PreOrder_Transitive (A : Prop) (B : Prop) (C : Prop) := @flip (B -> C) (A -> B) (A -> C) (@compose A B C); |} in
   {|
     leProp P Q := P -> Q;
-    Poset_isSetoid := mkSetoidFromPreOrder impl_PreOrder;
+    Proset_isSetoid := mkSetoidFromPreOrder impl_PreOrder;
     leProp_PreOrder := impl_PreOrder;
     leProp_PartialOrder := mkSetoidFromPreOrder_derivesPartialOrder impl_PreOrder;
   |}.
 
 #[program]
-Definition pi_isPoset {A : Type} {B : A -> Type} `(POSET : forall x : A, isPoset (B x)) : isPoset (forall x : A, B x) :=
-  {| leProp f g := forall x, f x =< g x; Poset_isSetoid := pi_isSetoid (fun x : A => (POSET x).(Poset_isSetoid)) |}.
+Definition pi_isProset {A : Type} {B : A -> Type} `(PROSET : forall x : A, isProset (B x)) : isProset (forall x : A, B x) :=
+  {| leProp f g := forall x, f x =< g x; Proset_isSetoid := pi_isSetoid (fun x : A => (PROSET x).(Proset_isSetoid)) |}.
 Next Obligation.
   split.
   - intros f1 x. exact (PreOrder_Reflexive (f1 x)).
@@ -151,39 +159,39 @@ Next Obligation.
   - eapply leProp_PartialOrder. exact (conj (f_le_g x) (g_le_f x)).
 Defined.
 
-Lemma leProp_refl {A : Type} `{A_isPoset : isPoset A}
+Lemma leProp_refl {A : Type} `{A_isProset : isProset A}
   : forall x : A, x =< x.
 Proof.
   eapply PreOrder_Reflexive.
 Defined.
 
-Lemma leProp_trans {A : Type} `{A_isPoset : isPoset A}
+Lemma leProp_trans {A : Type} `{A_isProset : isProset A}
   : forall x : A, forall y : A, forall z : A, x =< y -> y =< z -> x =< z.
 Proof.
   eapply PreOrder_Transitive.
 Defined.
 
-Lemma leProp_antisymmetry {A : Type} `{A_isPoset : isPoset A}
+Lemma leProp_antisymmetry {A : Type} `{A_isProset : isProset A}
   : forall x : A, forall y : A, x =< y -> y =< x -> x == y.
 Proof.
   intros x y x_le_y y_le_x. exact (proj2 (leProp_PartialOrder x y) (conj x_le_y y_le_x)).
 Defined.
 
-Lemma eqProp_implies_leProp {A : Type} `{A_isPoset : isPoset A}
+Lemma eqProp_implies_leProp {A : Type} `{A_isProset : isProset A}
   : forall x : A, forall y : A, x == y -> x =< y.
 Proof.
   intros x y x_eq_y. exact (proj1 (proj1 (leProp_PartialOrder x y) x_eq_y)).
 Defined.
 
-Class isMonotonic1 {A : Type} {B : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} (f : A -> B) : Prop :=
+Class isMonotonic1 {A : Type} {B : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} (f : A -> B) : Prop :=
   compatibleWith_leProp_1 x1 x2 (x_LE : x1 =< x2) : f x1 =< f x2.
 
-Class isMonotonic2 {A : Type} {B : Type} {C : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} `{C_isPoset : isPoset C} (f : A -> B -> C) : Prop :=
+Class isMonotonic2 {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C) : Prop :=
   compatibleWith_leProp_2 x1 x2 y1 y2 (x_LE : x1 =< x2) (y_LE : y1 =< y2) : f x1 y1 =< f x2 y2.
 
 #[global]
-Add Parametric Morphism {A : Type} {B : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} (f : A -> B)
-  `(MONOTONIC : @isMonotonic1 A B A_isPoset B_isPoset f)
+Add Parametric Morphism {A : Type} {B : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} (f : A -> B)
+  `(MONOTONIC : @isMonotonic1 A B A_isProset B_isProset f)
   : f with signature (eqProp ==> eqProp)
   as isMonotonic1_compatWith_eqProp.
 Proof.
@@ -193,8 +201,8 @@ Proof.
 Defined.
 
 #[global]
-Add Parametric Morphism {A : Type} {B : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} (f : A -> B)
-  `(MONOTONIC : @isMonotonic1 A B A_isPoset B_isPoset f)
+Add Parametric Morphism {A : Type} {B : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} (f : A -> B)
+  `(MONOTONIC : @isMonotonic1 A B A_isProset B_isProset f)
   : f with signature (leProp ==> leProp)
   as compatibleWith_leProp_1'.
 Proof.
@@ -202,8 +210,8 @@ Proof.
 Defined.
 
 #[global]
-Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} `{C_isPoset : isPoset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isPoset B_isPoset C_isPoset f)
+Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
+  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (eqProp ==> eqProp ==> eqProp)
   as isMonotonic2_compatWith_eqProp.
 Proof.
@@ -213,8 +221,8 @@ Proof.
 Defined.
 
 #[global]
-Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} `{C_isPoset : isPoset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isPoset B_isPoset C_isPoset f)
+Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
+  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (leProp ==> leProp ==> leProp)
   as compatibleWith_leProp_2'.
 Proof.
@@ -222,8 +230,8 @@ Proof.
 Defined.
 
 #[global]
-Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} `{C_isPoset : isPoset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isPoset B_isPoset C_isPoset f)
+Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
+  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (eqProp ==> leProp ==> leProp)
   as compatibleWith_leProp_2_eqProp_l.
 Proof.
@@ -231,8 +239,8 @@ Proof.
 Defined.
 
 #[global]
-Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} `{C_isPoset : isPoset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isPoset B_isPoset C_isPoset f)
+Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
+  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (leProp ==> eqProp ==> leProp)
   as compatibleWith_leProp_2_eqProp_r.
 Proof.
@@ -240,15 +248,15 @@ Proof.
 Defined.
 
 #[global]
-Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isPoset : isPoset A} `{B_isPoset : isPoset B} `{C_isPoset : isPoset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isPoset B_isPoset C_isPoset f)
+Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
+  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (eqProp ==> eqProp ==> leProp)
   as compatibleWith_leProp_2_eqProp_lr.
 Proof.
   intros x1 x2 x_EQ y1 y2 y_EQ. exact (compatibleWith_leProp_2 x1 x2 y1 y2 (eqProp_implies_leProp x1 x2 x_EQ) (eqProp_implies_leProp y1 y2 y_EQ)).
 Defined.
 
-(** End POSET. *)
+(** End PROSET. *)
 
 Lemma PreOrder_iff {A : Type} (R : A -> A -> Prop)
   : PreOrder R <-> (forall x, forall y, R x y <-> (forall z, R z x -> R z y)).
@@ -324,9 +332,9 @@ Instance subSetoid {A : Type} {SETOID : isSetoid A} (P : A -> Prop) : isSetoid (
   }.
 
 #[global]
-Instance subPoset {A : Type} {POSET : isPoset A} (P : A -> Prop) : isPoset (@sig A P) :=
+Instance subProset {A : Type} {PROSET : isProset A} (P : A -> Prop) : isProset (@sig A P) :=
   { leProp (lhs : @sig A P) (rhs : @sig A P) := proj1_sig lhs =< proj1_sig rhs
-  ; Poset_isSetoid := subSetoid P
+  ; Proset_isSetoid := subSetoid P
   ; leProp_PreOrder := relation_on_image_liftsPreOrder _ (@proj1_sig A P)
   ; leProp_PartialOrder := relation_on_image_liftsPartialOrder _ (@proj1_sig A P)
   }.
@@ -432,13 +440,13 @@ Definition subset@{u} {A : Type@{u}} (X1 : t@{u} A) (X2 : t@{u} A) : Prop :=
 #[local] Infix "\subseteq" := subset : type_scope.
 
 #[global]
-Instance ensemble_isPoset {A : Type} : isPoset (E.t A) :=
-  let POSET : isPoset (E.t A) := pi_isPoset (fun _ : A => Prop_isPoset) in
+Instance ensemble_isProset {A : Type} : isProset (E.t A) :=
+  let PROSET : isProset (E.t A) := pi_isProset (fun _ : A => Prop_isProset) in
   {|
     leProp := subset;
-    Poset_isSetoid := {| eqProp lhs rhs := forall x, x \in lhs <-> x \in rhs; eqProp_Equivalence := POSET.(Poset_isSetoid).(eqProp_Equivalence) |};
-    leProp_PreOrder := POSET.(leProp_PreOrder);
-    leProp_PartialOrder := POSET.(leProp_PartialOrder);
+    Proset_isSetoid := {| eqProp lhs rhs := forall x, x \in lhs <-> x \in rhs; eqProp_Equivalence := PROSET.(Proset_isSetoid).(eqProp_Equivalence) |};
+    leProp_PreOrder := PROSET.(leProp_PreOrder);
+    leProp_PartialOrder := PROSET.(leProp_PartialOrder);
   |}.
 
 #[global]
@@ -451,7 +459,7 @@ Defined.
 
 #[global]
 Instance t_isSetoid1 : isSetoid1 E.t :=
-  fun X : Type => fun _ : isSetoid X => (@ensemble_isPoset X).(Poset_isSetoid).
+  fun X : Type => fun _ : isSetoid X => (@ensemble_isProset X).(Proset_isSetoid).
 
 #[global]
 Instance t_isMonad : isMonad E.t :=
@@ -734,8 +742,11 @@ Tactic Notation "s!" :=
     autounfold with simplication_hints in *
   ).
 
-Tactic Notation "done!" :=
+Tactic Notation "ss!" :=
   s!; subst; eauto with *; firstorder (try congruence).
+
+Tactic Notation "done!" :=
+  now ii; repeat ss!; done.
 
 Class isAssociative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
   assoc x y z : f x (f y z) == f (f x y) z.
@@ -743,13 +754,13 @@ Class isAssociative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :
 Class isCommutative {A : Type} `{SETOID : isSetoid A} (f : A -> A -> A) : Prop :=
   comm x y : f x y == f y x.
 
-Class isClosureOperator {A : Type} `{POSET : isPoset A} (cl : A -> A) : Prop :=
+Class isClosureOperator {A : Type} `{PROSET : isProset A} (cl : A -> A) : Prop :=
   { cl_op_extensive : forall x, x =< cl x
   ; cl_op_idempotent : forall x, cl (cl x) == cl x
   ; cl_op_monotonic :: isMonotonic1 cl
   }.
 
-Lemma isClosureOperator_iff {A : Type} `{POSET : isPoset A} (cl : A -> A)
+Lemma isClosureOperator_iff {A : Type} `{PROSET : isProset A} (cl : A -> A)
   : isClosureOperator cl <-> (forall x, forall y, x =< cl y <-> cl x =< cl y).
 Proof.
   split.
@@ -1049,7 +1060,7 @@ End L.
 
 Class AxiomsForTopology (X : Type) (T : ensemble (ensemble X)) : Prop :=
   { full_isOpen
-    : E.empty \in T
+    : E.full \in T
   ; unions_isOpen Os
     (OPENs : Os \subseteq T)
     : E.unions Os \in T
@@ -1057,18 +1068,18 @@ Class AxiomsForTopology (X : Type) (T : ensemble (ensemble X)) : Prop :=
     (OPEN1 : O1 \in T)
     (OPEN2 : O2 \in T)
     : E.intersection O1 O2 \in T
-  ; isOpen_compatWith_eqProp O1 O2
+  ; isOpen_compatWith_ext_eq O1 O2
     (OPEN : O1 \in T)
-    (EQ : O1 == O2)
+    (EXT_EQ : forall x : X, x \in O1 <-> x \in O2)
     : O2 \in T
   }.
 
 Lemma empty_isOpen {X : Type} {T : ensemble (ensemble X)} `{TOPOLOGY : AxiomsForTopology X T}
   : E.empty \in T.
 Proof.
-  eapply isOpen_compatWith_eqProp with (O1 := E.unions E.empty).
+  eapply isOpen_compatWith_ext_eq with (O1 := E.unions E.empty).
   - eapply unions_isOpen. ii. done!.
-  - do 6 red. i. done!.
+  - i. done!.
 Qed.
 
 Class topology (A : Type) : Type :=
@@ -1079,31 +1090,61 @@ Class topology (A : Type) : Type :=
 #[global]
 Add Parametric Morphism {A : Type} `{TOPOLOGY : topology A}
   : (@isOpen A TOPOLOGY) with signature (eqProp ==> iff)
-  as isOpen_eqProp_iff.
+  as isOpen_compatWith_eqProp.
 Proof.
-  ii; split; i; eapply isOpen_compatWith_eqProp; done!.
+  ii; split; i; eapply isOpen_compatWith_ext_eq; done!.
 Qed.
 
-Definition isContinuous {A : Type} {B : Type} {A_topology : topology A} {B_topology : topology B} (f : A -> B) : Prop :=
-  forall Y : ensemble B, isOpen Y -> isOpen (E.preimage f Y).
+Lemma empty_in_T {A : Type} `{TOPOLOGY : topology A}
+  : isOpen (@E.empty A).
+Proof.
+  eapply empty_isOpen.
+Defined.
+
+Lemma full_in_T {A : Type} `{TOPOLOGY : topology A}
+  : isOpen (@E.full A).
+Proof.
+  eapply full_isOpen.
+Defined.
+
+Lemma unions_in_T {A : Type} `{TOPOLOGY : topology A} Os
+  (OPENs : forall O, O \in Os -> isOpen O)
+  : isOpen (@E.unions A Os).
+Proof.
+  eapply unions_isOpen; eauto.
+Defined.
+
+Lemma intersection_in_T {A : Type} `{TOPOLOGY : topology A} O1 O2
+  (OPEN1 : isOpen O1)
+  (OPEN2 : isOpen O2)
+  : isOpen (@E.intersection A O1 O2).
+Proof.
+  eapply intersection_isOpen; eauto.
+Defined.
+
+#[global] Hint Resolve empty_in_T unions_in_T full_in_T intersection_in_T isOpen_compatWith_eqProp : simplication_hints.
 
 Definition Kuratowski_cl_op {A : Type} (cl : ensemble A -> ensemble A) : E.t (E.t A) :=
   fun O => E.complement O == cl (E.complement O).
 
 Theorem Kuratowski_cl_op_good {A : Type} (cl : ensemble A -> ensemble A)
   (cl_isClosureOperator : isClosureOperator cl)
+  (cl_preserves_empty : cl E.empty == E.empty)
   (cl_subadditive : forall X, forall Y, cl (E.union X Y) \subseteq E.union (cl X) (cl Y))
   (cl_classic : forall X, cl (E.complement (E.complement X)) == E.complement (E.complement (cl X)))
   : AxiomsForTopology A (Kuratowski_cl_op cl).
 Proof.
   unfold Kuratowski_cl_op; ii; split; i.
-  - done!.
+  - red. eapply leProp_antisymmetry.
+    + done!.
+    + transitivity (cl E.empty).
+      { eapply cl_op_monotonic. done!. }
+      rewrite cl_preserves_empty. done!.
   - red. eapply leProp_antisymmetry.
     + eapply cl_op_extensive.
     + do 2 red in OPENs. intros x IN H_in. rewrite E.in_unions_iff in H_in. destruct H_in as [X [H_in H_IN]].
       pose proof (OPENs X H_IN) as H_EQ. revert x IN H_in. change (cl (E.complement (E.unions Os)) =< E.complement X).
-      rewrite H_EQ. eapply cl_op_monotonic. intros x H_in CONTRA.
-      eapply H_in. done!.
+      rewrite H_EQ. eapply cl_op_monotonic. intros x H_in CONTRA. done!.
   - red in OPEN1, OPEN2. red. eapply leProp_antisymmetry.
     + eapply cl_op_extensive.
     + transitivity (cl (E.complement (E.complement (E.union (E.complement O1) (E.complement O2))))).
@@ -1112,6 +1153,36 @@ Proof.
       { rewrite cl_classic. intros x IN IN'. contradiction IN. intros CONTRA. contradiction IN'.
         clear IN IN'. rewrite OPEN1, OPEN2. revert x CONTRA. eapply cl_subadditive.
       }
-      intros x IN IN'. contradiction IN; done!.
-  - red. red in OPEN. rewrite <- EQ. exact OPEN.
+      done!.
+  - red. red in OPEN. change (O1 == O2) in EXT_EQ. rewrite <- EXT_EQ. exact OPEN.
 Qed.
+
+Definition isContinuous {A : Type} {B : Type} {A_topology : topology A} {B_topology : topology B} (f : A -> B) : Prop :=
+  forall Y : ensemble B, isOpen Y -> isOpen (E.preimage f Y).
+
+Section SUBSPACE_TOPOLOGY.
+
+#[local] Opaque "\in".
+
+#[global, program]
+Instance Subspace_topology {A : Type} {P : A -> Prop} (TOPOLOGY : topology A) : topology (@sig A P) :=
+  { isOpen U := exists O : ensemble A, isOpen O /\ (forall z, proj1_sig z \in O <-> z \in U) }.
+Next Obligation.
+  ii. split.
+  - exists E.full. done!.
+  - i. exists (E.unions (bind Os (fun U => fun O => (forall z, proj1_sig z \in O <-> z \in U) /\ isOpen O))). split.
+    { eapply unions_in_T. done!. }
+    { done!. }
+  - i. s!. ss!. exists (E.intersection x x0). split.
+    { eapply intersection_in_T; done!. }
+    { done!. }
+  - done!.
+Qed.
+
+Lemma proj1_sig_isContinuous {A : Type} {TOPOLOGY : topology A} (P : A -> Prop)
+  : @isContinuous (@sig A P) A (Subspace_topology TOPOLOGY) TOPOLOGY (@proj1_sig A P).
+Proof.
+  intros Y OPEN. simpl. exists Y; done!.
+Qed.
+
+End SUBSPACE_TOPOLOGY.

@@ -14,14 +14,24 @@ Proof.
 Qed.
 
 #[program]
-Definition mkPosetFrom_ltProp {A : Type} (ltProp : A -> A -> Prop) (ltProp_StrictOrder : StrictOrder ltProp) : isPoset A :=
-  {| leProp x y := ltProp x y \/ x = y; Poset_isSetoid := mkSetoid_from_eq; |}.
+Definition mkProsetFrom_ltProp {A : Type} (ltProp : A -> A -> Prop) (ltProp_StrictOrder : StrictOrder ltProp) : isProset A :=
+  {| leProp x y := ltProp x y \/ x = y; Proset_isSetoid := mkSetoid_from_eq; |}.
 Next Obligation.
   split; ii; firstorder try congruence.
 Qed.
 Next Obligation.
   intros x y. cbn. unfold flip. split; firstorder try congruence. contradiction (StrictOrder_Irreflexive x). firstorder.
 Qed.
+
+Class isPoset (A : Type) `{PROSET : isProset A} : Prop :=
+  poset_spec (x : A) (y : A) : x == y <-> x = y.
+
+#[global]
+Instance mkProsetFrom_ltProp_isPoset {A : Type} {ltProp : A -> A -> Prop} (ltProp_StrictOrder : StrictOrder ltProp)
+  : isPoset A (PROSET := mkProsetFrom_ltProp ltProp ltProp_StrictOrder).
+Proof.
+  red; reflexivity.
+Defined.
 
 Class has_ltProp (A : Type) : Type :=
   ltProp (lhs : A) (rhs : A) : Prop.
@@ -33,7 +43,7 @@ Class hasStrictOrder (A : Type) : Type :=
   ; lt_StrictOrder :: StrictOrder lt
   }.
 
-Infix "≦" := (leProp (isPoset := mkPosetFrom_ltProp lt lt_StrictOrder)) : type_scope.
+Infix "≦" := (leProp (isProset := mkProsetFrom_ltProp lt lt_StrictOrder)) : type_scope.
 
 Class isWellPoset (A : Type) : Type :=
   { wltProp :: has_ltProp A
@@ -49,7 +59,7 @@ Instance wltProp_StrictOrder {A : Type} `{WPOSET : isWellPoset A} : StrictOrder 
   ; StrictOrder_Transitive := wltProp_Transitive
   }.
 
-Infix "⪳" := (leProp (isPoset := mkPosetFrom_ltProp wltProp wltProp_StrictOrder)) : type_scope.
+Infix "⪳" := (leProp (isProset := mkProsetFrom_ltProp wltProp wltProp_StrictOrder)) : type_scope.
 
 Class isWellToset (A : Type) : Type :=
   { WellToset_isWellPoset :: isWellPoset A
@@ -58,12 +68,11 @@ Class isWellToset (A : Type) : Type :=
   }.
 
 #[local] Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive : poset_hints.
-
 #[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : poset_hints.
 
 Section BASIC1.
 
-Lemma leProp_unfold {A : Type} `{POSET : isPoset A} (x : A) (y : A)
+Lemma leProp_unfold {A : Type} `{PROSET : isProset A} (x : A) (y : A)
   : x =< y <-> (forall z, z =< x -> z =< y).
 Proof.
   exact (proj1 (PreOrder_iff leProp) leProp_PreOrder x y).
@@ -84,22 +93,22 @@ Proof.
   change (forall x, f1 x == f2 x) in f1_eq_f2. now rewrite f1_eq_f2.
 Qed.
 
-Definition prefixedpointsOf {D : Type} `{POSET : isPoset D} (f : D -> D) : ensemble D :=
+Definition prefixedpointsOf {D : Type} `{PROSET : isProset D} (f : D -> D) : ensemble D :=
   fun x => x >= f x.
 
-Definition postfixedpointsOf {D : Type} `{POSET : isPoset D} (f : D -> D) : ensemble D :=
+Definition postfixedpointsOf {D : Type} `{PROSET : isProset D} (f : D -> D) : ensemble D :=
   fun x => x =< f x.
 
-Definition upperboundsOf {D : Type} `{POSET : isPoset D} (X : ensemble D) : ensemble D :=
+Definition upperboundsOf {D : Type} `{PROSET : isProset D} (X : ensemble D) : ensemble D :=
   fun u => forall x : D, forall IN : x \in X, x =< u.
 
-Definition lowerboundsOf {D : Type} `{POSET : isPoset D} (X: ensemble D) : ensemble D :=
+Definition lowerboundsOf {D : Type} `{PROSET : isProset D} (X: ensemble D) : ensemble D :=
   fun l => forall x : D, forall IN : x \in X, x >= l.
 
-Definition is_supremum_of {D : Type} `{POSET : isPoset D} (sup_X : D) (X : ensemble D) : Prop :=
+Definition is_supremum_of {D : Type} `{PROSET : isProset D} (sup_X : D) (X : ensemble D) : Prop :=
   forall u : D, sup_X =< u <-> u \in upperboundsOf X.
 
-Definition is_infimum_of {D : Type} `{POSET : isPoset D} (inf_X : D) (X : ensemble D) : Prop :=
+Definition is_infimum_of {D : Type} `{PROSET : isProset D} (inf_X : D) (X : ensemble D) : Prop :=
   forall l : D, inf_X >= l <-> l \in lowerboundsOf X.
 
 #[global]
@@ -114,85 +123,79 @@ Qed.
 
 #[local] Hint Unfold fixedpointsOf prefixedpointsOf postfixedpointsOf upperboundsOf lowerboundsOf is_supremum_of is_infimum_of : simplication_hints.
 
-Context {D : Type} `{POSET : isPoset D}.
+Context {D : Type} `{PROSET : isProset D}.
 
-#[local] Existing Instance pi_isPoset.
+#[local] Existing Instance pi_isProset.
 
 #[global]
 Instance prefixecpointsOf_eqPropCompatible1
-  : eqPropCompatible1 (@prefixedpointsOf D POSET).
+  : eqPropCompatible1 (@prefixedpointsOf D PROSET).
 Proof.
-  intros f1 f2 f1_eq_f2 x. unfold prefixedpointsOf. unfold "\in".
-  change (forall x, f1 x == f2 x) in f1_eq_f2. now rewrite f1_eq_f2.
+  done!.
 Qed.
 
 #[global]
 Instance postfixedpointsOf_eqPropCompatible1
-  : eqPropCompatible1 (@postfixedpointsOf D POSET).
+  : eqPropCompatible1 (@postfixedpointsOf D PROSET).
 Proof.
-  intros f1 f2 f1_eq_f2 x. unfold postfixedpointsOf. unfold "\in".
-  change (forall x, f1 x == f2 x) in f1_eq_f2. now rewrite f1_eq_f2.
+  done!.
 Qed.
 
 Lemma prefixedpointsOf_decreasing (f1 : D -> D) (f2 : D -> D)
   (LE : f1 =< f2)
-  : prefixedpointsOf f2 =< prefixedpointsOf f1.
+  : prefixedpointsOf f1 >= prefixedpointsOf f2.
 Proof.
-  intros x. unfold prefixedpointsOf, "\in". i.
-  change (forall x, f1 x =< f2 x) in LE. now rewrite -> LE.
+  done!.
 Qed.
 
 Lemma postfixedpointsOf_increasing (f1 : D -> D) (f2 : D -> D)
   (LE : f1 =< f2)
   : postfixedpointsOf f1 =< postfixedpointsOf f2.
 Proof.
-  intros x. unfold postfixedpointsOf, "\in". i.
-  change (forall x, f1 x =< f2 x) in LE. now rewrite <- LE.
+  done!.
 Qed.
 
 #[global]
 Add Parametric Morphism
-  : (@upperboundsOf D POSET) with signature (eqProp ==> eqProp)
+  : (@upperboundsOf D PROSET) with signature (eqProp ==> eqProp)
   as upperboundsOf_compatWith_eqProp.
 Proof.
-  intros X1 X2 X_EQ. done!.
+  done!.
 Qed.
 
 #[global]
 Add Parametric Morphism
-  : (@lowerboundsOf D POSET) with signature (eqProp ==> eqProp)
+  : (@lowerboundsOf D PROSET) with signature (eqProp ==> eqProp)
   as lowerboundsOf_compatWith_eqProp.
 Proof.
-  intros X1 X2 X_EQ. done!.
+  done!.
 Qed.
 
 #[global]
 Add Parametric Morphism
-  : (@is_supremum_of D POSET) with signature (eqProp ==> eqProp ==> iff)
+  : (@is_supremum_of D PROSET) with signature (eqProp ==> eqProp ==> iff)
   as is_supremum_of_compatWith_eqProp.
 Proof.
   intros sup_X1 sup_X2 sup_EQ X1 X2 X_EQ; unfold is_supremum_of. split; intros UPPERBOUND ?.
-  - rewrite <- X_EQ, <- sup_EQ. eauto.
-  - rewrite -> X_EQ, -> sup_EQ. eauto.
+  - rewrite <- X_EQ, <- sup_EQ; eauto.
+  - rewrite -> X_EQ, -> sup_EQ; eauto.
 Qed.
 
 #[global]
 Add Parametric Morphism
-  : (@is_infimum_of D POSET) with signature (eqProp ==> eqProp ==> iff)
+  : (@is_infimum_of D PROSET) with signature (eqProp ==> eqProp ==> iff)
   as is_infimum_of_compatWith_eqProp.
 Proof.
   intros inf_X1 inf_X2 inf_EQ X1 X2 X_EQ; unfold is_infimum_of. split; intros UPPERBOUND ?.
-  - rewrite <- X_EQ, <- inf_EQ. eauto.
-  - rewrite -> X_EQ, -> inf_EQ. eauto.
+  - rewrite <- X_EQ, <- inf_EQ; eauto.
+  - rewrite -> X_EQ, -> inf_EQ; eauto.
 Qed.
 
 Lemma supremum_is_infimum_of_its_upperbounds X sup_X
   (SUPREMUM : is_supremum_of sup_X X)
   : is_infimum_of sup_X (E.singleton sup_X).
 Proof.
-  ii. split.
-  - ii. now inv IN.
-  - ii. red in H. done!.
+  ii; split; done!.
 Qed.
 
 Lemma supremum_monotonic sup_X1 sup_X2 X1 X2
@@ -201,7 +204,7 @@ Lemma supremum_monotonic sup_X1 sup_X2 X1 X2
   (SUBSET : X1 \subseteq X2)
   : sup_X1 =< sup_X2.
 Proof.
-  eapply SUPREMUM1. ii. eapply SUPREMUM2; done!.
+  eapply SUPREMUM1; ii; eapply SUPREMUM2; done!.
 Qed.
 
 #[local] Hint Resolve supremum_monotonic : poset_hints.
@@ -217,7 +220,7 @@ Qed.
 
 #[local] Hint Resolve supremum_unique : poset_hints.
 
-Lemma is_supremum_of_congruence sup_X1 sup_X2 X1 X2
+Lemma supremum_congruence sup_X1 sup_X2 X1 X2
   (SUPREMUM : is_supremum_of sup_X1 X1)
   (sup_EQ : sup_X1 == sup_X2)
   (X_EQ : X1 == X2)
@@ -226,7 +229,7 @@ Proof.
   now rewrite sup_EQ, X_EQ in SUPREMUM.
 Qed.
 
-#[local] Hint Resolve is_supremum_of_congruence : poset_hints.
+#[local] Hint Resolve supremum_congruence : poset_hints.
 
 Definition map_suprema (Xs : ensemble (ensemble D)) : ensemble D :=
   Xs >>= fun X_i => fun sup_X_i => is_supremum_of sup_X_i X_i.
@@ -297,7 +300,7 @@ Proof with eauto with *.
     + rewrite H. eapply H_infimum .
       intros lower_bound lower_bound_in. unnw.
       exact (lower_bound_in x IN).
-    + unnw. eapply H_infimum...
+    + eapply H_infimum...
 Qed.
 
 Lemma infimum_monotonic (X1 : ensemble D) (X2 : ensemble D) (inf_X1 : D) (inf_X2 : D)
@@ -306,8 +309,7 @@ Lemma infimum_monotonic (X1 : ensemble D) (X2 : ensemble D) (inf_X1 : D) (inf_X2
   (SUBSETEQ : X1 \subseteq X2)
   : inf_X2 =< inf_X1.
 Proof.
-  eapply INFIMUM1; ii.
-  eapply INFIMUM2; eauto with *.
+  eapply INFIMUM1; ii; eapply INFIMUM2; eauto with *.
 Qed.
 
 #[local] Hint Resolve infimum_monotonic : poset_hints.
@@ -343,7 +345,7 @@ Definition is_gfpOf (gfp : D) (f : D -> D) : Prop :=
 
 #[local] Hint Unfold is_lfpOf is_gfpOf : poset_hints.
 
-Theorem lfpOf_Monotnoic (f : D -> D) (lfp : D)
+Theorem prefixedpoint_is_lfpOf (f : D -> D) (lfp : D)
   (MONOTONIC : isMonotonic1 f)
   (INFIMUM : is_infimum_of lfp (prefixedpointsOf f))
   : is_lfpOf lfp f.
@@ -362,7 +364,7 @@ Proof with eauto with *.
   split... eapply leProp_antisymmetry...
 Qed.
 
-Lemma gfpOf_Monotnoic (f : D -> D) (gfp : D)
+Lemma postfixedpoint_is_gfpOf (f : D -> D) (gfp : D)
   (MONOTONIC : isMonotonic1 f)
   (SUPREMUM : is_supremum_of gfp (postfixedpointsOf f))
   : is_gfpOf gfp f.
@@ -380,11 +382,11 @@ Proof with eauto with *.
     eapply eqProp_implies_leProp...
 Qed.
 
-Definition isSupremumIn (sup : D) (X : ensemble D) (phi : D -> Prop) : Prop :=
+Definition is_supremum_in (sup : D) (X : ensemble D) (phi : D -> Prop) : Prop :=
   phi sup /\ (forall upper_bound : { d : D | phi d }, sup =< (proj1_sig upper_bound) <-> proj1_sig upper_bound \in upperboundsOf X).
 
-Theorem isSupremumIn_iff (phi : D -> Prop) (sup_X : @sig D phi) (X : ensemble (@sig D phi))
-  : isSupremumIn (proj1_sig sup_X) (E.image (@proj1_sig D phi) X) phi <-> is_supremum_of sup_X X.
+Theorem is_supremum_in_iff (phi : D -> Prop) (sup_X : @sig D phi) (X : ensemble (@sig D phi))
+  : is_supremum_in (proj1_sig sup_X) (E.image (@proj1_sig D phi) X) phi <-> is_supremum_of sup_X X.
 Proof with eauto with *. 
   split.
   { intros [? ?] z; split.
@@ -409,9 +411,9 @@ Qed.
 End BASIC1.
 
 #[local, program]
-Instance direct_product_of_Poset {A : Type} {B : Type} (A_isPoset : isPoset A) (B_isPoset : isPoset B) : isPoset (A * B) :=
+Instance direct_product_of_two_Prosets {A : Type} {B : Type} (A_isProset : isProset A) (B_isProset : isProset B) : isProset (A * B) :=
   { leProp lhs rhs := fst lhs =< fst rhs /\ snd lhs =< snd rhs
-  ; Poset_isSetoid := directProduct_of_two_Setoids A_isPoset.(Poset_isSetoid) B_isPoset.(Poset_isSetoid)
+  ; Proset_isSetoid := directProduct_of_two_Setoids A_isProset.(Proset_isSetoid) B_isProset.(Proset_isSetoid)
   }.
 Next Obligation.
   split.
@@ -436,26 +438,40 @@ Next Obligation.
     + exact (proj2 (proj2 EQ)).
 Defined.
 
-Module Cola.
+#[program]
+Definition dual_Proset {D : Type} `(PROSET : isProset D) : isProset D :=
+  {| leProp lhs rhs := rhs =< lhs; Proset_isSetoid := PROSET.(Proset_isSetoid) |}.
+Next Obligation.
+  split.
+  - intros x. reflexivity.
+  - intros x y z LE LE'. transitivity y; [exact LE' | exact LE].
+Defined.
+Next Obligation.
+  intros x y. unfold flip; cbn. split.
+  - intros EQ. eapply leProp_PartialOrder. symmetry. exact EQ.
+  - intros EQ. symmetry. eapply leProp_PartialOrder. exact EQ.
+Defined.
 
-#[local] Existing Instance pi_isPoset.
+Module ColaDef.
+
+#[local] Existing Instance pi_isProset.
 
 Notation "`[ A -> B ]" := { f : A -> B | isMonotonic1 f }.
 
-Class isCola (D : Type) {POSET : isPoset D} : Type :=
+Class isCola (D : Type) {PROSET : isProset D} : Type :=
   supremum_cola (X : ensemble D) : { sup_X : D | is_supremum_of sup_X X }.
 
-End Cola.
+End ColaDef.
 
-Module Cpo.
+Module CpoDef.
 
 Import ListNotations.
 
-#[local] Existing Instance pi_isPoset.
+#[local] Existing Instance pi_isProset.
 
 Notation "`[ A -> B ]" := { f : A -> B | isContinuous f }.
 
-Variant isDirected {D : Type} `{POSET : isPoset D} (X : ensemble D) : Prop :=
+Variant isDirected {D : Type} `{PROSET : isProset D} (X : ensemble D) : Prop :=
   | isDirected_intro 
     (NONEMPTY : exists x0, x0 \in X)
     (DIRECTED' : forall x1, forall x2, forall x1_IN : x1 \in X, forall x2_IN : x2 \in X, exists x3, x3 \in X /\ (x1 =< x3 /\ x2 =< x3))
@@ -463,7 +479,7 @@ Variant isDirected {D : Type} `{POSET : isPoset D} (X : ensemble D) : Prop :=
 
 #[local] Hint Constructors isDirected : poset_hints.
 
-Lemma isDirected_iff {D : Type} `{POSET : isPoset D} (X : ensemble D)
+Lemma isDirected_iff {D : Type} `{PROSET : isProset D} (X : ensemble D)
   : isDirected X <-> (forall xs, L.is_finsubset_of xs X -> exists y, y \in X /\ (forall x, L.In x xs -> x =< y)).
 Proof.
   split.
@@ -471,36 +487,36 @@ Proof.
     + done!.
     + intros FINSUBSET. exploit IH. done!.
       intros [y' [IN' BOUNDED']]. exploit (DIRECTED' x' y'); eauto.
-      intros (y & ? & ? & ?). exists y. split; trivial. intros x [<- | IN]; done!.
+      intros (y & ? & ? & ?). exists y; done!.
   - intros DIRECTED. split.
     + exploit (DIRECTED []); simpl.
       * done!.
-      * intros [y [IN ?]]. exists y. done!.
+      * intros [y [IN ?]]. exists y; done!.
     + ii. exploit (DIRECTED [x1; x2]); simpl. 
       * now intros ? [<- | [<- | []]].
-      * intros [y [IN ?]]. exists y. done!.
+      * intros [y [IN ?]]. exists y; done!.
 Qed.
 
-Lemma preservesDirectedness_if_isMonotonic {A : Type} {B : Type} {A_isPoset : isPoset A} {B_isPoset : isPoset B} (f : A -> B)
+Lemma preservesDirectedness_if_isMonotonic {A : Type} {B : Type} {A_isProset : isProset A} {B_isProset : isProset B} (f : A -> B)
   (MONOTONIC : isMonotonic1 f)
   : forall X, isDirected X -> isDirected (E.image f X).
 Proof.
   intros X [? ?]. split.
-  - destruct NONEMPTY as [x0 IN]. exists (f x0). done!.
+  - destruct NONEMPTY as [x0 IN]. exists (f x0); done!.
   - intros y1 y2 y1_IN y2_IN. s!. destruct y1_IN as [x1 [-> x1_in]], y2_IN as [x2 [-> x2_in]].
-    pose proof (DIRECTED' x1 x2 x1_in x2_in) as [x3 [x3_in [x1_le_x3 x2_le_x3]]]. exists (f x3). done!.
+    pose proof (DIRECTED' x1 x2 x1_in x2_in) as [x3 [x3_in [x1_le_x3 x2_le_x3]]]. exists (f x3); done!.
 Qed.
 
-Class isCpo (D : Type) {POSET : isPoset D} : Type :=
+Class isCpo (D : Type) {PROSET : isProset D} : Type :=
   { bottom_cpo : D
   ; supremum_cpo (X : ensemble D) (DIRECTED : isDirected X) : D
   ; bottom_cpo_spec : forall x : D, bottom_cpo =< x
   ; supremum_cpo_spec (X : ensemble D) (DIRECTED : isDirected X) : is_supremum_of (supremum_cpo X DIRECTED) X
   }.
 
-End Cpo.
+End CpoDef.
 
-Class hsOrd (A : Type) `{POSET : isPoset A} : Type :=
+Class hsOrd (A : Type) `{PROSET : isProset A} : Type :=
   { compare (x : A) (y : A) : comparison
   ; compare_Lt x y
     (OBS_Lt : compare x y = Lt)
@@ -515,19 +531,19 @@ Class hsOrd (A : Type) `{POSET : isPoset A} : Type :=
 
 #[global] Hint Resolve compare_Lt compare_Eq compare_Gt : poset_hints.
 
-Lemma compare_spec {A : Type} {POSET : isPoset A} {ORD : hsOrd A (POSET := POSET)} (lhs : A) (rhs : A) :
+Lemma compare_spec {A : Type} {PROSET : isProset A} {ORD : hsOrd A (PROSET := PROSET)} (lhs : A) (rhs : A) :
   match compare lhs rhs with
   | Lt => lhs =< rhs /\ ~ lhs == rhs
   | Eq => lhs == rhs
   | Gt => rhs =< lhs /\ ~ lhs == rhs
   end.
 Proof.
-  destruct (compare lhs rhs) eqn: H_compare_result; eauto with *.
+  destruct (compare lhs rhs) eqn: H_OBS; eauto with *.
 Qed.
 
 Section list_hsOrd.
 
-Context {A : Type} {POSET : isPoset A} {ORD : hsOrd A (POSET := POSET)}.
+Context {A : Type} {PROSET : isProset A} {ORD : hsOrd A (PROSET := PROSET)}.
 
 Fixpoint lex_compare (xs : list A) (ys : list A) {struct xs} : comparison :=
   match xs, ys with
@@ -555,15 +571,15 @@ Proof with discriminate || eauto with *.
   unfold lex_eq. split.
   - intros xs1; induction xs1 as [ | x1 xs1 IH]; simpl...
     pose proof (claim1 := compare_spec x1 x1).
-    destruct (compare x1 x1) eqn: H_compare_result1...
+    destruct (compare x1 x1) eqn: H_OBS1...
     all: contradiction (proj2 claim1)...
   - intros xs1 xs2; revert xs1 xs2; induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x1).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x1) eqn: H_compare_result2...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2...
     all: contradiction (proj2 claim2)...
   - intros xs1 xs2 xs3; revert xs1 xs3; induction xs2 as [ | x2 xs2 IH]; destruct xs1 as [ | x1 xs1]; destruct xs3 as [ | x3 xs3]; simpl...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x3); pose proof (claim3 := compare_spec x1 x3).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x3) eqn: H_compare_result2; destruct (compare x1 x3) eqn: H_compare_result3...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x3) eqn: H_OBS2; destruct (compare x1 x3) eqn: H_OBS3...
     all: contradiction (proj2 claim3)...
 Qed.
 
@@ -585,7 +601,7 @@ Proof with discriminate || eauto with *.
   - intros xs1 xs2 xs3; revert xs1 xs3; induction xs2 as [ | x2 xs2 IH]; destruct xs1 as [ | x1 xs1]; destruct xs3 as [ | x3 xs3]; simpl...
     intros [H_false | H_false]...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x3); pose proof (claim3 := compare_spec x1 x3); pose proof (claim4 := IH xs1 xs3).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x3) eqn: H_compare_result2; destruct (compare x1 x3) eqn: H_compare_result3...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x3) eqn: H_OBS2; destruct (compare x1 x3) eqn: H_OBS3...
     + contradiction (proj2 claim3)...
     + contradiction (proj2 claim2)...
     + contradiction (proj2 claim3); eapply lemma1; [transitivity x2 | exact (proj1 claim3)]. eapply lemma2... exact (proj1 claim2).
@@ -614,7 +630,7 @@ Proof with discriminate || eauto with *.
   assert (lemma4 : forall xs1 : list A, forall xs2 : list A, lex_compare xs1 xs2 = Lt <-> lex_compare xs2 xs1 = Gt).
   { induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl... split...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x1); pose proof (claim3 := IH xs2).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x1) eqn: H_compare_result2...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2...
     - contradiction (proj2 claim2)...
     - contradiction (proj2 claim2)...
     - contradiction (proj2 claim1)...
@@ -625,7 +641,7 @@ Proof with discriminate || eauto with *.
   assert (lemma5 : forall xs1 : list A, forall xs2 : list A, lex_compare xs1 xs2 = Eq <-> lex_compare xs2 xs1 = Eq).
   { induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl... split... split...
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x1); pose proof (claim3 := IH xs2).
-    destruct (compare x1 x2) eqn: H_compare_result1; destruct (compare x2 x1) eqn: H_compare_result2...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2...
     - contradiction (proj2 claim2)...
     - contradiction (proj2 claim2)...
     - contradiction (proj2 claim1)...
@@ -634,7 +650,7 @@ Proof with discriminate || eauto with *.
     - split...
   }
   assert (lemma6 : forall xs1 : list A, forall xs2 : list A, lex_compare xs1 xs2 = Gt <-> lex_compare xs2 xs1 = Lt) by firstorder.
-  intros lhs rhs; destruct (lex_compare lhs rhs) eqn: H_compare_result; now firstorder.
+  intros lhs rhs; destruct (lex_compare lhs rhs) eqn: H_OBS; now firstorder.
 Qed.
 
 Corollary lex_le_flip_iff lhs rhs OBS :
@@ -648,7 +664,7 @@ Proof.
   split.
   - ii; subst OBS. exact (lex_le_flip_spec lhs rhs).
   - pose proof (lex_le_flip_spec rhs lhs) as claim1. intros H_eq.
-    destruct OBS eqn: H_compare_result; now rewrite H_eq in claim1.
+    destruct OBS eqn: H_OBS; now rewrite H_eq in claim1.
 Qed.
 
 #[local]
@@ -657,7 +673,7 @@ Instance lex_le_PartialOrder
 Proof with discriminate || eauto with *.
   intros xs1 xs2; cbn. unfold flip, lex_eq, lex_le.
   pose proof (claim1 := lex_le_flip_spec xs1 xs2).
-  destruct (lex_compare xs1 xs2) eqn: H_compare_result.
+  destruct (lex_compare xs1 xs2) eqn: H_OBS.
   - split...
   - split... intros [? [H_false | H_false]].
     all: rewrite H_false in claim1...
@@ -665,9 +681,9 @@ Proof with discriminate || eauto with *.
 Qed.
 
 #[local]
-Instance list_lexicographical_order : isPoset (list A) :=
+Instance list_lexicographical_order : isProset (list A) :=
   { leProp := lex_le
-  ; Poset_isSetoid := list_isSetoid_of_elementwise_comparison
+  ; Proset_isSetoid := list_isSetoid_of_elementwise_comparison
   ; leProp_PreOrder := lex_le_PreOrder
   ; leProp_PartialOrder := lex_le_PartialOrder
   }.
@@ -675,7 +691,7 @@ Instance list_lexicographical_order : isPoset (list A) :=
 #[local] Obligation Tactic := cbn; unfold lex_le, lex_eq; ii.
 
 #[global, program]
-Instance list_hsOrd : hsOrd (list A) (POSET := list_lexicographical_order) :=
+Instance list_hsOrd : hsOrd (list A) (PROSET := list_lexicographical_order) :=
   { compare := lex_compare }.
 Next Obligation.
   rewrite OBS_Lt. split; [now left | congruence].
@@ -688,3 +704,64 @@ Next Obligation.
 Qed.
 
 End list_hsOrd.
+
+Section nat_hsOrd.
+
+#[local]
+Instance nat_isPoset : isProset nat :=
+  { leProp := Nat.le
+  ; Proset_isSetoid := mkSetoid_from_eq
+  ; leProp_PreOrder := Nat.le_preorder
+  ; leProp_PartialOrder := Nat.le_partialorder
+  }.
+
+Fixpoint nat_compare (x : nat) (y : nat) {struct x} : comparison :=
+  match x, y with
+  | O, O => Eq
+  | O, S y' => Lt
+  | S x', O => Gt
+  | S x', S y' => nat_compare x' y'
+  end.
+
+Lemma nat_compare_lt (x : nat) (y : nat)
+  (hyp_lt : nat_compare x y = Lt)
+  : x <= y /\ x <> y.
+Proof with eauto with *.
+  revert x y hyp_lt. induction x as [ | x IH], y as [ | y]; simpl; ii.
+  - inversion hyp_lt.
+  - split; lia.
+  - inversion hyp_lt.
+  - pose proof (IH y hyp_lt) as [x_le_y x_ne_y]. split; lia.
+Qed.
+
+Lemma nat_compare_eq (x : nat) (y : nat)
+  (hyp_lt : nat_compare x y = Eq)
+  : x = y.
+Proof with eauto with *.
+  revert x y hyp_lt. induction x as [ | x IH], y as [ | y]; simpl; ii.
+  - reflexivity.
+  - inversion hyp_lt.
+  - inversion hyp_lt.
+  - pose proof (IH y hyp_lt) as x_eq_y. f_equal. exact x_eq_y.
+Qed.
+
+Lemma nat_compare_gt (x : nat) (y : nat)
+  (hyp_lt : nat_compare x y = Gt)
+  : y <= x /\ x <> y.
+Proof with eauto with *.
+  cbn. revert x y hyp_lt. induction x as [ | x IH], y as [ | y]; simpl; ii.
+  - inversion hyp_lt.
+  - inversion hyp_lt.
+  - split; lia.
+  - pose proof (IH y hyp_lt) as [y_le_x x_ne_y]. split; lia.
+Qed.
+
+#[local]
+Instance nat_hsOrd : hsOrd nat (PROSET := nat_isPoset) :=
+  { compare := nat_compare
+  ; compare_Lt := nat_compare_lt
+  ; compare_Eq := nat_compare_eq
+  ; compare_Gt := nat_compare_gt
+  }.
+
+End nat_hsOrd.
