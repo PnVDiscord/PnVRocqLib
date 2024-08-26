@@ -32,6 +32,8 @@ The Coq Proof Assistant, version 8.18.0
 
 ### Math
 
+- `BooleanAlgebra.v` : Basic Theory on Boolean Algebras.
+
 - `ClassicalDomainTheory.v` : Classical Domain Theory.
 
 - `DomainTheory.v` : Constructive Domain Theory.

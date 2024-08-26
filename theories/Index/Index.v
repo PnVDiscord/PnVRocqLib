@@ -1,5 +1,6 @@
 Require Import PnV.Data.Aczel.
 Require Import PnV.Data.Vector.
+Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Math.ClassicalDomainTheory.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.

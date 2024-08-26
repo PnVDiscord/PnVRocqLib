@@ -789,7 +789,7 @@ Class AbsorptionLaw (OP1 : A -> A -> A) (OP2 : A -> A -> A) : Prop :=
     : OP2 x (OP1 x y) == x
   }.
 
-Class isAnnihilatorOf (a : A) (OP : A -> A -> A) : Prop :=
+Class isAnnihilatorFor (a : A) (OP : A -> A -> A) : Prop :=
   { left_ann x
     : OP a x == a
   ; right_ann x
