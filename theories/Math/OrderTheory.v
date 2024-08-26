@@ -26,6 +26,13 @@ Qed.
 Class isPoset (A : Type) `{PROSET : isProset A} : Prop :=
   poset_spec (x : A) (y : A) : x == y <-> x = y.
 
+Lemma eqPropCompatible_dom_isPoset {A : Type} {B : Type} `{A_isProset : isProset A} `{B_isSetoid : isSetoid B}
+  (POSET : isPoset A)
+  : forall f : A -> B, eqPropCompatible1 f.
+Proof.
+  ii. rewrite poset_spec in x_EQ. now rewrite x_EQ.
+Qed.
+
 #[global]
 Instance mkProsetFrom_ltProp_isPoset {A : Type} {ltProp : A -> A -> Prop} (ltProp_StrictOrder : StrictOrder ltProp)
   : isPoset A (PROSET := mkProsetFrom_ltProp ltProp ltProp_StrictOrder).

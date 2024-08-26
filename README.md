@@ -26,6 +26,10 @@ The Coq Proof Assistant, version 8.18.0
 
 - `Vector.v` : Replaces `Coq.Vectors.VectorDef.t`.
 
+### Index
+
+- `Index.v` : Accumulates all source files and check their consistency.
+
 ### Math
 
 - `ClassicalDomainTheory.v` : Classical Domain Theory.
@@ -47,10 +51,6 @@ The Coq Proof Assistant, version 8.18.0
 - `SfLib.v` : The copy of `snu-sf/sflib.v`. See `References`.
 
 - `Prelude.v` : The prelude code.
-
-### Index
-
-- `Index.v` : Accumulates all source files and check their consistency.
 
 ## References
 
