@@ -1,6 +1,8 @@
 # PnVRocqLib
 
-A Coq library written by members of PnV Discord Server
+A Coq library written by members of PnV Discord Server.
+
+Currently, this library is standalone.
 
 ## Quick Start
 

@@ -220,7 +220,7 @@ Unshelve.
   - rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
     exact (phiVNil).
   - inversion H_eq.
-Qed.
+Defined.
 
 Lemma caseS {n' : nat} (phi : vec (S n') -> Type)
   (phiVCons : forall x' : A, forall xs' : vec n', phi (x' :: xs'))
@@ -240,7 +240,7 @@ Unshelve.
   - pose proof (f_equal pred H_eq) as n_eq_n'. simpl in n_eq_n'. subst n'.
     rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
     exact (phiVCons x' xs').
-Qed.
+Defined.
 
 Lemma rectS (phi : forall n, vec (S n) -> Type)
   (phiOnce : forall x, phi 0 [x])
@@ -297,7 +297,7 @@ Proof.
 Qed.
 
 Theorem vec_ext_eq {A : Type} {n : nat} (lhs : Vector.t A n) (rhs : Vector.t A n)
-  : lhs = rhs <-> forall i, lhs !! i = rhs !! i.
+  : lhs = rhs <-> (forall i, lhs !! i = rhs !! i).
 Proof.
   split.
   - now intros ?; subst.
@@ -433,27 +433,6 @@ Lemma tail_unfold {A : Type} (n : nat) (x : A) (xs : Vector.t A n)
 Proof.
   reflexivity.
 Defined.
-
-Fixpoint gen_nat_vec (n : nat) (seed : nat) : Vector.t nat n :=
-  match n with
-  | O => []
-  | S n' => fst (cp seed) :: gen_nat_vec n' (snd (cp seed))
-  end.
-
-Fixpoint gen_nat_vec_linv {n : nat} (xs : Vector.t nat n) : nat :=
-  match xs with
-  | [] => O
-  | x :: xs' => cpInv x (gen_nat_vec_linv xs')
-  end.
-
-Lemma gen_nat_vec_linv_left_inverse n (xs : Vector.t nat n)
-  : gen_nat_vec n (gen_nat_vec_linv xs) = xs.
-Proof.
-  induction xs as [ | n x xs IH].
-  - reflexivity.
-  - simpl. destruct (cp (cpInv x (gen_nat_vec_linv xs))) as [E_x E_xs] eqn: H_OBS.
-    simpl. rewrite cp_spec in H_OBS. apply cpInv_inj in H_OBS. destruct H_OBS as [<- <-]. congruence.
-Qed.
 
 Section HEQ.
 
