@@ -223,7 +223,7 @@ Unshelve.
 Defined.
 
 Lemma caseS {n' : nat} (phi : vec (S n') -> Type)
-  (phiVCons : forall x' : A, forall xs' : vec n', phi (x' :: xs'))
+  (phiVCons : forall x', forall xs', phi (x' :: xs'))
   : forall xs, phi xs.
 Proof.
   refine (
@@ -256,17 +256,17 @@ Proof.
   ).
 Defined.
 
-Let uncons' (n : nat) (xs : vec (S n)) : S n = S n -> A * vec n :=
-  match xs in Vector.t _ m return S n = m -> A * vec (pred m) with
-  | VNil => fun H_eq: S n = O => S_eq_O_elim H_eq
-  | VCons n' x xs' => fun H_eq: S n = S n' => (x, xs')
+Definition head {n : nat} (xs : vec (S n)) : A :=
+  match xs in Vector.t _ n' return (match n' as n' return Type with O => unit | S n => A end) with
+  | VNil => tt
+  | VCons _ x _ => x
   end.
 
-Definition head {n : nat} (xs : vec (S n)) : A :=
-  fst (uncons' n xs eq_refl).
-
 Definition tail {n : nat} (xs : vec (S n)) : vec n :=
-  snd (uncons' n xs eq_refl).
+  match xs in Vector.t _ n' return (match n' as n' return Type with O => unit | S n => vec n end) with
+  | VNil => tt
+  | VCons _ _ xs => xs
+  end.
 
 Fixpoint nth {n : nat} (xs : vec n) {struct xs} : Fin.t n -> A :=
   match xs with
@@ -332,7 +332,7 @@ Fixpoint replicate {A : Type} {n : nat} {struct n} : A -> Vector.t A n :=
   | S n' => fun x => x :: replicate (n := n') x
   end.
 
-Lemma replicate_spec {A : Type} {n : nat} (x: A)
+Lemma replicate_spec {A : Type} {n : nat} (x : A)
   : forall i : Fin.t n, x = replicate x !! i.
 Proof.
   induction n; [Fin.case0 | Fin.caseS i]; simpl; eauto.
@@ -344,7 +344,7 @@ Fixpoint diagonal {A : Type} {n : nat} {struct n} : Vector.t (Vector.t A n) n ->
   | S n' => fun xss => head (head xss) :: diagonal (n := n') (map tail (tail xss))
   end.
 
-Lemma diagonal_spec {A : Type} {n : nat} (xss: Vector.t (Vector.t A n) n)
+Lemma diagonal_spec {A : Type} {n : nat} (xss : Vector.t (Vector.t A n) n)
   : forall i : Fin.t n, xss !! i !! i = diagonal xss !! i.
 Proof.
   revert xss; induction n as [ | n IH].
@@ -386,8 +386,8 @@ Definition vec (n : nat) (A : Type) : Type :=
 
 #[local]
 Instance vec_isMonad {n : nat} : isMonad (vec n) :=
-  { bind {A} {B} (m : vec n A) (k : A -> vec n B) := diagonal (map k m)
-  ; pure {A} (x : A) := replicate x
+  { bind {A : Type} {B : Type} (m : vec n A) (k : A -> vec n B) := diagonal (map k m)
+  ; pure {A : Type} (x : A) := replicate x
   }.
 
 Definition zipWith {n : nat} {A : Type} {B : Type} {C : Type} (f : A -> B -> C) (xs : Vector.t A n) (ys : Vector.t B n) : Vector.t C n :=
@@ -401,11 +401,13 @@ Qed.
 
 #[local]
 Instance vec_isSetoid (n : nat) (A : Type) `(SETOID : isSetoid A) : isSetoid (vec n A) :=
-  { eqProp (lhs : vec n A) (rhs : vec n A) := forall i, lhs !! i == rhs !! i
+  { eqProp (lhs : vec n A) (rhs : vec n A) := forall i : Fin.t n, lhs !! i == rhs !! i
   ; eqProp_Equivalence := relation_on_image_liftsEquivalence (pi_isSetoid (fun _ => SETOID)).(eqProp_Equivalence) nth
   }.
 
-#[local] Instance vec_isSetoid1 {n : nat} : isSetoid1 (vec n) := vec_isSetoid n.
+#[local]
+Instance vec_isSetoid1 {n : nat} : isSetoid1 (vec n) :=
+  vec_isSetoid n.
 
 #[global]
 Instance vec_satisfiesMonadLaws {n : nat}
@@ -469,7 +471,7 @@ Proof.
   - f_equal. exact IH.
 Qed.
 
-Inductive vec_heq (n : nat) (xs : Vector.t A n) : forall m, Vector.t A m -> Prop :=
+Inductive vec_heq (n : nat) (xs : Vector.t A n) : forall m : nat, Vector.t A m -> Prop :=
   | vec_ext_heq_refl
     : vec_heq n xs n xs.
 
