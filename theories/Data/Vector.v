@@ -41,13 +41,12 @@ Lemma rectS (phi : forall n, Fin.t (S n) -> Type)
   (phiFZ : forall n : nat, phi n (@FZ n))
   (phiFS : forall n : nat, forall i : Fin.t (S n), phi n i -> phi (S n) (@FS (S n) i))
   : forall n, forall i, phi n i.
-Proof.  
+Proof.
   exact (
     fix rectS_fix (n : nat) (i : Fin.t (S n)) {struct i} : phi n i :=
-    match i with
-    | @FZ k => phiFZ k
-    | @FS O i' => @case0 (fun i'' : Fin.t 0 => phi 0 (@FS 0 i'')) i'
-    | @FS (S n') i' => phiFS n' i' (rectS_fix n' i')
+    match i as i in Fin.t n return (match n return Fin.t n -> Type with O => fun _ => unit | S m => phi m end) i with
+    | @FZ m => phiFZ m
+    | @FS m i' => (match m as m return forall i : Fin.t m, phi m (@FS m i) with O => case0 | S m' => fun i => phiFS m' i (rectS_fix m' i) end) i'
     end
   ).
 Defined.
@@ -244,18 +243,15 @@ Unshelve.
 Qed.
 
 Lemma rectS (phi : forall n, vec (S n) -> Type)
-  (phiOnce : forall x, phi 0 (x :: []))
+  (phiOnce : forall x, phi 0 [x])
   (phiCons : forall n, forall x, forall xs, phi n xs -> phi (S n) (x :: xs))
   : forall n, forall xs, phi n xs.
 Proof.
   exact (
     fix rectS_fix (n : nat) (xs : vec (S n)) {struct xs} : phi n xs :=
-    match xs with
-    | VCons 0 x xs' =>
-      match xs' with
-      | VNil => phiOnce x
-      end
-    | VCons (S n') x xs' => phiCons n' x xs' (rectS_fix n' xs')
+    match xs as xs in Vector.t _ n return (match n as n return vec n -> Type with O => fun _ => unit | S n' => phi n' end) xs with
+    | VNil => tt
+    | VCons n' x' xs' => (match n' as m return forall x : A, forall xs : vec m, phi m (VCons m x xs) with O => fun x => case0 (fun xs => phi 0 (VCons 0 x xs)) (phiOnce x) | S m' => fun x => fun xs => phiCons m' x xs (rectS_fix m' xs) end) x' xs'
     end
   ).
 Defined.
