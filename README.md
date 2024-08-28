@@ -30,6 +30,8 @@ The Coq Proof Assistant, version 8.18.0
 
 ### Logic
 
+- `ClassicalPropositionalLogic.v` : The Soundness, Completeness and Compactness Theorem for PropositionalLogic.
+
 - `MuRec.v` : Basic facts on μ-recursive functions.
 
 - `PrimRec.v` : Basic facts on primitive recursive functions.
