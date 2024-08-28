@@ -10,7 +10,7 @@ Constraint Set_u < Set_V.
 Create HintDb aczel_hints.
 
 Inductive Tree : Type@{Set_V} :=
-  | mkNode (cs : Type@{Set_u}) (ts : forall c : cs, Tree).
+  | mkNode (cs : Type@{Set_u}) (ts : forall c : cs, Tree) : Tree.
 
 Fixpoint eqTree (lhs : Tree) (rhs : Tree) : Prop :=
   match lhs, rhs with
@@ -428,6 +428,9 @@ Proof.
   - rewrite singlton_spec in *. rewrite -> x_EQ. exact H.
 Qed.
 
+Definition pair (x : Tree) (y : Tree) : Tree :=
+  upair (singlton x) (upair x y).
+
 Lemma upair_eq_upair_implies x1 y1 x2 y2
   (EQ : upair x1 y1 == upair x2 y2)
   : (x1 == x2 /\ y1 == y2) \/ (x1 == y2 /\ x2 == y1).
@@ -467,9 +470,6 @@ Proof.
   }
   intros x y z EQ. unfold singlton in EQ. apply upair_eq_upair_implies in EQ. destruct EQ as [[EQ1 H_EQ] | [EQ1 H_EQ]]; done.
 Qed.
-
-Definition pair (x : Tree) (y : Tree) : Tree :=
-  upair (singlton x) (upair x y).
 
 Theorem pair_inv x1 x2 y1 y2
   (EQ : pair x1 y1 == pair x2 y2)
@@ -621,18 +621,29 @@ End STRONG_COLLECTION.
 
 Inductive rLt (lhs : Tree) (rhs : Tree) : Prop :=
   | rLt_intro c
-    (H_rLe : rLe lhs (childnodes rhs c))
-    : rLt lhs rhs
+    (H_rLe : lhs ≦ᵣ childnodes rhs c)
+    : lhs <ᵣ rhs
+  where "lhs <ᵣ rhs" := (rLt lhs rhs) : type_scope
 with rLe (lhs : Tree) (rhs : Tree) : Prop :=
   | rLe_intro
-    (H_rLt : forall c, rLt (childnodes lhs c) rhs)
-    : rLe lhs rhs.
+    (H_rLt : forall c, childnodes lhs c <ᵣ rhs)
+    : lhs ≦ᵣ rhs
+  where "lhs ≦ᵣ rhs" := (rLe lhs rhs) : type_scope.
 
 #[global] Hint Constructors rLt rLe : aczel_hints.
 
-Infix "≦ᵣ" := rLe (at level 70, no associativity) : type_scope.
-
-Infix "<ᵣ" := rLt (at level 70, no associativity) : type_scope.
+Fixpoint rLt_inv x y (H_rLt : y <ᵣ x) {struct H_rLt}
+  : exists c1 : children x, forall c2 : children y, childnodes y c2 <ᵣ childnodes x c1
+with rLe_inv x y (H_rLe : x ≦ᵣ y) {struct H_rLe}
+  : forall c1 : children x, exists c2 : children y, childnodes x c1 ≦ᵣ childnodes y c2.
+Proof.
+  - destruct H_rLt as [c2 H_rLe]. exists c2. intros c1.
+    pose proof (rLe_inv y (childnodes x c2) H_rLe c1) as [c H_rLe'].
+    exists c. exact H_rLe'.
+  - destruct H_rLe as [H_rLt]. intros c1.
+    pose proof (rLt_inv y (childnodes x c1) (H_rLt c1)) as [c2 H_rLt'].
+    exists c2. econs. exact H_rLt'.
+Qed.
 
 Lemma rLe_refl x
   : x ≦ᵣ x.
@@ -759,6 +770,14 @@ Proof.
   destruct IN as [c EQ]. exists c. eauto with *.
 Qed.
 
+Lemma subseteq_implies_rLe lhs rhs
+  (SUBSET : lhs \subseteq rhs)
+  : lhs ≦ᵣ rhs.
+Proof.
+  econs. intros c. eapply member_implies_rLt.
+  exact (SUBSET (childnodes lhs c) (member_intro _ _ _)).
+Qed.
+
 #[global] Hint Resolve rLt_implies_rLe member_implies_rLt : aczel_hints.
 
 Lemma rLe_rLt_rLt x y z
@@ -819,11 +838,10 @@ Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x)
   | Acc_intro _ ACC_INV => mkNode { y : A | R y x } (fun c => @fromAcc A R (proj1_sig c) (ACC_INV (proj1_sig c) (proj2_sig c)))
   end.
 
-Lemma fromAcc_unfold (A : Type@{Set_u}) (R : A -> A -> Prop) x ACC
+Lemma fromAcc_unfold (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (ACC : Acc R x)
   : forall z, z \in @fromAcc A R x ACC <-> (exists c : { y : A | R y x }, z == fromAcc (proj1_sig c) (Acc_inv ACC (proj2_sig c))).
 Proof.
-  intros z. destruct ACC as [ACC_INV]; simpl in *.
-  split; intros [[c H_R] EQ]; now exists (@exist _ _ c H_R).
+  intros z. destruct ACC as [ACC_INV]; simpl in *. reflexivity.
 Qed.
 
 #[global] Hint Rewrite fromAcc_unfold : simplication_hints.
@@ -848,7 +866,7 @@ Proof.
 Qed.
 
 Definition fromWf {A : Type@{Set_u}} (R : A -> A -> Prop) (Wf : well_founded R) : Tree :=
-  mkNode A (fun c => @fromAcc A R c (Wf c)).
+  mkNode A (fun x => @fromAcc A R x (Wf x)).
 
 Definition succ (x : Tree) : Tree :=
   union x (singlton x).
@@ -939,7 +957,7 @@ Proof.
     rewrite EQ, EQ''. eapply fromAcc_member_fromAcc_intro. transitivity c'; trivial.
 Qed.
 
-Lemma sup_C_isOrdinal C
+Lemma sup_C_isOrdinal (C : Tree)
   (ORDINAL : forall alpha, alpha \in C -> isOrdinal alpha)
   : isOrdinal (unions C).
 Proof.
@@ -948,13 +966,13 @@ Proof.
   - pose proof (ORDINAL y1 H2) as [? ?]. eapply TRANS'; eauto with *.
 Qed.
 
-Lemma inf_C_isOrdinal C inf_C
-  (NONEMPTY : exists d, d \in C)
-  (ORDINAL : forall alpha, alpha \in C -> isOrdinal alpha)
-  (SPEC : forall z, z \in inf_C <-> (forall alpha, alpha \in C -> z \in alpha))
-  : isOrdinal inf_C.
+Lemma min_C_isOrdinal (C : ensemble Tree) (min_C : Tree)
+  (NONEMPTY : exists d, E.In d C)
+  (ORDINAL : forall alpha, E.In alpha C -> isOrdinal alpha)
+  (min_C_SPEC : forall z, z \in min_C <-> (forall alpha, E.In alpha C -> z \in alpha))
+  : isOrdinal min_C.
 Proof.
-  destruct NONEMPTY as [d IN]. split; ii; rewrite SPEC in *; ii.
+  destruct NONEMPTY as [d IN]. split; ii; rewrite min_C_SPEC in *; ii.
   - pose proof (ORDINAL alpha H1) as [? ?]. eauto with *.
   - pose proof (ORDINAL d IN) as [? ?]. eapply TRANS'; eauto with *.
 Qed.

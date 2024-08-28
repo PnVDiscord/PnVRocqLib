@@ -46,14 +46,14 @@ Import ListNotations.
 
 Context {B : Type} {BA : isBA B}.
 
-#[local] Notation andB := (andB (isBA := BA)).
+#[local] Notation andB := (@andB B BA).
 
 Definition andsB : list B -> B :=
   fold_right andB trueB.
 
 Context {SETOID : isSetoid B}.
 
-Definition leB lhs rhs : Prop :=
+Definition leB (lhs : B) (rhs : B) : Prop :=
   andB lhs rhs == lhs.
 
 Context {BOOLEAN_ALGEBRA_LAWS : BooleanAlgebraLaws BA}.

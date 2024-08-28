@@ -28,19 +28,27 @@ The Coq Proof Assistant, version 8.18.0
 
 - `Vector.v` : Replaces `Coq.Vectors.VectorDef.t`.
 
+### Logic
+
+- `MuRec.v` : Basic facts on μ-recursive functions.
+
+- `PrimRec.v` : Basic facts on primitive recursive functions.
+
+- `PropoitionalLogic.v` : Contructive meta-theory on the Propositional Logic.
+
 ### Index
 
 - `Index.v` : Accumulates all source files and check their consistency.
 
 ### Math
 
-- `BooleanAlgebra.v` : Basic Theory on Boolean Algebras.
+- `BooleanAlgebra.v` : Basic theory on Boolean Algebras.
 
-- `ClassicalDomainTheory.v` : Classical Domain Theory.
+- `ClassicalDomainTheory.v` : Classical domain theory.
 
-- `DomainTheory.v` : Constructive Domain Theory.
+- `DomainTheory.v` : Constructive domain theory.
 
-- `OrderTheory.v` : Basic Order Theory.
+- `OrderTheory.v` : Basic order theory.
 
 - `ThN.v` : Basic facts on the natural numbers.
 
@@ -65,3 +73,7 @@ The Coq Proof Assistant, version 8.18.0
 3. [A note written by Jayadev Misra](https://www.cs.utexas.edu/users/misra/Notes.dir/KnasterTarski.pdf)
 
 4. [Constructive Completeness Proofs and Delimited Control](https://theses.hal.science/pastel-00530424/)
+
+5. [Murec_Extraction](https://github.com/DmxLarchey/Murec_Extraction)
+
+6. [CoqGym/goedel](https://github.com/princeton-vl/CoqGym/tree/master/coq_projects/goedel)

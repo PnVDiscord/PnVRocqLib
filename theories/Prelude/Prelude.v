@@ -717,6 +717,20 @@ Ltac unfold_E := repeat
   | [ |- context[ E.subset _ (fun _ => _) ] ] => unfold E.subset
   end.
 
+#[global]
+Instance subseteq_PreOrder {A : Type}
+  : PreOrder (@E.subset A).
+Proof.
+  exact (leProp_PreOrder).
+Defined.
+
+Lemma insert_monotonic {A : Type} (x1 : A) (X2 : E.t A) (X2' : E.t A)
+  (SUBSET : X2 \subseteq X2')
+  : E.insert x1 X2 \subseteq E.insert x1 X2'.
+Proof.
+  intros z [-> | H_IN]; [left; reflexivity | right; exact (SUBSET z H_IN)].
+Qed.
+
 End E.
 
 Notation ensemble := E.t.
@@ -855,6 +869,20 @@ Lemma eqProp_cl_isCompatibleWith_eqProp {A : Type} `{SETOID : isSetoid A} (X : e
 Proof.
   intros x [a [EQ IN]] y EQ'. exists a. split. rewrite <- EQ'. exact EQ. exact IN.
 Qed.
+
+Lemma isCompatibleWith_eqProp_forall {A : Type} {B : A -> Type} `{SETOID : forall i : A, isSetoid (B i)} (P : forall i : A, B i -> Prop)
+  (COMPAT : forall i : A, isCompatibleWith_eqProp (P i))
+  : isCompatibleWith_eqProp (fun x => forall i : A, P i (x i)).
+Proof.
+  intros x P_x y EQ i. exact (COMPAT i (x i) (P_x i) (y i) (EQ i)).
+Defined.
+
+Lemma isCompatibleWith_eqProp_exists {A : Type} {B : A -> Type} `{SETOID : forall i : A, isSetoid (B i)} (P : forall i : A, B i -> Prop)
+  (COMPAT : forall i : A, isCompatibleWith_eqProp (P i))
+  : isCompatibleWith_eqProp (fun x => exists i : A, P i (x i)).
+Proof.
+  intros x [i P_x] y EQ. exists i. exact (COMPAT i (x i) P_x (y i) (EQ i)).
+Defined.
 
 Module B.
 
@@ -1016,13 +1044,17 @@ Module L.
 
 Include Coq.Lists.List.
 
-Lemma in_remove_iff {A : Type} `(EQ_DEC : hasEqDec A) (x1 : A) (xs2 : list A)
+#[global] Hint Rewrite in_map_iff in_app_iff : simplication_hints.
+
+Lemma in_remove_iff (A : Type) `(EQ_DEC : hasEqDec A) (x1 : A) (xs2 : list A)
   : forall z, In z (remove Prelude.eq_dec x1 xs2) <-> (In z xs2 /\ z <> x1).
 Proof.
   i; split.
   { intros H_IN. eapply in_remove. exact H_IN. }
   { intros [H_IN H_NE]. eapply in_in_remove; [exact H_NE | exact H_IN]. }
 Qed.
+
+#[global] Hint Rewrite in_remove_iff : simplication_hints.
 
 Lemma rev_inj {A : Type} (xs1 : list A) (xs2 : list A)
   (rev_EQ : rev xs1 = rev xs2)

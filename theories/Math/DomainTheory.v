@@ -11,15 +11,6 @@ Require Import PnV.Math.OrderTheory.
 
 #[local] Hint Unfold fixedpointsOf prefixedpointsOf postfixedpointsOf upperboundsOf lowerboundsOf is_supremum_of is_infimum_of : simplication_hints.
 
-Class isUpperLattice (D : Type) {PROSET : isProset D} : Type :=
-  { join_lattice (x : D) (y : D) : D
-  ; bottom_lattice : D
-  ; join_lattice_spec (x : D) (y : D)
-    : is_supremum_of (join_lattice x y) (E.fromList [x; y])
-  ; bottom_lattice_spec
-    : is_supremum_of bottom_lattice E.empty
-  }.
-
 Section COLA_THEORY.
 
 Import ListNotations.
@@ -32,6 +23,21 @@ Import ColaDef.
 Definition infimum_cola {D : Type} {PROSET : isProset D} {COLA : isCola D} (X : ensemble D) : { inf_X : D | is_infimum_of inf_X X } :=
   let inf_X : D := proj1_sig (supremum_cola (lowerboundsOf X)) in
   @exist D (fun inf_X : D => is_infimum_of inf_X X) inf_X (proj2 (supremum_of_lowerbounds_is_infimum inf_X X) (proj2_sig (supremum_cola (lowerboundsOf X)))).
+
+#[program]
+Definition Cola_isLowerSemilattice {D : Type} {PROSET : isProset D} {COLA : isCola D (PROSET := PROSET)} : isLowerSemilattice D (PROSET := PROSET) :=
+  {| meet_lattice x y := infimum_cola (E.fromList [x; y]); top_lattice := infimum_cola E.empty; |}.
+Next Obligation.
+  cbn beta. destruct (infimum_cola (E.fromList [x1; x2])) as [meet meet_spec]; simpl. s!. rewrite meet_spec. split.
+  - i; split; done!.
+  - now i; des; subst.
+Qed.
+Next Obligation.
+  destruct (infimum_cola E.empty) as [top top_spec]; simpl. done!.
+Qed.
+
+Definition Cola_isLattice {D : Type} {PROSET : isProset D} (COLA : isCola D (PROSET := PROSET)) : isLattice D (PROSET := PROSET) :=
+  {| Lattice_asUpperSemilattice := Cola_isUpperSemilattice; Lattice_asLowerSemilattice := Cola_isLowerSemilattice; |}.
 
 Definition supremum_of_monotonic_maps {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {COLA : isCola D} {COLA' : isCola D'} (F : ensemble `[D -> D']) :=
   reify (fun x => supremum_cola (E.image (fun f : `[D -> D'] => proj1_sig f x) F)).
@@ -182,45 +188,9 @@ Section PACO_METATHEORY.
 
 Context {D : Type} {PROSET : isProset D}.
 
-Lemma le_join_lattice_introl {UPPER_LATTICE : isUpperLattice D} (x1 : D) (x2 : D)
-  : forall x : D, x =< x1 -> x =< join_lattice x1 x2.
-Proof.
-  intros x x_le; rewrite x_le. eapply join_lattice_spec; done!.
-Qed.
+#[local] Hint Resolve le_join_lattice_introl le_join_lattice_intror join_lattice_le_intro bot_lattice_le_intro : core.
 
-Lemma le_join_lattice_intror {UPPER_LATTICE : isUpperLattice D} (x1 : D) (x2 : D)
-  : forall x : D, x =< x2 -> x =< join_lattice x1 x2.
-Proof.
-  intros x x_le; rewrite x_le. eapply join_lattice_spec; done!.
-Qed.
-
-Lemma join_lattice_le_elim_l {UPPER_LATTICE : isUpperLattice D} (x1 : D) (x2 : D)
-  : forall x : D, join_lattice x1 x2 =< x -> x1 =< x.
-Proof.
-  intros x le_x. apply join_lattice_spec in le_x; done!.
-Qed.
-
-Lemma join_lattice_le_elim_r {UPPER_LATTICE : isUpperLattice D} (x1 : D) (x2 : D)
-  : forall x : D, join_lattice x1 x2 =< x -> x2 =< x.
-Proof.
-  intros x le_x. apply join_lattice_spec in le_x; done!.
-Qed.
-
-Lemma join_lattice_le_intro {UPPER_LATTICE : isUpperLattice D} (x1 : D) (x2 : D)
-  : forall x : D, x1 =< x -> x2 =< x -> join_lattice x1 x2 =< x.
-Proof.
-  ii; eapply join_lattice_spec; done!.
-Qed.
-
-Lemma bottom_lattice_le_intro {UPPER_LATTICE : isUpperLattice D}
-  : forall x : D, bottom_lattice =< x.
-Proof.
-  ii; eapply bottom_lattice_spec; done!.
-Qed.
-
-#[local] Hint Resolve le_join_lattice_introl le_join_lattice_intror join_lattice_le_intro bottom_lattice_le_intro : core.
-
-Lemma strong_coinduction {COLA : isCola D} {UPPER_LATTICE : isUpperLattice D} (f : `[D -> D]) (x : D)
+Lemma strong_coinduction {COLA : isCola D} {UPPER_LATTICE : isUpperSemilattice D} (f : `[D -> D]) (x : D)
   : x =< proj1_sig (nu f) <-> x =< proj1_sig f (join_lattice x (proj1_sig (nu f))).
 Proof with eauto with *.
   assert (claim1 : proj1_sig f (proj1_sig (nu f)) =< proj1_sig f (join_lattice x (proj1_sig (nu f)))).
@@ -232,20 +202,20 @@ Proof with eauto with *.
     + intros H. rewrite x_le. eapply postfixedpoint_le_gfpOf. eapply (proj2_sig f)...
 Qed.
 
-Definition G_aux0 {UPPER_LATTICE : isUpperLattice D} (f : `[D -> D]) (x : D) : D -> D :=
+Definition G_aux0 {UPPER_LATTICE : isUpperSemilattice D} (f : `[D -> D]) (x : D) : D -> D :=
   fun y : D => proj1_sig f (join_lattice x y).
 
-Lemma G_aux0_isMonotionicMap {UPPER_LATTICE : isUpperLattice D} (f : `[D -> D]) (x : D)
+Lemma G_aux0_isMonotionicMap {UPPER_LATTICE : isUpperSemilattice D} (f : `[D -> D]) (x : D)
   : isMonotonic1 (G_aux0 f x).
 Proof.
   intros x1 x2 x1_le_x2. eapply (proj2_sig f).
   eapply join_lattice_le_intro; [eapply le_join_lattice_introl | rewrite x1_le_x2; eapply le_join_lattice_intror]; eauto with *.
 Qed.
 
-Definition G_aux {UPPER_LATTICE : isUpperLattice D} (f : `[D -> D]) (x : D) : `[D -> D] :=
+Definition G_aux {UPPER_LATTICE : isUpperSemilattice D} (f : `[D -> D]) (x : D) : `[D -> D] :=
   @exist (D -> D) isMonotonic1 (G_aux0 f x) (G_aux0_isMonotionicMap f x).
 
-Context {COLA : isCola D} {UPPER_LATTICE : isUpperLattice D}.
+Context {COLA : isCola D} {UPPER_LATTICE : isUpperSemilattice D}.
 
 Definition G0 (f : `[D -> D]) (x : D) : D :=
   proj1_sig (nu (G_aux f x)).
@@ -281,7 +251,7 @@ Definition G : `[`[D -> D] -> `[D -> D]] :=
 
 Variant paco_spec (f : `[D -> D]) (G_f : `[D -> D]) : Prop :=
   | paco_spec_intro
-    (INIT_COFIXPOINT : proj1_sig (nu f) == proj1_sig G_f bottom_lattice)
+    (INIT_COFIXPOINT : proj1_sig (nu f) == proj1_sig G_f bot_lattice)
     (UNFOLD_COFIXPOINT : forall x : D, proj1_sig G_f x == proj1_sig f (join_lattice x (proj1_sig G_f x)))
     (ACCUM_COFIXPOINT : forall x : D, forall y : D, y =< proj1_sig G_f x <-> y =< proj1_sig G_f (join_lattice x y))
     : paco_spec f G_f.
@@ -289,7 +259,7 @@ Variant paco_spec (f : `[D -> D]) (G_f : `[D -> D]) : Prop :=
 Theorem G_specification (f : `[D -> D])
   : paco_spec f (proj1_sig G f).
 Proof with eauto with *.
-  pose proof (nu_is_supremum_of_postfixedpointsOf (G_aux f bottom_lattice)) as claim1.
+  pose proof (nu_is_supremum_of_postfixedpointsOf (G_aux f bot_lattice)) as claim1.
   pose proof (nu_is_supremum_of_postfixedpointsOf f) as claim2.
   pose proof (fun x : D => proj1 (nu_f_is_gfpOf_f (G_aux f x))) as claim3.
   split.
@@ -338,11 +308,11 @@ End PACO_METATHEORY.
 
 Section PACO.
 
-#[local] Hint Resolve le_join_lattice_introl le_join_lattice_intror join_lattice_le_intro bottom_lattice_le_intro : core.
+#[local] Hint Resolve le_join_lattice_introl le_join_lattice_intror join_lattice_le_intro bot_lattice_le_intro : core.
 
 Context {A : Type}.
 
-Lemma join_lattice_spec_forEnsembles (X1 : ensemble A) (X2 : ensemble A)
+Lemma union_join_lattice_spec (X1 : ensemble A) (X2 : ensemble A)
   : is_supremum_of (@E.union A X1 X2) (E.fromList [X1; X2]).
 Proof.
   ii; split.
@@ -354,7 +324,7 @@ Proof.
     + eapply H_IN with (x := X2); trivial. done!.
 Qed.
 
-Lemma bottom_lattice_spec_forEnsembles
+Lemma empty_bot_lattice_spec
   : is_supremum_of (@E.empty A) E.empty.
 Proof.
   ii; split.
@@ -362,15 +332,15 @@ Proof.
   - intros H_IN x x_in. inversion x_in.
 Qed.
 
-#[local]
-Instance ensemble_isUpperLattice : isUpperLattice (ensemble A) :=
-  { join_lattice := @E.union A
-  ; bottom_lattice := @E.empty A
-  ; join_lattice_spec := join_lattice_spec_forEnsembles
-  ; bottom_lattice_spec := bottom_lattice_spec_forEnsembles
-  }.
-
 Let D : Type := ensemble A.
+
+#[local]
+Instance ensemble_isUpperSemilattice : isUpperSemilattice D :=
+  { join_lattice := @E.union A
+  ; bot_lattice := @E.empty A
+  ; join_lattice_spec := union_join_lattice_spec
+  ; bot_lattice_spec := empty_bot_lattice_spec
+  }.
 
 Variant paco' {paco_F : D -> D} (F : D -> D) (X : D) : D :=
   | mk_paco' (WITNESS : D)
@@ -381,25 +351,25 @@ Lemma inv_paco' {paco_F : D -> D} {F : D -> D} {Y : D} {z : A}
   (H_paco' : z \in paco' (paco_F := paco_F) F Y)
   : exists X, X \subseteq join_lattice Y (paco_F Y) /\ z \in F X.
 Proof.
-  inversion H_paco'; subst. now exists (WITNESS).
+  inversion H_paco'; subst. now exists WITNESS.
 Qed.
-
-#[projections(primitive)]
-CoInductive paco (F : D -> D) (X : D) (z : A) : Prop :=
-  Fold_paco { unfold_paco : z \in paco' (paco_F := paco F) F X }.
 
 Lemma unions_is_supremum (Xs : ensemble D)
   : is_supremum_of (E.unions Xs) Xs.
 Proof.
   intros X; unnw; split.
-  - intros unions_Xs_le_X Z Z_in x x_in. eapply unions_Xs_le_X. now exists (Z).
+  - intros unions_Xs_le_X Z Z_in x x_in. eapply unions_Xs_le_X. now exists Z.
   - intros X_is_upper_bound_of_Xs x x_in. s!. destruct x_in as [Z [x_in IN]].
     revert x x_in. change (Z =< X). eapply X_is_upper_bound_of_Xs. exact IN.
 Qed.
 
 #[global]
-Instance ensemble_isCoLa : isCola (ensemble A) :=
+Instance ensemble_isCoLa : isCola D :=
   fun Xs : ensemble D => @exist D (fun sup_Xs : D => is_supremum_of sup_Xs Xs) (E.unions Xs) (unions_is_supremum Xs).
+
+#[projections(primitive)]
+CoInductive paco (F : D -> D) (X : D) (z : A) : Prop :=
+  Fold_paco { unfold_paco : z \in paco' (paco_F := paco F) F X }.
 
 Theorem paco_fold (F : D -> D) (Y : D)
   : F (join_lattice Y (paco F Y)) \subseteq paco F Y.
@@ -429,12 +399,12 @@ Definition Paco (f : `[D -> D]) : `[D -> D] :=
   @exist (D -> D) isMonotonic1 (paco (proj1_sig f)) (paco_preserves_monotonicity (proj1_sig f) (proj2_sig f)).
 
 Lemma initPaco (f : `[D -> D])
-  : proj1_sig (nu f) == proj1_sig (Paco f) bottom_lattice.
+  : proj1_sig (nu f) == proj1_sig (Paco f) bot_lattice.
 Proof with eauto with *.
   pose (proj1_sig f) as F.
-  assert (claim1 : F (join_lattice bottom_lattice (paco F bottom_lattice)) =< paco F bottom_lattice) by exact (paco_fold F bottom_lattice).
-  assert (claim2 : paco F bottom_lattice =< F (join_lattice bottom_lattice (paco F bottom_lattice))) by exact (paco_unfold F bottom_lattice (proj2_sig f)).
-  assert (FIXEDPOINT : paco F bottom_lattice == F (paco F bottom_lattice)).
+  assert (claim1 : F (join_lattice bot_lattice (paco F bot_lattice)) =< paco F bot_lattice) by exact (paco_fold F bot_lattice).
+  assert (claim2 : paco F bot_lattice =< F (join_lattice bot_lattice (paco F bot_lattice))) by exact (paco_unfold F bot_lattice (proj2_sig f)).
+  assert (FIXEDPOINT : paco F bot_lattice == F (paco F bot_lattice)).
   { eapply @leProp_antisymmetry with (A_isProset := E.ensemble_isProset).
     - rewrite claim2 at 1. eapply (proj2_sig f). eapply join_lattice_le_intro...
     - rewrite <- claim1 at 2. eapply (proj2_sig f). eapply le_join_lattice_intror...
@@ -442,7 +412,7 @@ Proof with eauto with *.
   assert (IS_SUPREMUM : is_supremum_of (proj1_sig (nu f)) (postfixedpointsOf F)) by eapply nu_is_supremum_of_postfixedpointsOf.
   pose proof (nu_f_is_gfpOf_f f) as [claim3 claim4]; unnw.
   do 2 red in claim3. fold F in claim3.
-  assert (to_show : F (proj1_sig (nu f)) =< paco F bottom_lattice).
+  assert (to_show : F (proj1_sig (nu f)) =< paco F bot_lattice).
   { cofix CIH. intros z z_in. econstructor. revert z z_in. apply mk_paco'.
     intros z z_in. right. eapply CIH. rewrite <- claim3. exact (z_in).
   }
@@ -451,7 +421,7 @@ Qed.
 
 Theorem paco_init (F : D -> D)
   (F_monotonic : isMonotonic1 F)
-  : paco F bottom_lattice == proj1_sig (nu (@exist (D -> D) isMonotonic1 F F_monotonic)).
+  : paco F bot_lattice == proj1_sig (nu (@exist (D -> D) isMonotonic1 F F_monotonic)).
 Proof.
   symmetry. eapply initPaco with (f := @exist (D -> D) isMonotonic1 F F_monotonic).
 Qed.

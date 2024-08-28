@@ -89,13 +89,10 @@ Instance wltProp_StrictOrder {A : Type} `{WPOSET : isWellPoset A} : StrictOrder 
   ; StrictOrder_Transitive := wltProp_Transitive
   }.
 
-Infix "⪳" := (leProp (isProset := (mkProsetFrom_ltProp_isPoset (ltProp := wltProp) wltProp_StrictOrder).(Poset_isProset))) : type_scope.
+Definition wleProp {A : Type} `{WPOSET : isWellPoset A} : forall lhs : A, forall rhs : A, Prop :=
+  leProp (isProset := Poset_isProset (isPoset := mkProsetFrom_ltProp_isPoset (ltProp := wltProp) wltProp_StrictOrder)).
 
-Class isWellToset (A : Type) : Type :=
-  { WellToset_isWellPoset :: isWellPoset A
-  ; WellToset_total_order (x : A) (y : A)
-    : x ⪳ y \/ y ⪳ x
-  }.
+Infix "⪳" := wleProp : type_scope.
 
 #[local] Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive : poset_hints.
 #[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : poset_hints.
@@ -440,6 +437,85 @@ Qed.
 
 End BASIC1.
 
+Class isUpperSemilattice (D : Type) {PROSET : isProset D} : Type :=
+  { join_lattice (x : D) (y : D) : D
+  ; bot_lattice : D
+  ; join_lattice_spec (x : D) (y : D)
+    : is_supremum_of (join_lattice x y) (E.fromList [x; y])
+  ; bot_lattice_spec
+    : is_supremum_of bot_lattice E.empty
+  }.
+
+Section UPPER_SEMILATTICE.
+
+Context {D : Type} {PROSET : isProset D} {UPPER_SEMILATTICE : isUpperSemilattice D (PROSET := PROSET)}.
+
+Lemma le_join_lattice_introl (x1 : D) (x2 : D)
+  : forall x : D, x =< x1 -> x =< join_lattice x1 x2.
+Proof.
+  intros x x_le; rewrite x_le. eapply join_lattice_spec; done!.
+Qed.
+
+Lemma le_join_lattice_intror (x1 : D) (x2 : D)
+  : forall x : D, x =< x2 -> x =< join_lattice x1 x2.
+Proof.
+  intros x x_le; rewrite x_le. eapply join_lattice_spec; done!.
+Qed.
+
+Lemma join_lattice_le_elim_l (x1 : D) (x2 : D)
+  : forall x : D, join_lattice x1 x2 =< x -> x1 =< x.
+Proof.
+  intros x le_x. apply join_lattice_spec in le_x; done!.
+Qed.
+
+Lemma join_lattice_le_elim_r (x1 : D) (x2 : D)
+  : forall x : D, join_lattice x1 x2 =< x -> x2 =< x.
+Proof.
+  intros x le_x. apply join_lattice_spec in le_x; done!.
+Qed.
+
+Lemma join_lattice_le_intro (x1 : D) (x2 : D)
+  : forall x : D, x1 =< x -> x2 =< x -> join_lattice x1 x2 =< x.
+Proof.
+  ii; eapply join_lattice_spec; done!.
+Qed.
+
+Lemma bot_lattice_le_intro
+  : forall x : D, bot_lattice =< x.
+Proof.
+  ii; eapply bot_lattice_spec; done!.
+Qed.
+
+End UPPER_SEMILATTICE.
+
+Class isLowerSemilattice (D : Type) {PROSET : isProset D} : Type :=
+  { meet_lattice (x : D) (y : D) : D
+  ; top_lattice : D
+  ; meet_lattice_spec (x1 : D) (x2 : D)
+    : forall x : D, x =< meet_lattice x1 x2 <-> (x =< x1 /\ x =< x2)
+  ; top_lattice_spec
+    : forall x : D, x =< top_lattice
+  }.
+
+Section LOWER_SEMILATTICE.
+
+Import ListNotations.
+
+Context {D : Type} {PROSET : isProset D} {LOWER_SEMILATTICE : isLowerSemilattice D (PROSET := PROSET)}.
+
+Lemma meet_lattice_is_infimum (x1 : D) (x2 : D)
+  : is_infimum_of (meet_lattice x1 x2) (E.fromList [x1; x2]).
+Proof.
+  ii. rewrite meet_lattice_spec. split; done!.
+Qed.
+
+End LOWER_SEMILATTICE.
+
+Class isLattice (D : Type) {PROSET : isProset D} : Type :=
+  { Lattice_asUpperSemilattice :: isUpperSemilattice D (PROSET := PROSET)
+  ; Lattice_asLowerSemilattice :: isLowerSemilattice D (PROSET := PROSET)
+  }.
+
 #[local, program]
 Instance direct_product_of_two_Prosets {A : Type} {B : Type} (A_isProset : isProset A) (B_isProset : isProset B) : isProset (A * B) :=
   { leProp lhs rhs := fst lhs =< fst rhs /\ snd lhs =< snd rhs
@@ -486,10 +562,22 @@ Module ColaDef.
 
 #[local] Existing Instance pi_isProset.
 
+Import ListNotations.
+
 Notation "`[ A -> B ]" := { f : A -> B | isMonotonic1 f }.
 
 Class isCola (D : Type) {PROSET : isProset D} : Type :=
   supremum_cola (X : ensemble D) : { sup_X : D | is_supremum_of sup_X X }.
+
+#[program]
+Definition Cola_isUpperSemilattice {D : Type} {PROSET : isProset D} {COLA : isCola D (PROSET := PROSET)} : isUpperSemilattice D (PROSET := PROSET) :=
+  {| join_lattice x y := supremum_cola (E.fromList [x; y]); bot_lattice := supremum_cola E.empty; |}.
+Next Obligation.
+  i. exact (proj2_sig (supremum_cola (E.fromList [x; y]))).
+Qed.
+Next Obligation.
+  ii. destruct (supremum_cola E.empty) as [bot bot_spec]; simpl. done!.
+Qed.
 
 End ColaDef.
 
