@@ -686,6 +686,28 @@ Proof.
 Qed.
 
 #[universes(polymorphic=yes)]
+Definition delete@{u} {A : Type@{u}} (x1 : A) (X2 : E.t@{u} A) : E.t@{u} A :=
+  fun x => x <> x1 /\ x \in X2.
+
+#[global] Hint Unfold delete : simplication_hints.
+
+Lemma in_delete_iff (A : Type) x1 X2
+  : forall z, z \in @delete A x1 X2 <-> (z <> x1 /\ z \in X2).
+Proof.
+  reflexivity.
+Qed.
+
+#[global] Hint Rewrite in_delete_iff : simplication_hints.
+
+#[global]
+Add Parametric Morphism {A : Type}
+  : (@delete A) with signature (eq ==> eqProp ==> eqProp)
+  as delete_compatWith_eqProp.
+Proof.
+  firstorder.
+Qed.
+
+#[universes(polymorphic=yes)]
 Definition intersections@{u} {A : Type@{u}} (Xs : E.t@{u} (E.t@{u} A)) : E.t@{u} A :=
   fun x => forall X, X \in Xs -> x \in X.
 
