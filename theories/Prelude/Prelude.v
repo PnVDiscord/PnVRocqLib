@@ -62,7 +62,7 @@ Next Obligation.
   - exact (conj (@PreOrder_Transitive A leProp leProp_PreOrder x y z (proj1 H) (proj1 H0)) (@PreOrder_Transitive A leProp leProp_PreOrder z y x (proj2 H0) (proj2 H))).
 Defined.
 
-Lemma mkSetoidFromPreOrder_derivesPartialOrder {A : Type} {leProp : A -> A -> Prop} `(leProp_PreOrder : @PreOrder A leProp)
+Lemma mkSetoidFromPreOrder_good {A : Type} {leProp : A -> A -> Prop} `(leProp_PreOrder : @PreOrder A leProp)
   (SETOID := mkSetoidFromPreOrder leProp_PreOrder)
   : PartialOrder SETOID.(eqProp) leProp.
 Proof.
@@ -140,7 +140,7 @@ Definition Prop_isProset : isProset Prop :=
     leProp P Q := P -> Q;
     Proset_isSetoid := mkSetoidFromPreOrder impl_PreOrder;
     leProp_PreOrder := impl_PreOrder;
-    leProp_PartialOrder := mkSetoidFromPreOrder_derivesPartialOrder impl_PreOrder;
+    leProp_PartialOrder := mkSetoidFromPreOrder_good impl_PreOrder;
   |}.
 
 #[program]
@@ -1102,9 +1102,6 @@ Proof.
     + eapply IH.
 Qed.
 
-Definition ext_eq_as_finset {A : Type} (xs1 : list A) (xs2 : list A) : Prop :=
-  forall x : A, L.In x xs1 <-> L.In x xs2.
-
 Fixpoint lookup {A : Type} {B : Type} {EQ_DEC : hasEqDec A} (x : A) (zs : list (A * B)) : option B :=
   match zs with
   | [] => None
@@ -1232,7 +1229,7 @@ Next Obligation.
   - i. exists (E.unions (bind Os (fun U => fun O => (forall z, proj1_sig z \in O <-> z \in U) /\ isOpen O))). split.
     { eapply unions_in_T. done!. }
     { done!. }
-  - i. s!. ss!. exists (E.intersection x x0). split.
+  - i. ss!. exists (E.intersection x0 x). split.
     { eapply intersection_in_T; done!. }
     { done!. }
   - done!.

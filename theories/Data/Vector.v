@@ -276,7 +276,7 @@ Fixpoint nth {n : nat} (xs : vec n) {struct xs} : Fin.t n -> A :=
 
 End Accessories.
 
-#[local] Infix " !! " := nth.
+#[local] Infix "!!" := nth.
 
 #[local]
 Tactic Notation "introVNil" :=
@@ -290,8 +290,8 @@ Tactic Notation "introVCons" ident( x' ) ident( xs' ) :=
   intro xs; pattern xs; revert xs;
   apply V.caseS; intros x' xs'.
 
-Lemma nth_unfold {A : Type} {n : nat} (xs : Vector.t A n) (i : Fin.t n) :
-  xs !! i = (match i in Fin.t m return Vector.t A m -> A with FZ => fun v => head v | FS i' => fun v => tail v !! i' end) xs.
+Lemma nth_unfold {A : Type} {n : nat} (xs : Vector.t A n) (i : Fin.t n)
+  : xs !! i = (match i in Fin.t m return Vector.t A m -> A with FZ => fun v => head v | FS i' => fun v => tail v !! i' end) xs.
 Proof.
   revert i; destruct xs as [ | n' x' xs']; [Fin.case0 | Fin.caseS i']; reflexivity.
 Qed.
@@ -354,11 +354,8 @@ Proof.
     + now rewrite nth_unfold; rewrite <- IH with (i := i); rewrite map_spec with (f := tail) (xs := xss) (i := i).
 Qed.
 
-Ltac red_vec := first
-  [ rewrite <- diagonal_spec
-  | rewrite <- map_spec
-  | rewrite <- replicate_spec
-  ].
+Ltac red_vec :=
+  first [rewrite <- diagonal_spec | rewrite <- map_spec | rewrite <- replicate_spec].
 
 Section INSTANCES.
 

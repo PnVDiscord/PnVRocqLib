@@ -23,22 +23,25 @@ Next Obligation.
   intros x y. cbn. unfold flip. split; firstorder try congruence. contradiction (StrictOrder_Irreflexive x). firstorder.
 Qed.
 
-Class isPoset (A : Type) `{PROSET : isProset A} : Prop :=
-  poset_spec (x : A) (y : A) : x == y <-> x = y.
+Class isPoset (A : Type) : Type :=
+  { Poset_isProset :: isProset A
+  ; Poset_eqProp_spec (x : A) (y : A)
+    : x == y <-> x = y
+  }.
 
-Lemma eqPropCompatible_dom_isPoset {A : Type} {B : Type} `{A_isProset : isProset A} `{B_isSetoid : isSetoid B}
-  (POSET : isPoset A)
+Infix "≦" := (leProp (isProset := Poset_isProset)) : type_scope.
+
+Lemma eqPropCompatible_dom_isPoset {A : Type} {B : Type} `{A_isPoset : isPoset A} `{B_isSetoid : isSetoid B}
   : forall f : A -> B, eqPropCompatible1 f.
 Proof.
-  ii. rewrite poset_spec in x_EQ. now rewrite x_EQ.
+  ii. rewrite Poset_eqProp_spec in x_EQ. now rewrite x_EQ.
 Qed.
 
 #[global]
-Instance mkProsetFrom_ltProp_isPoset {A : Type} {ltProp : A -> A -> Prop} (ltProp_StrictOrder : StrictOrder ltProp)
-  : isPoset A (PROSET := mkProsetFrom_ltProp ltProp ltProp_StrictOrder).
-Proof.
-  red; reflexivity.
-Defined.
+Instance mkProsetFrom_ltProp_isPoset {A : Type} {ltProp : A -> A -> Prop} (ltProp_StrictOrder : StrictOrder ltProp) : isPoset A :=
+  { Poset_isProset := mkProsetFrom_ltProp ltProp ltProp_StrictOrder
+  ; Poset_eqProp_spec x y := conj (fun H : x = y => H) (fun H : x = y => H)
+  }.
 
 Class has_ltProp (A : Type) : Type :=
   ltProp (lhs : A) (rhs : A) : Prop.
@@ -50,7 +53,27 @@ Class hasStrictOrder (A : Type) : Type :=
   ; lt_StrictOrder :: StrictOrder lt
   }.
 
-Infix "≦" := (leProp (isProset := mkProsetFrom_ltProp lt lt_StrictOrder)) : type_scope.
+#[global]
+Instance mkPoset_fromStrictOrder {A : Type} `{STRICT_ORDER : hasStrictOrder A} : isPoset A :=
+  @mkProsetFrom_ltProp_isPoset A lt lt_StrictOrder.
+
+Lemma lt_iff_le_ne {A : Type} `{STRICT_ORDER : hasStrictOrder A} (x : A) (y : A)
+  : x ≨ y <-> (x ≦ y /\ x <> y).
+Proof.
+  split.
+  - intros H_LT. split.
+    + left. exact H_LT.
+    + intros ->. revert H_LT. eapply StrictOrder_Irreflexive.
+  - intros [[H_LT | H_EQ] H_NE].
+    + exact H_LT.
+    + contradiction (H_NE H_EQ).
+Qed.
+
+Lemma le_iff_lt_eq {A : Type} `{STRICT_ORDER : hasStrictOrder A} (x : A) (y : A)
+  : x ≦ y <-> (x ≨ y \/ x = y).
+Proof.
+  reflexivity.
+Qed.
 
 Class isWellPoset (A : Type) : Type :=
   { wltProp :: has_ltProp A
@@ -66,7 +89,7 @@ Instance wltProp_StrictOrder {A : Type} `{WPOSET : isWellPoset A} : StrictOrder 
   ; StrictOrder_Transitive := wltProp_Transitive
   }.
 
-Infix "⪳" := (leProp (isProset := mkProsetFrom_ltProp wltProp wltProp_StrictOrder)) : type_scope.
+Infix "⪳" := (leProp (isProset := (mkProsetFrom_ltProp_isPoset (ltProp := wltProp) wltProp_StrictOrder).(Poset_isProset))) : type_scope.
 
 Class isWellToset (A : Type) : Type :=
   { WellToset_isWellPoset :: isWellPoset A
@@ -715,7 +738,7 @@ End list_hsOrd.
 Section nat_hsOrd.
 
 #[local]
-Instance nat_isPoset : isProset nat :=
+Instance nat_isProset : isProset nat :=
   { leProp := Nat.le
   ; Proset_isSetoid := mkSetoid_from_eq
   ; leProp_PreOrder := Nat.le_preorder
@@ -742,29 +765,29 @@ Proof with eauto with *.
 Qed.
 
 Lemma nat_compare_eq (x : nat) (y : nat)
-  (hyp_lt : nat_compare x y = Eq)
+  (hyp_eq : nat_compare x y = Eq)
   : x = y.
 Proof with eauto with *.
-  revert x y hyp_lt. induction x as [ | x IH], y as [ | y]; simpl; ii.
+  revert x y hyp_eq. induction x as [ | x IH], y as [ | y]; simpl; ii.
   - reflexivity.
-  - inversion hyp_lt.
-  - inversion hyp_lt.
-  - pose proof (IH y hyp_lt) as x_eq_y. f_equal. exact x_eq_y.
+  - inversion hyp_eq.
+  - inversion hyp_eq.
+  - pose proof (IH y hyp_eq) as x_eq_y. f_equal. exact x_eq_y.
 Qed.
 
 Lemma nat_compare_gt (x : nat) (y : nat)
-  (hyp_lt : nat_compare x y = Gt)
+  (hyp_gt : nat_compare x y = Gt)
   : y <= x /\ x <> y.
 Proof with eauto with *.
-  cbn. revert x y hyp_lt. induction x as [ | x IH], y as [ | y]; simpl; ii.
-  - inversion hyp_lt.
-  - inversion hyp_lt.
+  cbn. revert x y hyp_gt. induction x as [ | x IH], y as [ | y]; simpl; ii.
+  - inversion hyp_gt.
+  - inversion hyp_gt.
   - split; lia.
-  - pose proof (IH y hyp_lt) as [y_le_x x_ne_y]. split; lia.
+  - pose proof (IH y hyp_gt) as [y_le_x x_ne_y]. split; lia.
 Qed.
 
 #[local]
-Instance nat_hsOrd : hsOrd nat (PROSET := nat_isPoset) :=
+Instance nat_hsOrd : hsOrd nat (PROSET := nat_isProset) :=
   { compare := nat_compare
   ; compare_Lt := nat_compare_lt
   ; compare_Eq := nat_compare_eq

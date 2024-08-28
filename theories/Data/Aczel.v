@@ -680,7 +680,7 @@ Instance rEq_Equivalence : Equivalence rEq :=
 
 #[global]
 Instance rLe_PartialOrder : PartialOrder rEq rLe :=
-  mkSetoidFromPreOrder_derivesPartialOrder rLe_PreOrder.
+  mkSetoidFromPreOrder_good rLe_PreOrder.
 
 Lemma rLe_eqTree_rLe x y z
   (H_rLe : x ≦ᵣ y)
