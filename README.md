@@ -34,7 +34,7 @@ The Coq Proof Assistant, version 8.18.0
 
 - `PrimRec.v` : Basic facts on primitive recursive functions.
 
-- `PropoitionalLogic.v` : Contructive meta-theory on the Propositional Logic.
+- `PropositionalLogic.v` : Contructive meta-theory on the Propositional Logic.
 
 ### Index
 

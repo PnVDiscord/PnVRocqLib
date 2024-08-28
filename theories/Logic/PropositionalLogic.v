@@ -309,7 +309,7 @@ Definition gen_context_for (env : propLetter -> bool) : list propLetter -> list 
 Lemma infers_dec (C : formula)
   : { ls : list propLetter | ⟪ OCCURS : forall l, In l ls <-> occurs l C ⟫ /\ ⟪ INFERS_DEC : forall e, let Gamma := E.fromList (gen_context_for e ls) in if eval_bool e C then Gamma ⊢ C else Gamma ⊢ NegationF C ⟫ }.
 Proof.
-  unnw.  revert C.
+  unnw. revert C.
   assert (AUX1 : forall e, forall ls1, forall ls2, E.fromList (gen_context_for e ls1) \subseteq E.fromList (gen_context_for e (ls1 ++ ls2))).
   { intros e ls1 lhs2 p IN. s!. unfold gen_context_for in *. rewrite L.in_map_iff in *. destruct IN as [l [<- IN]]. exists l. done!. }
   assert (AUX2 : forall e, forall ls1, forall ls2, E.fromList (gen_context_for e ls2) \subseteq E.fromList (gen_context_for e (ls1 ++ ls2))).
