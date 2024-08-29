@@ -16,7 +16,7 @@ Lemma case0 {phi : Fin.t O -> Type}
 Proof.
   intros i.
   exact (
-    match i as this in Fin.t n return (match n as m return Fin.t m -> Type with O => fun i => phi i | S n' => fun i => unit end) this with
+    match i as i in Fin.t n return (match n as m return Fin.t m -> Type with O => phi | S n' => fun i => unit end) i with
     | @FZ n' => tt
     | @FS n' i' => tt
     end
@@ -30,7 +30,7 @@ Lemma caseS {n' : nat} {phi : Fin.t (S n') -> Type}
 Proof.
   intros i; revert phi phiFZ phiFS.
   exact (
-    match i as this in Fin.t n return (match n as m return Fin.t m -> Type with O => fun i => unit | S m' => fun i => forall phi' : Fin.t (S m') -> Type, phi' (@FZ m') -> (forall i' : Fin.t m', phi' (@FS m' i')) -> phi' i end) this with
+    match i as i in Fin.t n return (match n as m return Fin.t m -> Type with O => fun i => unit | S m' => fun i => forall phi' : Fin.t (S m') -> Type, phi' (@FZ m') -> (forall i' : Fin.t m', phi' (@FS m' i')) -> phi' i end) i with
     | @FZ n' => fun phi : Fin.t (S n') -> Type => fun phiFZ : phi (@FZ n') => fun phiFS : forall i' : Fin.t n', phi (@FS n' i') => phiFZ
     | @FS n' i' => fun phi : Fin.t (S n') -> Type => fun phiFS : phi (@FZ n') => fun phiFS : forall i' : Fin.t n', phi (@FS n' i') => phiFS i'
     end

@@ -14,6 +14,8 @@ Require Export Coq.Setoids.Setoid.
 
 Create HintDb simplication_hints.
 
+#[global] Hint Rewrite orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq : simplication_hints.
+
 #[local] Obligation Tactic := idtac.
 
 Ltac property X :=
@@ -779,7 +781,7 @@ Tactic Notation "s!" :=
   ).
 
 Tactic Notation "ss!" :=
-  s!; subst; eauto with *; firstorder (try congruence).
+  s!; subst; eauto with *; firstorder (try first [congruence | f_equal]).
 
 Tactic Notation "done!" :=
   now ii; repeat ss!; done.
