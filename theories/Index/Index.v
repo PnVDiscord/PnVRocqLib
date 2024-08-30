@@ -1,6 +1,7 @@
 Require Import PnV.Data.Aczel.
 Require Import PnV.Data.Vector.
 Require Import PnV.Logic.BasicFol.
+Require Import PnV.Logic.ClassicalFol.
 Require Import PnV.Logic.ClassicalPropositionalLogic.
 Require Import PnV.Logic.HilbertFol.
 Require Import PnV.Logic.MuRec.

@@ -8,13 +8,13 @@ Section PRIMITIVE_RECURSION. (* Reference: "https://github.com/princeton-vl/CoqG
 
 Let arity : Set := nat.
 
-Fixpoint naryFun (n : arity) :=
+Fixpoint naryFun (n : arity) : Set :=
   match n with
   | O => nat
   | S n' => nat -> naryFun n'
   end.
 
-Fixpoint naryRel (n : arity) :=
+Fixpoint naryRel (n : arity) : Type :=
   match n with
   | O => Prop
   | S n' => nat -> naryRel n'

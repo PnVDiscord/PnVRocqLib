@@ -32,6 +32,8 @@ The Coq Proof Assistant, version 8.18.0
 
 - `BasicFol.v` : Basic definitions of First-Order Logic
 
+- `ClassicalFol.v` : Meta-theories on Classical First-Order Logic.
+
 - `ClassicalPropositionalLogic.v` : The Soundness, Completeness and Compactness Theorem for PropositionalLogic.
 
 - `MuRec.v` : Basic facts on μ-recursive functions.
