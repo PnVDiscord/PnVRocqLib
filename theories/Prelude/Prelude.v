@@ -16,6 +16,10 @@ Create HintDb simplication_hints.
 
 #[global] Hint Rewrite forallb_app orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq not_true_iff_false not_false_iff_true : simplication_hints.
 
+Ltac obs_eqb n m :=
+  let H_OBS := fresh "H_OBS" in
+  destruct (Nat.eqb n m) as [ | ] eqn: H_OBS; [rewrite Nat.eqb_eq in H_OBS | rewrite Nat.eqb_neq in H_OBS].
+
 #[local] Obligation Tactic := idtac.
 
 Ltac property X :=

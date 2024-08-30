@@ -2130,7 +2130,7 @@ End EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
 #[global] Hint Unfold is_not_free_in_frm is_free_in_trms is_not_free_in_frm is_not_free_in_frms : simplication_hints.
 #[global] Hint Unfold nil_subst cons_subst one_subst subst_compose : simplication_hints.
 
-#[global] Opaque subst_trm subst_trms subst_frm.
+#[global] Opaque subst_trm subst_trms.
 #[global] Hint Rewrite <- @subst_compose_trm_spec @subst_compose_trms_spec @subst_compose_frm_spec : simplication_hints.
 
 #[global] Hint Rewrite @fresh_var_ne_x @fresh_var_is_not_free_in_trm @fresh_var_is_not_free_in_frm : simplication_hints.
@@ -2286,12 +2286,10 @@ Proof.
   revert env s. frm_ind p; simpl; i.
   - f_equal. rewrite substitution_lemma_trms. done.
   - f_equal. do 2 rewrite substitution_lemma_trm. done.
-  - rewrite subst_frm_unfold; ss!.
-  - rewrite subst_frm_unfold. simpl. rewrite IH1, IH2. done.
+  - done!.
+  - rewrite IH1, IH2. done.
   - unfold "∘" in *.
-    enough (ENOUGH : forall v : domain_of_discourse, interpret_frm (fun z : ivar => if eq_dec z y then v else interpret_trm env (s z)) p1 <-> interpret_frm (fun z : ivar => if eq_dec z (chi_frm s (All_frm y p1)) then v else env z) (subst_frm (cons_subst y (Var_trm (chi_frm s (All_frm y p1))) s) p1)).
-    { rewrite subst_frm_unfold with (p := All_frm y p1). ss!. }
-    i.
+    enough (ENOUGH : forall v : domain_of_discourse, interpret_frm (fun z : ivar => if eq_dec z y then v else interpret_trm env (s z)) p1 <-> interpret_frm (fun z : ivar => if eq_dec z (chi_frm s (All_frm y p1)) then v else env z) (subst_frm (cons_subst y (Var_trm (chi_frm s (All_frm y p1))) s) p1)) by ss!. i.
     assert (claim1 : forall z : ivar, is_free_in_frm z p1 = true -> interpret_trm (fun x : ivar => if eq_dec x (chi_frm s (All_frm y p1)) then v else env x) (cons_subst y (Var_trm (chi_frm s (All_frm y p1))) s z) = (if eq_dec z y then v else interpret_trm env (s z))).
     { intros z FREE. unfold cons_subst. destruct (eq_dec z y) as [z_eq_y | z_ne_y].
       - transitivity ((fun x : ivar => if eq_dec x (chi_frm s (All_frm y p1)) then v else env x) (chi_frm s (All_frm y p1))); try reflexivity.
