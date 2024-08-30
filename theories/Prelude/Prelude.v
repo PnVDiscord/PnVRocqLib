@@ -14,12 +14,15 @@ Require Export Coq.Setoids.Setoid.
 
 Create HintDb simplication_hints.
 
-#[global] Hint Rewrite orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq : simplication_hints.
+#[global] Hint Rewrite forallb_app orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq not_true_iff_false not_false_iff_true : simplication_hints.
 
 #[local] Obligation Tactic := idtac.
 
 Ltac property X :=
   eapply (proj2_sig X).
+
+Tactic Notation "rewrite!" :=
+  autorewrite with simplication_hints in *.
 
 #[universes(polymorphic=yes)]
 Definition reify@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} (f : forall x : A, { y : B | P x y }) : { f : A -> B | forall x, P x (f x) } :=
@@ -781,7 +784,7 @@ Tactic Notation "s!" :=
   ).
 
 Tactic Notation "ss!" :=
-  s!; subst; eauto with *; firstorder (try first [congruence | f_equal]).
+  s!; subst; eauto with *; firstorder (try first [lia | congruence | f_equal]).
 
 Tactic Notation "done!" :=
   now ii; repeat ss!; done.

@@ -3,6 +3,7 @@
 theories/Data/Aczel.v #
 theories/Data/Vector.v #
 theories/Index/Index.v #
+theories/Logic/BasicFol.v #
 theories/Logic/ClassicalPropositionalLogic.v #
 theories/Logic/MuRec.v #
 theories/Logic/PrimRec.v #

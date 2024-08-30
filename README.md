@@ -30,6 +30,8 @@ The Coq Proof Assistant, version 8.18.0
 
 ### Logic
 
+- `BasicFol.v` : Basic definitions of First-Order Logic
+
 - `ClassicalPropositionalLogic.v` : The Soundness, Completeness and Compactness Theorem for PropositionalLogic.
 
 - `MuRec.v` : Basic facts on μ-recursive functions.
@@ -79,3 +81,5 @@ The Coq Proof Assistant, version 8.18.0
 5. [Murec_Extraction](https://github.com/DmxLarchey/Murec_Extraction)
 
 6. [CoqGym/goedel](https://github.com/princeton-vl/CoqGym/tree/master/coq_projects/goedel)
+
+7. [formalmetatheory-stoughton](https://github.com/ernius/formalmetatheory-stoughton)
