@@ -2470,11 +2470,12 @@ Import FolNotations.
 
 #[global]
 Add Parametric Morphism {L : language}
-  : (@entails L) with signature (eqProp ==> eq ==> iff) as entails_upto.
+  : (@entails L) with signature (eqProp ==> alpha_equiv ==> iff)
+  as entails_compatWith_eqProp.
 Proof.
-  intros Gamma1 Gamma2 EQ C. split.
-  - ii. eapply H. done!.
-  - ii. eapply H. done!.
+  intros Gamma Gamma' EQ C C' ALPHA. transitivity (Gamma ⊨ C').
+  - now split; ii; eapply alpha_equiv_compat_interpret_frm; try (eapply H; exact SATISFY).
+  - split; ii; eapply H; done!.
 Qed.
 
 Lemma extend_entails {L : language} (Gamma : ensemble (@frm L)) (Gamma' : ensemble (@frm L)) (C : frm L)

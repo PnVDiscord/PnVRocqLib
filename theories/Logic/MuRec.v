@@ -213,10 +213,10 @@ Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t Value n -> Value -> 
   | MR_primRec_spec_S n g h xs z a acc
     (ACC : MuRecSpec (S n) (MR_primRec g h) (a :: xs) acc)
     (h_spec : MuRecSpec (S (S n)) h (a :: acc :: xs) z)
-    : MuRecSpec (S n) (MR_primRec g h) (S a :: xs) z (* corrected by "SoonWon Moon" *)
+    : MuRecSpec (S n) (MR_primRec g h) (S a :: xs) z
   | MR_mu_spec n g xs z
     (g_spec : MuRecSpec (S n) g (z :: xs) 0)
-    (MIN : forall y, y < z -> exists p, p > 0 /\ MuRecSpec (S n) g (y :: xs) p) (* corrected by "SoonWon Moon" *)
+    (MIN : forall y, y < z -> exists p, p > 0 /\ MuRecSpec (S n) g (y :: xs) p)
     : MuRecSpec n (MR_mu g) xs z
 with MuRecsSpec : forall n : Arity, forall m : Arity, MuRecs n m -> Vector.t Value n -> Vector.t Value m -> Prop :=
   | MRs_nil_spec n xs
@@ -233,7 +233,7 @@ Fixpoint MuRecGraph {n : Arity} (f : MuRec n) : Vector.t Value n -> Value -> Pro
   | MR_proj i => fun xs => fun z => xs !! i = z
   | MR_compose g h => fun xs => fun z => exists ys, MuRecsGraph g xs ys /\ MuRecGraph h ys z
   | MR_primRec g h => fun xs => nat_rect _ (fun z => MuRecGraph g (V.tail xs) z) (fun a => fun ACC => fun z => exists y, ACC y /\ MuRecGraph h (a :: y :: V.tail xs) z) (V.head xs)
-  | MR_mu g => fun xs => fun z => (forall y, y < z -> exists p, p > 0 /\ MuRecGraph g (y :: xs) p) /\ MuRecGraph g (z :: xs) 0 (* corrected by "SoonWon Moon" *)
+  | MR_mu g => fun xs => fun z => (forall y, y < z -> exists p, p > 0 /\ MuRecGraph g (y :: xs) p) /\ MuRecGraph g (z :: xs) 0
   end
 with MuRecsGraph {n : Arity} {m : Arity} (fs : MuRecs n m) : Vector.t Value n -> Vector.t Value m -> Prop :=
   match fs with
@@ -471,3 +471,38 @@ Proof.
 Qed.
 
 End MU_RECURSIVE.
+
+Fixpoint fromPrimRec {n : nat} (f : PrimRec n) : MuRec n :=
+  match f with
+  | PR_succ => MR_succ
+  | PR_zero => MR_zero
+  | PR_proj n i => MR_proj i
+  | PR_compose n m g h => MR_compose (fromPrimRecs g) (fromPrimRec h)
+  | PR_primRec n g h => MR_primRec (fromPrimRec g) (fromPrimRec h)
+  end
+with fromPrimRecs {n : nat} {m : nat} (fs : PrimRecs n m) : MuRecs n m :=
+  match fs with
+  | PRs_nil n => MRs_nil
+  | PRs_cons n m f fs => MRs_cons (fromPrimRec f) (fromPrimRecs fs)
+  end.
+
+Fixpoint fromPrimRec_good (n : nat) (f : PrimRec n) (xs : Vector.t nat n) (z : nat) (SPEC : PrimRecSpec n f xs z) {struct SPEC}
+  : MuRecSpec n (fromPrimRec f) xs z
+with fromPrimRecs_good (n : nat) (m : nat) (fs : PrimRecs n m) (xs : Vector.t nat n) (z : Vector.t nat m) (SPEC : PrimRecsSpec n m fs xs z) {struct SPEC}
+  : MuRecsSpec n m (fromPrimRecs fs) xs z.
+Proof.
+  - destruct SPEC; simpl.
+    + econs 1.
+    + econs 2.
+    + econs 3.
+    + econs 4; [exact (fromPrimRecs_good n m g xs ys g_spec) | exact (fromPrimRec_good m h ys z SPEC)].
+    + econs 5; exact (fromPrimRec_good n g xs z SPEC).
+    + econs 6.
+      * eapply fromPrimRec_good with (f := PR_primRec n g h). exact SPEC1.
+      * eapply fromPrimRec_good with (f := h). exact SPEC2.
+  - destruct SPEC; simpl.
+    + econs 1.
+    + econs 2.
+      * eapply fromPrimRec_good. exact f_spec.
+      * eapply fromPrimRecs_good. exact SPEC.
+Qed.
