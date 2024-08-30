@@ -16,7 +16,7 @@ Lemma case0 {phi : Fin.t O -> Type}
 Proof.
   intros i.
   exact (
-    match i as i in Fin.t n return (match n as m return Fin.t m -> Type with O => phi | S n' => fun i => unit end) i with
+    match i as i in Fin.t n return (match n as m return Fin.t m -> Type with O => phi | S m' => fun _ => unit end) i with
     | @FZ n' => tt
     | @FS n' i' => tt
     end
@@ -30,7 +30,7 @@ Lemma caseS {n' : nat} {phi : Fin.t (S n') -> Type}
 Proof.
   intros i; revert phi phiFZ phiFS.
   exact (
-    match i as i in Fin.t n return (match n as m return Fin.t m -> Type with O => fun i => unit | S m' => fun i => forall phi' : Fin.t (S m') -> Type, phi' (@FZ m') -> (forall i' : Fin.t m', phi' (@FS m' i')) -> phi' i end) i with
+    match i as i in Fin.t n return (match n as m return Fin.t m -> Type with O => fun _ => unit | S m' => fun i => forall phi' : Fin.t (S m') -> Type, phi' (@FZ m') -> (forall i' : Fin.t m', phi' (@FS m' i')) -> phi' i end) i with
     | @FZ n' => fun phi : Fin.t (S n') -> Type => fun phiFZ : phi (@FZ n') => fun phiFS : forall i' : Fin.t n', phi (@FS n' i') => phiFZ
     | @FS n' i' => fun phi : Fin.t (S n') -> Type => fun phiFS : phi (@FZ n') => fun phiFS : forall i' : Fin.t n', phi (@FS n' i') => phiFS i'
     end
@@ -46,7 +46,7 @@ Proof.
     fix rectS_fix (n : nat) (i : Fin.t (S n)) {struct i} : phi n i :=
     match i as i in Fin.t n return (match n return Fin.t n -> Type with O => fun _ => unit | S m => phi m end) i with
     | @FZ m => phiFZ m
-    | @FS m i' => (match m as m return forall i : Fin.t m, phi m (@FS m i) with O => case0 | S m' => fun i => phiFS m' i (rectS_fix m' i) end) i'
+    | @FS m i' => (match m as m return forall i : Fin.t m, phi m (@FS m i) with O => Fin.case0 | S m' => fun i => phiFS m' i (rectS_fix m' i) end) i'
     end
   ).
 Defined.
