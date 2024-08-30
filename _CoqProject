@@ -7,6 +7,7 @@ theories/Logic/BasicFol.v #
 theories/Logic/ClassicalFol.v #
 theories/Logic/ClassicalPropositionalLogic.v #
 theories/Logic/HilbertFol.v #
+theories/Logic/HilbertFol2.v #
 theories/Logic/MuRec.v #
 theories/Logic/PrimRec.v #
 theories/Logic/PropositionalLogic.v #

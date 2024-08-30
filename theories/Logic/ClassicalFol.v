@@ -4,21 +4,23 @@ Require Import PnV.Data.Vector.
 Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Logic.BasicFol.
 Require Import PnV.Logic.HilbertFol.
+Require Import PnV.Logic.HilbertFol2.
 
 Import FolNotations.
 
-#[local] Infix " \in " := E.In.
-#[local] Infix " \subseteq " := E.subset.
+#[local] Infix "\in" := E.In.
+#[local] Infix "\subseteq" := E.subset.
 #[local] Notation In := L.In.
 
 Section SOUNDNESS_OF_HilbertCalculus.
 
+Import FolHilbert.
+
 #[local] Existing Instance V.vec_isSetoid.
-#[local] Infix "⊢" := HilbertFol.proves.
 
 Context {L : language}.
 
-Theorem HilbertProofSystem_sound (Gamma : ensemble (frm L)) (C : frm L)
+Theorem HilbertCalculus_sound (Gamma : ensemble (frm L)) (C : frm L)
   (PROVE : Gamma ⊢ C)
   : Gamma ⊨ C.
 Proof with eauto with *.
