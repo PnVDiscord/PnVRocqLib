@@ -84,7 +84,7 @@ Proof.
 Defined.
 
 Theorem enumeration_lemma
-  (encode_surjective : forall n : nat, exists x, encode x = n)
+  (encode_surjective : forall n : nat, exists x : A, encode x = n)
   : { enum : nat -> A & ⟪ enumerable : forall x, { n : nat | enum n = x } ⟫ }.
 Proof.
   exists (fun n : nat => search n (encode_surjective n)). unnw. intros x. exists (encode x).

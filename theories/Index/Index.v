@@ -1,4 +1,5 @@
 Require Import PnV.Data.Aczel.
+Require Import PnV.Data.Graph.
 Require Import PnV.Data.Vector.
 Require Import PnV.Logic.BasicFol.
 Require Import PnV.Logic.ClassicalFol.

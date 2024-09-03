@@ -1220,7 +1220,7 @@ Proof with eauto with *.
   eapply NegationE. eapply inconsistent_cl_iff. rewrite cl_eq_Th...
 Qed.
 
-Definition MaximalConsistentSet (X : ensemble formula) : ensemble formula :=
+Definition MaximallyConsistentSet (X : ensemble formula) : ensemble formula :=
   completeFilterOf (Th X).
 
 Variant full_axiom_set (X : ensemble formula) (b : formula) : Prop :=
@@ -1229,7 +1229,7 @@ Variant full_axiom_set (X : ensemble formula) (b : formula) : Prop :=
     : b \in full_axiom_set X.
 
 Lemma lemma2_of_1_3_9 (X : ensemble formula)
-  : MaximalConsistentSet X \subseteq Th (full_axiom_set X).
+  : MaximallyConsistentSet X \subseteq Th (full_axiom_set X).
 Proof.
   intros z [n z_in].
   pose proof (proj1 (lemma1_of_1_3_9 X n z) z_in) as [INFERS].
@@ -1258,7 +1258,7 @@ Proof with eauto with *.
 Qed.
 
 Lemma lemma3_of_1_3_9 (X : ensemble formula)
-  : Th (full_axiom_set X) \subseteq MaximalConsistentSet X.
+  : Th (full_axiom_set X) \subseteq MaximallyConsistentSet X.
 Proof with eauto with *.
   intros z [INFERS].
   pose proof (inference_is_finite (full_axiom_set X) z INFERS) as [xs [X' [xs_isFiniteSubsetOf [xs_isListRepOf INFERS']]]].
@@ -1271,39 +1271,39 @@ Proof with eauto with *.
   - eapply andsB_le_iff. now firstorder.
 Qed.
 
-Variant MaximalConsistentSet_spec (X : ensemble formula) (F : ensemble formula) : Prop :=
-  | MaximalConsistentSetSpec_areTheFollowings
+Variant MaximallyConsistentSet_spec (X : ensemble formula) (F : ensemble formula) : Prop :=
+  | MaximallyConsistentSetSpec_areTheFollowings
     (SUBSET : Th X \subseteq F)
     (EQUICONSISTENT : equiconsistent (Th X) F)
     (CLOSED_infers : forall b : formula, b \in F <-> F ⊢ b)
     (META_DN : forall b : formula, << NEGATION : NegationF b \in F -> ContradictionF \in F >> -> b \in F)
     (IMPLICATION_FAITHFUL : forall b : formula, forall b' : formula, ImplicationF b b' \in F <-> << IMPLICATION : b \in F -> b' \in F >>)
-    : MaximalConsistentSet_spec X F.
+    : MaximallyConsistentSet_spec X F.
 
 Theorem theorem_of_1_3_10 (X : ensemble formula)
-  : MaximalConsistentSet_spec X (MaximalConsistentSet X).
+  : MaximallyConsistentSet_spec X (MaximallyConsistentSet X).
 Proof with eauto with *.
   pose proof (lemma1 := @lemma1_of_1_3_8).
   pose proof (theorem_of_1_2_14 (Th X) (lemma1 X)) as [? ? ? ?].
-  fold (MaximalConsistentSet X) in SUBSET, IS_FILTER, COMPLETE, EQUICONSISTENT.
-  assert (CLOSED_infers : forall b : formula, b \in MaximalConsistentSet X <-> MaximalConsistentSet X ⊢ b).
+  fold (MaximallyConsistentSet X) in SUBSET, IS_FILTER, COMPLETE, EQUICONSISTENT.
+  assert (CLOSED_infers : forall b : formula, b \in MaximallyConsistentSet X <-> MaximallyConsistentSet X ⊢ b).
   { intros b. split; intros b_in.
-    - enough (to_show : b \in Th (MaximalConsistentSet X)) by now inversion to_show.
+    - enough (to_show : b \in Th (MaximallyConsistentSet X)) by now inversion to_show.
       rewrite <- cl_eq_Th. eapply fact3_of_1_2_8...
     - eapply fact5_of_1_2_8... rewrite -> cl_eq_Th...
   }
-  assert (META_DN : forall b : formula, (NegationF b \in MaximalConsistentSet X -> ContradictionF \in MaximalConsistentSet X) -> b \in MaximalConsistentSet X).
+  assert (META_DN : forall b : formula, (NegationF b \in MaximallyConsistentSet X -> ContradictionF \in MaximallyConsistentSet X) -> b \in MaximallyConsistentSet X).
   { intros b NEGATION. eapply COMPLETE. split.
     - intros INCONSISTENT. eapply inconsistent_compatWith_isSubsetOf...
-      transitivity (E.insert b (MaximalConsistentSet X)).
+      transitivity (E.insert b (MaximallyConsistentSet X)).
       + ii; right...
       + eapply fact3_of_1_2_8.
     - intros INCONSISTENT.
-      assert (claim1 : E.insert b (MaximalConsistentSet X) ⊢ ContradictionF).
+      assert (claim1 : E.insert b (MaximallyConsistentSet X) ⊢ ContradictionF).
       { now eapply inconsistent_cl_iff. }
       exists (ContradictionF). split... eapply NEGATION, CLOSED_infers, NegationI... reflexivity.
   }
-  assert (IMPLICATION_FAITHFUL : forall b : formula, forall b' : formula, ImplicationF b b' \in MaximalConsistentSet X <-> (b \in MaximalConsistentSet X -> b' \in MaximalConsistentSet X)).
+  assert (IMPLICATION_FAITHFUL : forall b : formula, forall b' : formula, ImplicationF b b' \in MaximallyConsistentSet X <-> (b \in MaximallyConsistentSet X -> b' \in MaximallyConsistentSet X)).
   { intros b b'. split.
     - intros IMPLICATION b_in.
       eapply CLOSED_infers. eapply ImplicationE with (A := b).
@@ -1311,14 +1311,14 @@ Proof with eauto with *.
       + eapply CLOSED_infers...
     - intros IMPLICATION. eapply META_DN.
       intros H_in. eapply CLOSED_infers.
-      assert (claim1 : E.insert (ImplicationF b b') (MaximalConsistentSet X) ⊢ ContradictionF).
+      assert (claim1 : E.insert (ImplicationF b b') (MaximallyConsistentSet X) ⊢ ContradictionF).
       { eapply ContradictionI with (A := ImplicationF b b').
         - eapply ByAssumption. left...
-        - eapply extend_infers with (Gamma := MaximalConsistentSet X).
+        - eapply extend_infers with (Gamma := MaximallyConsistentSet X).
           + eapply CLOSED_infers...
           + ii; right...
       }
-      assert (claim2 : MaximalConsistentSet X ⊢ ConjunctionF b (NegationF b')).
+      assert (claim2 : MaximallyConsistentSet X ⊢ ConjunctionF b (NegationF b')).
       { eapply DisjunctionE with (A := b) (B := NegationF b).
         - eapply extend_infers with (Gamma := E.empty).
           + eapply Law_of_Excluded_Middle.
@@ -1342,9 +1342,9 @@ Proof with eauto with *.
             { eapply ByAssumption. right; left... }
           + eapply extend_infers... ii; s!. tauto.
       }
-      assert (claim3 : MaximalConsistentSet X ⊢ b).
+      assert (claim3 : MaximallyConsistentSet X ⊢ b).
       { eapply ConjunctionE1... }
-      assert (claim4 : MaximalConsistentSet X ⊢ NegationF b').
+      assert (claim4 : MaximallyConsistentSet X ⊢ NegationF b').
       { eapply ConjunctionE2. exact claim2. }
       eapply ContradictionI with (A := b'); trivial.
       eapply CLOSED_infers, IMPLICATION, CLOSED_infers; trivial.

@@ -1129,7 +1129,7 @@ Proof.
   revert s. frm_ind p; simpl; i; ss!.
 Qed.
 
-Lemma quick_draw_one (p : frm L) (x : ivar) (y : ivar) (z : ivar) (s : subst L)
+Lemma one_subst_cons_subst (p : frm L) (x : ivar) (y : ivar) (z : ivar) (s : subst L)
   (FRESH : is_free_in_frm x p = false \/ x = y)
   : subst_frm (one_subst x (Var_trm z)) (subst_frm (cons_subst y (Var_trm z) s) p) = subst_frm (cons_subst y (Var_trm z) (subst_compose s (one_subst x (Var_trm z)))) (subst_frm (one_subst x (Var_trm y)) p).
 Proof.
@@ -1905,7 +1905,91 @@ Proof.
       * f_equal. eapply IH. simpl; lia.
 Qed.
 
+Lemma one_fv_frm_subst_closed_term_close_formula (y : ivar) (t : trm L) (p : frm L)
+  (one_fv : forall z, is_free_in_frm z p = true -> z = y)
+  (trm_closed : forall z, is_not_free_in_trm z t)
+  : forall z, is_not_free_in_frm z (subst_frm (one_subst y t) p).
+Proof.
+  i. red. rewrite <- frm_is_fresh_in_subst_iff. unfold frm_is_fresh_in_subst. rewrite forallb_forall.
+  intros u u_free. s!. destruct (eq_dec u y) as [EQ | NE].
+  - subst u. exact (trm_closed z).
+  - s!. intros ->. eapply NE. exact (one_fv z u_free).
+Qed.
+
+Definition scoped_trm (xs : list ivar) : Set :=
+  { t : trm L | forall z, is_free_in_trm z t = true -> In z xs }.
+
+Definition scoped_trms (n : nat) (xs : list ivar) : Set :=
+  { ts : trms L n | forall z, is_free_in_trms z ts = true -> In z xs }.
+
+Definition scoped_frm (xs : list ivar) : Set :=
+  { p : frm L | forall z, is_free_in_frm z p = true -> In z xs }.
+
+#[program]
+Definition sRel {xs : list ivar} (R : L.(relation_symbols)) (ts : scoped_trms (L.(relation_arity_table) R) xs) : scoped_frm xs :=
+  @exist _ _ (Rel_frm R (proj1_sig ts)) (fun z : ivar => fun H => _).
+Next Obligation.
+  exact (proj2_sig ts z H).
+Qed.
+
+#[program]
+Definition sEqn {xs : list ivar} (t1 : scoped_trm xs) (t2 : scoped_trm xs) : scoped_frm xs :=
+  @exist _ _ (Eqn_frm t1 t2) (fun z : ivar => fun H => _).
+Next Obligation.
+  rewrite orb_true_iff in H. destruct H as [H | H].
+  - eapply (proj2_sig t1 z H).
+  - eapply (proj2_sig t2 z H).
+Qed.
+
+#[program]
+Definition sNeg {xs : list ivar} (s1 : scoped_frm xs) : scoped_frm xs :=
+  @exist _ _ (Neg_frm (proj1_sig s1)) (fun z : ivar => fun H => _).
+Next Obligation.
+  exact (proj2_sig s1 z H).
+Qed.
+
+#[program]
+Definition sImp {xs : list ivar} (s1 : scoped_frm xs) (s2 : scoped_frm xs) : scoped_frm xs :=
+  @exist _ _ (Imp_frm (proj1_sig s1) (proj1_sig s2)) (fun z : ivar => fun H => _).
+Next Obligation.
+  rewrite orb_true_iff in H. destruct H as [H | H].
+  - eapply (proj2_sig s1 z H).
+  - eapply (proj2_sig s2 z H).
+Qed.
+
+#[program]
+Definition sAll {xs : list ivar} (y : ivar) (s1 : scoped_frm (y :: xs)) : scoped_frm xs :=
+  @exist _ _ (All_frm y (proj1_sig s1)) (fun z : ivar => fun H => _).
+Next Obligation.
+  s!. destruct H as [FREE NE]. pose proof (proj2_sig s1 z FREE) as claim. simpl in claim.
+  destruct claim as [EQ | IN]; [now contradiction NE | exact IN].
+Qed.
+
+#[program]
+Definition Con_trm_nil_scoped (c : L.(constant_symbols)) : scoped_trm [] :=
+  @exist _ _ (Con_trm c) _.
+
+#[program]
+Definition subst_one_frm_nil_scoped (y : ivar) (t : scoped_trm []) (p : scoped_frm [y]) : scoped_frm [] :=
+  @exist _ _ (subst_frm (one_subst y (proj1_sig t)) (proj1_sig p)) _.
+Next Obligation.
+  revert z H.
+  assert (claim1 : forall z : ivar, is_free_in_frm z (proj1_sig p) = true -> z = y).
+  { intros z FREE. now pose proof (proj2_sig p z FREE) as [EQ | []]. }
+  assert (claim2 : forall z : ivar, is_not_free_in_trm z (proj1_sig t)).
+  { intros z. red. pose proof (proj2_sig t z). destruct (is_free_in_trm z (proj1_sig t)) as [ | ]; [now contradiction H | reflexivity]. }
+  intros z H. pose proof (one_fv_frm_subst_closed_term_close_formula y (proj1_sig t) (proj1_sig p) claim1 claim2 z) as claim3. red in claim3.
+  enough (WTS : true = false) by discriminate. rewrite <- H. rewrite <- claim3. reflexivity.
+Qed.
+
 End FOL_SYNTAX.
+
+#[global] Arguments scoped_trm : clear implicits.
+#[global] Arguments scoped_trms : clear implicits.
+#[global] Arguments scoped_frm : clear implicits.
+
+Notation senetence L := (scoped_frm L []).
+
 Section EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
 
 #[local] Infix "=~=" := is_similar_to : type_scope.

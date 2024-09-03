@@ -1,6 +1,7 @@
 -Q theories PnV #
 # Please sort in lexicographical order
 theories/Data/Aczel.v #
+theories/Data/Graph.v #
 theories/Data/Vector.v #
 theories/Index/Index.v #
 theories/Logic/BasicFol.v #

@@ -156,13 +156,13 @@ Qed.
 
 Lemma hasModel_ifConsistent (X : ensemble formula)
   (CONSISTENT : X ⊬ ContradictionF)
-  : X \subseteq MaximalConsistentSet X /\ is_structure (MaximalConsistentSet X).
+  : X \subseteq MaximallyConsistentSet X /\ is_structure (MaximallyConsistentSet X).
 Proof with first [eassumption | trivial]. (* Infinitely grateful for Sohn's advice! *)
-  ii. set (X_dagger := MaximalConsistentSet X).
+  ii. set (X_dagger := MaximallyConsistentSet X).
   pose proof (theorem_of_1_3_10 X) as [? ? ? ? ?].
   fold X_dagger in SUBSET, EQUICONSISTENT, CLOSED_infers, META_DN, IMPLICATION_FAITHFUL.
   pose proof (theorem_of_1_2_14 (Th X) (lemma1_of_1_3_8 X)) as [SUBSET' IS_FILTER' COMPLETE' EQUICONSISTENT'].
-  fold (MaximalConsistentSet X) in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.
+  fold (MaximallyConsistentSet X) in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.
   fold X_dagger in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.
   pose proof (claim1 := Th_isSubsetOf_cl X).
   pose proof (claim2 := cl_isSubsetOf_Th X).
@@ -201,7 +201,7 @@ Proof with first [eassumption | trivial]. (* Infinitely grateful for Sohn's advi
     - intros H_not_in.
       eapply CLOSED_infers, META_DN. unnw. intros H_in.
       eapply CLOSED_infers. eapply ContradictionI with (A := NegationF p1).
-      + enough (claim6 : MaximalConsistentSet X ⊢ ImplicationF p1 ContradictionF).
+      + enough (claim6 : MaximallyConsistentSet X ⊢ ImplicationF p1 ContradictionF).
         { eapply NegationI. eapply ImplicationE with (A := p1).
           - eapply extend_infers... ss!.
           - eapply ByAssumption... ss!.
@@ -310,18 +310,18 @@ Proof with eauto with *.
   assert (CONSISTENT : X ⊬ ContradictionF).
   { intros INCONSISTENT. contradiction it_is_false_that_Gamma_infers_C. eapply NegationE... }
   pose proof (theorem_of_1_2_14 (Th X) (lemma1_of_1_3_8 X)) as [SUBSET' IS_FILTER' COMPLETE' EQUICONSISTENT'].
-  fold (MaximalConsistentSet X) in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.
+  fold (MaximallyConsistentSet X) in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.
   pose proof (hasModel_ifConsistent X CONSISTENT) as [INCL IS_STRUCTURE].
   unfold is_structure in IS_STRUCTURE.
   pose proof (theorem_of_1_3_10 Gamma) as [? ? ? ? ?]; unnw.
   contradiction it_is_false_that_Gamma_infers_C.
-  eapply completeness_theorem_prototype with (env := E.preimage AtomF (MaximalConsistentSet X)); trivial.
+  eapply completeness_theorem_prototype with (env := E.preimage AtomF (MaximallyConsistentSet X)); trivial.
   - unfold equiconsistent in *.
-    transitivity (inconsistent (MaximalConsistentSet X))...
+    transitivity (inconsistent (MaximallyConsistentSet X))...
     split; intros [botB [botB_in botB_eq_falseB]].
     + exists botB. split... eapply IS_STRUCTURE...
     + exists botB. split... eapply IS_STRUCTURE...
-  - transitivity (MaximalConsistentSet X)...
+  - transitivity (MaximallyConsistentSet X)...
     ii. eapply IS_STRUCTURE...
   - eapply isFilter_compatWith_eqProp...
 Qed.

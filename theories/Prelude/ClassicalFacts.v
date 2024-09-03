@@ -10,3 +10,11 @@ Proof.
   - ii. eapply eq_rect_eq.
   - eapply eq_dep_dep1. exact EQ.
 Qed.
+
+Lemma exist_eq_iff {A : Type} {P : A -> Prop} (x : A) (x' : A) (H_P : P x) (H_P' : P x')
+  : @exist A P x H_P = @exist A P x' H_P' <-> x = x'.
+Proof.
+  split.
+  - intros EQ. apply f_equal with (f := @proj1_sig A P) in EQ. exact EQ.
+  - intros EQ. subst x'. rewrite proof_irrelevance with (P := P x) (p1 := H_P) (p2 := H_P'). reflexivity.
+Qed.

@@ -44,7 +44,7 @@ Lemma rectS (phi : forall n, Fin.t (S n) -> Type)
 Proof.
   exact (
     fix rectS_fix (n : nat) (i : Fin.t (S n)) {struct i} : phi n i :=
-    match i as i in Fin.t n return (match n return Fin.t n -> Type with O => fun _ => unit | S m => phi m end) i with
+    match i as i in Fin.t n return (match n return Fin.t n -> Type with O => fun _ => unit | S n' => phi n' end) i with
     | @FZ m => phiFZ m
     | @FS m i' => (match m as m return forall i : Fin.t m, phi m (@FS m i) with O => Fin.case0 | S m' => fun i => phiFS m' i (rectS_fix m' i) end) i'
     end
