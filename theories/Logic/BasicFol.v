@@ -5,7 +5,7 @@ Require Import PnV.Data.Vector.
 Require Import Coq.Arith.Wf_nat.
 
 #[local] Infix "\in" := E.In.
-#[local] Infix "\subseteq" := E.subset.
+#[local] Infix "\subseteq" := E.isSubsetOf.
 #[local] Notation In := List.In.
 
 #[projections(primitive)]

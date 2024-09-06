@@ -1,7 +1,7 @@
 Require Import PnV.Prelude.Prelude.
 
 #[local] Infix "\in" := E.In.
-#[local] Infix "\subseteq" := E.subset.
+#[local] Infix "\subseteq" := E.isSubsetOf.
 #[local] Obligation Tactic := i.
 
 Create HintDb poset_hints.

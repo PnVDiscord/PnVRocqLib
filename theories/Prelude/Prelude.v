@@ -442,17 +442,17 @@ Definition t@{u} (A : Type@{u}) : Type@{u} := A -> Prop.
 Definition In@{u} {A : Type@{u}} (x : A) (X : t@{u} A) : Prop := X x.
 
 #[universes(polymorphic=yes)]
-Definition subset@{u} {A : Type@{u}} (X1 : t@{u} A) (X2 : t@{u} A) : Prop :=
+Definition isSubsetOf@{u} {A : Type@{u}} (X1 : t@{u} A) (X2 : t@{u} A) : Prop :=
   forall x, In@{u} x X1 -> In@{u} x X2.
 
 #[local] Infix "\in" := In : type_scope.
-#[local] Infix "\subseteq" := subset : type_scope.
+#[local] Infix "\subseteq" := isSubsetOf : type_scope.
 
 #[global]
 Instance ensemble_isProset {A : Type} : isProset (E.t A) :=
   let PROSET : isProset (E.t A) := pi_isProset (fun _ : A => Prop_isProset) in
   {|
-    leProp := subset;
+    leProp := isSubsetOf;
     Proset_isSetoid := {| eqProp lhs rhs := forall x, x \in lhs <-> x \in rhs; eqProp_Equivalence := PROSET.(Proset_isSetoid).(eqProp_Equivalence) |};
     leProp_PreOrder := PROSET.(leProp_PreOrder);
     leProp_PartialOrder := PROSET.(leProp_PartialOrder);
@@ -744,13 +744,13 @@ Ltac unfold_E := repeat
   match goal with
   | [ H : context[ E.In _ (fun _ => _) ] |- _ ] => unfold E.In in H
   | [ |- context[ E.In _ (fun _ => _) ] ] => unfold E.In
-  | [ H : context[ E.subset _ (fun _ => _) ] |- _ ] => unfold E.subset in H
-  | [ |- context[ E.subset _ (fun _ => _) ] ] => unfold E.subset
+  | [ H : context[ E.isSubsetOf _ (fun _ => _) ] |- _ ] => unfold E.isSubsetOf in H
+  | [ |- context[ E.isSubsetOf _ (fun _ => _) ] ] => unfold E.isSubsetOf
   end.
 
 #[global]
 Instance subseteq_PreOrder {A : Type}
-  : PreOrder (@E.subset A).
+  : PreOrder (@E.isSubsetOf A).
 Proof.
   exact (leProp_PreOrder).
 Defined.
@@ -767,7 +767,7 @@ End E.
 Notation ensemble := E.t.
 
 #[local] Infix "\in" := E.In : type_scope.
-#[local] Infix "\subseteq" := E.subset : type_scope.
+#[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
 
 Lemma unfold_ensemble_eqProp (A : Type) (X1 : ensemble A) (X2 : ensemble A)
   : X1 == X2 <-> (X1 \subseteq X2 /\ X2 \subseteq X1).
@@ -1174,6 +1174,17 @@ Fixpoint lookup {A : Type} {B : Type} {EQ_DEC : hasEqDec A} (x : A) (zs : list (
 Notation is_finsubset_of xs X := (forall x, L.In x xs -> x \in X).
 
 Notation is_listrep_of xs X := (forall x, L.In x xs <-> x \in X).
+
+Lemma map_image_eq {A : Type} {B : Type} {C : Type} (f : A -> C) (g : B -> C) (xs : list A)
+  (IMAGE : forall x, L.In x xs -> { y : B | f x = g y })
+  : { ys : list B | L.map f xs = L.map g ys }.
+Proof.
+  induction xs as [ | x' xs' IH].
+  - exists []. reflexivity.
+  - pose proof (IMAGE x' (or_introl eq_refl)) as [y y_EQ].
+    pose proof (IH (fun x => fun IN => IMAGE x (or_intror IN))) as [ys ys_EQ].
+    exists (y :: ys). simpl. f_equal. exact y_EQ. exact ys_EQ.
+Defined.
 
 End L.
 

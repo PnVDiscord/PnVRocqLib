@@ -3,7 +3,7 @@ Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Math.OrderTheory.
 
 #[local] Infix "\in" := E.In.
-#[local] Infix "\subseteq" := E.subset.
+#[local] Infix "\subseteq" := E.isSubsetOf.
 #[local] Obligation Tactic := i.
 
 #[local] Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive : poset_hints.

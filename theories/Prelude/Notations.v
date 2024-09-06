@@ -1,18 +1,17 @@
 Require Import PnV.Prelude.SfLib.
 
+Reserved Infix "==" (no associativity, at level 70).
 Reserved Infix "≡" (no associativity, at level 70).
 
-Reserved Infix "==" (no associativity, at level 70).
 Reserved Infix "=<" (no associativity, at level 70).
-
-Reserved Infix "≦ᵣ" (no associativity, at level 70).
-Reserved Infix "=ᵣ" (no associativity, at level 70).
-Reserved Infix "<ᵣ" (no associativity, at level 70).
-
 Reserved Infix "⪳" (no associativity, at level 70).
 Reserved Infix "⪵" (no associativity, at level 70).
 Reserved Infix "≦" (no associativity, at level 70).
 Reserved Infix "≨" (no associativity, at level 70).
+
+Reserved Infix "≦ᵣ" (no associativity, at level 70).
+Reserved Infix "=ᵣ" (no associativity, at level 70).
+Reserved Infix "<ᵣ" (no associativity, at level 70).
 
 Reserved Infix "⊑" (no associativity, at level 70).
 
@@ -42,3 +41,4 @@ Reserved Notation " src '---[' x ']-->' tgt " (at level 70, no associativity).
 Reserved Notation " src '===[' x ']==>' tgt " (at level 70, no associativity).
 Reserved Notation " src '~~~[' x ']~~>*' tgt " (at level 70, no associativity).
 Reserved Notation " src '---[' x ']-->*' tgt " (at level 70, no associativity).
+Reserved Notation " src '===[' x ']==>*' tgt " (at level 70, no associativity).

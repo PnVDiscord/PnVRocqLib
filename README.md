@@ -36,15 +36,15 @@ The Coq Proof Assistant, version 8.18.0
 
 - `ClassicalPropositionalLogic.v` : The Soundness, Completeness and Compactness Theorem for PropositionalLogic.
 
-- `HilbertFol.v` : Hilbert calculus for First-Order Logic.
+- `HilbertFol.v` : Basic facts on Hilbert calculus for First-Order Logic.
 
-- `HilbertFol2.v` : Hilbert calculus for First-Order Logic.
+- `HilbertFol2.v` : Advanced facts on Hilbert calculus for First-Order Logic.
 
 - `MuRec.v` : Basic facts on μ-recursive functions.
 
 - `PrimRec.v` : Basic facts on primitive recursive functions.
 
-- `PropositionalLogic.v` : Contructive meta-theory on the Propositional Logic.
+- `PropositionalLogic.v` : Contructive meta-theory on the Propositional Logic, Weak Completeness Theorem for PropoistionalLogic.
 
 ### Index
 

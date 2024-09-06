@@ -9,7 +9,7 @@ Require Import PnV.Logic.HilbertFol2.
 Import FolNotations.
 
 #[local] Infix "\in" := E.In.
-#[local] Infix "\subseteq" := E.subset.
+#[local] Infix "\subseteq" := E.isSubsetOf.
 #[local] Notation In := L.In.
 
 Section SOUNDNESS_OF_HilbertCalculus.

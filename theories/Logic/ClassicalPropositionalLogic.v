@@ -6,7 +6,7 @@ Require Import PnV.Logic.PropositionalLogic.
 Import PropositialLogicNotations.
 
 #[local] Infix " \in " := E.In.
-#[local] Infix " \subseteq " := E.subset.
+#[local] Infix " \subseteq " := E.isSubsetOf.
 #[local] Notation In := List.In.
 
 #[local] Hint Resolve E.insert_monotonic : core.

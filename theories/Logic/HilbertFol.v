@@ -5,7 +5,7 @@ Require Import PnV.Data.Vector.
 Require Import PnV.Logic.BasicFol.
 
 #[local] Infix "\in" := E.In.
-#[local] Infix "\subseteq" := E.subset.
+#[local] Infix "\subseteq" := E.isSubsetOf.
 
 Reserved Infix "\proves" (at level 70, no associativity).
 

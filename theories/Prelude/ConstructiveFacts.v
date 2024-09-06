@@ -1,6 +1,7 @@
 Require Import PnV.Prelude.Prelude.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
+Require Import Coq.Arith.Wf_nat.
 
 Lemma eq_pirrel_fromEqDec {A : Type} {hasEqDec : hasEqDec A} (lhs : A) (rhs : A)
   (EQ1 : lhs = rhs)
@@ -175,3 +176,26 @@ Proof.
     + exists (S y'). lia.
   - rewrite <- Nat.eqb_eq with (n := f (first_nat p n)) (m := 0). exact claim1.
 Defined.
+
+Theorem infinite_descent (P : nat -> Prop)
+  (DESCENT : forall n, P n -> exists m, m < n /\ P m)
+  : forall n, ~ P n.
+Proof.
+  intros n. induction (lt_wf n) as [n _ IH]. intros P_n.
+  pose proof (DESCENT n P_n) as [m [LT P_m]].
+  contradiction (IH m LT P_m).
+Qed.
+
+Lemma dec_find_minimum_if_exists (P : nat -> Prop)
+  (DEC : forall n, {P n} + {~ P n})
+  (EXISTENCE : exists x, P x)
+  : { x : nat | P x /\ ⟪ MIN : forall y, P y -> y >= x ⟫ }.
+Proof.
+  pose proof (dec_find_result_if_exists P DEC EXISTENCE) as [n P_n].
+  set (p := fun n : nat => if DEC n then true else false).
+  assert (claim : forall x, P x <-> p x = true).
+  { intros x. unfold p. destruct (DEC x) as [H_yes | H_no]; ss!. }
+  exists (first_nat p n). pose proof (first_nat_spec p n) as SPEC.
+  rewrite <- claim in SPEC. specialize (SPEC P_n). simpl in SPEC.
+  destruct SPEC as [SPEC SPEC']. split; ii; rewrite claim in *; ss!.
+Qed.

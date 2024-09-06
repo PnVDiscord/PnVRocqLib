@@ -7,7 +7,7 @@ Require Import PnV.Logic.HilbertFol.
 Import FolNotations.
 
 #[local] Infix "\in" := E.In.
-#[local] Infix "\subseteq" := E.subset.
+#[local] Infix "\subseteq" := E.isSubsetOf.
 #[local] Notation In := L.In.
 
 Module FolHilbert.

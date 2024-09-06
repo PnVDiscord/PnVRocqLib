@@ -6,7 +6,7 @@ Require Import PnV.Logic.PrimRec.
 Section UNBOUNDED_MINIMIZATION. (* Reference: "https://github.com/DmxLarchey/Murec_Extraction/blob/murec_artifact/theories/standalone.v" *)
 
 #[local] Infix "\in" := E.In : type_scope.
-#[local] Infix "\subseteq" := E.subset : type_scope.
+#[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
 
 Section BETWEEN. (* Reference: "https://github.com/DmxLarchey/Murec_Extraction/blob/murec_artifact/theories/between.v" *)
 

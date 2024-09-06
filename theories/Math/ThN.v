@@ -597,3 +597,27 @@ Proof.
     + exact (eq_ind n (le n) (le_n n) (suc m') hyp_eq).
     + exact (le_S n m' hyp_le).
 Qed.
+
+Theorem nat_strong_recursion (A : nat -> Type) (P : forall n : nat, A n -> Prop)
+  (SREC : forall REC : (forall n, option (A n)), forall x : nat, ⟪ REC_SPEC : forall x', x' < x -> { RET : { y' : A x' | P x' y' } | REC x' = Some (proj1_sig RET) } ⟫ -> { y : A x | P x y })
+  : { f : (forall n, A n) | forall n, P n (f n) }.
+Proof.
+  enough (WTS : forall x : nat, { y : A x | P x y }).
+  { exists (fun n => proj1_sig (WTS n)). exact (fun n => proj2_sig (WTS n)). }
+  intros x. induction (lt_wf x) as [x _ IH]. pose (REC := fun x' => match le_gt_dec x x' with left LE => None | right GT => Some (proj1_sig (IH x' GT)) end).
+  eapply SREC with (REC := REC). intros y LT. exists (IH y LT). unfold REC. destruct (le_gt_dec x y) as [LE | GT].
+  - lia.
+  - rewrite le_pirrel with (LE1 := LT) (LE2 := GT). reflexivity.
+Defined.
+
+Theorem nat_strong_recursion' (A : nat -> Type) (P : forall n : nat, A n -> Type)
+  (SREC : forall REC : (forall n, option (A n)), forall x : nat, ⟪ REC_SPEC : forall x', x' < x -> { RET : { y' : A x' & P x' y' } | REC x' = Some (projT1 RET) } ⟫ -> { y : A x & P x y })
+  : { f : (forall n, A n) & forall n, P n (f n) }.
+Proof.
+  enough (WTS : forall x : nat, { y : A x & P x y }).
+  { exists (fun n => projT1 (WTS n)). exact (fun n => projT2 (WTS n)). }
+  intros x. induction (lt_wf x) as [x _ IH]. pose (REC := fun x' => match le_gt_dec x x' with left LE => None | right GT => Some (projT1 (IH x' GT)) end).
+  eapply SREC with (REC := REC). intros y LT. exists (IH y LT). unfold REC. destruct (le_gt_dec x y) as [LE | GT].
+  - lia.
+  - rewrite le_pirrel with (LE1 := LT) (LE2 := GT). reflexivity.
+Defined.

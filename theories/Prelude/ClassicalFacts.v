@@ -1,4 +1,5 @@
 Require Import PnV.Prelude.Prelude.
+Require Import PnV.Prelude.ConstructiveFacts.
 Require Import Coq.Logic.EqdepFacts.
 Require Export Coq.Logic.Classical_Prop.
 
@@ -17,4 +18,15 @@ Proof.
   split.
   - intros EQ. apply f_equal with (f := @proj1_sig A P) in EQ. exact EQ.
   - intros EQ. subst x'. rewrite proof_irrelevance with (P := P x) (p1 := H_P) (p2 := H_P'). reflexivity.
+Qed.
+
+Theorem minimisation_lemma (P : nat -> Prop)
+  (EXISTENCE : exists n, P n)
+  : exists n, P n /\ ⟪ MIN : forall m, P m -> m >= n ⟫.
+Proof.
+  eapply NNPP. intros CONTRA. destruct EXISTENCE as [n P_n].
+  eapply infinite_descent with (P := P); [intros i P_i | exact P_n].
+  eapply NNPP. intros CONTRA'. eapply CONTRA. exists i. split; trivial.
+  intros m P_m. enough (WTS : ~ m < i) by lia. intros H_lt.
+  contradiction CONTRA'. exists m. split; trivial.
 Qed.
