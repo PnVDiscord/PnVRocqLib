@@ -588,13 +588,13 @@ Proof.
   unfold t in claim at 1. now apply pair_inv in claim.
 Qed.
 
-Definition cartesion_product (X : Tree) (Y : Tree) : Tree :=
+Definition Cartesian_product (X : Tree) (Y : Tree) : Tree :=
   filter (fun z => exists x, x \in X /\ exists y, y \in Y /\ z == pair x y) (power (power (union X Y))).
 
-Lemma cartesion_product_spec X Y
-  : forall z, z \in cartesion_product X Y <-> (exists x, x \in X /\ exists y, y \in Y /\ z == pair x y).
+Lemma Cartesian_product_spec X Y
+  : forall z, z \in Cartesian_product X Y <-> (exists x, x \in X /\ exists y, y \in Y /\ z == pair x y).
 Proof.
-  intros z. unfold cartesion_product. rewrite filter_good.
+  intros z. unfold Cartesian_product. rewrite filter_good.
   - rewrite power_spec. split.
     + intros (SUBSET & x & x_in_X & y & y_in_Y & EQ). done.
     + intros (x & x_in_X & y & y_in_Y & EQ). split.
