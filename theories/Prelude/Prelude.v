@@ -1004,6 +1004,21 @@ Infix ">=>" := B.kcompose : program_scope.
 Class hasEqDec (A : Type) : Type :=
   eq_dec (x : A) (y : A) : {x = y} + {x <> y}.
 
+Definition eqb {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A) : bool :=
+  if eq_dec x y then true else false.
+
+Lemma eqb_eq {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A)
+  : eqb x y = true <-> x = y.
+Proof.
+  unfold eqb. destruct (eq_dec x y) as [H_yes | H_no]; done!.
+Qed.
+
+Lemma eqb_neq {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A)
+  : eqb x y = false <-> x <> y.
+Proof.
+  unfold eqb. destruct (eq_dec x y) as [H_yes | H_no]; done!.
+Qed.
+
 #[global]
 Instance nat_hasEqDec : hasEqDec nat :=
   Nat.eq_dec.
@@ -1013,6 +1028,15 @@ Instance pair_hasEqdec {A : Type} {B : Type}
   `(A_hasEqDec : hasEqDec A)
   `(B_hasEqDec : hasEqDec B)
   : hasEqDec (A * B).
+Proof.
+  red in A_hasEqDec, B_hasEqDec. red. decide equality.
+Defined.
+
+#[global]
+Instance sum_hasEqDec {A : Type} {B : Type}
+  `(A_hasEqDec : hasEqDec A)
+  `(B_hasEqDec : hasEqDec B)
+  : hasEqDec (A + B).
 Proof.
   red in A_hasEqDec, B_hasEqDec. red. decide equality.
 Defined.
