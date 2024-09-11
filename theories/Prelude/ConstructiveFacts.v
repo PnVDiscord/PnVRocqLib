@@ -33,7 +33,7 @@ Inductive search_step (P : A -> Prop) (n : nat) : nat -> Prop :=
     (SOME : decode n = Some x)
     : search_step P n (S n).
 
-Lemma Acc_flip_search_step_P_0 (P : A -> Prop)
+Lemma initial_step (P : A -> Prop)
   (BOUND : exists x, P x)
   : Acc (flip (search_step P)) 0.
 Proof.
@@ -81,7 +81,7 @@ Definition search (n : nat) (BOUND : exists x, encode x = n) : A.
 Proof.
   eapply search_go with (n := 0) (P := fun x : A => encode x = n).
   - exact (fun x : A => Nat.eq_dec (encode x) n).
-  - eapply Acc_flip_search_step_P_0. exact BOUND.
+  - eapply initial_step. exact BOUND.
 Defined.
 
 Theorem enumeration_lemma
@@ -97,7 +97,7 @@ Defined.
 End SEARCH.
 
 Theorem LEM_implies_MarkovPrinciple (LEM : forall P : Prop, P \/ ~ P) (f : nat -> bool) 
-  (NOT_ALL_TRUE : ~ forall x, f x = true)
+  (NOT_ALL_TRUE : ~ (forall x, f x = true))
   : { n : nat | f n = false }.
 Proof.
   enough (EXISTENCE : exists n : nat, f n = false).
@@ -105,20 +105,20 @@ Proof.
     { exists id Some. reflexivity. }
     assert (P_dec : forall x : nat, {f x = false} + {f x <> false}).
     { intros x. now destruct (f x) as [ | ]; [right | left]. }
-    pose proof (FUEL := @Acc_flip_search_step_P_0 nat COUNTABLE (fun x : nat => f x = false) EXISTENCE).
+    pose proof (FUEL := @initial_step nat COUNTABLE (fun x : nat => f x = false) EXISTENCE).
     exists (@search_go nat COUNTABLE (fun x : nat => f x = false) P_dec 0 FUEL). eapply search_go_correct.
   - pose proof (LEM (exists n : nat, f n = false)) as [YES | NO].
     + exact YES.
     + contradiction NOT_ALL_TRUE. intros x. destruct (f x) as [ | ] eqn: H_OBS; now firstorder.
 Defined.
 
-Lemma dec_find_result_if_exists (P : nat -> Prop)
+Lemma dec_finds_result_if_exists (P : nat -> Prop)
   (DEC : forall n, {P n} + {~ P n})
   (EXISTENCE : exists x, P x)
   : { x : nat | P x }.
 Proof.
   pose (COUNTABLE := {| encode := id; decode := @Some nat; decode_encode (x : nat) := @eq_refl (option nat) (Some x) |}).
-  exists (@search_go nat COUNTABLE P DEC 0 (@Acc_flip_search_step_P_0 nat COUNTABLE P EXISTENCE)).
+  exists (@search_go nat COUNTABLE P DEC 0 (@initial_step nat COUNTABLE P EXISTENCE)).
   eapply search_go_correct.
 Defined.
 
@@ -157,7 +157,7 @@ Proof.
   { exists id Some. reflexivity. }
   assert (P_dec : forall x : nat, {p x = true} + {p x <> true}).
   { intros x. now destruct (p x) as [ | ]; [left | right]. }
-  pose proof (FUEL := @Acc_flip_search_step_P_0 nat COUNTABLE (fun x : nat => p x = true) EXISTENCE).
+  pose proof (FUEL := @initial_step nat COUNTABLE (fun x : nat => p x = true) EXISTENCE).
   exists (@search_go nat COUNTABLE (fun x : nat => p x = true) P_dec 0 FUEL). eapply search_go_correct.
 Defined.
 
@@ -186,12 +186,12 @@ Proof.
   contradiction (IH m LT P_m).
 Qed.
 
-Lemma dec_find_minimum_if_exists (P : nat -> Prop)
-  (DEC : forall n, {P n} + {~ P n})
+Lemma dec_finds_minimum_if_exists (P : nat -> Prop)
+  (DEC : forall n : nat, {P n} + {~ P n})
   (EXISTENCE : exists x, P x)
   : { x : nat | P x /\ ⟪ MIN : forall y, P y -> y >= x ⟫ }.
 Proof.
-  pose proof (dec_find_result_if_exists P DEC EXISTENCE) as [n P_n].
+  pose proof (dec_finds_result_if_exists P DEC EXISTENCE) as [n P_n].
   set (p := fun n : nat => if DEC n then true else false).
   assert (claim : forall x, P x <-> p x = true).
   { intros x. unfold p. destruct (DEC x) as [H_yes | H_no]; ss!. }

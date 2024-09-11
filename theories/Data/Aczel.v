@@ -588,6 +588,23 @@ Proof.
   unfold t in claim at 1. now apply pair_inv in claim.
 Qed.
 
+Definition Cartesian_product (X : Tree) (Y : Tree) : Tree :=
+  filter (fun z => exists x, x \in X /\ exists y, y \in Y /\ z == pair x y) (power (power (union X Y))).
+
+Lemma Cartesian_product_spec X Y
+  : forall z, z \in Cartesian_product X Y <-> (exists x, x \in X /\ exists y, y \in Y /\ z == pair x y).
+Proof.
+  intros z. unfold Cartesian_product. rewrite filter_good.
+  - rewrite power_spec. split.
+    + intros (SUBSET & x & x_in_X & y & y_in_Y & EQ). done.
+    + intros (x & x_in_X & y & y_in_Y & EQ). split.
+      * intros a a_in. rewrite power_spec. intros b b_in. unfold pair in EQ. rewrite EQ in a_in. rewrite upair_spec in a_in. destruct a_in as [EQ' | EQ'].
+        { rewrite EQ' in b_in. rewrite singlton_spec in b_in. rewrite b_in. rewrite union_spec. left. exact x_in_X. }
+        { rewrite EQ' in b_in. rewrite upair_spec in b_in. destruct b_in as [EQ'' | EQ'']; rewrite EQ''; rewrite union_spec; [left | right]; trivial. }
+      * done.
+  - intros a (x & x_in & y & y_in & EQ) b a_eq_b. exists x. split; trivial. exists y. split; trivial. rewrite <- a_eq_b; trivial.
+Qed.
+
 (** End SET_CONSTRUCTIONS. *)
 
 Section STRONG_COLLECTION.

@@ -428,7 +428,7 @@ Proof.
         pose proof (MuRecInterpreter (S (S n)) f2 (a :: acc :: xs) claim2) as [z z_spec].
         exists z. econs 6. exact acc_spec. exact z_spec.
     + pose (COUNTABLE := {| encode := id; decode := @Some nat; decode_encode (x : nat) := eq_refl |}). set (P := MuRecSpec n (MR_mu f) xs).
-      pose proof (@Acc_flip_search_step_P_0 nat COUNTABLE P EXISTENCE) as ACC.
+      pose proof (@initial_step nat COUNTABLE P EXISTENCE) as ACC.
       assert (SEARCH : exists z, MuRecSpec n (MR_mu f) xs z /\ (forall x, x < z -> search_step P x (S x))).
       { destruct EXISTENCE as [z z_spec]. exists z. split. exact z_spec.
         rewrite <- MuRecGraph_correct in z_spec. simpl in z_spec.
