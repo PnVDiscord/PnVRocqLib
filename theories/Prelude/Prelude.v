@@ -1081,6 +1081,12 @@ Proof.
   simpl in *. congruence.
 Qed.
 
+#[global]
+Instance nat_isEnumerable : isEnumerable nat :=
+  { enum := id
+  ; enum_spec x := @exist _ _ x eq_refl
+  }.
+
 Class isCountable (A : Type) : Type :=
   { encode : A -> nat
   ; decode : nat -> option A

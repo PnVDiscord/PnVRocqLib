@@ -621,3 +621,44 @@ Proof.
   - lia.
   - rewrite le_pirrel with (LE1 := LT) (LE2 := GT). reflexivity.
 Defined.
+
+#[local] Obligation Tactic := idtac.
+#[local] Opaque "/" "mod".
+
+#[global, program]
+Instance sum_isEnumerable {A : Type} {A' : Type} `{ENUMERABLE : isEnumerable A} `{ENUMERABLE' : isEnumerable A'} : isEnumerable (A + A') :=
+  { enum n := if Nat.eqb (n mod 2) 0 then inl (enum (n / 2)) else inr (enum (n / 2)) }.
+Next Obligation.
+  intros ? ? ? ? [x | x].
+  - exists (2 * proj1_sig (enum_spec x)). destruct (enum_spec x) as [n n_spec]; simpl proj1_sig. obs_eqb ((2 * n) mod 2) 0; f_equal.
+    + rewrite <- n_spec. f_equal. symmetry. pose proof (Nat.div_mod (2 * n) 2). lia.
+    + contradiction H_OBS. rewrite Nat.mul_comm. eapply Nat.Div0.mod_mul.
+  - exists (2 * proj1_sig (enum_spec x) + 1). destruct (enum_spec x) as [n n_spec]; simpl proj1_sig. obs_eqb ((2 * n + 1) mod 2) 0; f_equal.
+    + pose proof (claim := @mod_congruence_r (2 * n + 1) 2 n 1). rewrite H_OBS in claim. discriminate claim; lia.
+    + rewrite <- n_spec. f_equal. symmetry. pose proof (div_mod_uniqueness (2 * n + 1) 2 n 1 eq_refl). lia.
+Qed.
+
+#[global, program]
+Instance prod_isEnumerable {A : Type} {A' : Type} `{ENUMERABLE : isEnumerable A} `{ENUMERABLE' : isEnumerable A'} : isEnumerable (A * A') :=
+  { enum n := (enum (fst (cp n)), enum (snd (cp n))) }.
+Next Obligation.
+  intros ? ? ? ? [x y]. exists (cpInv (proj1_sig (enum_spec x)) (proj1_sig (enum_spec y))). destruct (enum_spec x) as [n n_spec], (enum_spec y) as [m m_spec]; simpl proj1_sig. f_equal.
+  - rewrite <- n_spec. f_equal. rewrite cpInv_rightInv. reflexivity.
+  - rewrite <- m_spec. f_equal. rewrite cpInv_rightInv. reflexivity.
+Qed.
+
+Fixpoint downto (n : nat) : list nat :=
+  match n with
+  | O => []
+  | S n' => n' :: downto n'
+  end.
+
+Lemma in_downto_iff n
+  : forall x, L.In x (downto n) <-> x < n.
+Proof.
+  induction n as [ | n IH]; s!.
+  - lia.
+  - intros x. rewrite IH. lia.
+Qed.
+
+#[global] Hint Rewrite in_downto_iff : simplication_hints.

@@ -2181,22 +2181,22 @@ Context {L : language} {constant_symbols' : Set}.
 
 #[local] Notation L' := (augmented_language L constant_symbols').
 
-#[local] Instance constant_symbols_similarity_instance_in_section_augmented_language : Similarity L.(constant_symbols) L'.(constant_symbols) :=
+#[global] Instance constant_symbols_similarity_instance_in_section_augmented_language : Similarity L.(constant_symbols) L'.(constant_symbols) :=
   fun c : L.(constant_symbols) => fun c' : L.(constant_symbols) + constant_symbols' => inl c = c'.
 
-#[local] Instance trm_similarity_instance_in_section_augmented_language : Similarity (trm L) (trm L') :=
+#[global] Instance trm_similarity_instance_in_section_augmented_language : Similarity (trm L) (trm L') :=
   trm_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language.
 
-#[local] Instance trms_similarity_instance_in_section_augmented_language n : Similarity (trms L n) (trms L' n) :=
+#[global] Instance trms_similarity_instance_in_section_augmented_language n : Similarity (trms L n) (trms L' n) :=
   trms_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language n.
 
-#[local] Instance frm_similarity_instance_in_section_augmented_language : Similarity (frm L) (frm L') :=
+#[global] Instance frm_similarity_instance_in_section_augmented_language : Similarity (frm L) (frm L') :=
   frm_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language.
 
-#[local] Instance frms_similarity_instance_in_section_augmented_language : Similarity (ensemble (frm L)) (ensemble (frm L')) :=
+#[global] Instance frms_similarity_instance_in_section_augmented_language : Similarity (ensemble (frm L)) (ensemble (frm L')) :=
   frms_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language.
 
-#[local] Instance subst_similarity_instance_in_section_augmented_language : Similarity (subst L) (subst L') :=
+#[global] Instance subst_similarity_instance_in_section_augmented_language : Similarity (subst L) (subst L') :=
   subst_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language.
 
 End AUGMENTED_LANGUAGE.
