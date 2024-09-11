@@ -193,25 +193,19 @@ Qed.
 
 Context {enum_function_symbols : isEnumerable L.(function_symbols)} {enum_constant_symbols : isEnumerable L.(constant_symbols)} {enum_relation_symbols : isEnumerable L.(relation_symbols)}.
 
-Inductive Henkin (n : nat) (theta : frm L') (c : Henkin_constants) : bool -> Prop :=
-  | Henkin_true
-    (x := fst (cp n))
-    (phi := enum (isEnumerable := frm_isEnumerable (L := L') enum_function_symbols (sum_isEnumerable) enum_relation_symbols) (snd (cp n)))
-    (EQ : theta = Imp_frm (All_frm x phi) (subst_frm (one_subst x (@Con_trm L' (inr c))) phi))
+Inductive Henkin (n : nat) (theta : frm L') (c : Henkin_constants) : Prop :=
+  | Henkin_true (x : ivar) (phi : frm L')
+    (ENUM : (x, phi) = enum (isEnumerable := @prod_isEnumerable ivar (frm L') nat_isEnumerable (frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols)) n)
+    (theta_EQ : theta = Imp_frm (All_frm x phi) (subst_frm (one_subst x (@Con_trm L' (inr c))) phi))
     (NOT_OCCUR : HC_occurs_in_frm c phi = false)
-    (NOT_OCCUR' : forall k, k < n -> exists theta', exists c', Henkin k theta' c' true /\ HC_occurs_in_frm c theta' = false)
-    : Henkin n theta c true
-  | Henkin_false c'
-    (GT : c > c')
-    (HENKIN : Henkin n theta c true)
-    (HENKIN' : Henkin n theta c' false)
-    : Henkin n theta c false.
+    (NOT_OCCUR' : forall k, k < n -> exists theta', exists c', Henkin k theta' c' /\ HC_occurs_in_frm c theta' = false)
+    : Henkin n theta c.
 
 Definition graph (n : nat) (theta : frm L') (c : Henkin_constants) : Prop :=
-  Henkin n theta c true /\ ~ Henkin n theta c false.
+  Henkin n theta c /\ ⟪ FIRST : forall c', Henkin n theta c' -> c' >= c ⟫.
 
 Lemma Henkin_formulae_and_Henkin_constants_exist (n : nat)
-  : { theta : frm L' & { c : Henkin_constants | graph n theta c /\ ⟪ UNIQUE : forall theta', forall c', graph n theta' c' -> (theta = theta' /\ c = c') ⟫ /\ ⟪ FIRST : forall c', Henkin n theta c' true -> c' >= c ⟫ } }.
+  : { theta : frm L' & { c : Henkin_constants | graph n theta c /\ ⟪ UNIQUE : forall theta', forall c', graph n theta' c' -> (theta = theta' /\ c = c') ⟫ } }.
 Proof.
 Abort.
 
