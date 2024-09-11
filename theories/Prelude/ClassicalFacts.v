@@ -25,7 +25,7 @@ Theorem minimisation_lemma (P : nat -> Prop)
   : exists n, P n /\ ⟪ MIN : forall m, P m -> m >= n ⟫.
 Proof.
   eapply NNPP. intros CONTRA. destruct EXISTENCE as [n P_n].
-  eapply infinite_descent with (P := P); [intros i P_i | exact P_n].
+  eapply infinite_descent with (P := P) (n := n); [intros i P_i | exact P_n].
   eapply NNPP. intros CONTRA'. eapply CONTRA. exists i. split; trivial.
   intros m P_m. enough (WTS : ~ m < i) by lia. intros H_lt.
   contradiction CONTRA'. exists m. split; trivial.

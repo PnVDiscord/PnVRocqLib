@@ -97,7 +97,7 @@ Defined.
 End SEARCH.
 
 Theorem LEM_implies_MarkovPrinciple (LEM : forall P : Prop, P \/ ~ P) (f : nat -> bool) 
-  (NOT_ALL_TRUE : ~ forall x, f x = true)
+  (NOT_ALL_TRUE : ~ (forall x, f x = true))
   : { n : nat | f n = false }.
 Proof.
   enough (EXISTENCE : exists n : nat, f n = false).
@@ -112,7 +112,7 @@ Proof.
     + contradiction NOT_ALL_TRUE. intros x. destruct (f x) as [ | ] eqn: H_OBS; now firstorder.
 Defined.
 
-Lemma dec_find_result_if_exists (P : nat -> Prop)
+Lemma dec_finds_result_if_exists (P : nat -> Prop)
   (DEC : forall n, {P n} + {~ P n})
   (EXISTENCE : exists x, P x)
   : { x : nat | P x }.
@@ -186,8 +186,8 @@ Proof.
   contradiction (IH m LT P_m).
 Qed.
 
-Lemma dec_find_minimum_if_exists (P : nat -> Prop)
-  (DEC : forall n, {P n} + {~ P n})
+Lemma dec_finds_minimum_if_exists (P : nat -> Prop)
+  (DEC : forall n : nat, {P n} + {~ P n})
   (EXISTENCE : exists x, P x)
   : { x : nat | P x /\ ⟪ MIN : forall y, P y -> y >= x ⟫ }.
 Proof.
