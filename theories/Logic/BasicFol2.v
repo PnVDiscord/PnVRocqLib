@@ -194,7 +194,7 @@ Qed.
 Context {enum_function_symbols : isEnumerable L.(function_symbols)} {enum_constant_symbols : isEnumerable L.(constant_symbols)} {enum_relation_symbols : isEnumerable L.(relation_symbols)}.
 
 Inductive Henkin (n : nat) (theta : frm L') (c : Henkin_constants) : Prop :=
-  | Henkin_true (x : ivar) (phi : frm L')
+  | Henkin_intro (x : ivar) (phi : frm L')
     (ENUM : (x, phi) = enum (isEnumerable := @prod_isEnumerable ivar (frm L') nat_isEnumerable (frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols)) n)
     (theta_EQ : theta = Imp_frm (All_frm x phi) (subst_frm (one_subst x (@Con_trm L' (inr c))) phi))
     (NOT_OCCUR : HC_occurs_in_frm c phi = false)
