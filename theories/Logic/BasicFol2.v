@@ -198,7 +198,7 @@ Fixpoint Henkin (n : nat) {struct n} : Vector.t (frm L') n -> Vector.t Henkin_co
 
 #[local] Opaque enum.
 
-Lemma Henkin_unique (n : nat) thetas thetas' cs cs'
+Lemma Henkin_unique n thetas thetas' cs cs'
   (HENKIN : Henkin n thetas cs)
   (HENKIN' : Henkin n thetas' cs')
   : thetas = thetas' /\ cs = cs'.
@@ -219,7 +219,7 @@ Proof.
       * congruence.
 Qed.
 
-Lemma Henkin_exists (n : nat)
+Lemma Henkin_exists n
   : { RET : Vector.t (frm L') n * Vector.t Henkin_constants n | Henkin n (fst RET) (snd RET) }.
 Proof.
   induction n as [ | n [[thetas cs] IH]].
