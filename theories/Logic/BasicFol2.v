@@ -147,7 +147,6 @@ Fixpoint accum_HCs_frm (p : frm L') : list Henkin_constants :=
   | All_frm y p1 => accum_HCs_frm p1
   end.
 
-<<<<<<< HEAD
 Lemma HC_occurs_in_trm_iff_in_accumHCs_trm (t : trm L')
   : forall hc, HC_occurs_in_trm hc t = true <-> In hc (accum_HCs_trm t)
 with HC_occurs_in_trms_iff_in_accumHCs_trms n (ts : trms L' n)
@@ -242,8 +241,6 @@ Proof.
     + intros c' [NOT_OCCUR1 NOT_OCCUR1']. eapply MIN; trivial. s!. split; trivial.
 Qed.
 
-=======
->>>>>>> update
 End HENKIN.
 
 #[global] Opaque HC_occurs_in_trm.
@@ -262,7 +259,4 @@ End HENKIN.
 
 #[global] Hint Rewrite @accum_HCs_trms_O_trms @accum_HCs_trms_S_trms : simplication_hints.
 
-<<<<<<< HEAD
 #[global] Hint Rewrite <- @HC_occurs_in_trm_iff_in_accumHCs_trm @HC_occurs_in_trms_iff_in_accumHCs_trms @HC_occurs_in_frm_iff_in_accumHCs_frm : simplication_hints.
-=======
->>>>>>> update
