@@ -572,6 +572,24 @@ Proof.
   - rewrite to_list_snoc. f_equal. exact IH.
 Qed.
 
+Fixpoint forallb {A : Type} {n : nat} (p : A -> bool) (xs : Vector.t A n) : bool :=
+  match xs with
+  | [] => true
+  | x :: xs => p x && forallb p xs
+  end.
+
+Lemma forallb_forall {A : Type} {n : nat} (p : A -> bool) (xs : Vector.t A n)
+  : forallb p xs = true <-> (forall i, p (xs !! i) = true).
+Proof.
+  induction xs as [ | n x xs IH]; simpl.
+  - split; trivial. intros _. Fin.case0.
+  - rewrite andb_true_iff. rewrite IH. split.
+    + intros [p_x p_xs]. Fin.caseS i; eauto.
+    + intros H_p. split.
+      * eapply H_p with (i := FZ).
+      * intros i. eapply H_p with (i := FS i).
+Qed.
+
 End V.
 
 Ltac introVNil :=
