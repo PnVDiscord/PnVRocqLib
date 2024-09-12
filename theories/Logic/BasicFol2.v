@@ -9,6 +9,8 @@ Require Import PnV.Logic.BasicFol.
 #[local] Infix "\subseteq" := E.isSubsetOf.
 #[local] Notation In := List.In.
 
+#[global] Hint Rewrite L.forallb_forall : simplication_hints.
+
 Import FolNotations.
 
 Section HENKIN.
@@ -173,47 +175,71 @@ Proof.
 Qed.
 
 Lemma last_HC_for_finite_formulae (ps : list (frm L')) (hc : Henkin_constants)
-  : forall p : frm L', In p ps -> HC_occurs_in_frm hc p = true -> hc <= maxs (map (maxs ∘ accum_HCs_frm)%prg ps).
+  : forall p : frm L', In p ps -> hc > maxs (map (maxs ∘ accum_HCs_frm)%prg ps) -> HC_occurs_in_frm hc p = false.
 Proof.
   induction ps as [ | p ps IH]; simpl in *.
   - tauto.
   - intros p' [<- | IN] H.
-    + enough (WTS : hc <= (maxs ∘ accum_HCs_frm)%prg p) by lia. unfold "∘"%prg.
-      eapply in_maxs_ge. rewrite <- HC_occurs_in_frm_iff_in_accumHCs_frm; trivial.
-    + enough (WTS : hc <= (maxs (map (maxs ∘ accum_HCs_frm)%prg ps))) by lia. eapply IH with (p := p'); trivial.
-Qed.
-
-Lemma fresh_HC_for_finite_formulae (ps : list (frm L'))
-  : exists hc : Henkin_constants, L.forallb (fun p => negb (HC_occurs_in_frm hc p)) ps = true.
-Proof.
-  pose proof (last_HC_for_finite_formulae ps) as LAST. exists (S (maxs (map (maxs ∘ accum_HCs_frm)%prg ps))).
-  rewrite L.forallb_forall. intros p IN. rewrite negb_true_iff. pose proof (LAST (S (maxs (map (maxs ∘ accum_HCs_frm)%prg ps))) p IN).
-  destruct (HC_occurs_in_frm (S (maxs (map (maxs ∘ accum_HCs_frm)%prg ps))) p) as [ | ]; lia.
+    + eapply last_HC_gt_frm. unfold "∘"%prg in H. lia.
+    + eapply IH; trivial. lia.
 Qed.
 
 Context {enum_function_symbols : isEnumerable L.(function_symbols)} {enum_constant_symbols : isEnumerable L.(constant_symbols)} {enum_relation_symbols : isEnumerable L.(relation_symbols)}.
 
-Inductive Henkin (n : nat) (theta : frm L') (c : Henkin_constants) : bool -> Prop :=
-  | Henkin_true
-    (x := fst (cp n))
-    (phi := enum (isEnumerable := frm_isEnumerable (L := L') enum_function_symbols (sum_isEnumerable) enum_relation_symbols) (snd (cp n)))
-    (EQ : theta = Imp_frm (All_frm x phi) (subst_frm (one_subst x (@Con_trm L' (inr c))) phi))
-    (NOT_OCCUR : HC_occurs_in_frm c phi = false)
-    (NOT_OCCUR' : forall k, k < n -> exists theta', exists c', Henkin k theta' c' true /\ HC_occurs_in_frm c theta' = false)
-    : Henkin n theta c true
-  | Henkin_false c'
-    (GT : c > c')
-    (HENKIN : Henkin n theta c true)
-    (HENKIN' : Henkin n theta c' false)
-    : Henkin n theta c false.
+Fixpoint Henkin (n : nat) {struct n} : Vector.t (frm L') n -> Vector.t Henkin_constants n -> Prop :=
+  match n with
+  | O => fun thetas => fun cs => thetas = VNil /\ cs = VNil
+  | S n' => fun thetas => fun cs =>
+    let x : ivar := fst (cp n') in
+    let phi : frm L' := enum (isEnumerable := frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols) (snd (cp n')) in
+    let P (c : Henkin_constants) : Prop := HC_occurs_in_frm c phi = false /\ V.forallb (fun theta_k => negb (HC_occurs_in_frm c theta_k)) (V.tail thetas) = true in
+    V.head thetas = Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr (V.head cs)))) phi) (All_frm x phi) /\ Henkin n' (V.tail thetas) (V.tail cs) /\ P (V.head cs) /\ ⟪ MIN : forall c, P c -> c >= V.head cs ⟫
+  end.
 
-Definition graph (n : nat) (theta : frm L') (c : Henkin_constants) : Prop :=
-  Henkin n theta c true /\ ~ Henkin n theta c false.
+#[local] Opaque enum.
 
-Lemma Henkin_formulae_and_Henkin_constants_exist (n : nat)
-  : { theta : frm L' & { c : Henkin_constants | graph n theta c /\ ⟪ UNIQUE : forall theta', forall c', graph n theta' c' -> (theta = theta' /\ c = c') ⟫ /\ ⟪ FIRST : forall c', Henkin n theta c' true -> c' >= c ⟫ } }.
+Lemma Henkin_unique n thetas thetas' cs cs'
+  (HENKIN : Henkin n thetas cs)
+  (HENKIN' : Henkin n thetas' cs')
+  : thetas = thetas' /\ cs = cs'.
 Proof.
-Abort.
+  revert thetas thetas' cs cs' HENKIN HENKIN'. induction n as [ | n IH].
+  - introVNil; introVNil; introVNil; introVNil; trivial.
+  - introVCons theta thetas; introVCons theta' thetas'; introVCons c cs; introVCons c' cs'; intros HENKIN HENKIN'. exploit (IH thetas thetas' cs cs').
+    + simpl Henkin in HENKIN. tauto.
+    + simpl Henkin in HENKIN'. tauto.
+    + intros [<- <-]. simpl Henkin in HENKIN, HENKIN'.
+      assert (claim : c = c').
+      { enough (WTS : c >= c' /\ c' >= c) by lia. split.
+        - des. eapply MIN. split; trivial.
+        - des. eapply MIN0. split; trivial.
+      }
+      split.
+      * f_equal. destruct HENKIN as [-> ?], HENKIN' as [-> ?]. congruence.
+      * congruence.
+Qed.
+
+Lemma Henkin_exists n
+  : { RET : Vector.t (frm L') n * Vector.t Henkin_constants n | Henkin n (fst RET) (snd RET) }.
+Proof.
+  induction n as [ | n [[thetas cs] IH]].
+  - exists (VNil, VNil). simpl; split; trivial.
+  - simpl in *. set (x := fst (cp n)). set (phi := enum (isEnumerable := (frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols)) (snd (cp n))).
+    exploit (@dec_finds_minimum_if_exists (fun c : Henkin_constants => andb (negb (HC_occurs_in_frm c phi)) (V.forallb (fun theta_k => negb (HC_occurs_in_frm c theta_k)) thetas) = true)).
+    { intros m. destruct (negb (HC_occurs_in_frm m phi) && V.forallb (fun theta_k : frm L' => negb (HC_occurs_in_frm m theta_k)) thetas) as [ | ]; [left | right]; done!. }
+    { exists (1 + max (maxs (accum_HCs_frm phi)) (maxs (map (maxs ∘ accum_HCs_frm)%prg (V.to_list thetas)))). s!. split.
+      - eapply last_HC_gt_frm. lia.
+      - rewrite V.forallb_forall. intros i. s!. eapply last_HC_for_finite_formulae with (ps := V.to_list thetas).
+        + clear cs IH x phi. revert i. induction thetas as [ | n theta thetas IH].
+          * Fin.case0.
+          * Fin.caseS i; simpl; [left | right]; trivial.
+        + unfold "∘"%prg. lia.
+    }
+    intros [c c_spec]. exists (VCons n (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) thetas, VCons n c cs); simpl. split; trivial. split; trivial.
+    s!. destruct c_spec as [[NOT_OCCUR NOT_OCCUR'] MIN]; unnw. split.
+    + split; trivial.
+    + intros c' [NOT_OCCUR1 NOT_OCCUR1']. eapply MIN; trivial. s!. split; trivial.
+Qed.
 
 End HENKIN.
 
