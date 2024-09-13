@@ -192,11 +192,12 @@ Fixpoint Henkin (n : nat) {struct n} : Vector.t (frm L') n -> Vector.t Henkin_co
   | S n' => fun thetas => fun cs =>
     let x : ivar := fst (cp n') in
     let phi : frm L' := enum (isEnumerable := frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols) (snd (cp n')) in
-    let P (c : Henkin_constants) : Prop := HC_occurs_in_frm c phi = false /\ V.forallb (fun theta_k => negb (HC_occurs_in_frm c theta_k)) (V.tail thetas) = true in
-    V.head thetas = Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr (V.head cs)))) phi) (All_frm x phi) /\ Henkin n' (V.tail thetas) (V.tail cs) /\ P (V.head cs) /\ ⟪ MIN : forall c, P c -> c >= V.head cs ⟫
+    let PROP (c : Henkin_constants) : Prop := HC_occurs_in_frm c phi = false /\ V.forallb (fun theta_k => negb (HC_occurs_in_frm c theta_k)) (V.tail thetas) = true in
+    V.head thetas = (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr (V.head cs)))) phi) (All_frm x phi)) /\ Henkin n' (V.tail thetas) (V.tail cs) /\ PROP (V.head cs) /\ ⟪ MIN : forall c, PROP c -> c >= V.head cs ⟫
   end.
 
 #[local] Opaque enum.
+#[local] Opaque cp.
 
 Lemma Henkin_unique n thetas thetas' cs cs'
   (HENKIN : Henkin n thetas cs)
@@ -230,15 +231,61 @@ Proof.
     { exists (1 + max (maxs (accum_HCs_frm phi)) (maxs (map (maxs ∘ accum_HCs_frm)%prg (V.to_list thetas)))). s!. split.
       - eapply last_HC_gt_frm. lia.
       - rewrite V.forallb_forall. intros i. s!. eapply last_HC_for_finite_formulae with (ps := V.to_list thetas).
-        + clear cs IH x phi. revert i. induction thetas as [ | n theta thetas IH].
-          * Fin.case0.
-          * Fin.caseS i; simpl; [left | right]; trivial.
+        + eapply V.to_list_In.
         + unfold "∘"%prg. lia.
     }
     intros [c c_spec]. exists (VCons n (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) thetas, VCons n c cs); simpl. split; trivial. split; trivial.
     s!. destruct c_spec as [[NOT_OCCUR NOT_OCCUR'] MIN]; unnw. split.
     + split; trivial.
     + intros c' [NOT_OCCUR1 NOT_OCCUR1']. eapply MIN; trivial. s!. split; trivial.
+Qed.
+
+#[local] Open Scope vec_scope.
+
+Lemma Henkin_seq (k : nat) (n : nat) theta_k theta_n c_k c_n
+  (LT : k < n)
+  (HENKIN_k : Henkin (S k) theta_k c_k)
+  (HENKIN_n : Henkin n theta_n c_n)
+  : L.In (V.head theta_k) (V.to_list theta_n) /\ L.In (V.head c_k) (V.to_list c_n).
+Proof.
+  revert theta_k theta_n c_k c_n HENKIN_k HENKIN_n. induction LT as [ | n LT IH].
+  - introVCons theta' thetas'; introVCons theta thetas; introVCons c' cs'; introVCons c cs. i.
+    pose proof (Henkin_unique _ _ _ _ _ HENKIN_k HENKIN_n) as [theta_eq c_eq]. simpl. split; left; congruence.
+  - introVCons theta' thetas'; introVCons theta thetas; introVCons c' cs'; introVCons c cs. i.
+    simpl. exploit (IH (theta' :: thetas') thetas (c' :: cs') cs); trivial.
+    + simpl in HENKIN_n. des; trivial.
+    + intros [? ?]; split; right; trivial.
+Qed.
+
+Definition nth_Henkin_axiom (n : nat) : frm L' :=
+  V.head (fst (proj1_sig (Henkin_exists (S n)))).
+
+Definition nth_Henkin_constant (n : nat) : Henkin_constants :=
+  V.head (snd (proj1_sig (Henkin_exists (S n)))).
+
+Lemma Henkin_constant_does_not_occur_in_any_former_Henkin_axioms k n
+  (LT : k < n)
+  : HC_occurs_in_frm (nth_Henkin_constant n) (nth_Henkin_axiom k) = false.
+Proof.
+  unfold nth_Henkin_constant, nth_Henkin_axiom. destruct (Henkin_exists (S n)) as [[theta_n c_n] H_n]. destruct (Henkin_exists (S k)) as [[theta_k c_k] H_k].
+  simpl fst in *; simpl snd in *. pose proof H_k as [? [? [[? ?] ?]]]; unnw. rewrite <- negb_true_iff. revert theta_n c_n H_n. introVCons theta thetas; introVCons c cs.
+  intros [? [HENKIN_n [[? ?] ?]]]. simpl in *. rewrite V.forallb_forall in H6. pose proof (Henkin_seq k n theta_k thetas c_k cs LT H_k HENKIN_n) as [IN _].
+  rewrite V.in_to_list_iff in IN. destruct IN as [i <-]. eapply H6.
+Qed.
+
+Lemma Henkin_constant_does_not_occur_in_enum n
+  : HC_occurs_in_frm (nth_Henkin_constant n) (enum (isEnumerable := frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols) (snd (cp n))) = false.
+Proof.
+  unfold nth_Henkin_constant. destruct (Henkin_exists (S n)) as [[theta_n c_n] HENKIN_n]; simpl in *. des; trivial.
+Qed.
+
+Lemma Henkin_axiom_is_of_form n
+  (x := fst (cp n))
+  (phi := enum (isEnumerable := frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols) (snd (cp n)))
+  : nth_Henkin_axiom n = (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr (nth_Henkin_constant n)))) phi) (All_frm x phi)).
+Proof.
+  unfold nth_Henkin_axiom, nth_Henkin_constant. destruct (Henkin_exists (S n)) as [[theta c] HENKIN]; simpl in *.
+  destruct HENKIN as [-> [HENKIN [[NOT_OCCUR NOT_OCCUR'] MIN]]]. reflexivity.
 Qed.
 
 End HENKIN.

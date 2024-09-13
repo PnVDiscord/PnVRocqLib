@@ -468,6 +468,26 @@ Proof.
   - f_equal. exact IH.
 Qed.
 
+Lemma to_list_In (n : nat) (xs : Vector.t A n) (i : Fin.t n)
+  : L.In (xs !! i) (to_list xs).
+Proof.
+  revert i. induction xs as [ | n x xs IH].
+  - Fin.case0.
+  - Fin.caseS i; [left | right]; eauto.
+Qed.
+
+Lemma in_to_list_iff (n : nat) (xs : Vector.t A n)
+  : forall x, In x (to_list xs) <-> (exists i, xs !! i = x).
+Proof.
+  intros x. split.
+  - revert x. induction xs as [ | n x' xs' IH]; simpl; intros x IN.
+    + tauto.
+    + destruct IN as [<- | IN].
+      * exists (@FZ n). simpl. reflexivity.
+      * pose proof (IH x IN) as [i EQ]. exists (@FS n i). simpl. exact EQ.
+  - intros [i <-]. eapply to_list_In.
+Qed.
+
 Inductive vec_heq (n : nat) (xs : Vector.t A n) : forall m : nat, Vector.t A m -> Prop :=
   | vec_ext_heq_refl
     : vec_heq n xs n xs.
