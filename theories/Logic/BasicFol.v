@@ -2062,18 +2062,6 @@ Inductive frm_similarity : Similarity (frm L) (frm L') :=
 #[local] Instance frm_similarity_instance : Similarity (frm L) (frm L') :=
   frm_similarity.
 
-Variant frms_similarity (ps : ensemble (frm L)) (ps' : ensemble (frm L')) : Prop :=
-  | is_extend_sig_frms_of_intro
-    (BSIM : forall p' : frm L', forall IN : p' \in ps', exists p : frm L, p \in ps /\ p =~= p')
-    (FSIM : forall p : frm L, forall IN : p \in ps, exists p' : frm L', p' \in ps' /\ p =~= p')
-    : frms_similarity ps ps'.
-
-#[local] Instance frms_similarity_instance : Similarity (ensemble (frm L)) (ensemble (frm L')) :=
-  frms_similarity.
-
-#[local] Instance subst_similarity_instance : Similarity (subst L) (subst L') :=
-  fun s : subst L => fun s' : subst L' => forall z : ivar, s z =~= s' z.
-
 Lemma fvs_trm_compat_similarity (t : trm L) (t' : trm L')
   (t_SIM : t =~= t')
   : fvs_trm t = fvs_trm t'
@@ -2097,69 +2085,6 @@ Proof with try done!.
   induction p_SIM; simpl...
   - eapply fvs_trms_compat_similarity...
   - f_equal; eapply fvs_trm_compat_similarity...
-Qed.
-
-Lemma subst_trm_compat_similarity (s : subst L) (s' : subst L') (t : trm L) (t' : trm L')
-  (s_SIM : s =~= s')
-  (t_SIM : t =~= t')
-  : subst_trm s t =~= subst_trm s' t'
-with subst_trms_compat_similarity n (s : subst L) (s' : subst L') (ts : trms L n) (ts' : trms L' n)
-  (s_SIM : s =~= s')
-  (ts_SIM : ts =~= ts')
-  : subst_trms s ts =~= subst_trms s' ts'.
-Proof with eauto with *.
-  - red in t_SIM. induction t_SIM.
-    + cbn. eapply s_SIM.
-    + do 2 rewrite subst_trm_unfold. econstructor 2.
-      eapply subst_trms_compat_similarity. exact s_SIM. exact ts_SIM.
-    + econstructor 3. exact c_SIM.
-  - revert s s' s_SIM. induction ts_SIM; simpl; ii.
-    + econstructor 1.
-    + rewrite subst_trms_unfold.
-      replace (subst_trms s (S_trms n t ts)) with (@S_trms L n (subst_trm s t) (subst_trms s ts)) by reflexivity.
-      econstructor 2.
-      * eapply subst_trm_compat_similarity. exact s_SIM. exact t_SIM.
-      * eapply IHts_SIM. exact s_SIM.
-Qed.
-
-Lemma chi_frm_compat_similarity (s : subst L) (s' : subst L') (p : frm L) (p' : frm L')
-  (s_SIM : s =~= s')
-  (p_SIM : p =~= p')
-  : chi_frm s p = chi_frm s' p'.
-Proof with eauto with *.
-  unfold chi_frm. simpl. f_equal. eapply maxs_ext. intros n. unfold "∘".
-  split; intros H_in; eapply in_map_iff; apply in_map_iff in H_in; destruct H_in as [x [<- H_in]].
-  - exists x. split.
-    + unfold last_ivar_trm. eapply maxs_ext.
-      pose proof (s_SIM x) as SIM. i.
-      enough (ENOUGH : fvs_trm (s x) = fvs_trm (s' x)) by now rewrite ENOUGH.
-      eapply fvs_trm_compat_similarity...
-    + replace (fvs_frm p') with (fvs_frm p)...
-      eapply fvs_frm_compat_similarity...
-  - exists x. split.
-    + unfold last_ivar_trm. eapply maxs_ext.
-      pose proof (s_SIM x) as SIM. i.
-      enough (ENOUGH : fvs_trm (s x) = fvs_trm (s' x)) by now rewrite ENOUGH.
-      eapply fvs_trm_compat_similarity...
-    + replace (fvs_frm p) with (fvs_frm p')...
-      symmetry. eapply fvs_frm_compat_similarity...
-Qed.
-
-Lemma subst_frm_compat_simliarity (s : subst L) (s' : subst L') (p : frm L) (p' : frm L')
-  (s_SIM : s =~= s')
-  (p_SIM : p =~= p')
-  : @subst_frm L s p =~= @subst_frm L' s' p'.
-Proof with try done!.
-  revert s' s s_SIM. induction p_SIM; simpl; i.
-  - econstructor 1. eapply subst_trms_compat_similarity...
-  - econstructor 2; eapply subst_trm_compat_similarity...
-  - econstructor 3...
-  - econstructor 4...
-  - assert (claim1 : chi_frm s (All_frm y p1) = chi_frm s' (All_frm y p1')).
-    { eapply chi_frm_compat_similarity... eapply All_sim... }
-    rewrite claim1. eapply All_sim. eapply IHp_SIM.
-    ii. unfold cons_subst. pose proof (s_SIM z) as claim2.
-    destruct (eq_dec z y) as [ | ]... subst z. econstructor.
 Qed.
 
 End GENERAL_CASE.
@@ -2192,12 +2117,6 @@ Context {L : language} {constant_symbols' : Set}.
 
 #[global] Instance frm_similarity_instance_in_section_augmented_language : Similarity (frm L) (frm L') :=
   frm_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language.
-
-#[global] Instance frms_similarity_instance_in_section_augmented_language : Similarity (ensemble (frm L)) (ensemble (frm L')) :=
-  frms_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language.
-
-#[global] Instance subst_similarity_instance_in_section_augmented_language : Similarity (subst L) (subst L') :=
-  subst_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language.
 
 End AUGMENTED_LANGUAGE.
 

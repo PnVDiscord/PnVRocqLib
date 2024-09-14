@@ -791,7 +791,7 @@ Tactic Notation "ss!" :=
   s!; subst; eauto with *; firstorder (try first [lia | congruence | f_equal]).
 
 Tactic Notation "done!" :=
-  now ii; repeat ss!; done.
+  now ii; first [congruence | lia | repeat ss!; done].
 
 Section OPERATION_PROPS.
 
@@ -1017,6 +1017,12 @@ Lemma eqb_neq {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A)
   : eqb x y = false <-> x <> y.
 Proof.
   unfold eqb. destruct (eq_dec x y) as [H_yes | H_no]; done!.
+Qed.
+
+Theorem eqb_spec {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A) (b : bool)
+  : eqb x y = b <-> if b then x = y else x <> y.
+Proof.
+  destruct b; [eapply eqb_eq | eapply eqb_neq].
 Qed.
 
 #[global]
