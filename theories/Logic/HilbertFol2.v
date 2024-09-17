@@ -275,20 +275,20 @@ Proof.
     assert (ALPHA : p ≡ subst_frm (fun z : ivar => Var_trm (z / 2)) (subst_frm (fun z : ivar => Var_trm (z * 2)) p)).
     { symmetry. rewrite <- subst_compose_frm_spec. eapply subst_nil_frm. ii. unfold subst_compose. rewrite subst_trm_unfold. f_equal. exploit (div_mod_uniqueness (x * 2) 2 x 0); lia. }
     rewrite ALPHA. eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z / 2))) E.empty). done!. eapply proves_substitutivity.
-    rewrite <- twilight_frm'_embed. clear ALPHA. pose proof (twilight_rel_twilight_frm' (embed_frm p)) as INVARIANT. revert INVARIANT PROVE. generalize (embed_frm p) as A.
+    rewrite <- twilight_frm'_embed. clear ALPHA. remember (twilight_frm' (embed_frm p)) as p' eqn: INVARIANT. revert INVARIANT PROVE. generalize (embed_frm p) as A.
     clear p Gamma; i. destruct PROVE as (ps&INCL&(PF)).
     assert (ps_spec : forall q : frm L', ~ L.In q ps).
     { intros q q_in. done!. }
-    clear INCL. revert INVARIANT. induction PF; i.
+    clear INCL. revert p' INVARIANT. induction PF; i.
     + contradiction (ps_spec p (or_introl eq_refl)).
     + eapply for_Imp_E with (p := twilight_frm' p).
-      * eapply IHPF1. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. eapply twilight_rel_twilight_frm'.
-      * eapply IHPF2. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. eapply twilight_rel_twilight_frm'.
-    + eapply for_All_I with (p := twilight_frm' q). done!. eapply IHPF. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. eapply twilight_rel_twilight_frm'.
-    + simpl. eapply empty_proof_intro. eapply IMP1.
-    + simpl. eapply empty_proof_intro. eapply IMP2.
-    + simpl. eapply empty_proof_intro. eapply CP.
-    + simpl.
+      * eapply IHPF1. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. simpl. congruence.
+      * eapply IHPF2. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. simpl. congruence.
+    + subst. simpl. eapply for_All_I with (p := twilight_frm' q). done!. eapply IHPF. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. reflexivity.
+    + subst. simpl. eapply empty_proof_intro. eapply IMP1.
+    + subst. simpl. eapply empty_proof_intro. eapply IMP2.
+    + subst. simpl. eapply empty_proof_intro. eapply CP.
+    + subst. simpl.
       assert (ALPHA : (twilight_frm' (subst_frm (one_subst x t) p)) ≡ subst_frm (one_subst (2 * x) (twilight_trm' t)) (twilight_frm' p)).
       { rewrite embed_frm_alpha. rewrite <- twilight_frm_decomposition. rewrite embed_subst_frm. transitivity (subst_frm (one_subst (2 * x) (twilight_trm t)) (twilight_frm p)).
         - erewrite subst_hsubst_compat_in_frm with (p := twilight_frm p). 2: ii; reflexivity. transitivity (subst_frm (one_subst (2 * x) (twilight_trm t)) (twilight_frm p)).
@@ -301,15 +301,15 @@ Proof.
           intros u u_free. unfold one_subst, cons_subst, nil_subst, compose. destruct (eq_dec _ _) as [EQ | NE]; trivial. rewrite twilight_trm_decomposition. reflexivity.
       }
       rewrite ALPHA. eapply empty_proof_intro. eapply FA1.
-    + simpl. eapply empty_proof_intro. eapply FA2.
+    + subst. simpl. eapply empty_proof_intro. eapply FA2.
       red. rewrite <- embed_fvs_frm. rewrite <- twilight_frm_decomposition. rewrite Nat.mul_comm. rewrite <- twilight_frm_fvs. exact NOT_FREE.
-    + simpl. eapply empty_proof_intro. eapply FA3.
-    + simpl. eapply proves_reflexivity.
-    + eapply for_Imp_I. eapply proves_symmetry. eapply for_ByHyp. done!.
-    + eapply for_Imp_I. eapply for_Imp_I. eapply proves_transitivity with (t2 := twilight_trm' (Var_trm 1)); eapply for_ByHyp; done!.
-    + rewrite <- embed_frm_Fun_eqAxm. rewrite twilight_frm'_embed. eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z * 2))) E.empty). done!.
+    + subst. simpl. eapply empty_proof_intro. eapply FA3.
+    + subst. simpl. eapply proves_reflexivity.
+    + subst. eapply for_Imp_I. eapply proves_symmetry. eapply for_ByHyp. done!.
+    + subst. eapply for_Imp_I. eapply for_Imp_I. eapply proves_transitivity with (t2 := twilight_trm' (Var_trm 1)); eapply for_ByHyp; done!.
+    + subst. rewrite <- embed_frm_Fun_eqAxm. rewrite twilight_frm'_embed. eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z * 2))) E.empty). done!.
       eapply proves_substitutivity. eapply empty_proof_intro. eapply EQN_FUN.
-    + rewrite <- embed_frm_Rel_eqAxm. rewrite twilight_frm'_embed. eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z * 2))) E.empty). done!.
+    + subst. rewrite <- embed_frm_Rel_eqAxm. rewrite twilight_frm'_embed. eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z * 2))) E.empty). done!.
       eapply proves_substitutivity. eapply empty_proof_intro. eapply EQN_REL.
   - eapply for_Imp_E with (p := q).
     + eapply IH.
