@@ -21,6 +21,8 @@ Section FOL_DEF.
 
 Definition ivar : Set := nat.
 
+Definition renaming : Set := ivar -> ivar.
+
 Context {L : language}.
 
 Inductive trm : Set :=
@@ -1099,6 +1101,39 @@ Qed.
 
 #[local] Hint Rewrite <- subst_compose_frm_spec : simplication_hints.
 
+Definition rename_trm (eta : renaming) : trm L -> trm L :=
+  subst_trm (Var_trm ∘ eta)%prg.
+
+Definition rename_trms {n : nat} (eta : renaming) : trms L n -> trms L n :=
+  subst_trms (Var_trm ∘ eta)%prg.
+
+Definition rename_frm (eta : renaming) : frm L -> frm L :=
+  subst_frm (Var_trm ∘ eta)%prg.
+
+Lemma rename_frm_subst (s : subst L) (eta : renaming) (eta' : renaming) (p : frm L)
+  (eta_inj : forall z : ivar, is_free_in_frm z p = true -> eta' (eta z) = z)
+  : rename_frm eta (subst_frm s p) = subst_frm (rename_trm eta ∘ s ∘ eta')%prg (rename_frm eta p).
+Proof.
+  unfold rename_frm. do 2 rewrite <- subst_compose_frm_spec. eapply equiv_subst_in_frm_implies_subst_frm_same.
+  ii; unfold "∘"%prg in *; unfold subst_compose in *. symmetry. rewrite subst_trm_unfold. rewrite eta_inj; done.
+Qed.
+
+Lemma rename_frm_one_subst (eta : renaming) (x : ivar) (t : trm L) (p : frm L)
+  (eta_inj : exists eta' : renaming, forall z : ivar, is_free_in_frm z p = true \/ z = x -> eta' (eta z) = z)
+  : rename_frm eta (subst_frm (one_subst x t) p) = subst_frm (one_subst (eta x) (rename_trm eta t)) (rename_frm eta p).
+Proof.
+  destruct eta_inj as [eta' eta_inj].
+  assert (claim1 : eta' (eta x) = x) by done!.
+  assert (claim2 : forall z : ivar, is_free_in_frm z p = true -> eta' (eta z) = z) by done!.
+  rewrite rename_frm_subst with (eta' := eta'); trivial.
+  unfold rename_frm. do 2 rewrite <- subst_compose_frm_spec. eapply equiv_subst_in_frm_implies_subst_frm_same.
+  ii. unfold subst_compose. unfold "∘"%prg. simpl. rewrite claim2; trivial.
+  unfold one_subst, cons_subst, nil_subst. destruct (eq_dec (eta z) (eta x)) as [eta_EQ | eta_NE].
+  - eapply f_equal with (f := eta') in eta_EQ. rewrite claim1 in eta_EQ. rewrite claim2 in eta_EQ; trivial.
+    subst z. destruct (eq_dec x x); done.
+  - destruct (eq_dec z x); done!.
+Qed.
+
 Lemma trivial_subst (x : ivar) (p : frm L)
   : subst_frm (one_subst x (Var_trm x)) p = subst_frm nil_subst p.
 Proof.
@@ -2087,38 +2122,103 @@ Proof with try done!.
   - f_equal; eapply fvs_trm_compat_similarity...
 Qed.
 
+Variant frms_similarity (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L')) : Prop :=
+  | frms_similarity_intro
+    (FWD : forall p : frm L, p \in Gamma -> exists p' : frm L', p =~= p' /\ p' \in Gamma')
+    (BWD : forall p' : frm L', p' \in Gamma' -> exists p : frm L, p =~= p' /\ p \in Gamma)
+    : frms_similarity Gamma Gamma'.
+
+#[local]
+Instance frms_similarity_instance : Similarity (ensemble (frm L)) (ensemble (frm L')) :=
+  frms_similarity.
+
+Lemma fvs_trm_similarity (t : trm L) (t' : trm L')
+  (t_SIM : t =~= t')
+  : fvs_trm t = fvs_trm t'
+with fvs_trms_similarity n (ts : trms L n) (ts' : trms L' n)
+  (ts_SIM : ts =~= ts')
+  : fvs_trms ts = fvs_trms ts'.
+Proof.
+  - induction t_SIM.
+    + reflexivity.
+    + do 2 rewrite fvs_trm_unfold with (t := Fun_trm _ _). eapply fvs_trms_similarity. exact ts_SIM.
+    + reflexivity.
+  - induction ts_SIM.
+    + reflexivity.
+    + do 2 rewrite fvs_trms_unfold with (ts := S_trms _ _ _). f_equal.
+      * eapply fvs_trm_similarity; exact t_SIM.
+      * eapply IHts_SIM; exact ts_SIM.
+Qed.
+
+#[local] Hint Resolve fvs_trm_similarity fvs_trms_similarity : core.
+
+Lemma fvs_frm_similarity (p : frm L) (p' : frm L')
+  (p_SIM : p =~= p')
+  : fvs_frm p = fvs_frm p'.
+Proof.
+  induction p_SIM; simpl; f_equal; eauto with *.
+Qed.
+
+#[local] Hint Resolve fvs_frm_similarity : core.
+
+Lemma chi_frm_similarity (s : subst L) (s' : subst L') (p : frm L) (p' : frm L')
+  (s_SIM : s =~= s')
+  (p_SIM : p =~= p')
+  : chi_frm s p = chi_frm s' p'.
+Proof with eauto.
+  assert (ENOUGH : forall xs : list ivar, forall f : ivar -> list ivar, maxs (L.map (maxs ∘ f)%prg xs) = maxs (L.flat_map f xs)).
+  { induction xs; simpl; i; eauto. unfold "∘"%prg. rewrite maxs_app. f_equal. eauto. }
+  unfold chi_frm. f_equal. unfold last_ivar_trm.
+  change (maxs (L.map (maxs ∘ (fvs_trm ∘ s))%prg (fvs_frm p)) = maxs (L.map (maxs ∘ (fvs_trm ∘ s'))%prg (fvs_frm p'))).
+  do 2 rewrite ENOUGH. eapply maxs_ext. intros z. do 2 rewrite in_flat_map. unfold "∘"%prg. clear ENOUGH.
+  split; intros [x [FREE FREE']]; exists x; split.
+  - erewrite <- fvs_frm_similarity...
+  - erewrite <- fvs_trm_similarity...
+  - erewrite -> fvs_frm_similarity...
+  - erewrite -> fvs_trm_similarity...
+Qed.
+
+Lemma subst_trm_similiarity (s : subst L) (s' : subst L') (t : trm L) (t' : trm L')
+  (s_SIM : s =~= s')
+  (t_SIM : t =~= t')
+  : subst_trm s t =~= subst_trm s' t'
+with subst_trms_similiarity n (s : subst L) (s' : subst L') (ts : trms L n) (ts' : trms L' n)
+  (s_SIM : s =~= s')
+  (ts_SIM : ts =~= ts')
+  : subst_trms s ts =~= subst_trms s' ts'.
+Proof.
+  - induction t_SIM.
+    + exact (s_SIM x).
+    + do 2 rewrite subst_trm_unfold. econs. eapply subst_trms_similiarity; [exact s_SIM | exact ts_SIM].
+    + do 2 rewrite subst_trm_unfold. econs. exact c_SIM.
+  - induction ts_SIM.
+    + econs.
+    + do 2 rewrite subst_trms_unfold with (ts := S_trms _ _ _). econs.
+      * eapply subst_trm_similiarity; [exact s_SIM | exact t_SIM].
+      * assumption.
+Qed.
+
+Lemma subst_frm_similarity (s : subst L) (s' : subst L') (p : frm L) (p' : frm L')
+  (s_SIM : s =~= s')
+  (p_SIM : p =~= p')
+  : subst_frm s p =~= subst_frm s' p'.
+Proof.
+  revert s s' s_SIM. induction p_SIM; i.
+  - do 2 rewrite subst_frm_unfold. simpl. econs. eapply subst_trms_similiarity; trivial.
+  - do 2 rewrite subst_frm_unfold. simpl. econs; eapply subst_trm_similiarity; trivial.
+  - simpl. econs. done!.
+  - simpl. econs; done!.
+  - assert (claim : (chi_frm s (All_frm y p1)) = (chi_frm s' (All_frm y p1'))).
+    { eapply chi_frm_similarity; trivial. econs; trivial. }
+    simpl. rewrite claim. econs. rewrite <- claim at 1. eapply IHp_SIM.
+    intros z. unfold cons_subst. destruct (eq_dec z y) as [EQ1 | NE1].
+    + rewrite claim. econs.
+    + exact (s_SIM z).
+Qed.
+
 End GENERAL_CASE.
 
 End SIMILARITY.
-
-Section AUGMENTED_LANGUAGE.
-
-Definition augmented_language (L : language) (constant_symbols' : Set) : language :=
-  {|
-    function_symbols := L.(function_symbols);
-    constant_symbols := L.(constant_symbols) + constant_symbols';
-    relation_symbols := L.(relation_symbols);
-    function_arity_table := L.(function_arity_table);
-    relation_arity_table := L.(relation_arity_table);
-  |}.
-
-Context {L : language} {constant_symbols' : Set}.
-
-#[local] Notation L' := (augmented_language L constant_symbols').
-
-#[global] Instance constant_symbols_similarity_instance_in_section_augmented_language : Similarity L.(constant_symbols) L'.(constant_symbols) :=
-  fun c : L.(constant_symbols) => fun c' : L.(constant_symbols) + constant_symbols' => inl c = c'.
-
-#[global] Instance trm_similarity_instance_in_section_augmented_language : Similarity (trm L) (trm L') :=
-  trm_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language.
-
-#[global] Instance trms_similarity_instance_in_section_augmented_language n : Similarity (trms L n) (trms L' n) :=
-  trms_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language n.
-
-#[global] Instance frm_similarity_instance_in_section_augmented_language : Similarity (frm L) (frm L') :=
-  frm_similarity_instance L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(constant_symbols) L'.(constant_symbols) constant_symbols_similarity_instance_in_section_augmented_language.
-
-End AUGMENTED_LANGUAGE.
 
 End EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
 
