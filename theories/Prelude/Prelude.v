@@ -791,7 +791,7 @@ Tactic Notation "ss!" :=
   s!; subst; eauto with *; firstorder (try first [lia | congruence | f_equal]).
 
 Tactic Notation "done!" :=
-  now ii; repeat ss!; done.
+  now ii; first [congruence | lia | repeat ss!; done].
 
 Section OPERATION_PROPS.
 
@@ -1019,6 +1019,12 @@ Proof.
   unfold eqb. destruct (eq_dec x y) as [H_yes | H_no]; done!.
 Qed.
 
+Theorem eqb_spec {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A) (b : bool)
+  : eqb x y = b <-> if b then x = y else x <> y.
+Proof.
+  destruct b; [eapply eqb_eq | eapply eqb_neq].
+Qed.
+
 #[global]
 Instance nat_hasEqDec : hasEqDec nat :=
   Nat.eq_dec.
@@ -1105,7 +1111,19 @@ Module L.
 
 Include Coq.Lists.List.
 
-#[global] Hint Rewrite in_map_iff in_app_iff : simplication_hints.
+Definition null {A : Type} (l : list A) : bool :=
+  match l with
+  | L.nil => true
+  | L.cons _ _ => false
+  end.
+
+Lemma null_spec (A : Type) (l : list A)
+  : forall b, null l = b <-> (if b then l = [] else l <> []).
+Proof.
+  destruct l; intros [ | ]; simpl; done!.
+Qed.
+
+#[global] Hint Rewrite null_spec in_map_iff in_app_iff : simplication_hints.
 
 Lemma in_remove_iff (A : Type) `(EQ_DEC : hasEqDec A) (x1 : A) (xs2 : list A)
   : forall z, In z (remove Prelude.eq_dec x1 xs2) <-> (In z xs2 /\ z <> x1).

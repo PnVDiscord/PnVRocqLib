@@ -325,7 +325,7 @@ Qed.
 
 End DEDUCTION_THEOREM.
 
-Lemma MP_preseves_truth (p : frm L) (q : frm L) (ps1 : list (frm L)) (ps2 : list (frm L)) (Gamma : ensemble (frm L))
+Lemma MP_preserves_truth (p : frm L) (q : frm L) (ps1 : list (frm L)) (ps2 : list (frm L)) (Gamma : ensemble (frm L))
   (ENTAILS1 : forall Gamma, E.fromList ps1 \subseteq Gamma -> Gamma ⊨ Imp_frm p q)
   (ENTAILS2 : forall Gamma, E.fromList ps2 \subseteq Gamma -> Gamma ⊨ p)
   (INCL : E.fromList (ps1 ++ ps2) \subseteq Gamma)
@@ -366,7 +366,7 @@ Lemma Fun_eqAxm_preserves_truth (f : L.(function_symbols)) (STRUCTURE : isStruct
 Proof.
   enough (HACK : forall phi,
     forall phi_a_b : forall a, forall b, forall EQNS : interpret_trms STRUCTURE env a == interpret_trms STRUCTURE env b, interpret_frm STRUCTURE env (phi a b),
-    interpret_frm STRUCTURE env (nat_rec (fun _ => frm L) (prod_rec (fun _ => frm L) phi (varcouples (function_arity_table L f))) (fun n => fun q => Imp_frm (Eqn_frm (Var_trm (n + n)) (Var_trm (S (n + n)))) q) (L.(function_arity_table) f))
+    interpret_frm STRUCTURE env (nat_rec (fun _ => frm L) (prod_rec (fun _ => frm L) phi (varcouples (function_arity_table L f))) (fun n => fun q => Imp_frm (Eqn_frm (Var_trm (n + n)) (Var_trm (S (n + n)))) q) (function_arity_table L f))
   ).
   { unfold Fun_eqAxm. eapply HACK. ii. simpl. do 2 rewrite interpret_trm_unfold. eapply function_interpret_preserves_eqProp. exact EQNS. }
   simpl. induction (function_arity_table L f) as [ | n IH].
@@ -383,7 +383,7 @@ Lemma Rel_eqAxm_preserves_truth (R : L.(relation_symbols)) (STRUCTURE : isStruct
 Proof.
   enough (HACK : forall phi,
     forall phi_a_b : forall a, forall b, forall EQNS : interpret_trms STRUCTURE env a == interpret_trms STRUCTURE env b, interpret_frm STRUCTURE env (phi a b),
-    interpret_frm STRUCTURE env (nat_rec (fun _ => frm L) (prod_rec (fun _ => frm L) phi (varcouples (relation_arity_table L R))) (fun n => fun q => Imp_frm (Eqn_frm (Var_trm (n + n)) (Var_trm (S (n + n)))) q) (L.(relation_arity_table) R))
+    interpret_frm STRUCTURE env (nat_rec (fun _ => frm L) (prod_rec (fun _ => frm L) phi (varcouples (relation_arity_table L R))) (fun n => fun q => Imp_frm (Eqn_frm (Var_trm (n + n)) (Var_trm (S (n + n)))) q) (relation_arity_table L R))
   ).
   { unfold Rel_eqAxm. eapply HACK. ii. simpl. pose proof (@relation_interpret_preserves_eqProp L STRUCTURE R _ _ EQNS). done. }
   simpl. induction (relation_arity_table L R) as [ | n IH].
