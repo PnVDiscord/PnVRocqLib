@@ -1969,18 +1969,18 @@ Proof.
   - ii. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec _ _) as [EQ1 | NE1]; trivial. rewrite unembed_trm_fvs; trivial.
 Qed.
 
-Fixpoint frm_corr (p : frm L) (p' : frm L') {struct p'} : Prop :=
+Fixpoint twilight_rel (p : frm L) (p' : frm L') {struct p'} : Prop :=
   match p' with
   | Rel_frm R ts' => embed_frm p = hsubst_frm (fun z : hatom => match z with inl x => Var_trm (x * 2) | inr hc => Var_trm (hc * 2 + 1) end) p'
   | Eqn_frm t1' t2' => embed_frm p = hsubst_frm (fun z : hatom => match z with inl x => Var_trm (x * 2) | inr hc => Var_trm (hc * 2 + 1) end) p'
-  | Neg_frm p1' => exists p1, p = Neg_frm p1 /\ frm_corr p1 p1'
-  | Imp_frm p1' p2' => exists p1, exists p2, p = Imp_frm p1 p2 /\ frm_corr p1 p1' /\ frm_corr p2 p2'
-  | All_frm y p1' => exists p1, p = All_frm (y * 2) p1 /\ frm_corr p1 p1'
+  | Neg_frm p1' => exists p1, p = Neg_frm p1 /\ twilight_rel p1 p1'
+  | Imp_frm p1' p2' => exists p1, exists p2, p = Imp_frm p1 p2 /\ twilight_rel p1 p1' /\ twilight_rel p2 p2'
+  | All_frm y p1' => exists p1, p = All_frm (y * 2) p1 /\ twilight_rel p1 p1'
   end.
 
-Lemma frm_corr_unique (p' : frm L') (p1 : frm L) (p2 : frm L)
-  (SIM1 : frm_corr p1 p')
-  (SIM2 : frm_corr p2 p')
+Lemma twilight_rel_unique (p' : frm L') (p1 : frm L) (p2 : frm L)
+  (SIM1 : twilight_rel p1 p')
+  (SIM2 : twilight_rel p2 p')
   : p1 = p2.
 Proof.
   revert p1 p2 SIM1 SIM2. frm_ind p'; simpl.
@@ -1994,8 +1994,8 @@ Proof.
     f_equal; eauto.
 Qed.
 
-Lemma frm_corr_twilight_frm' (p' : frm L')
-  : frm_corr (twilight_frm' p') p'.
+Lemma twilight_rel_twilight_frm' (p' : frm L')
+  : twilight_rel (twilight_frm' p') p'.
 Proof.
   frm_ind p'.
   - simpl. f_equal. rewrite <- twilight_trms_decomposition. eapply twilight_trms_spec.

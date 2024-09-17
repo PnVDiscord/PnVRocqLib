@@ -275,16 +275,16 @@ Proof.
     assert (ALPHA : p ≡ subst_frm (fun z : ivar => Var_trm (z / 2)) (subst_frm (fun z : ivar => Var_trm (z * 2)) p)).
     { symmetry. rewrite <- subst_compose_frm_spec. eapply subst_nil_frm. ii. unfold subst_compose. rewrite subst_trm_unfold. f_equal. exploit (div_mod_uniqueness (x * 2) 2 x 0); lia. }
     rewrite ALPHA. eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z / 2))) E.empty). done!. eapply proves_substitutivity.
-    rewrite <- twilight_frm'_embed. clear ALPHA. pose proof (frm_corr_twilight_frm' (embed_frm p)) as INVARIANT. revert INVARIANT PROVE. generalize (embed_frm p) as A.
+    rewrite <- twilight_frm'_embed. clear ALPHA. pose proof (twilight_rel_twilight_frm' (embed_frm p)) as INVARIANT. revert INVARIANT PROVE. generalize (embed_frm p) as A.
     clear p Gamma; i. destruct PROVE as (ps&INCL&(PF)).
     assert (ps_spec : forall q : frm L', ~ L.In q ps).
     { intros q q_in. done!. }
     clear INCL. revert INVARIANT. induction PF; i.
     + contradiction (ps_spec p (or_introl eq_refl)).
     + eapply for_Imp_E with (p := twilight_frm' p).
-      * eapply IHPF1. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. eapply frm_corr_twilight_frm'.
-      * eapply IHPF2. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. eapply frm_corr_twilight_frm'.
-    + eapply for_All_I with (p := twilight_frm' q). done!. eapply IHPF. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. eapply frm_corr_twilight_frm'.
+      * eapply IHPF1. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. eapply twilight_rel_twilight_frm'.
+      * eapply IHPF2. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. eapply twilight_rel_twilight_frm'.
+    + eapply for_All_I with (p := twilight_frm' q). done!. eapply IHPF. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. eapply twilight_rel_twilight_frm'.
     + simpl. eapply empty_proof_intro. eapply IMP1.
     + simpl. eapply empty_proof_intro. eapply IMP2.
     + simpl. eapply empty_proof_intro. eapply CP.
