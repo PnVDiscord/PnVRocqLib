@@ -2066,18 +2066,21 @@ Qed.
 #[local] Open Scope vec_scope.
 
 Lemma Henkin_seq (k : nat) (n : nat) theta_k theta_n c_k c_n
-  (LT : k < n)
+  (LE : S k <= n)
   (HENKIN_k : Henkin (S k) theta_k c_k)
   (HENKIN_n : Henkin n theta_n c_n)
-  : L.In (V.head theta_k) (V.to_list theta_n) /\ L.In (V.head c_k) (V.to_list c_n).
+  : nth_error (V.to_list theta_n) (n - S k) = Some (V.head theta_k) /\ nth_error (V.to_list c_n) (n - S k) = Some (V.head c_k).
 Proof.
-  revert theta_k theta_n c_k c_n HENKIN_k HENKIN_n. induction LT as [ | n LT IH].
+  remember (n - S k) as i eqn: H_i. assert (i_spec : S i + k = n) by lia. clear H_i.
+  revert theta_k theta_n c_k c_n i HENKIN_k HENKIN_n i_spec. induction LE as [ | n LE IH].
   - introVCons theta' thetas'; introVCons theta thetas; introVCons c' cs'; introVCons c cs. i.
-    pose proof (Henkin_unique _ _ _ _ _ HENKIN_k HENKIN_n) as [theta_eq c_eq]. simpl. split; left; congruence.
+    pose proof (Henkin_unique _ _ _ _ _ HENKIN_k HENKIN_n) as [theta_eq c_eq]. simpl.
+    assert (EQ : i = 0) by lia. subst i. split; simpl; congruence.
   - introVCons theta' thetas'; introVCons theta thetas; introVCons c' cs'; introVCons c cs. i.
-    simpl. exploit (IH (theta' :: thetas') thetas (c' :: cs') cs); trivial.
+    simpl. exploit (IH (theta' :: thetas') thetas (c' :: cs') cs (pred i)); trivial.
     + simpl in HENKIN_n. des; trivial.
-    + intros [? ?]; split; right; trivial.
+    + assert (GT : i > 0) by lia. destruct i as [ | i']; lia.
+    + assert (GT : i > 0) by lia. destruct i as [ | i']; [lia | simpl; intros [EQ1 EQ2]]. split; trivial.
 Qed.
 
 Definition nth_Henkin_axiom (n : nat) : frm L' :=
@@ -2093,7 +2096,7 @@ Proof.
   unfold nth_Henkin_constant, nth_Henkin_axiom. destruct (Henkin_exists (S n)) as [[theta_n c_n] H_n]. destruct (Henkin_exists (S k)) as [[theta_k c_k] H_k].
   simpl fst in *; simpl snd in *. pose proof H_k as [? [? [[? ?] ?]]]; unnw. rewrite <- negb_true_iff. revert theta_n c_n H_n. introVCons theta thetas; introVCons c cs.
   intros [? [HENKIN_n [[? ?] ?]]]. simpl in *. rewrite V.forallb_forall in H6. pose proof (Henkin_seq k n theta_k thetas c_k cs LT H_k HENKIN_n) as [IN _].
-  rewrite V.in_to_list_iff in IN. destruct IN as [i <-]. eapply H6.
+  assert (LT1 : n - S k < n) by lia. erewrite V.nth_error_to_list with (LT := LT1) in IN. apply f_equal with (f := B.maybe (V.head theta_k) id) in IN. simpl in IN. unfold id in IN. rewrite <- IN. eapply H6.
 Qed.
 
 Lemma Henkin_constant_does_not_occur_in_enum n

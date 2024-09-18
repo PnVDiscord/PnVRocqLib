@@ -525,6 +525,43 @@ Proof.
   - destruct IH. rewrite to_list_from_list. econs.
 Qed.
 
+#[local] Hint Constructors vec_heq : core.
+
+Lemma nth_error_to_list (n : nat) (xs : Vector.t A n) (i : nat)
+  (LT : i < n)
+  : nth_error (to_list xs) i = Some (xs !! Fin.getFin i LT).
+Proof.
+  assert (claim : exists zs : list A, from_list zs =~= xs).
+  { exists (to_list xs). eapply from_list_to_list. }
+  destruct claim as [zs EQ]. destruct EQ. rename i into k.
+  remember (Fin.getFin k LT) as i eqn: H_i. apply f_equal with (f := Fin.runFin) in H_i.
+  rewrite Fin.runFin_getFin_id in H_i. revert k i LT H_i. induction zs as [ | z zs IH]; i.
+  - simpl in *. inv LT.
+  - simpl from_list. simpl to_list. simpl length in *. revert i H_i. Fin.caseS i'; i.
+    + assert (EQ : k = O).
+      { pose proof (@Fin.getFin_runFin_id (S (length zs)) FZ) as claim. rewrite H_i in claim. simpl proj1_sig in claim.
+        apply f_equal with (f := Fin.runFin) in claim. rewrite Fin.runFin_getFin_id in claim. simpl in claim.
+        apply f_equal with (f := @proj1_sig _ _) in claim. simpl in claim. trivial. 
+      }
+      subst k. simpl. reflexivity.
+    + assert (EQ : k = S (proj1_sig (Fin.runFin i'))).
+      { pose proof (@Fin.getFin_runFin_id (S (length zs)) (FS i')) as claim. rewrite H_i in claim. simpl proj1_sig in claim.
+        apply f_equal with (f := Fin.runFin) in claim. rewrite Fin.runFin_getFin_id in claim. simpl in claim.
+        apply f_equal with (f := @proj1_sig _ _) in claim. simpl in claim. trivial.
+      }
+      subst k. simpl. eapply IH. simpl in H_i. rewrite <- Fin.runFin_getFin_id. rewrite Fin.getFin_runFin_id. reflexivity.
+Qed.
+
+Lemma nth_error_to_list_eq (n : nat) (xs : Vector.t A n) (i : nat)
+  : nth_error (to_list xs) i = (match le_lt_dec n i with right LT => Some (xs !! Fin.getFin i LT) | left GE => None end).
+Proof.
+  destruct (le_lt_dec n i) as [GE | LT].
+  - revert i GE. induction xs as [ | n x xs IH]; simpl; i.
+    + destruct i as [ | i']; trivial.
+    + destruct i as [ | i']; [lia | simpl; eapply IH; lia].
+  - eapply nth_error_to_list.
+Qed.
+
 Lemma heq_refl (n1 : nat) (xs1 : Vector.t A n1)
   : xs1 =~= xs1.
 Proof.
