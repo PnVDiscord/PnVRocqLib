@@ -198,48 +198,30 @@ Context {A : Type}.
 
 #[local] Notation vec := (Vector.t A).
 
-Definition cast {n : nat} {m : nat} (H_eq : n = m) : vec n -> vec m :=
-  match H_eq with
-  | eq_refl => fun xs => xs
-  end.
-
-Lemma case0 (phi : vec O -> Type)
-  (phiVNil : phi [])
-  : forall xs, phi xs.
+Lemma case0 (phi : Vector.t A O -> Type)
+  (phi_nil : phi (@VNil A))
+  : forall ts, phi ts.
 Proof.
-  refine (
-    let claim1 (xs : vec O) : forall H_eq : O = O, phi (cast H_eq xs) :=
-      match xs in Vector.t _ m return forall H_eq : m = O, phi (cast H_eq xs) with
-      | VNil => fun H_eq : O = O => _
-      | VCons n x' xs' => fun H_eq : S n = O => _
-      end
-    in _
+  intros ts. revert phi phi_nil.
+  exact (
+    match ts as ts in Vector.t _ n return (match n as n return Vector.t A n -> Type with O => fun ts => forall phi : Vector.t A O -> Type, phi VNil -> phi ts | S n' => fun ts => unit end) ts with
+    | @VNil _ => fun phi => fun phi_O => phi_O
+    | @VCons _ n' t' ts' => tt
+    end
   ).
-  { intros xs. exact (claim1 xs eq_refl). }
-Unshelve.
-  - rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
-    exact (phiVNil).
-  - inversion H_eq.
 Defined.
 
-Lemma caseS {n' : nat} (phi : vec (S n') -> Type)
-  (phiVCons : forall x', forall xs', phi (x' :: xs'))
-  : forall xs, phi xs.
+Lemma caseS {n' : nat} (phi : Vector.t A (S n') -> Type)
+  (phi_cons : forall t', forall ts', phi (@VCons A n' t' ts'))
+  : forall ts, phi ts.
 Proof.
-  refine (
-    let claim1 (xs : vec (S n')) : forall H_eq : S n' = S n', phi (cast H_eq xs) :=
-      match xs in Vector.t _ m return forall H_eq : m = S n', phi (cast H_eq xs) with
-      | VNil => fun H_eq : O = S n' => _
-      | VCons n x' xs' => fun H_eq : S n = S n' => _
-      end
-    in _
+  intros ts. revert phi phi_cons.
+  exact (
+    match ts as ts in Vector.t _ n return (match n as n return Vector.t A n -> Type with O => fun _ => unit | S n' => fun ts => forall phi : Vector.t A (S n') -> Type, (forall t' : A, forall ts' : Vector.t A n', phi (VCons n' t' ts')) -> phi ts end) ts with
+    | @VNil _ => tt
+    | @VCons _ n' t' ts' => fun phi => fun phi_S => phi_S t' ts'
+    end
   ).
-  { intros xs. exact (claim1 xs eq_refl). }
-Unshelve.
-  - inversion H_eq.
-  - pose proof (f_equal pred H_eq) as n_eq_n'. simpl in n_eq_n'. subst n'.
-    rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
-    exact (phiVCons x' xs').
 Defined.
 
 Lemma rectS (phi : forall n, vec (S n) -> Type)

@@ -19,9 +19,11 @@ Record language : Type :=
 
 Section FOL_DEF.
 
-Definition ivar : Set := nat.
+Definition ivar : Set :=
+  nat.
 
-Definition renaming : Set := ivar -> ivar.
+Definition renaming : Set :=
+  ivar -> ivar.
 
 Context {L : language}.
 
@@ -40,49 +42,31 @@ Inductive frm : Set :=
   | Imp_frm (p1 : frm) (p2 : frm) : frm
   | All_frm (y : ivar) (p1 : frm) : frm.
 
-Let cast (n : nat) (m : nat) (EQ : n = m) : trms n -> trms m :=
-  match EQ with
-  | eq_refl => fun xs => xs
-  end.
-
 Lemma trms_case0 (phi : trms O -> Type)
   (phi_nil : phi O_trms)
   : forall ts, phi ts.
 Proof.
-  refine (
-    let claim1 (xs : trms O) : forall H_eq : O = O, phi (cast O O H_eq xs) :=
-      match xs in trms m return forall H_eq : m = O, phi (cast m O H_eq xs) with
-      | O_trms => fun H_eq : O = O => _
-      | S_trms n x' xs' => fun H_eq : S n = O => _
-      end
-    in _
+  intros ts. revert phi phi_nil.
+  exact (
+    match ts as ts in trms n return (match n as n return trms n -> Type with O => fun ts => forall phi : trms O -> Type, phi O_trms -> phi ts | S n' => fun ts => unit end) ts with
+    | O_trms => fun phi => fun phi_O => phi_O
+    | S_trms n' t' ts' => tt
+    end
   ).
-  { intros xs. exact (claim1 xs eq_refl). }
-Unshelve.
-  - rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
-    exact (phi_nil).
-  - inversion H_eq.
-Qed.
+Defined.
 
 Lemma trms_caseS {n' : nat} (phi : trms (S n') -> Type)
   (phi_cons : forall t', forall ts', phi (S_trms n' t' ts'))
   : forall ts, phi ts.
 Proof.
-  refine (
-    let claim1 (xs : trms (S n')) : forall H_eq : S n' = S n', phi (cast (S n') (S n') H_eq xs) :=
-      match xs in trms m return forall H_eq : m = S n', phi (cast m (S n') H_eq xs) with
-      | O_trms => fun H_eq : O = S n' => _
-      | S_trms n x' xs' => fun H_eq : S n = S n' => _
-      end
-    in _
+  intros ts. revert phi phi_cons.
+  exact (
+    match ts as ts in trms n return (match n as n return trms n -> Type with O => fun _ => unit | S n' => fun ts => forall phi : trms (S n') -> Type, (forall t' : trm, forall ts' : trms n', phi (S_trms n' t' ts')) -> phi ts end) ts with
+    | O_trms => tt
+    | S_trms n' t' ts' => fun phi => fun phi_S => phi_S t' ts'
+    end
   ).
-  { intros xs. exact (claim1 xs eq_refl). }
-Unshelve.
-  - inversion H_eq.
-  - pose proof (f_equal Nat.pred H_eq) as n_eq_n'. simpl in n_eq_n'. subst n'.
-    rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
-    exact (phi_cons x' xs').
-Qed.
+Defined.
 
 Definition head {n : nat} (ts : trms (S n)) : trm :=
   match ts in trms n' return (match n' as n' return Type with O => unit | S n => trm end) with
