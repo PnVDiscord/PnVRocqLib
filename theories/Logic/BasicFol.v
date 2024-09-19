@@ -22,9 +22,6 @@ Section FOL_DEF.
 Definition ivar : Set :=
   nat.
 
-Definition renaming : Set :=
-  ivar -> ivar.
-
 Context {L : language}.
 
 Inductive trm : Set :=
@@ -108,6 +105,21 @@ Proof.
       * apply f_equal with (f := V.tail) in H0. do 2 rewrite V.tail_unfold in H0; eauto.
   - f_equal; eauto.
 Qed.
+
+Definition Bot_frm : frm :=
+  Neg_frm (All_frm 0 (Eqn_frm (Var_trm 0) (Var_trm 0))).
+
+Definition Con_frm (p1 : frm) (p2 : frm) : frm :=
+  Neg_frm (Imp_frm p1 (Neg_frm p2)).
+
+Definition Dis_frm (p1 : frm) (p2 : frm) : frm :=
+  Neg_frm (Con_frm (Neg_frm p1) (Neg_frm p2)).
+
+Definition Iff_frm (p1 : frm) (p2 : frm) : frm :=
+  Con_frm (Imp_frm p1 p2) (Imp_frm p2 p1).
+
+Definition Exs_frm (y : ivar) (p1 : frm) : frm :=
+  Neg_frm (All_frm y (Neg_frm p1)).
 
 End FOL_DEF.
 
@@ -551,6 +563,9 @@ Section FOL_SYNTAX. (* Reference: "https://github.com/ernius/formalmetatheory-st
 #[local] Open Scope program_scope.
 
 Import ListNotations.
+
+Definition renaming : Set :=
+  ivar -> ivar.
 
 Definition subst (L : language) : Set :=
   ivar -> trm L.

@@ -6,6 +6,7 @@ Require Import PnV.Logic.BasicFol2.
 Require Import PnV.Logic.HilbertFol.
 Require Import PnV.Math.ThN.
 
+Import ListNotations.
 Import FolNotations.
 
 #[local] Infix "\in" := E.In.
@@ -23,15 +24,618 @@ Definition inconsistent {L : language} (Gamma : ensemble (frm L)) : Prop :=
 
 Context {L : language}.
 
-Lemma inconsistent_iff (Gamma : ensemble (frm L))
-  : inconsistent Gamma <-> (exists p, Gamma ⊢ p /\ Gamma ⊢ Neg_frm p).
+Lemma extend_infers (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L)) (C : frm L)
+  (INFERS : Gamma ⊢ C)
+  (SUBSET : Gamma \subseteq Gamma')
+  : Gamma' ⊢ C.
+Proof.
+  eapply extend_proves; eauto.
+Qed.
+
+Lemma ByAssumption (Gamma : ensemble (frm L)) C
+  (IN : C \in Gamma)
+  : Gamma ⊢ C.
+Proof.
+  eapply for_ByHyp; trivial.
+Qed.
+
+Lemma ContradictionI (Gamma : ensemble (frm L)) A
+  (INFERS1 : Gamma ⊢ A)
+  (INFERS2 : Gamma ⊢ Neg_frm A)
+  : Gamma ⊢ Bot_frm.
+Proof.
+  eapply for_Imp_E. eapply for_Imp_E. exists []. split. done. econs. eapply proof_ex_falso. exact INFERS2. exact INFERS1.
+Qed.
+
+Lemma ContradictionE (Gamma : ensemble (frm L)) A
+  (INFERS1 : Gamma ⊢ Bot_frm)
+  : Gamma ⊢ A.
+Proof.
+  eapply for_Imp_E with (p := All_frm 0 (Eqn_frm (Var_trm 0) (Var_trm 0))).
+  - eapply for_Imp_E with (p := Bot_frm).
+    + exists []. split. done. econs. eapply proof_ex_falso.
+    + eapply INFERS1.
+  - eapply extend_proves with (Gamma := E.empty). done. eapply for_All_I. done. eapply proves_reflexivity.
+Qed.
+
+Lemma NegationI (Gamma : ensemble (frm L)) A
+  (INFERS1 : E.insert A Gamma ⊢ Bot_frm)
+  : Gamma ⊢ Neg_frm A.
+Proof.
+  rewrite <- Deduction_theorem in INFERS1. eapply for_Imp_E. 2: exact INFERS1. eapply for_compose.
+  - eapply for_CP1. eapply INFERS1.
+  - eapply for_Imp_I. eapply for_Imp_E.
+    + exists []. split. done. econs. eapply proof_dni.
+    + eapply extend_proves with (Gamma := E.empty). done. eapply for_All_I. done. eapply proves_reflexivity.
+Qed.
+
+Lemma NegationE (Gamma : ensemble (frm L)) A
+  (INFERS1 : E.insert (Neg_frm A) Gamma ⊢ Bot_frm)
+  : Gamma ⊢ A.
+Proof.
+  eapply for_Imp_E. exists []. split. done. econs. eapply proof_dne. eapply NegationI. exact INFERS1.
+Qed.
+
+Lemma ConjunctionI (Gamma : ensemble (frm L)) A B
+  (INFERS1 : Gamma ⊢ A)
+  (INFERS2 : Gamma ⊢ B)
+  : Gamma ⊢ Con_frm A B.
+Proof.
+  unfold Con_frm. eapply NegationI. eapply ContradictionI with (A := B).
+  - eapply extend_proves with (Gamma := Gamma). done!. eapply INFERS2.
+  - eapply for_Imp_E with (p := A). eapply ByAssumption. done!. eapply extend_proves with (Gamma := Gamma). done!. eapply INFERS1.
+Qed.
+
+Lemma ConjunctionE1 (Gamma : ensemble (frm L)) A B
+  (INFERS1 : Gamma ⊢ Con_frm A B)
+  : Gamma ⊢ A.
+Proof.
+  eapply for_Imp_E. exists []. split. done. econs. eapply proof_dne. unfold Con_frm in INFERS1. eapply for_Imp_E. 2: exact INFERS1.
+  eapply for_CP1. eapply for_Imp_I. eapply for_Imp_I. eapply NegationI. eapply ContradictionI with (A := A); eapply for_ByHyp; done!.
+Qed.
+
+Lemma ConjunctionE2 (Gamma : ensemble (frm L)) A B
+  (INFERS1 : Gamma ⊢ Con_frm A B)
+  : Gamma ⊢ B.
+Proof.
+  eapply for_Imp_E. exists []. split. done. econs. eapply proof_dne. unfold Con_frm in INFERS1. eapply for_Imp_E. 2: exact INFERS1.
+  eapply for_CP1. eapply for_Imp_I. eapply for_Imp_I. eapply NegationI. eapply ContradictionI with (A := B); eapply for_ByHyp; done!.
+Qed.
+
+Lemma DisjunctionI1 (Gamma : ensemble (frm L)) A B
+  (INFERS1 : Gamma ⊢ A)
+  : Gamma ⊢ Dis_frm A B.
+Proof.
+  unfold Dis_frm. eapply NegationI. eapply ContradictionI with (A := A).
+  - eapply extend_proves with (Gamma := Gamma); done!.
+  - eapply ConjunctionE1. eapply ByAssumption. left. reflexivity.
+Qed.
+
+Lemma DisjunctionI2 (Gamma : ensemble (frm L)) A B
+  (INFERS1 : Gamma ⊢ B)
+  : Gamma ⊢ Dis_frm A B.
+Proof.
+  unfold Dis_frm. eapply NegationI. eapply ContradictionI with (A := B).
+  - eapply extend_proves with (Gamma := Gamma); done!.
+  - eapply ConjunctionE2. eapply ByAssumption. left. reflexivity.
+Qed.
+
+Lemma DisjunctionE (Gamma : ensemble (frm L)) A B C
+  (INFERS1 : Gamma ⊢ Dis_frm A B)
+  (INFERS2 : E.insert A Gamma ⊢ C)
+  (INFERS3 : E.insert B Gamma ⊢ C)
+  : Gamma ⊢ C.
+Proof.
+  eapply for_Imp_E. exists []. split. done. econs. eapply proof_dne.
+  eapply NegationI. unfold Dis_frm in INFERS1. eapply ContradictionI with (A := Con_frm (Neg_frm A) (Neg_frm B)).
+  - eapply ConjunctionI; rewrite <- Deduction_theorem; eapply for_CP1; eapply for_Imp_I; trivial.
+  - eapply extend_infers with (Gamma := Gamma); done!.
+Qed.
+
+Lemma ImplicationI (Gamma : ensemble (frm L)) A B
+  (INFERS1 : E.insert A Gamma ⊢ B)
+  : Gamma ⊢ Imp_frm A B.
+Proof.
+  eapply for_Imp_I; trivial.
+Qed.
+
+Lemma ImplicationE (Gamma : ensemble (frm L)) A B
+  (INFERS1 : Gamma ⊢ Imp_frm A B)
+  (INFERS2 : Gamma ⊢ A)
+  : Gamma ⊢ B.
+Proof.
+  eapply for_Imp_E; eauto.
+Qed.
+
+Lemma BiconditionalI (Gamma : ensemble (frm L)) A B
+  (INFERS1 : E.insert A Gamma ⊢ B)
+  (INFERS2 : E.insert B Gamma ⊢ A)
+  : Gamma ⊢ Iff_frm A B.
+Proof.
+  unfold Iff_frm. eapply ConjunctionI; eapply for_Imp_I; eauto.
+Qed.
+
+Lemma BiconditionalE1 (Gamma : ensemble (frm L)) A B
+  (INFERS1 : Gamma ⊢ Iff_frm A B)
+  (INFERS2 : Gamma ⊢ A)
+  : Gamma ⊢ B.
+Proof.
+  unfold Iff_frm in INFERS1. eapply for_Imp_E. eapply ConjunctionE1. eapply INFERS1. eapply INFERS2.
+Qed.
+
+Lemma BiconditionalE2 (Gamma : ensemble (frm L)) A B
+  (INFERS1 : Gamma ⊢ Iff_frm A B)
+  (INFERS2 : Gamma ⊢ B)
+  : Gamma ⊢ A.
+Proof.
+  unfold Iff_frm in INFERS1. eapply for_Imp_E. eapply ConjunctionE2. eapply INFERS1. eapply INFERS2.
+Qed.
+
+Lemma UniversalI (Gamma : ensemble (frm L)) x y A
+  (FRESH1 : forall p, p \in Gamma -> is_free_in_frm y p = false)
+  (FRESH2 : is_free_in_frm y (All_frm x A) = false)
+  (INFERS1 : Gamma ⊢ subst_frm (one_subst x (Var_trm y)) A)
+  : Gamma ⊢ All_frm x A.
+Proof.
+  eapply for_All_I' with (y := y); ss!.
+Qed.
+
+Lemma UniversalE (Gamma : ensemble (frm L)) x t A
+  (INFERS1 : Gamma ⊢ All_frm x A)
+  : Gamma ⊢ subst_frm (one_subst x t) A.
+Proof.
+  eapply for_All_E with (t := t); ss!.
+Qed.
+
+Lemma ExistentialI (Gamma : ensemble (frm L)) x t A
+  (INFERS1 : Gamma ⊢ subst_frm (one_subst x t) A)
+  : Gamma ⊢ Exs_frm x A.
+Proof.
+  unfold Exs_frm. eapply NegationI. eapply ContradictionI with (A := subst_frm (one_subst x t) (Neg_frm A)).
+  - eapply for_All_E. eapply for_ByHyp. done!.
+  - simpl. eapply NegationI. eapply ContradictionI with (A := subst_frm (one_subst x t) A).
+    + eapply extend_infers. eapply INFERS1. done!.
+    + eapply for_ByHyp. done!.
+Qed.
+
+Lemma ExistentialE (Gamma : ensemble (frm L)) x y A B
+  (FRESH1 : forall p, p \in Gamma -> is_free_in_frm y p = false)
+  (FRESH2 : is_free_in_frm y (All_frm x A) = false)
+  (FRESH3 : is_free_in_frm y B = false)
+  (INFERS1 : Gamma ⊢ Exs_frm x A)
+  (INFERS2 : E.insert (subst_frm (one_subst x (Var_trm y)) A) Gamma ⊢ B)
+  : Gamma ⊢ B.
+Proof.
+  assert (claim : Gamma ⊢ Imp_frm (Neg_frm B) (All_frm x (Neg_frm A))).
+  { eapply for_Imp_I. eapply for_All_I' with (y := y).
+    - intros p [-> | IN]; simpl; ss!.
+    - ss!.
+    - simpl. rewrite <- Deduction_theorem. eapply for_CP1. rewrite -> Deduction_theorem. eapply INFERS2.
+  }
+  apply for_CP1 in claim. eapply for_Imp_E. exists []. split. done. econs. eapply proof_dne.
+  eapply for_Imp_E. eapply claim. exact INFERS1.
+Qed.
+
+Lemma EquationI (Gamma : ensemble (frm L)) t
+  : Gamma ⊢ Eqn_frm t t.
+Proof.
+  eapply proves_reflexivity.
+Qed.
+
+Lemma EquationE (Gamma : ensemble (frm L)) x t1 t2 A
+  (INFERS1 : Gamma ⊢ Eqn_frm t1 t2)
+  (INFERS2 : Gamma ⊢ subst_frm (one_subst x t1) A)
+  : Gamma ⊢ subst_frm (one_subst x t2) A.
+Proof.
+  eapply for_Imp_E. 2: eapply INFERS2. eapply proves_eqn_frm. eapply INFERS1.
+Qed.
+
+Lemma Law_of_Excluded_Middle (A : frm L)
+  : E.empty ⊢ Dis_frm A (Neg_frm A).
+Proof with repeat ((now left) || right).
+  eapply NegationE, ContradictionI.
+  - eapply DisjunctionI2, NegationI, ContradictionI.
+    + eapply DisjunctionI1, ByAssumption...
+    + eapply ByAssumption...
+  - eapply ByAssumption...
+Qed.
+
+Lemma Cut_property (Gamma : ensemble (frm L)) A B
+  (INFERS : Gamma ⊢ A)
+  (IMPLY : E.insert A Gamma ⊢ B)
+  : Gamma ⊢ B.
+Proof.
+  assert (claim : Gamma ⊢ Imp_frm A B).
+  { eapply ImplicationI; exact IMPLY. }
+  eapply ImplicationE; [exact claim | exact INFERS].
+Qed.
+
+#[local] Notation formula := (frm L).
+
+#[global]
+Instance formula_isBA : isBA formula :=
+  { andB := Con_frm
+  ; orB := Dis_frm
+  ; notB := Neg_frm
+  ; trueB := Imp_frm Bot_frm Bot_frm
+  ; falseB := Bot_frm
+  }.
+
+#[local] Obligation Tactic := i.
+
+#[global, program]
+Instance formula_isSetoid : isSetoid formula :=
+  { eqProp (lhs : formula) (rhs : formula) := E.singleton lhs ⊢ rhs /\ E.singleton rhs ⊢ lhs }.
+Next Obligation with done!.
+  split.
+  - ii. split; eapply ByAssumption...
+  - ii; des...
+  - ii; des. split; eapply Cut_property; try eassumption; eapply extend_infers; try eassumption...
+Qed.
+
+#[global]
+Instance LBA_satisfiesBooleanAlgebraLaws
+  : BooleanAlgebraLaws formula_isBA.
+Proof with done!.
+  repeat (split; ii); simpl in *; des.
+  { eapply ConjunctionI.
+    - eapply Cut_property with (A := x1).
+      + eapply ConjunctionE1, ByAssumption...
+      + eapply extend_infers...
+    - eapply Cut_property with (A := y1).
+      + eapply ConjunctionE2, ByAssumption...
+      + eapply extend_infers...
+  }
+  { eapply ConjunctionI.
+    - eapply Cut_property with (A := x2).
+      + eapply ConjunctionE1, ByAssumption...
+      + eapply extend_infers...
+    - eapply Cut_property with (A := y2).
+      + eapply ConjunctionE2, ByAssumption...
+      + eapply extend_infers...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply DisjunctionI1, extend_infers...
+    - eapply DisjunctionI2, extend_infers...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply DisjunctionI1, extend_infers...
+    - eapply DisjunctionI2, extend_infers...
+  }
+  { eapply NegationI. eapply ContradictionI with (A := x1).
+    - eapply extend_infers...
+    - eapply ByAssumption...
+  }
+  { eapply NegationI. eapply ContradictionI with (A := x2).
+    - eapply extend_infers...
+    - eapply ByAssumption...
+  }
+  { eapply ConjunctionI.
+    - eapply ConjunctionI.
+      + eapply ConjunctionE1, ByAssumption...
+      + eapply ConjunctionE1, ConjunctionE2, ByAssumption...
+    - eapply ConjunctionE2, ConjunctionE2, ByAssumption...
+  }
+  { eapply ConjunctionI.
+    - eapply ConjunctionE1, ConjunctionE1, ByAssumption...
+    - eapply ConjunctionI.
+      + eapply ConjunctionE2, ConjunctionE1, ByAssumption...
+      + eapply ConjunctionE2, ByAssumption...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply DisjunctionI1, DisjunctionI1, ByAssumption. left...
+    - eapply DisjunctionE.
+      + eapply ByAssumption. left...
+      + eapply DisjunctionI1, DisjunctionI2, ByAssumption. left...
+      + eapply DisjunctionI2, ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply DisjunctionE.
+      + eapply ByAssumption. left...
+      + eapply DisjunctionI1, ByAssumption. left...
+      + eapply DisjunctionI2, DisjunctionI1, ByAssumption. left...
+    - eapply DisjunctionI2, DisjunctionI2, ByAssumption. left...
+  }
+  { eapply ConjunctionI.
+    - eapply ConjunctionE2, ByAssumption...
+    - eapply ConjunctionE1, ByAssumption...
+  }
+  { eapply ConjunctionI.
+    - eapply ConjunctionE2, ByAssumption...
+    - eapply ConjunctionE1, ByAssumption...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply DisjunctionI2, ByAssumption. left...
+    - eapply DisjunctionI1, ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply DisjunctionI2, ByAssumption. left...
+    - eapply DisjunctionI1, ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ConjunctionE2, ByAssumption...
+    - eapply DisjunctionI1, ConjunctionI.
+      + eapply ConjunctionE1, ByAssumption. right...
+      + eapply ByAssumption. left...
+    - eapply DisjunctionI2, ConjunctionI.
+      + eapply ConjunctionE1, ByAssumption. right...
+      + eapply ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply ConjunctionI.
+      + eapply ConjunctionE1, ByAssumption. left...
+      + eapply DisjunctionI1, ConjunctionE2, ByAssumption. left...
+    - eapply ConjunctionI.
+      + eapply ConjunctionE1, ByAssumption. left...
+      + eapply DisjunctionI2, ConjunctionE2, ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ConjunctionE1, ByAssumption...
+    - eapply DisjunctionI1, ConjunctionI.
+      + eapply ByAssumption. left...
+      + eapply ConjunctionE2, ByAssumption. right...
+    - eapply DisjunctionI2, ConjunctionI.
+      + eapply ByAssumption. left...
+      + eapply ConjunctionE2, ByAssumption. right...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply ConjunctionI.
+      + eapply DisjunctionI1, ConjunctionE1, ByAssumption. left...
+      + eapply ConjunctionE2, ByAssumption. left...
+    - eapply ConjunctionI.
+      + eapply DisjunctionI2, ConjunctionE1, ByAssumption. left...
+      + eapply ConjunctionE2, ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply ConjunctionI.
+      + eapply DisjunctionE.
+        * eapply ByAssumption. right...
+        * eapply DisjunctionI1, ByAssumption. left...
+        * eapply DisjunctionI2, ConjunctionE1, ByAssumption. left...
+      + eapply DisjunctionE.
+        * eapply ByAssumption. right...
+        * eapply DisjunctionI1, ByAssumption. left...
+        * eapply DisjunctionI2, ConjunctionE2, ByAssumption. left...
+    - eapply ConjunctionI.
+      + eapply DisjunctionE.
+        * eapply ByAssumption. right...
+        * eapply DisjunctionI1, ByAssumption. left...
+        * eapply DisjunctionI2, ConjunctionE1, ByAssumption. left...
+      + eapply DisjunctionE.
+        * eapply ByAssumption. right...
+        * eapply DisjunctionI1, ByAssumption. left...
+        * eapply DisjunctionI2, ConjunctionE2, ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ConjunctionE1, ByAssumption...
+    - eapply DisjunctionI1, ByAssumption. left...
+    - eapply DisjunctionE.
+      + eapply ConjunctionE2, ByAssumption. right...
+      + eapply DisjunctionI1, ByAssumption. left...
+      + eapply DisjunctionI2, ConjunctionI.
+        * eapply ByAssumption. right; left...
+        * eapply ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply ConjunctionI.
+      + eapply DisjunctionI1, ConjunctionE1, ByAssumption. left...
+      + eapply DisjunctionI1, ConjunctionE2, ByAssumption. left...
+    -  eapply ConjunctionI.
+      + eapply DisjunctionI2, ByAssumption. left...
+      + eapply DisjunctionI2, ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ConjunctionE1, ByAssumption...
+    - eapply DisjunctionE.
+      + eapply ConjunctionE2, ByAssumption. right...
+      + eapply DisjunctionI1, ConjunctionI.
+        * eapply ByAssumption. right; left...
+        * eapply ByAssumption. left...
+      + eapply DisjunctionI2, ByAssumption. left...
+    - eapply DisjunctionI2, ByAssumption. left...
+  }
+  { eapply ConjunctionE2, ByAssumption... }
+  { eapply ConjunctionI.
+    - eapply ImplicationI, ByAssumption. left...
+    - eapply ByAssumption...
+  }
+  { eapply ConjunctionE1, ByAssumption... }
+  { eapply ConjunctionI.
+    - eapply ByAssumption...
+    - eapply ImplicationI, ByAssumption. left...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply ContradictionE, ByAssumption. left...
+    - eapply ByAssumption. left...
+  }
+  { eapply DisjunctionI2, ByAssumption... }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply ByAssumption. left...
+    - eapply ContradictionE, ByAssumption. left...
+  }
+  { eapply DisjunctionI1, ByAssumption... }
+  { eapply ConjunctionE1, ByAssumption... }
+  { eapply ConjunctionI.
+    - eapply ByAssumption...
+    - eapply ContradictionE, ByAssumption...
+  }
+  { eapply ConjunctionE2, ByAssumption... }
+  { eapply ConjunctionI.
+    - eapply ContradictionE, ByAssumption...
+    - eapply ByAssumption...
+  }
+  { eapply ImplicationI, ByAssumption. left... }
+  { eapply DisjunctionI1, ImplicationI, ByAssumption. left... }
+  { eapply ImplicationI, ByAssumption. left... }
+  { eapply DisjunctionI2, ImplicationI, ByAssumption. left... }
+  { eapply ConjunctionE1, ByAssumption... }
+  { eapply ConjunctionI; eapply ByAssumption... }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply ByAssumption. left...
+    - eapply ByAssumption. left...
+  }
+  { eapply DisjunctionI1, ByAssumption... }
+  { eapply ConjunctionE1, ByAssumption... }
+  { eapply ConjunctionI.
+    - eapply ByAssumption...
+    - eapply DisjunctionI1, ByAssumption...
+  }
+  { eapply DisjunctionE.
+    - eapply ByAssumption...
+    - eapply ByAssumption. left...
+    - eapply ConjunctionE1, ByAssumption. left...
+  }
+  { eapply DisjunctionI1, ByAssumption... }
+  { eapply ContradictionI with (A := x).
+    - eapply ConjunctionE1, ByAssumption...
+    - eapply ConjunctionE2, ByAssumption...
+  }
+  { eapply ContradictionE, ByAssumption... }
+  { eapply ImplicationI, ByAssumption. left... }
+  { eapply extend_infers.
+    - eapply Law_of_Excluded_Middle.
+    - ii...
+  }
+Qed.
+
+Lemma leB_iff (lhs : formula) (rhs : formula)
+  : lhs =< rhs <-> E.singleton lhs ⊢ rhs.
+Proof with reflexivity || trivial.
+  simpl. split.
+  - intros [INFERS INFERS'].
+    eapply Cut_property with (A := Con_frm lhs rhs)...
+    eapply ConjunctionE2, ByAssumption. left...
+  - intros INFERS. split.
+    + eapply ConjunctionE1, ByAssumption...
+    + eapply ConjunctionI...
+      eapply ByAssumption...
+Qed.
+
+Lemma andsB_le_iff (xs : list formula) (b : formula)
+  : andsB xs =< b <-> (exists X, L.is_listrep_of xs X /\ X ⊢ b).
 Proof.
   split.
-  - intros INCONSISTENT. exists (Eqn_frm (Var_trm 0) (Var_trm 0)). split; eapply INCONSISTENT.
-  - intros [p [PROVE PROVE']] q. destruct PROVE as (ps&INCL&(PF)), PROVE' as (ps'&INCL'&(PF')).
-    exists (ps' ++ ps). split. done!. econs. eapply MP.
-    + rewrite <- L.app_nil_l with (l := ps'). eapply MP. exact (proof_ex_falso p q). exact PF'.
-    + exact PF.
+  - intros LE. exists (E.fromList xs). split. done. revert b LE. induction xs as [ | x xs IH]; simpl; i.
+    + destruct LE as [INFERS1 INFERS2]. eapply Cut_property with (A := Imp_frm Bot_frm Bot_frm).
+      * eapply ImplicationI. eapply for_ByHyp. done!.
+      * eapply extend_infers with (Gamma := E.singleton (Imp_frm Bot_frm Bot_frm)).
+        { eapply ConjunctionE2. eapply INFERS2. }
+        { done!. }
+    + destruct LE as [INFERS1 INFERS2]. unfold leProp in IH. simpl in IH. eapply extend_proves with (Gamma := E.insert x (E.fromList xs)). done!. rewrite <- Deduction_theorem. eapply IH. split.
+      * eapply ConjunctionE1. eapply ByAssumption. econs.
+      * eapply ConjunctionI.
+        { eapply ByAssumption. done!. }
+        { eapply ImplicationI. eapply ConjunctionE2 with (A := Con_frm x (andsB xs)). eapply for_Imp_E with (p := Con_frm x (andsB xs)).
+          - eapply for_Imp_I. eapply extend_infers. exact INFERS2. done!.
+          - eapply ConjunctionI; eapply for_ByHyp; done!.
+        }
+  - intros (X&EQ&PROVE). destruct PROVE as (ps&INCL&(PF)).
+    assert (SUBSET : forall q, L.In q ps -> L.In q xs) by ss!.
+    assert (LE : andsB ps =< b).
+    { simpl. split.
+      - eapply ConjunctionE1; eapply for_ByHyp; done!.
+      - eapply ConjunctionI.
+        + eapply for_ByHyp; done!.
+        + assert (PROVE : E.fromList ps ⊢ b).
+          { exists ps. split. done!. econs. exact PF. }
+          revert PROVE. clear. revert b. induction ps as [ | p ps IH]; simpl; i.
+          * eapply extend_infers. eapply PROVE. done!.
+          * exploit (IH (Imp_frm p b)).
+            { eapply for_Imp_I. eapply extend_infers. exact PROVE. done!. }
+            intros claim. rewrite Deduction_theorem in claim.
+            eapply for_Imp_E with (p := p); cycle 1. eapply ConjunctionE1; eapply for_ByHyp; done!.
+            eapply for_Imp_E with (p := andsB ps); cycle 1. eapply ConjunctionE2; eapply for_ByHyp; done!.
+            eapply for_Imp_E with (p := Con_frm p (andsB ps)); cycle 1. eapply for_ByHyp; done!.
+            eapply for_Imp_I. eapply for_Imp_I. eapply for_Imp_I. eapply extend_infers. eapply claim. done!.
+    }
+    clear X INCL EQ PF. revert b LE.
+    enough (WTS : andsB xs =< andsB ps).
+    { ii. etransitivity; eauto. }
+    rewrite leB_iff. revert xs SUBSET. induction ps as [ | p ps IH]; simpl; i.
+    + eapply for_Imp_I. eapply for_ByHyp. done!.
+    + exploit (IH xs). done!. intros claim. eapply ConjunctionI; trivial.
+      exploit (SUBSET p). done!. clear. revert p. induction xs as [ | x xs IH]; simpl; intros p IN.
+      * tauto.
+      * destruct IN as [<- | IN].
+        { eapply ConjunctionE1. eapply for_ByHyp; done!. }
+        { eapply for_Imp_E; cycle 1. eapply ConjunctionE1. eapply for_ByHyp; econs.
+          eapply for_Imp_E; cycle 1. eapply ConjunctionE2. eapply for_ByHyp; econs.
+          eapply for_Imp_I. eapply for_Imp_I. eapply extend_infers. exact (IH p IN). done!.
+        }
+Qed.
+
+#[global]
+Add Parametric Morphism :
+  (@proves L) with signature (eqProp ==> eqProp ==> iff)
+  as proves_compatWith_eqProp.
+Proof.
+  intros X X' X_eq_X' b b' [INFERS1 INFERS2]. split.
+  - intros INFERS. eapply Cut_property with (A := b).
+    + eapply extend_infers; done!.
+    + eapply extend_infers; done!.
+  - intros INFERS. eapply Cut_property with (A := b').
+    + eapply extend_infers; done!.
+    + eapply extend_infers; done!.
+Qed.
+
+Variant Th (X : ensemble formula) (b : formula) : Prop :=
+  | In_Th
+    (INFERS : X ⊢ b)
+    : b \in Th X.
+
+#[local] Hint Constructors Th : core.
+
+#[global]
+Add Parametric Morphism :
+  Th with signature (eqProp ==> eqProp)
+  as Th_lifts_eqProp.
+Proof.
+  intros X X' X_eq_X' b. split; intros [INFERS]; econstructor.
+  - now rewrite <- X_eq_X'.
+  - now rewrite -> X_eq_X'.
+Qed.
+
+Lemma lemma1_of_1_3_8 (X : ensemble formula)
+  : isFilter (Th X).
+Proof with reflexivity || eauto.
+  eapply isFilter_intro.
+  - exists trueB. econstructor.
+    eapply ImplicationI, ByAssumption; done!.
+  - intros x1 x2 [INFERS1] [INFERS2].
+    econstructor. eapply ConjunctionI; done!.
+  - intros x [INFERS] x' x_le_x'. apply leB_iff in x_le_x'.
+    econstructor. eapply Cut_property. exact INFERS.
+    eapply extend_infers with (Gamma := E.singleton x); done!.
+Qed.
+
+Lemma cl_isSubsetOf_Th (X : ensemble formula)
+  : cl X \subseteq Th X.
+Proof with eauto.
+  intros b [xs ?]; des. apply andsB_le_iff in andsB_LE.
+  destruct andsB_LE as [X' [xs_repr_X' INFERS]].
+  econstructor. eapply extend_infers...
+  intros z z_in. eapply FINITE_SUBSET, xs_repr_X'...
+Qed.
+
+Lemma inconsistent_iff (Gamma : ensemble (frm L))
+  : inconsistent Gamma <-> Gamma ⊢ Bot_frm.
+Proof.
+  split.
+  - intros INCONSISTENT. eapply INCONSISTENT.
+  - intros INCONSISTENT q. eapply ContradictionE. eapply INCONSISTENT.
 Qed.
 
 Section UNION.
@@ -43,19 +647,38 @@ Variable f : nat -> ensemble (frm L).
 
 Hypothesis incl : forall n1 : nat, forall n2 : nat, forall LE : n1 <= n2, f n1 \subseteq f n2.
 
-Lemma union_f_proves p
-  (PROVE : union_f f ⊢ p)
-  : exists n, f n ⊢ p.
+Lemma subset_union_f n
+  : f n \subseteq union_f f.
 Proof.
-  destruct PROVE as (ps&INCL&(PF)).
-  enough (WTS : exists n, E.fromList ps \subseteq f n).
-  { destruct WTS as [n SUBSET]. exists n. exists ps. split; trivial. econs; exact PF. }
-  clear PF p. induction ps as [ | p ps IH]; simpl.
-  - exists 0. done.
-  - exploit IH. ii. eapply INCL. done!. intros [n SUBSET]. exploit (INCL p). done!. intros [m IN].
-    exists (max n m). intros q q_in. s!. destruct q_in as [-> | q_in].
-    + eapply incl with (n1 := m); done!.
-    + eapply incl with (n1 := n); done!.
+  intros q q_in. exists n. exact q_in.
+Qed.
+
+Lemma union_f_proves_iff p
+  : union_f f ⊢ p <-> (exists n, f n ⊢ p).
+Proof.
+  split.
+  - intros (ps&INCL&(PF)).
+    enough (WTS : exists n, E.fromList ps \subseteq f n).
+    { destruct WTS as [n SUBSET]. exists n. exists ps. split; trivial. econs; exact PF. }
+    clear PF p. induction ps as [ | p ps IH]; simpl.
+    + exists 0. done.
+    + exploit IH. ii. eapply INCL. done!. intros [n SUBSET]. exploit (INCL p). done!. intros [m IN].
+      exists (max n m). intros q q_in. s!. destruct q_in as [-> | q_in].
+      * eapply incl with (n1 := m); done!.
+      * eapply incl with (n1 := n); done!.
+  - intros [n INCONSISTENT]. eapply extend_proves with (Gamma := f n). eapply subset_union_f. exact INCONSISTENT.
+Qed.
+
+Hypothesis equiconsistent : forall n : nat, inconsistent (f n) <-> inconsistent (f (S n)).
+
+Lemma equiconsistent_union_f
+  : inconsistent (f 0) <-> inconsistent (union_f f).
+Proof.
+  split.
+  - intros INCONSISTENT p. eapply extend_proves with (Gamma := f 0). eapply subset_union_f. eapply INCONSISTENT.
+  - do 2 rewrite inconsistent_iff. intros INCONSISTENT. rewrite union_f_proves_iff in INCONSISTENT. destruct INCONSISTENT as [n PROVE]. induction n as [ | n IH].
+    + eapply PROVE.
+    + eapply IH. rewrite <- inconsistent_iff. rewrite equiconsistent. rewrite inconsistent_iff. eapply PROVE.
 Qed.
 
 End UNION.
@@ -358,14 +981,14 @@ Theorem similar_equiconsistent (Gamma : ensemble (frm L)) (Gamma' : ensemble (fr
 Proof.
   split; intros INCONSISTENT.
   - rewrite inconsistent_iff in INCONSISTENT. rewrite inconsistent_iff.
-    destruct INCONSISTENT as [p [PROVE PROVE']]. exists (embed_frm p).
-    rewrite <- embed_frms_spec in SIM. rewrite <- SIM. split.
-    + eapply embed_proves; trivial.
-    + change (E.image embed_frm Gamma ⊢ embed_frm (Neg_frm p)). eapply embed_proves; trivial.
+    rewrite <- embed_frms_spec in SIM. rewrite <- SIM.
+    change (E.image embed_frm Gamma ⊢ embed_frm Bot_frm). now eapply embed_proves.
   - intros p. pose proof (INCONSISTENT (embed_frm p)) as claim.
     rewrite <- embed_frms_spec in SIM. rewrite <- SIM in claim.
     eapply embed_proves_inv. exact claim.
 Qed.
+
+Context {enum_frm_L' : isEnumerable (frm L')}.
 
 End HENKIN.
 
