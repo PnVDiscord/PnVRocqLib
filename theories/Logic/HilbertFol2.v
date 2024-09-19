@@ -320,6 +320,12 @@ Proof.
     + eapply for_ByHyp. exploit (INCL (embed_frm q)). ss!. intros IN. ss!. apply embed_frm_inj in H; subst x; done.
 Qed.
 
+Theorem embed_frm_proves_iff (Gamma : ensemble (frm L)) (p : frm L)
+  : E.image embed_frm Gamma ⊢ embed_frm p <-> Gamma ⊢ p.
+Proof.
+  split; [eapply embed_proves_inv | eapply embed_proves].
+Qed.
+
 Theorem similar_equiconsistent (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L'))
   (SIM : Gamma =~= Gamma')
   : inconsistent Gamma <-> inconsistent Gamma'.

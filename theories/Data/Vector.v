@@ -198,48 +198,30 @@ Context {A : Type}.
 
 #[local] Notation vec := (Vector.t A).
 
-Definition cast {n : nat} {m : nat} (H_eq : n = m) : vec n -> vec m :=
-  match H_eq with
-  | eq_refl => fun xs => xs
-  end.
-
-Lemma case0 (phi : vec O -> Type)
-  (phiVNil : phi [])
-  : forall xs, phi xs.
+Lemma case0 (phi : Vector.t A O -> Type)
+  (phi_nil : phi (@VNil A))
+  : forall ts, phi ts.
 Proof.
-  refine (
-    let claim1 (xs : vec O) : forall H_eq : O = O, phi (cast H_eq xs) :=
-      match xs in Vector.t _ m return forall H_eq : m = O, phi (cast H_eq xs) with
-      | VNil => fun H_eq : O = O => _
-      | VCons n x' xs' => fun H_eq : S n = O => _
-      end
-    in _
+  intros ts. revert phi phi_nil.
+  exact (
+    match ts as ts in Vector.t _ n return (match n as n return Vector.t A n -> Type with O => fun ts => forall phi : Vector.t A O -> Type, phi VNil -> phi ts | S n' => fun ts => unit end) ts with
+    | @VNil _ => fun phi => fun phi_O => phi_O
+    | @VCons _ n' t' ts' => tt
+    end
   ).
-  { intros xs. exact (claim1 xs eq_refl). }
-Unshelve.
-  - rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
-    exact (phiVNil).
-  - inversion H_eq.
 Defined.
 
-Lemma caseS {n' : nat} (phi : vec (S n') -> Type)
-  (phiVCons : forall x', forall xs', phi (x' :: xs'))
-  : forall xs, phi xs.
+Lemma caseS {n' : nat} (phi : Vector.t A (S n') -> Type)
+  (phi_cons : forall t', forall ts', phi (@VCons A n' t' ts'))
+  : forall ts, phi ts.
 Proof.
-  refine (
-    let claim1 (xs : vec (S n')) : forall H_eq : S n' = S n', phi (cast H_eq xs) :=
-      match xs in Vector.t _ m return forall H_eq : m = S n', phi (cast H_eq xs) with
-      | VNil => fun H_eq : O = S n' => _
-      | VCons n x' xs' => fun H_eq : S n = S n' => _
-      end
-    in _
+  intros ts. revert phi phi_cons.
+  exact (
+    match ts as ts in Vector.t _ n return (match n as n return Vector.t A n -> Type with O => fun _ => unit | S n' => fun ts => forall phi : Vector.t A (S n') -> Type, (forall t' : A, forall ts' : Vector.t A n', phi (VCons n' t' ts')) -> phi ts end) ts with
+    | @VNil _ => tt
+    | @VCons _ n' t' ts' => fun phi => fun phi_S => phi_S t' ts'
+    end
   ).
-  { intros xs. exact (claim1 xs eq_refl). }
-Unshelve.
-  - inversion H_eq.
-  - pose proof (f_equal pred H_eq) as n_eq_n'. simpl in n_eq_n'. subst n'.
-    rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
-    exact (phiVCons x' xs').
 Defined.
 
 Lemma rectS (phi : forall n, vec (S n) -> Type)
@@ -523,6 +505,43 @@ Proof.
   induction xs as [ | n x xs IH]; simpl.
   - econs.
   - destruct IH. rewrite to_list_from_list. econs.
+Qed.
+
+#[local] Hint Constructors vec_heq : core.
+
+Lemma nth_error_to_list (n : nat) (xs : Vector.t A n) (i : nat)
+  (LT : i < n)
+  : nth_error (to_list xs) i = Some (xs !! Fin.getFin i LT).
+Proof.
+  assert (claim : exists zs : list A, from_list zs =~= xs).
+  { exists (to_list xs). eapply from_list_to_list. }
+  destruct claim as [zs EQ]. destruct EQ. rename i into k.
+  remember (Fin.getFin k LT) as i eqn: H_i. apply f_equal with (f := Fin.runFin) in H_i.
+  rewrite Fin.runFin_getFin_id in H_i. revert k i LT H_i. induction zs as [ | z zs IH]; i.
+  - simpl in *. inv LT.
+  - simpl from_list. simpl to_list. simpl length in *. revert i H_i. Fin.caseS i'; i.
+    + assert (EQ : k = O).
+      { pose proof (@Fin.getFin_runFin_id (S (length zs)) FZ) as claim. rewrite H_i in claim. simpl proj1_sig in claim.
+        apply f_equal with (f := Fin.runFin) in claim. rewrite Fin.runFin_getFin_id in claim. simpl in claim.
+        apply f_equal with (f := @proj1_sig _ _) in claim. simpl in claim. trivial. 
+      }
+      subst k. simpl. reflexivity.
+    + assert (EQ : k = S (proj1_sig (Fin.runFin i'))).
+      { pose proof (@Fin.getFin_runFin_id (S (length zs)) (FS i')) as claim. rewrite H_i in claim. simpl proj1_sig in claim.
+        apply f_equal with (f := Fin.runFin) in claim. rewrite Fin.runFin_getFin_id in claim. simpl in claim.
+        apply f_equal with (f := @proj1_sig _ _) in claim. simpl in claim. trivial.
+      }
+      subst k. simpl. eapply IH. simpl in H_i. rewrite <- Fin.runFin_getFin_id. rewrite Fin.getFin_runFin_id. reflexivity.
+Qed.
+
+Lemma nth_error_to_list_eq (n : nat) (xs : Vector.t A n) (i : nat)
+  : nth_error (to_list xs) i = (match le_lt_dec n i with right LT => Some (xs !! Fin.getFin i LT) | left GE => None end).
+Proof.
+  destruct (le_lt_dec n i) as [GE | LT].
+  - revert i GE. induction xs as [ | n x xs IH]; simpl; i.
+    + destruct i as [ | i']; trivial.
+    + destruct i as [ | i']; [lia | simpl; eapply IH; lia].
+  - eapply nth_error_to_list.
 Qed.
 
 Lemma heq_refl (n1 : nat) (xs1 : Vector.t A n1)
