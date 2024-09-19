@@ -34,6 +34,32 @@ Proof.
     + exact PF.
 Qed.
 
+Section UNION.
+
+Definition union_f (f : nat -> ensemble (frm L)) : ensemble (frm L) :=
+  fun p => exists n, p \in f n.
+
+Variable f : nat -> ensemble (frm L).
+
+Hypothesis incl : forall n1 : nat, forall n2 : nat, forall LE : n1 <= n2, f n1 \subseteq f n2.
+
+Lemma union_f_proves p
+  (PROVE : union_f f ⊢ p)
+  : exists n, f n ⊢ p.
+Proof.
+  destruct PROVE as (ps&INCL&(PF)).
+  enough (WTS : exists n, E.fromList ps \subseteq f n).
+  { destruct WTS as [n SUBSET]. exists n. exists ps. split; trivial. econs; exact PF. }
+  clear PF p. induction ps as [ | p ps IH]; simpl.
+  - exists 0. done.
+  - exploit IH. ii. eapply INCL. done!. intros [n SUBSET]. exploit (INCL p). done!. intros [m IN].
+    exists (max n m). intros q q_in. s!. destruct q_in as [-> | q_in].
+    + eapply incl with (n1 := m); done!.
+    + eapply incl with (n1 := n); done!.
+Qed.
+
+End UNION.
+
 End EXTRA1.
 
 Section HENKIN.
