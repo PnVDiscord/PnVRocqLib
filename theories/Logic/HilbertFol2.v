@@ -19,6 +19,24 @@ Infix "⊢" := HilbertFol.proves : type_scope.
 
 Section EXTRA1.
 
+Lemma extend_alpha_proves {L : language} (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L)) (C : frm L)
+  (SUBSET : forall p : frm L, forall IN : p \in Gamma, exists p' : frm L, p ≡ p' /\ p' \in Gamma')
+  (PROVE : Gamma ⊢ C)
+  : Gamma' ⊢ C.
+Proof.
+  destruct PROVE as (ps&INCL&(PF)).
+  assert (PROVE : E.fromList ps ⊢ C).
+  { exists ps. split. done. econs. exact PF. }
+  clear PF. revert Gamma Gamma' C SUBSET INCL PROVE. induction ps as [ | p ps IH]; simpl; i.
+  - eapply extend_proves with (Gamma := E.fromList []). done. exact PROVE.
+  - exploit (SUBSET p). done!. intros (p'&ALPHA&IN). eapply for_Imp_E with (p := p').
+    + eapply IH with (Gamma := Gamma).
+      * intros q q_in. exploit (SUBSET q); trivial.
+      * done!.
+      * rewrite <- ALPHA. rewrite Deduction_theorem. eapply extend_proves with (Gamma := E.fromList (p :: ps)); trivial. done!.
+    + eapply for_ByHyp; trivial.
+Qed.
+
 Definition inconsistent {L : language} (Gamma : ensemble (frm L)) : Prop :=
   forall p, Gamma ⊢ p.
 
@@ -989,6 +1007,110 @@ Proof.
 Qed.
 
 Context {enum_frm_L' : isEnumerable (frm L')}.
+
+Fixpoint addHenkin (X : ensemble (frm L')) (n : nat) {struct n} : ensemble (frm L') :=
+  match n with
+  | O => X
+  | S n => E.insert (nth_Henkin_axiom n) (addHenkin X n)
+  end.
+
+Lemma addHenkin_incl (X : ensemble (frm L')) (n1 : nat) (n2 : nat)
+  (LE : n1 <= n2)
+  : addHenkin X n1 \subseteq addHenkin X n2.
+Proof.
+  revert X. induction LE; i.
+  - reflexivity.
+  - simpl. etransitivity. eapply IHLE. done!.
+Qed.
+
+Lemma addHenkin_nth_Henkin_not_occur (X : ensemble (frm L')) k n (p : frm L')
+  (LE : k <= n)
+  (HC_free : forall A : frm L', forall c : Henkin_constants, forall IN : A \in X, HC_occurs_in_frm c A = false)
+  (IN : p \in addHenkin X k)
+  : HC_occurs_in_frm (nth_Henkin_constant n) p = false.
+Proof.
+  revert n X p LE HC_free IN. induction k as [ | k IH]; simpl; i.
+  - eapply HC_free; trivial.
+  - s!. destruct IN as [-> | IN].
+    + eapply Henkin_constant_does_not_occur_in_any_former_Henkin_axioms. lia.
+    + eapply IH with (X := X); done!.
+Qed.
+
+Lemma addHenkin_equiconsistent (X : ensemble (frm L')) n
+  (HC_free : forall A : frm L', forall c : Henkin_constants, forall IN : A \in X, HC_occurs_in_frm c A = false)
+  : inconsistent (addHenkin X n) <-> inconsistent (addHenkin X (S n)).
+Proof.
+  split; intros INCONSISTENT.
+  - intros p. simpl. eapply extend_infers. eapply INCONSISTENT. done!.
+  - simpl in INCONSISTENT. rewrite inconsistent_iff in INCONSISTENT. rewrite inconsistent_iff.
+    set (x := fst (cp n)). set (phi := enum (snd (cp n))). set (c := @Con_trm L' (inr (nth_Henkin_constant n))).
+    assert (PROVE1 : addHenkin X n ⊢ Neg_frm (nth_Henkin_axiom n)).
+    { eapply NegationI. exact INCONSISTENT. }
+    rewrite Henkin_axiom_is_of_form in PROVE1. fold x in PROVE1. fold c in PROVE1. fold phi in PROVE1.
+    assert (PROVE2 : addHenkin X n ⊢ subst_frm (one_subst x c) phi).
+    { eapply for_Imp_E. exists []. split. done. econs. eapply proof_dne.
+      eapply for_Imp_E. 2: eapply PROVE1. eapply for_CP1. exists []. split. done. econs. eapply proof_ex_falso.
+    }
+    assert (PROVE3 : addHenkin X n ⊢ Neg_frm (All_frm x phi)).
+    { eapply for_Imp_E. 2: eapply PROVE1. eapply for_CP1. eapply for_Imp_I. eapply for_Imp_I. eapply for_ByHyp. done!. }
+    eapply ContradictionI with (A := All_frm x phi); trivial.
+    clear PROVE1 PROVE3. rename PROVE2 into PROVE. set (Gamma := addHenkin X n) in *.
+    destruct PROVE as (ps&INCL&(PF)). set (y := 1 + max (max x (maxs (map last_ivar_frm ps))) (max (last_ivar_frm (All_frm x phi)) (last_ivar_frm (subst_frm (one_subst x c) phi)))).
+    eapply extend_alpha_proves with (Gamma := E.image (replace_constant_in_frm (nth_Henkin_constant n) (Var_trm y)) (E.fromList ps)).
+    { ii. rewrite E.in_image_iff in IN. destruct IN as [q [-> IN]]. exists q. split; [ | done!].
+      exploit (addHenkin_nth_Henkin_not_occur X n n q (@le_n n)); trivial.
+      { now eapply INCL. }
+      intros claim1. unfold replace_constant_in_frm. transitivity (subst_frm nil_subst q).
+      - erewrite subst_hsubst_compat_in_frm. 2: ii; reflexivity. eapply alpha_equiv_eq_intro. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. intros [u | u] u_free; simpl.
+        + unfold one_hsubst, cons_hsubst, nil_hsubst, nil_subst. destruct (eqb _ _) as [ | ] eqn: H_OBS; rewrite eqb_spec in H_OBS; done!.
+        + unfold one_hsubst, cons_hsubst, nil_hsubst. destruct (eqb _ _) as [ | ] eqn: H_OBS; rewrite eqb_spec in H_OBS.
+          * rewrite H_OBS in u_free. rewrite occurs_free_in_frm_iff in u_free. rewrite in_accum_hatom_in_frm_iff_HC_occurs_in_frm in u_free. congruence.
+          * reflexivity.
+      - eapply subst_nil_frm. intros u u_free. reflexivity.
+    }
+    eapply for_All_I' with (y := y).
+    + ii. rewrite E.in_image_iff in H. destruct H as [q [-> IN]].
+      unfold replace_constant_in_frm. eapply frm_is_fresh_in_hsubst_iff. unfold frm_is_fresh_in_hsubst.
+      rewrite L.forallb_forall. unfold compose. intros u u_free. rewrite negb_true_iff. unfold one_hsubst, cons_hsubst, nil_hsubst. destruct (eqb _ _) as [ | ] eqn: H_OBS; rewrite eqb_spec in H_OBS.
+      * subst u. rewrite in_accum_hatom_in_frm_iff_HC_occurs_in_frm in u_free. exploit (addHenkin_nth_Henkin_not_occur X n n q (@le_n n)); trivial.
+        { now eapply INCL. }
+        intros claim. congruence.
+      * destruct u as [u | u].
+        { rewrite in_accum_hatom_in_frm_iff_is_free_in_frm in u_free. rewrite is_free_in_trm_unfold. erewrite Nat.eqb_neq. intros ->.
+          rewrite <- not_false_iff_true in u_free. eapply u_free. eapply last_ivar_frm_gt. red. red.
+          transitivity (1 + maxs (map last_ivar_frm ps)).
+          - enough (WTS : last_ivar_frm q <= maxs (map last_ivar_frm ps)) by lia.
+            eapply in_maxs_ge. done!.
+          - lia.
+        }
+        { reflexivity. }
+    + red. eapply last_ivar_frm_gt. lia.
+    + assert (ALPHA : subst_frm (one_subst x (Var_trm y)) phi ≡ replace_constant_in_frm (nth_Henkin_constant n) (Var_trm y) (subst_frm (one_subst x c) phi)).
+      { eapply alpha_equiv_eq_intro. unfold replace_constant_in_frm. erewrite subst_hsubst_compat_in_frm. 2: ii; reflexivity. erewrite subst_hsubst_compat_in_frm. 2: ii; reflexivity.
+        rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. intros [u | u] u_free.
+        - unfold to_hsubst, hsubst_compose, one_subst, cons_subst, nil_subst, one_hsubst, cons_hsubst, nil_hsubst. destruct (eq_dec u x) as [EQ1 | NE1]; trivial.
+          subst u. unfold c. rewrite hsubst_trm_unfold. destruct (eqb _ _) as [ | ] eqn: H_OBS; rewrite eqb_spec in H_OBS; done!.
+        - unfold to_hsubst, hsubst_compose, one_subst, cons_subst, nil_subst, one_hsubst, cons_hsubst, nil_hsubst. rewrite hsubst_trm_unfold. destruct (eqb _ _) as [ | ] eqn: H_OBS; rewrite eqb_spec in H_OBS.
+          + rewrite H_OBS in u_free. pose proof (@Henkin_constant_does_not_occur_in_enum L enum_frm_L' n) as claim. fold phi in claim.
+            rewrite occurs_free_in_frm_iff in u_free. rewrite in_accum_hatom_in_frm_iff_HC_occurs_in_frm in u_free. congruence.
+          + reflexivity.
+      }
+      rewrite ALPHA. eapply proves_hsubstitutivity. exists ps. split. done. econs. exact PF.
+Qed.
+
+Definition AddHenkin (X : ensemble (frm L)) : ensemble (frm L') :=
+  union_f (addHenkin (E.image embed_frm X)).
+
+Theorem AddHenkin_equiconsistent (X : ensemble (frm L))
+  : inconsistent X <-> inconsistent (AddHenkin X).
+Proof.
+  transitivity (inconsistent (E.image embed_frm X)).
+  - eapply similar_equiconsistent. rewrite <- embed_frms_spec. reflexivity.
+  - unfold AddHenkin. rewrite <- equiconsistent_union_f.
+    + simpl. reflexivity.
+    + eapply addHenkin_incl.
+    + intros n. eapply addHenkin_equiconsistent. intros p c IN. rewrite E.in_image_iff in IN. destruct IN as [q [-> IN]]. eapply embed_frm_HC_free.
+Qed.
 
 End HENKIN.
 
