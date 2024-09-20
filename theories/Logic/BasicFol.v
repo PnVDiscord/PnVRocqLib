@@ -1599,7 +1599,7 @@ Lemma alpha_is_not_free_in_frm (p : frm L) (p' : frm L) (x : ivar)
   (NOT_FREE : is_not_free_in_frm x p)
   : is_not_free_in_frm x p'.
 Proof.
-  red. red in NOT_FREE. symmetry in ALPHA. pose proof (is_free_in_frm_compat_alpha_equiv p' p x ALPHA). destruct (is_free_in_frm x p') as [ | ]; done!.
+  red. red in NOT_FREE. symmetry in ALPHA. pose proof (is_free_in_frm_compat_alpha_equiv p' p x ALPHA); destruct (is_free_in_frm x p') as [ | ]; done!.
 Qed.
 
 Definition close_ivars (p : frm L) : list ivar -> frm L :=
@@ -1607,6 +1607,17 @@ Definition close_ivars (p : frm L) : list ivar -> frm L :=
 
 Definition closed_frm (p : frm L) : frm L :=
   close_ivars p (nodup eq_dec (fvs_frm p)).
+
+Lemma closed_frm_closed (p : frm L)
+  : forall z, is_free_in_frm z (closed_frm p) = true -> False.
+Proof.
+  intros z. unfold closed_frm. remember (nodup eq_dec (fvs_frm p)) as xs eqn: H_xs. intros FREE.
+  assert (claim : forall x, L.In x xs <-> is_free_in_frm x p = true).
+  { intros x. subst xs. rewrite L.nodup_In. rewrite fv_is_free_in_frm. reflexivity. }
+  clear H_xs. specialize claim with (x := z). revert z p FREE claim. induction xs as [ | x xs IH]; simpl; i.
+  - rewrite claim; trivial.
+  - s!. eapply IH with (z := z) (p := p); done!.
+Qed.
 
 Definition fresh_var (x : ivar) (t : trm L) (p : frm L) : ivar :=
   1 + maxs ([x] ++ fvs_trm t ++ fvs_frm p).
