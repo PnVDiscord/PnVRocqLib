@@ -28,7 +28,8 @@ Definition augmented_language (L : language) (constant_symbols' : Set) : languag
     relation_arity_table := L.(relation_arity_table);
   |}.
 
-Definition Henkin_constants : Set := nat.
+Definition Henkin_constants : Set :=
+  nat.
 
 Context {L : language}.
 
