@@ -11,6 +11,15 @@ Proof.
   eapply UIP_dec. exact hasEqDec.
 Defined.
 
+Lemma exist_eq_fromEqDec {A : Type} (P : A -> bool) (x : A) (x' : A) (H : P x = true) (H' : P x' = true)
+  : @exist A P x H = @exist A P x' H' <-> x = x'.
+Proof.
+  split.
+  - intros EQ. inv EQ. reflexivity.
+  - intros EQ. subst x'. f_equal.
+    eapply UIP_dec. decide equality.
+Qed.
+
 Lemma projT2_eq_fromEqDec {A : Type} {B : A -> Type} {hasEqDec : hasEqDec A} (x : A) (y1 : B x) (y2 : B x)
   (EQ : @existT A B x y1 = @existT A B x y2)
   : y1 = y2.

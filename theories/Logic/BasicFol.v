@@ -2027,13 +2027,40 @@ Next Obligation.
   enough (WTS : true = false) by discriminate. rewrite <- H. rewrite <- claim3. reflexivity.
 Qed.
 
+Lemma closed_frm_is_sentence (p : frm L)
+  : L.null (fvs_frm (closed_frm p)) = true.
+Proof.
+  rewrite L.null_spec. destruct (fvs_frm (closed_frm p)) as [ | z zs] eqn: H_OBS; trivial.
+  contradiction (@closed_frm_closed p z). rewrite <- fv_is_free_in_frm. rewrite H_OBS; simpl; left; trivial.
+Qed.
+
+Definition sentence : Set :=
+  { p : frm L | L.null (fvs_frm p) = true }.
+
+#[program]
+Definition sentence_isEnumerable (enum_frm_L : isEnumerable (frm L)) : isEnumerable sentence :=
+  {| enum n := @exist _ _ (closed_frm (enum n)) (closed_frm_is_sentence (enum n)) |}.
+Next Obligation.
+  unfold closed_frm. destruct x as [p p_eq]; simpl in *.
+  assert (EQ : (close_ivars p (nodup eq_dec (fvs_frm p))) = p). 
+  { enough (WTS : (nodup eq_dec (fvs_frm p)) = []) by now rewrite WTS.
+    destruct (nodup eq_dec (fvs_frm p)) as [ | z zs] eqn: H_OBS.
+    - reflexivity.
+    - assert (claim : L.In z (fvs_frm p)).
+      { rewrite <- L.nodup_In with (decA := eq_dec). rewrite H_OBS. simpl. left. reflexivity. }
+      rewrite L.null_spec in p_eq. rewrite p_eq in claim. contradiction claim.
+  }
+  exists (proj1_sig (enum_spec p)). destruct (enum_spec p) as [n n_eq]; simpl.
+  rewrite <- n_eq in EQ. rewrite @exist_eq_fromEqDec with (A := frm L) (P := fun p => L.null (fvs_frm p)).
+  rewrite EQ. exact n_eq.
+Qed.
+
 End FOL_SYNTAX.
 
 #[global] Arguments scoped_trm : clear implicits.
 #[global] Arguments scoped_trms : clear implicits.
 #[global] Arguments scoped_frm : clear implicits.
-
-Notation senetence L := (scoped_frm L []).
+#[global] Arguments sentence : clear implicits.
 
 Section EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
 

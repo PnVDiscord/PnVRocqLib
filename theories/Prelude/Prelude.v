@@ -1039,6 +1039,13 @@ Proof.
 Defined.
 
 #[global]
+Instance bool_hasEqDec
+  : hasEqDec bool.
+Proof.
+  red. decide equality.
+Defined.
+
+#[global]
 Instance sum_hasEqDec {A : Type} {B : Type}
   `(A_hasEqDec : hasEqDec A)
   `(B_hasEqDec : hasEqDec B)
