@@ -1267,8 +1267,8 @@ Proof.
       rewrite ALPHA. eapply proves_hsubstitutivity. exists ps. split. done. econs. exact PF.
 Qed.
 
-Theorem Henkin_complete (X : ensemble (frm L')) (Gamma : ensemble (frm L')) (x : ivar) (phi : frm L')
-  : exists c : Henkin_constants, (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) \in union_f (addHenkin X).
+Theorem Henkin_complete (Gamma : ensemble (frm L')) (x : ivar) (phi : frm L')
+  : exists c : Henkin_constants, (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) \in union_f (addHenkin Gamma).
 Proof.
   set (n := cpInv x (proj1_sig (enum_spec phi))).
   pose proof (@Henkin_axiom_is_of_form L enum_frm_L' n) as claim.
@@ -1293,33 +1293,32 @@ Qed.
 
 #[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
 
-Theorem theorem_of_1_3_10 (X : ensemble (frm L'))
-  (HENKIN : forall x : ivar, forall phi : frm L', exists c : Henkin_constants, (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) \in X)
-  : MaximallyConsistentSet_spec X (MaximallyConsistentSet X).
+Theorem theorem_of_1_3_10 (Gamma : ensemble (frm L))
+  : MaximallyConsistentSet_spec (E.image embed_frm Gamma) (MaximallyConsistentSet (AddHenkin (E.image embed_frm Gamma))).
 Proof with eauto with *.
-  pose proof (lemma1 := @lemma1_of_1_3_8 L').
-  pose proof (theorem_of_1_2_14 (Th X) (lemma1 X)) as [? ? ? ?].
-  fold (MaximallyConsistentSet X) in SUBSET, IS_FILTER, COMPLETE, EQUICONSISTENT.
-  assert (CLOSED_infers : forall b, b \in MaximallyConsistentSet X <-> MaximallyConsistentSet X ⊢ b).
+  set (X := E.image embed_frm Gamma). pose proof (lemma1 := @lemma1_of_1_3_8 L').
+  pose proof (theorem_of_1_2_14 (Th (AddHenkin X)) (lemma1 (AddHenkin X))) as [? ? ? ?].
+  fold (MaximallyConsistentSet (AddHenkin X)) in SUBSET, IS_FILTER, COMPLETE, EQUICONSISTENT.
+  assert (CLOSED_infers : forall b, b \in MaximallyConsistentSet (AddHenkin X) <-> MaximallyConsistentSet (AddHenkin X) ⊢ b).
   { intros b. split; intros b_in.
-    - enough (to_show : b \in Th (MaximallyConsistentSet X)) by now inversion to_show.
+    - enough (to_show : b \in Th (MaximallyConsistentSet (AddHenkin X))) by now inversion to_show.
       rewrite <- cl_eq_Th. eapply fact3_of_1_2_8...
     - eapply fact5_of_1_2_8... rewrite cl_eq_Th... econs...
   }
-  assert (META_DN : forall b, (Neg_frm b \in MaximallyConsistentSet X -> Bot_frm \in MaximallyConsistentSet X) -> b \in MaximallyConsistentSet X).
+  assert (META_DN : forall b, (Neg_frm b \in MaximallyConsistentSet (AddHenkin X) -> Bot_frm \in MaximallyConsistentSet (AddHenkin X)) -> b \in MaximallyConsistentSet (AddHenkin X)).
   { intros b NEGATION. eapply COMPLETE. split.
     - intros INCONSISTENT. eapply inconsistent_compatWith_isSubsetOf...
-      transitivity (E.insert b (MaximallyConsistentSet X)).
+      transitivity (E.insert b (MaximallyConsistentSet (AddHenkin X))).
       + ii; right...
       + eapply fact3_of_1_2_8.
     - intros INCONSISTENT.
-      assert (claim1 : E.insert b (MaximallyConsistentSet X) ⊢ Bot_frm).
+      assert (claim1 : E.insert b (MaximallyConsistentSet (AddHenkin X)) ⊢ Bot_frm).
       { rewrite <- inconsistent_okay in INCONSISTENT... }
       exists (Bot_frm). split...
       + eapply NEGATION, CLOSED_infers, NegationI...
       + reflexivity.
   }
-  assert (IMPLICATION_FAITHFUL : forall A, forall B, Imp_frm A B \in MaximallyConsistentSet X <-> << IMPLICATION : A \in MaximallyConsistentSet X -> B \in MaximallyConsistentSet X >>).
+  assert (IMPLICATION_FAITHFUL : forall A, forall B, Imp_frm A B \in MaximallyConsistentSet (AddHenkin X) <-> << IMPLICATION : A \in MaximallyConsistentSet (AddHenkin X) -> B \in MaximallyConsistentSet (AddHenkin X) >>).
   { intros b b'. split.
     - intros IMPLICATION b_in.
       eapply CLOSED_infers. eapply ImplicationE with (A := b).
@@ -1327,14 +1326,14 @@ Proof with eauto with *.
       + eapply CLOSED_infers...
     - intros IMPLICATION. eapply META_DN.
       intros H_in. eapply CLOSED_infers.
-      assert (claim1 : E.insert (Imp_frm b b') (MaximallyConsistentSet X) ⊢ Bot_frm).
+      assert (claim1 : E.insert (Imp_frm b b') (MaximallyConsistentSet (AddHenkin X)) ⊢ Bot_frm).
       { eapply ContradictionI with (A := Imp_frm b b').
         - eapply ByAssumption. left...
-        - eapply extend_infers with (Gamma := MaximallyConsistentSet X).
+        - eapply extend_infers with (Gamma := MaximallyConsistentSet (AddHenkin X)).
           + eapply CLOSED_infers...
           + ii; right...
       }
-      assert (claim2 : MaximallyConsistentSet X ⊢ Con_frm b (Neg_frm b')).
+      assert (claim2 : MaximallyConsistentSet (AddHenkin X) ⊢ Con_frm b (Neg_frm b')).
       { eapply DisjunctionE with (A := b) (B := Neg_frm b).
         - eapply extend_infers with (Gamma := E.empty).
           + eapply Law_of_Excluded_Middle.
@@ -1358,22 +1357,33 @@ Proof with eauto with *.
             { eapply ByAssumption. right; left... }
           + eapply extend_infers... ii; s!. tauto.
       }
-      assert (claim3 : MaximallyConsistentSet X ⊢ b).
+      assert (claim3 : MaximallyConsistentSet (AddHenkin X) ⊢ b).
       { eapply ConjunctionE1... }
-      assert (claim4 : MaximallyConsistentSet X ⊢ Neg_frm b').
+      assert (claim4 : MaximallyConsistentSet (AddHenkin X) ⊢ Neg_frm b').
       { eapply ConjunctionE2. exact claim2. }
       eapply ContradictionI with (A := b'); trivial.
       eapply CLOSED_infers, IMPLICATION, CLOSED_infers; trivial.
   }
-  assert (FORALL_FAITHFUL : forall x, forall A, All_frm x A \in MaximallyConsistentSet X <-> << IMPLICATION : forall t, subst_frm (one_subst x t) A \in MaximallyConsistentSet X >>).
+  assert (FORALL_FAITHFUL : forall x, forall A, All_frm x A \in MaximallyConsistentSet (AddHenkin X) <-> << IMPLICATION : forall t, subst_frm (one_subst x t) A \in MaximallyConsistentSet (AddHenkin X) >>).
   { intros x phi. split.
     - intros UNIVERSAL IN. eapply CLOSED_infers. eapply UniversalE with (A := phi). eapply CLOSED_infers...
-    - intros UNIVERSAL. unnw. pose proof (HENKIN x phi) as [c IN].
+    - intros UNIVERSAL. unnw. pose proof (Henkin_complete X x phi) as [c IN].
       eapply IMPLICATION_FAITHFUL with (A := subst_frm (one_subst x (@Con_trm L' (inr c))) phi).
       + eapply SUBSET. econs. eapply ByAssumption...
       + eapply UNIVERSAL.
   }
-  repeat (split; trivial).
+  assert (claim1 : Th X \subseteq MaximallyConsistentSet (AddHenkin X)).
+  { transitivity (Th (AddHenkin X))... intros p p_in. rewrite <- cl_eq_Th in *. revert p p_in. eapply fact4_of_1_2_8. unfold AddHenkin. rewrite <- subset_union_f with (n := 0). reflexivity. }
+  assert (claim2 : equiconsistent (MaximallyConsistentSet (AddHenkin X)) (Th X)).
+  { red. split; intros INCONSISTENT.
+    - rewrite <- cl_eq_Th. rewrite <- inconsistent_okay. rewrite AddHenkin_equiconsistent.
+      + rewrite inconsistent_okay. rewrite cl_eq_Th. eapply EQUICONSISTENT...
+      + intros A c IN. unfold X in IN. rewrite E.in_image_iff in IN. destruct IN as [n [-> IN]]. eapply embed_frm_HC_free.
+    - rewrite <- cl_eq_Th in INCONSISTENT. rewrite <- inconsistent_okay in INCONSISTENT.
+      eapply EQUICONSISTENT. rewrite <- cl_eq_Th. rewrite <- inconsistent_okay. rewrite <- AddHenkin_equiconsistent...
+      intros A c IN. unfold X in IN. rewrite E.in_image_iff in IN. destruct IN as [n [-> IN]]. eapply embed_frm_HC_free.
+  }
+  red in claim2. repeat (split; trivial); tauto.
 Qed.
 
 End HENKIN.
