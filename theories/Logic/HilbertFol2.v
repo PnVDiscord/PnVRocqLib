@@ -656,6 +656,56 @@ Proof.
   - intros INCONSISTENT q. eapply ContradictionE. eapply INCONSISTENT.
 Qed.
 
+Corollary Th_isSubsetOf_cl (X : ensemble formula)
+  : Th X \subseteq cl X.
+Proof.
+  intros b [PROVE]. destruct PROVE as (ps&INCL&(PF)). exists ps. split; unnw.
+  - done.
+  - rewrite andsB_le_iff. exists (E.intersection (E.fromList ps) X). split.
+    + done!.
+    + eapply extend_proves with (Gamma := E.fromList ps). done!. exists ps. split. done. econs. exact PF.
+Qed.
+
+Corollary cl_eq_Th (X : ensemble formula)
+  : cl X == Th X.
+Proof.
+  s!. split.
+  - eapply cl_isSubsetOf_Th.
+  - eapply Th_isSubsetOf_cl.
+Qed.
+
+Lemma inconsistent_cl_iff (X : ensemble (frm L))
+  : Bot_frm \in cl X <-> X ⊢ Bot_frm.
+Proof.
+  split.
+  - intros IN. rewrite cl_eq_Th in IN. destruct IN as [INFERS]. exact INFERS.
+  - intros INFERS. rewrite cl_eq_Th. econs. exact INFERS.
+Qed.
+
+Lemma filter_inconsistent_iff (F : ensemble formula)
+  (F_isFilter : isFilter F)
+  : inconsistent F <-> Bot_frm \in F.
+Proof with eauto with *.
+  split.
+  - intros INCONSISTENT. pose proof (fact5_of_1_2_8 F F_isFilter) as SUBSET.
+    eapply SUBSET. rewrite inconsistent_cl_iff. now rewrite <- inconsistent_iff.
+  - intros IN. pose proof (fact3_of_1_2_8 F) as SUBSET.
+    rewrite inconsistent_iff. rewrite <- inconsistent_cl_iff. now eapply SUBSET.
+Qed.
+
+Lemma inconsistent_okay (Gamma : ensemble (frm L))
+  : inconsistent Gamma <-> BooleanAlgebra.inconsistent (cl Gamma).
+Proof.
+  unfold BooleanAlgebra.inconsistent. rewrite inconsistent_iff. split.
+  - intros INFERS. exists Bot_frm. split; try reflexivity.
+    rewrite cl_eq_Th. econs; trivial.
+  - intros [botB [IN EQ]].
+    enough (WTS : Bot_frm \in Th Gamma).
+    { destruct WTS; trivial. }
+    simpl in *. rewrite cl_eq_Th in IN. destruct EQ as [INFERS _].
+    econs. eapply cut_one with (A := botB); trivial. destruct IN as [PROVE]; trivial.
+Qed.
+
 Section UNION.
 
 Definition union_f (f : nat -> ensemble (frm L)) : ensemble (frm L) :=
@@ -700,6 +750,125 @@ Proof.
 Qed.
 
 End UNION.
+
+#[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
+
+Context {enum_frm_L : isEnumerable formula}.
+
+#[global]
+Instance LindenbaumBooleanAlgebra : isCBA formula (SETOID := formula_isSetoid) :=
+  { CBA_isBA := formula_isBA
+  ; CBA_satisfiesBooleanAlgebraLaws := LBA_satisfiesBooleanAlgebraLaws 
+  ; CBA_countable := enum_frm_L
+  }.
+
+Fixpoint axiom_set (X : ensemble formula) (n : nat) {struct n} : ensemble formula :=
+  match n with
+  | O => X
+  | S n => E.union (axiom_set X n) (insertion (improveFilter (Th X) n) n)
+  end.
+
+Lemma lemma1_of_1_3_9 (X : ensemble formula) (n : nat)
+  : improveFilter (Th X) n == Th (axiom_set X n).
+Proof with eauto with *.
+  revert X; induction n as [ | n IH]; [reflexivity | intros X b].
+  simpl. unfold Insertion. rewrite cl_eq_Th, IH. split; intros b_in.
+  - rewrite <- cl_eq_Th. rewrite <- cl_eq_Th in b_in. revert b b_in.
+    change ((cl (E.union (Th (axiom_set X n)) (insertion (Th (axiom_set X n)) n))) \subseteq (cl (E.union (axiom_set X n) (insertion (Th (axiom_set X n)) n)))).
+    transitivity (cl (cl (E.union (axiom_set X n) (insertion (Th (axiom_set X n)) n)))).
+    + eapply fact4_of_1_2_8. intros b [b_in | b_in].
+      * rewrite <- cl_eq_Th in b_in. revert b b_in. eapply fact4_of_1_2_8. ii; left...
+      * rewrite cl_eq_Th. econstructor. eapply ByAssumption. right...
+    + eapply fact5_of_1_2_8...
+  - rewrite <- cl_eq_Th. rewrite <- cl_eq_Th in b_in. revert b b_in.
+    eapply fact4_of_1_2_8. intros b [b_in | b_in].
+    + left. econstructor. eapply ByAssumption...
+    + right...
+Qed.
+
+Lemma completeness_theorem_prototype (X : ensemble formula) (b : formula) (STRUCTURE : isStructureOf L) (env : ivar -> domain_of_discourse)
+  (ENTAILS : X ⊨ b)
+  (EQUICONSISTENT : inconsistent (Th (E.insert (Neg_frm b) X)) <-> inconsistent (interpret_frm STRUCTURE env))
+  (SUBSET : Th (E.insert (Neg_frm b) X) \subseteq interpret_frm STRUCTURE env)
+  (IS_FILTER : isFilter (interpret_frm STRUCTURE env))
+  : X ⊢ b.
+Proof with eauto with *.
+  revert EQUICONSISTENT SUBSET IS_FILTER. pose (interpret_frm STRUCTURE env) as X'. fold X'. ii.
+  assert (claim1 : interpret_frm STRUCTURE env b).
+  { eapply ENTAILS. ii.
+    eapply SUBSET. econstructor.
+    eapply ByAssumption. right...
+  }
+  assert (claim2 : inconsistent (cl X')).
+  { rewrite filter_inconsistent_iff... rewrite cl_eq_Th. econs. eapply ContradictionI with (A := b).
+    - eapply ByAssumption...
+    - eapply ByAssumption. eapply SUBSET. econs. eapply ByAssumption. done!.
+  }
+  assert (claim3 : inconsistent (Th (E.insert (Neg_frm b) X))).
+  { rewrite EQUICONSISTENT. rewrite filter_inconsistent_iff... rewrite filter_inconsistent_iff in claim2... eapply fact5_of_1_2_8... }
+  eapply NegationE. eapply inconsistent_cl_iff. rewrite cl_eq_Th. rewrite inconsistent_iff in claim3.
+  enough (WTS : cl (Th (E.insert (Neg_frm b) X)) \subseteq Th (E.insert (Neg_frm b) X)).
+  { eapply WTS. rewrite inconsistent_cl_iff... }
+  eapply fact5_of_1_2_8. rewrite <- cl_eq_Th...
+Qed.
+
+Definition MaximallyConsistentSet (X : ensemble formula) : ensemble formula :=
+  completeFilterOf (Th X).
+
+Definition full_axiom_set (X : ensemble formula) : ensemble formula :=
+  union_f (axiom_set X).
+
+Lemma lemma2_of_1_3_9 (X : ensemble formula)
+  : MaximallyConsistentSet X \subseteq Th (full_axiom_set X).
+Proof.
+  intros z [n z_in].
+  pose proof (proj1 (lemma1_of_1_3_9 X n z) z_in) as [INFERS].
+  econstructor. eapply extend_infers; eauto. ii. now exists n.
+Qed.
+
+Lemma lemma3_of_1_3_9_aux1 (xs : list formula) (X : ensemble formula)
+  (FINITE_SUBSET : L.is_finsubset_of xs (full_axiom_set X))
+  : exists m, L.is_finsubset_of xs (improveFilter (Th X) m).
+Proof with eauto with *.
+  revert X FINITE_SUBSET. induction xs as [ | x xs IH]; simpl; ii.
+  - exists 0. tauto.
+  - assert (claim1 : forall z : formula, In z xs -> z \in full_axiom_set X) by now firstorder.
+    assert (claim2 : x \in full_axiom_set X) by now firstorder.
+    destruct claim2 as [n IN].
+    assert (claim3 : x \in improveFilter (Th X) n).
+    { eapply lemma1_of_1_3_9. econstructor. eapply ByAssumption... }
+    pose proof (IH X claim1) as [m claim4].
+    assert (m <= n \/ n <= m) as [m_le_n | n_lt_m] by lia.
+    + exists n. intros z [x_eq_z | z_in_xs].
+      { subst z... }
+      { eapply lemma1_of_1_2_12... }
+    + exists m. intros z [x_eq_z | z_in_xs].
+      { subst z. eapply lemma1_of_1_2_12... }
+      { eapply claim4... }
+Qed.
+
+Lemma lemma3_of_1_3_9 (X : ensemble formula)
+  : Th (full_axiom_set X) \subseteq MaximallyConsistentSet X.
+Proof with eauto with *.
+  intros z [INFERS]. destruct INFERS as (ps&INCL&(PF)).
+  pose proof (lemma3_of_1_3_9_aux1 ps X INCL) as [m claim1].
+  assert (claim2 : isFilter (improveFilter (Th X) m)).
+  { eapply @lemma1_of_1_2_11 with (CBA := LindenbaumBooleanAlgebra). eapply lemma1_of_1_3_8. }
+  inversion claim2. exists m.
+  eapply CLOSED_UPWARD with (x := andsB ps).
+  - eapply fact5_of_1_2_8... exists ps...
+  - eapply andsB_le_iff. exists (E.intersection (E.fromList ps) (improveFilter (Th X) m)). split; done!.
+Qed.
+
+Variant MaximallyConsistentSet_spec (X : ensemble formula) (F : ensemble formula) : Prop :=
+  | MaximallyConsistentSetSpec_areTheFollowings
+    (SUBSET : Th X \subseteq F)
+    (EQUICONSISTENT : equiconsistent (Th X) F)
+    (CLOSED_infers : forall A : formula, A \in F <-> F ⊢ A)
+    (META_DN : forall A : formula, << NEGATION : Neg_frm A \in F -> Bot_frm \in F >> -> A \in F)
+    (IMPLICATION_FAITHFUL : forall A : formula, forall B : formula, Imp_frm A B \in F <-> << IMPLICATION : A \in F -> B \in F >>)
+    (FORALL_FAITHFUL : forall x : ivar, forall A : formula, All_frm x A \in F <-> << IMPLICATION : forall t : trm L, subst_frm (one_subst x t) A \in F >>)
+    : MaximallyConsistentSet_spec X F.
 
 End EXTRA1.
 
@@ -1098,9 +1267,8 @@ Proof.
       rewrite ALPHA. eapply proves_hsubstitutivity. exists ps. split. done. econs. exact PF.
 Qed.
 
-Theorem Henkin_complete (Gamma : ensemble (frm L')) (x : ivar) (phi : frm L')
-  (IN : All_frm x phi \in Gamma)
-  : exists c : Henkin_constants, (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) \in union_f (addHenkin Gamma).
+Theorem Henkin_complete (X : ensemble (frm L')) (Gamma : ensemble (frm L')) (x : ivar) (phi : frm L')
+  : exists c : Henkin_constants, (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) \in union_f (addHenkin X).
 Proof.
   set (n := cpInv x (proj1_sig (enum_spec phi))).
   pose proof (@Henkin_axiom_is_of_form L enum_frm_L' n) as claim.
@@ -1111,18 +1279,101 @@ Proof.
   rewrite <- claim. exists (S n). simpl. left. reflexivity.
 Qed.
 
-Definition AddHenkin (X : ensemble (frm L)) : ensemble (frm L') :=
-  union_f (addHenkin (E.image embed_frm X)).
+Definition AddHenkin (X : ensemble (frm L')) : ensemble (frm L') :=
+  union_f (addHenkin X).
 
-Theorem AddHenkin_equiconsistent (X : ensemble (frm L))
+Theorem AddHenkin_equiconsistent (X : ensemble (frm L'))
+  (HC_free : forall A, forall c, A \in X -> HC_occurs_in_frm c A = false)
   : inconsistent X <-> inconsistent (AddHenkin X).
 Proof.
-  transitivity (inconsistent (E.image embed_frm X)).
-  - eapply similar_equiconsistent. rewrite <- embed_frms_spec. reflexivity.
-  - unfold AddHenkin. rewrite <- equiconsistent_union_f.
-    + simpl. reflexivity.
-    + eapply addHenkin_incl.
-    + intros n. eapply addHenkin_equiconsistent. intros p c IN. rewrite E.in_image_iff in IN. destruct IN as [q [-> IN]]. eapply embed_frm_HC_free.
+  unfold AddHenkin. rewrite <- equiconsistent_union_f; eauto.
+  - eapply addHenkin_incl.
+  - simpl. intros n. eapply addHenkin_equiconsistent; eauto.
+Qed.
+
+#[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
+
+Theorem theorem_of_1_3_10 (X : ensemble (frm L'))
+  (HENKIN : forall x : ivar, forall phi : frm L', exists c : Henkin_constants, (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) \in X)
+  : MaximallyConsistentSet_spec X (MaximallyConsistentSet X).
+Proof with eauto with *.
+  pose proof (lemma1 := @lemma1_of_1_3_8 L').
+  pose proof (theorem_of_1_2_14 (Th X) (lemma1 X)) as [? ? ? ?].
+  fold (MaximallyConsistentSet X) in SUBSET, IS_FILTER, COMPLETE, EQUICONSISTENT.
+  assert (CLOSED_infers : forall b, b \in MaximallyConsistentSet X <-> MaximallyConsistentSet X ⊢ b).
+  { intros b. split; intros b_in.
+    - enough (to_show : b \in Th (MaximallyConsistentSet X)) by now inversion to_show.
+      rewrite <- cl_eq_Th. eapply fact3_of_1_2_8...
+    - eapply fact5_of_1_2_8... rewrite cl_eq_Th... econs...
+  }
+  assert (META_DN : forall b, (Neg_frm b \in MaximallyConsistentSet X -> Bot_frm \in MaximallyConsistentSet X) -> b \in MaximallyConsistentSet X).
+  { intros b NEGATION. eapply COMPLETE. split.
+    - intros INCONSISTENT. eapply inconsistent_compatWith_isSubsetOf...
+      transitivity (E.insert b (MaximallyConsistentSet X)).
+      + ii; right...
+      + eapply fact3_of_1_2_8.
+    - intros INCONSISTENT.
+      assert (claim1 : E.insert b (MaximallyConsistentSet X) ⊢ Bot_frm).
+      { rewrite <- inconsistent_okay in INCONSISTENT... }
+      exists (Bot_frm). split...
+      + eapply NEGATION, CLOSED_infers, NegationI...
+      + reflexivity.
+  }
+  assert (IMPLICATION_FAITHFUL : forall A, forall B, Imp_frm A B \in MaximallyConsistentSet X <-> << IMPLICATION : A \in MaximallyConsistentSet X -> B \in MaximallyConsistentSet X >>).
+  { intros b b'. split.
+    - intros IMPLICATION b_in.
+      eapply CLOSED_infers. eapply ImplicationE with (A := b).
+      + eapply CLOSED_infers...
+      + eapply CLOSED_infers...
+    - intros IMPLICATION. eapply META_DN.
+      intros H_in. eapply CLOSED_infers.
+      assert (claim1 : E.insert (Imp_frm b b') (MaximallyConsistentSet X) ⊢ Bot_frm).
+      { eapply ContradictionI with (A := Imp_frm b b').
+        - eapply ByAssumption. left...
+        - eapply extend_infers with (Gamma := MaximallyConsistentSet X).
+          + eapply CLOSED_infers...
+          + ii; right...
+      }
+      assert (claim2 : MaximallyConsistentSet X ⊢ Con_frm b (Neg_frm b')).
+      { eapply DisjunctionE with (A := b) (B := Neg_frm b).
+        - eapply extend_infers with (Gamma := E.empty).
+          + eapply Law_of_Excluded_Middle.
+          + done!.
+        - eapply DisjunctionE with (A := b') (B := Neg_frm b').
+          + eapply extend_infers with (Gamma := E.empty).
+            { eapply Law_of_Excluded_Middle. }
+            { done!. }
+          + eapply ContradictionE.
+            eapply Cut_property with (A := Imp_frm b b').
+            { eapply ImplicationI, ByAssumption. right; left... }
+            { eapply extend_infers. exact claim1. ii; s!. tauto. }
+          + eapply ConjunctionI.
+            { eapply ByAssumption. right; left... }
+            { eapply ByAssumption. left... }
+        - eapply ContradictionE.
+          eapply Cut_property with (A := Imp_frm b b').
+          + eapply ImplicationI, ContradictionE.
+            eapply ContradictionI with (A := b).
+            { eapply ByAssumption. left... }
+            { eapply ByAssumption. right; left... }
+          + eapply extend_infers... ii; s!. tauto.
+      }
+      assert (claim3 : MaximallyConsistentSet X ⊢ b).
+      { eapply ConjunctionE1... }
+      assert (claim4 : MaximallyConsistentSet X ⊢ Neg_frm b').
+      { eapply ConjunctionE2. exact claim2. }
+      eapply ContradictionI with (A := b'); trivial.
+      eapply CLOSED_infers, IMPLICATION, CLOSED_infers; trivial.
+  }
+  assert (FORALL_FAITHFUL : forall x, forall A, All_frm x A \in MaximallyConsistentSet X <-> << IMPLICATION : forall t, subst_frm (one_subst x t) A \in MaximallyConsistentSet X >>).
+  { intros x phi. split.
+    - intros UNIVERSAL IN. eapply CLOSED_infers. eapply UniversalE with (A := phi). eapply CLOSED_infers...
+    - intros UNIVERSAL. unnw. pose proof (HENKIN x phi) as [c IN].
+      eapply IMPLICATION_FAITHFUL with (A := subst_frm (one_subst x (@Con_trm L' (inr c))) phi).
+      + eapply SUBSET. econs. eapply ByAssumption...
+      + eapply UNIVERSAL.
+  }
+  repeat (split; trivial).
 Qed.
 
 End HENKIN.

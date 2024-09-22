@@ -3,8 +3,10 @@ Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Data.Vector.
 Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Logic.BasicFol.
+Require Import PnV.Logic.BasicFol2.
 Require Import PnV.Logic.HilbertFol.
 Require Import PnV.Logic.HilbertFol2.
+Require Import PnV.Math.ThN.
 
 Import FolNotations.
 
@@ -44,3 +46,21 @@ Proof with eauto with *.
 Qed.
 
 End SOUNDNESS_OF_HilbertCalculus.
+
+Section COMPLETENESS_OF_HilbertCalculus.
+
+Import FolHilbert.
+
+#[local] Existing Instance V.vec_isSetoid.
+
+Context {L : language} {enum_function_symbols : isEnumerable L.(function_symbols)} {enum_constant_symbols : isEnumerable L.(constant_symbols)} {enum_relation_symbols : isEnumerable L.(relation_symbols)}.
+
+Notation L' := (augmented_language L Henkin_constants).
+
+#[local]
+Instance augmented_language_isEnumerable : isEnumerable (frm L') :=
+  frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable _ Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols.
+
+#[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
+
+End COMPLETENESS_OF_HilbertCalculus.
