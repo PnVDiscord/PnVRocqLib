@@ -1698,6 +1698,52 @@ Proof.
       * change (is_free_in_frm z (embed_frm (All_frm y1 p2)) = false) in RFRESH. rewrite embed_fvs_frm in RFRESH; trivial.
 Qed.
 
+Section RESTRICT_STRUCTURE.
+
+#[local] Existing Instance V.vec_isSetoid.
+
+#[local]
+Instance restrict_structure (STRUCTURE : isStructureOf L') : isStructureOf L :=
+  { domain_of_discourse := STRUCTURE.(domain_of_discourse)
+  ; equation_interpret := STRUCTURE.(equation_interpret)
+  ; function_interpret (f : L.(function_symbols)) := STRUCTURE.(function_interpret) f
+  ; constant_interpret (c : L.(constant_symbols)) := STRUCTURE.(constant_interpret) (inl c)
+  ; relation_interpret (R : L.(relation_symbols)) := STRUCTURE.(relation_interpret) R
+  ; domain_is_nonempty := STRUCTURE.(domain_is_nonempty)
+  ; function_interpret_preserves_eqProp := STRUCTURE.(function_interpret_preserves_eqProp)
+  ; relation_interpret_preserves_eqProp := STRUCTURE.(relation_interpret_preserves_eqProp)
+  }.
+
+Lemma restrict_structure_trm (STRUCTURE : isStructureOf L') (env : ivar -> domain_of_discourse) (t : trm L)
+  : interpret_trm STRUCTURE env (embed_trm t) == interpret_trm (restrict_structure STRUCTURE) env t
+with restrict_structure_trms n (STRUCTURE : isStructureOf L') (env : ivar -> domain_of_discourse) (ts : trms L n)
+  : interpret_trms STRUCTURE env (embed_trms ts) == interpret_trms (restrict_structure STRUCTURE) env ts.
+Proof.
+  - clear restrict_structure_trm; trm_ind t.
+    + reflexivity.
+    + simpl embed_trm. do 2 rewrite interpret_trm_unfold with (t := Fun_trm _ _); f_equal.
+      rewrite function_interpret_preserves_eqProp. 2: eapply restrict_structure_trms. reflexivity.
+    + reflexivity.
+  - clear restrict_structure_trms; trms_ind ts.
+    + reflexivity.
+    + simpl embed_trms. do 2 rewrite interpret_trms_unfold with (ts := S_trms _ _ _); f_equal. simpl. Fin.caseS i.
+      * simpl. eapply restrict_structure_trm.
+      * simpl. eapply IH.
+Qed.
+
+Lemma restrict_structure_frm (STRUCTURE : isStructureOf L') (env : ivar -> domain_of_discourse) (p : frm L)
+  : interpret_frm STRUCTURE env (embed_frm p) == interpret_frm (restrict_structure STRUCTURE) env p.
+Proof.
+  revert env. frm_ind p; simpl; i.
+  - rewrite relation_interpret_preserves_eqProp. 2: eapply restrict_structure_trms. reflexivity.
+  - split; intros H; do 2 rewrite restrict_structure_trm in *; eauto.
+  - done!.
+  - done!.
+  - done!.
+Qed.
+
+End RESTRICT_STRUCTURE.
+
 Fixpoint twilight_trm' (t : trm L') : trm L :=
   match t with
   | Var_trm x => @Var_trm L (x * 2)

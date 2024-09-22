@@ -53,6 +53,12 @@ Import FolHilbert.
 
 #[local] Existing Instance V.vec_isSetoid.
 
+Section MODEL_EXISTENCE.
+
+Context {L : language} (Gamma : ensemble (frm L)).
+
+End MODEL_EXISTENCE.
+
 Context {L : language} {enum_function_symbols : isEnumerable L.(function_symbols)} {enum_constant_symbols : isEnumerable L.(constant_symbols)} {enum_relation_symbols : isEnumerable L.(relation_symbols)}.
 
 Notation L' := (augmented_language L Henkin_constants).
@@ -62,5 +68,11 @@ Instance augmented_language_isEnumerable : isEnumerable (frm L') :=
   frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable _ Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols.
 
 #[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
+
+Theorem HilbertCalculus_complete (Gamma : ensemble (frm L)) (C : frm L)
+  (PROVE : Gamma ⊨ C)
+  : Gamma ⊢ C.
+Proof with eauto with *.
+Abort.
 
 End COMPLETENESS_OF_HilbertCalculus.
