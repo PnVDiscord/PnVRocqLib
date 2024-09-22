@@ -11,7 +11,7 @@ Proof.
   eapply UIP_dec. exact hasEqDec.
 Defined.
 
-Lemma exist_eq_fromEqDec {A : Type} (P : A -> bool) (x : A) (x' : A) (H : P x = true) (H' : P x' = true)
+Lemma exist_eq_bool {A : Type} (P : A -> bool) (x : A) (x' : A) (H : P x = true) (H' : P x' = true)
   : @exist A P x H = @exist A P x' H' <-> x = x'.
 Proof.
   split.

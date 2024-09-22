@@ -1112,6 +1112,19 @@ Proof.
     + intros n. eapply addHenkin_equiconsistent. intros p c IN. rewrite E.in_image_iff in IN. destruct IN as [q [-> IN]]. eapply embed_frm_HC_free.
 Qed.
 
+Lemma Henkin_complete (Gamma : ensemble (frm L')) (x : ivar) (phi : frm L')
+  (IN : All_frm x phi \in Gamma)
+  : exists c : Henkin_constants, (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) \in union_f (addHenkin Gamma).
+Proof.
+  set (n := cpInv x (proj1_sig (enum_spec phi))).
+  pose proof (@Henkin_axiom_is_of_form L enum_frm_L' n) as claim.
+  simpl in claim. exists (nth_Henkin_constant n).
+  destruct (enum_spec phi) as [n2 n2_eq]; simpl in *. subst phi.
+  assert (EQ : n = cpInv x n2) by reflexivity.
+  clearbody n. rewrite <- cp_spec in EQ. rewrite EQ in claim. simpl in claim.
+  rewrite <- claim. exists (S n). simpl. left. reflexivity.
+Qed.
+
 End HENKIN.
 
 End FolHilbert.

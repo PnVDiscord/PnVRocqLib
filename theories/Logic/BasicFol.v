@@ -1602,23 +1602,6 @@ Proof.
   red. red in NOT_FREE. symmetry in ALPHA. pose proof (is_free_in_frm_compat_alpha_equiv p' p x ALPHA); destruct (is_free_in_frm x p') as [ | ]; done!.
 Qed.
 
-Definition close_ivars (p : frm L) : list ivar -> frm L :=
-  @list_rec _ (fun _ => frm L) p (fun x => fun _ => fun q => All_frm x q).
-
-Definition closed_frm (p : frm L) : frm L :=
-  close_ivars p (nodup eq_dec (fvs_frm p)).
-
-Lemma closed_frm_closed (p : frm L)
-  : forall z, is_free_in_frm z (closed_frm p) = true -> False.
-Proof.
-  intros z. unfold closed_frm. remember (nodup eq_dec (fvs_frm p)) as xs eqn: H_xs. intros FREE.
-  assert (claim : forall x, L.In x xs <-> is_free_in_frm x p = true).
-  { intros x. subst xs. rewrite L.nodup_In. rewrite fv_is_free_in_frm. reflexivity. }
-  clear H_xs. specialize claim with (x := z). revert z p FREE claim. induction xs as [ | x xs IH]; simpl; i.
-  - rewrite claim; trivial.
-  - s!. eapply IH with (z := z) (p := p); done!.
-Qed.
-
 Definition fresh_var (x : ivar) (t : trm L) (p : frm L) : ivar :=
   1 + maxs ([x] ++ fvs_trm t ++ fvs_frm p).
 
@@ -1950,6 +1933,23 @@ Proof.
       * f_equal. eapply IH. simpl; lia.
 Qed.
 
+Definition close_ivars (p : frm L) : list ivar -> frm L :=
+  @list_rec _ (fun _ => frm L) p (fun x => fun _ => fun q => All_frm x q).
+
+Definition closed_frm (p : frm L) : frm L :=
+  close_ivars p (nodup eq_dec (fvs_frm p)).
+
+Lemma closed_frm_closed (p : frm L)
+  : forall z, is_free_in_frm z (closed_frm p) = true -> False.
+Proof.
+  intros z. unfold closed_frm. remember (nodup eq_dec (fvs_frm p)) as xs eqn: H_xs. intros FREE.
+  assert (claim : forall x, L.In x xs <-> is_free_in_frm x p = true).
+  { intros x. subst xs. rewrite L.nodup_In. rewrite fv_is_free_in_frm. reflexivity. }
+  clear H_xs. specialize claim with (x := z). revert z p FREE claim. induction xs as [ | x xs IH]; simpl; i.
+  - rewrite claim; trivial.
+  - s!. eapply IH with (z := z) (p := p); done!.
+Qed.
+
 Lemma one_fv_frm_subst_closed_term_close_formula (y : ivar) (t : trm L) (p : frm L)
   (one_fv : forall z, is_free_in_frm z p = true -> z = y)
   (trm_closed : forall z, is_not_free_in_trm z t)
@@ -2051,7 +2051,7 @@ Next Obligation.
       rewrite L.null_spec in p_eq. rewrite p_eq in claim. contradiction claim.
   }
   exists (proj1_sig (enum_spec p)). destruct (enum_spec p) as [n n_eq]; simpl.
-  rewrite <- n_eq in EQ. rewrite @exist_eq_fromEqDec with (A := frm L) (P := fun p => L.null (fvs_frm p)).
+  rewrite <- n_eq in EQ. rewrite @exist_eq_bool with (A := frm L) (P := fun p => L.null (fvs_frm p)).
   rewrite EQ. exact n_eq.
 Qed.
 
