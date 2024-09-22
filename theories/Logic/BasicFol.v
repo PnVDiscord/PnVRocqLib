@@ -2603,6 +2603,7 @@ Module FolNotations.
 
 Infix "≡" := alpha_equiv : type_scope.
 Infix "⊨" := entails : type_scope.
+Notation "Gamma ⊭ C" := (~ Gamma ⊨ C) : type_scope.
 
 End FolNotations.
 

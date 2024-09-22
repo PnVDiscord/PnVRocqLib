@@ -73,6 +73,13 @@ Theorem HilbertCalculus_complete (Gamma : ensemble (frm L)) (C : frm L)
   (PROVE : Gamma ⊨ C)
   : Gamma ⊢ C.
 Proof with eauto with *.
+  eapply NNPP. intros NO.
+  set (X := E.insert (Neg_frm C) Gamma).
+  assert (CONSISTENT : X ⊬ Bot_frm).
+  { intros INCONSISTENT. contradiction NO. eapply NegationE... }
+  exploit (@theorem_of_1_2_14 (frm L') (@formula_isSetoid L') LindenbaumBooleanAlgebra (Th (AddHenkin (E.image embed_frm X)))).
+  { eapply lemma1_of_1_3_8. }
+  intros [SUBSET' IS_FILTER' COMPLETE' EQUICONSISTENT']. fold (MaximallyConsistentSet (AddHenkin (E.image embed_frm X))) in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.
 Abort.
 
 End COMPLETENESS_OF_HilbertCalculus.

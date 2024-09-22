@@ -16,6 +16,7 @@ Import FolNotations.
 Module FolHilbert.
 
 Infix "⊢" := HilbertFol.proves : type_scope.
+Notation "Gamma ⊬ C" := (~ Gamma ⊢ C) : type_scope.
 
 Section EXTRA1.
 
