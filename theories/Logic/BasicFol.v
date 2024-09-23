@@ -22,9 +22,6 @@ Section FOL_DEF.
 Definition ivar : Set :=
   nat.
 
-Definition renaming : Set :=
-  ivar -> ivar.
-
 Context {L : language}.
 
 Inductive trm : Set :=
@@ -108,6 +105,39 @@ Proof.
       * apply f_equal with (f := V.tail) in H0. do 2 rewrite V.tail_unfold in H0; eauto.
   - f_equal; eauto.
 Qed.
+
+Fixpoint vec_to_trms {n : nat} (ts : Vector.t trm n) : trms n :=
+  match ts with
+  | VNil => O_trms
+  | VCons n t ts => S_trms n t (vec_to_trms ts)
+  end.
+
+Lemma vec_to_trms_to_vec arity (xs : Vector.t trm arity)
+  : trms_to_vec (vec_to_trms xs) = xs.
+Proof.
+  induction xs as [ | n x xs IH]; done!.
+Qed.
+
+Lemma trms_to_vec_to_trms arity (ts : trms arity)
+  : vec_to_trms (trms_to_vec ts) = ts.
+Proof.
+  induction ts as [ | n t ts IH]; done!.
+Qed.
+
+Definition Bot_frm : frm :=
+  Neg_frm (All_frm 0 (Eqn_frm (Var_trm 0) (Var_trm 0))).
+
+Definition Con_frm (p1 : frm) (p2 : frm) : frm :=
+  Neg_frm (Imp_frm p1 (Neg_frm p2)).
+
+Definition Dis_frm (p1 : frm) (p2 : frm) : frm :=
+  Neg_frm (Con_frm (Neg_frm p1) (Neg_frm p2)).
+
+Definition Iff_frm (p1 : frm) (p2 : frm) : frm :=
+  Con_frm (Imp_frm p1 p2) (Imp_frm p2 p1).
+
+Definition Exs_frm (y : ivar) (p1 : frm) : frm :=
+  Neg_frm (All_frm y (Neg_frm p1)).
 
 End FOL_DEF.
 
@@ -551,6 +581,9 @@ Section FOL_SYNTAX. (* Reference: "https://github.com/ernius/formalmetatheory-st
 #[local] Open Scope program_scope.
 
 Import ListNotations.
+
+Definition renaming : Set :=
+  ivar -> ivar.
 
 Definition subst (L : language) : Set :=
   ivar -> trm L.
@@ -1584,14 +1617,8 @@ Lemma alpha_is_not_free_in_frm (p : frm L) (p' : frm L) (x : ivar)
   (NOT_FREE : is_not_free_in_frm x p)
   : is_not_free_in_frm x p'.
 Proof.
-  red. red in NOT_FREE. symmetry in ALPHA. pose proof (is_free_in_frm_compat_alpha_equiv p' p x ALPHA). destruct (is_free_in_frm x p') as [ | ]; done!.
+  red. red in NOT_FREE. symmetry in ALPHA. pose proof (is_free_in_frm_compat_alpha_equiv p' p x ALPHA); destruct (is_free_in_frm x p') as [ | ]; done!.
 Qed.
-
-Definition close_ivars (p : frm L) : list ivar -> frm L :=
-  @list_rec _ (fun _ => frm L) p (fun x => fun _ => fun q => All_frm x q).
-
-Definition closed_frm (p : frm L) : frm L :=
-  close_ivars p (nodup eq_dec (fvs_frm p)).
 
 Definition fresh_var (x : ivar) (t : trm L) (p : frm L) : ivar :=
   1 + maxs ([x] ++ fvs_trm t ++ fvs_frm p).
@@ -1924,6 +1951,23 @@ Proof.
       * f_equal. eapply IH. simpl; lia.
 Qed.
 
+Definition close_ivars (p : frm L) : list ivar -> frm L :=
+  @list_rec _ (fun _ => frm L) p (fun x => fun _ => fun q => All_frm x q).
+
+Definition closed_frm (p : frm L) : frm L :=
+  close_ivars p (nodup eq_dec (fvs_frm p)).
+
+Lemma closed_frm_closed (p : frm L)
+  : forall z, is_free_in_frm z (closed_frm p) = true -> False.
+Proof.
+  intros z. unfold closed_frm. remember (nodup eq_dec (fvs_frm p)) as xs eqn: H_xs. intros FREE.
+  assert (claim : forall x, L.In x xs <-> is_free_in_frm x p = true).
+  { intros x. subst xs. rewrite L.nodup_In. rewrite fv_is_free_in_frm. reflexivity. }
+  clear H_xs. specialize claim with (x := z). revert z p FREE claim. induction xs as [ | x xs IH]; simpl; i.
+  - rewrite claim; trivial.
+  - s!. eapply IH with (z := z) (p := p); done!.
+Qed.
+
 Lemma one_fv_frm_subst_closed_term_close_formula (y : ivar) (t : trm L) (p : frm L)
   (one_fv : forall z, is_free_in_frm z p = true -> z = y)
   (trm_closed : forall z, is_not_free_in_trm z t)
@@ -2001,13 +2045,40 @@ Next Obligation.
   enough (WTS : true = false) by discriminate. rewrite <- H. rewrite <- claim3. reflexivity.
 Qed.
 
+Lemma closed_frm_is_sentence (p : frm L)
+  : L.null (fvs_frm (closed_frm p)) = true.
+Proof.
+  rewrite L.null_spec. destruct (fvs_frm (closed_frm p)) as [ | z zs] eqn: H_OBS; trivial.
+  contradiction (@closed_frm_closed p z). rewrite <- fv_is_free_in_frm. rewrite H_OBS; simpl; left; trivial.
+Qed.
+
+Definition sentence : Set :=
+  { p : frm L | L.null (fvs_frm p) = true }.
+
+#[program]
+Definition sentence_isEnumerable (enum_frm_L : isEnumerable (frm L)) : isEnumerable sentence :=
+  {| enum n := @exist _ _ (closed_frm (enum n)) (closed_frm_is_sentence (enum n)) |}.
+Next Obligation.
+  unfold closed_frm. destruct x as [p p_eq]; simpl in *.
+  assert (EQ : (close_ivars p (nodup eq_dec (fvs_frm p))) = p). 
+  { enough (WTS : (nodup eq_dec (fvs_frm p)) = []) by now rewrite WTS.
+    destruct (nodup eq_dec (fvs_frm p)) as [ | z zs] eqn: H_OBS.
+    - reflexivity.
+    - assert (claim : L.In z (fvs_frm p)).
+      { rewrite <- L.nodup_In with (decA := eq_dec). rewrite H_OBS. simpl. left. reflexivity. }
+      rewrite L.null_spec in p_eq. rewrite p_eq in claim. contradiction claim.
+  }
+  exists (proj1_sig (enum_spec p)). destruct (enum_spec p) as [n n_eq]; simpl.
+  rewrite <- n_eq in EQ. rewrite @exist_eq_bool with (A := frm L) (P := fun p => L.null (fvs_frm p)).
+  rewrite EQ. exact n_eq.
+Qed.
+
 End FOL_SYNTAX.
 
 #[global] Arguments scoped_trm : clear implicits.
 #[global] Arguments scoped_trms : clear implicits.
 #[global] Arguments scoped_frm : clear implicits.
-
-Notation senetence L := (scoped_frm L []).
+#[global] Arguments sentence : clear implicits.
 
 Section EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
 
@@ -2550,6 +2621,7 @@ Module FolNotations.
 
 Infix "≡" := alpha_equiv : type_scope.
 Infix "⊨" := entails : type_scope.
+Notation "Gamma ⊭ C" := (~ Gamma ⊨ C) : type_scope.
 
 End FolNotations.
 

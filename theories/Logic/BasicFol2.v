@@ -28,7 +28,8 @@ Definition augmented_language (L : language) (constant_symbols' : Set) : languag
     relation_arity_table := L.(relation_arity_table);
   |}.
 
-Definition Henkin_constants : Set := nat.
+Definition Henkin_constants : Set :=
+  nat.
 
 Context {L : language}.
 
@@ -1697,6 +1698,52 @@ Proof.
       * change (is_free_in_frm z (embed_frm (All_frm y1 p2)) = false) in RFRESH. rewrite embed_fvs_frm in RFRESH; trivial.
 Qed.
 
+Section RESTRICT_STRUCTURE.
+
+#[local] Existing Instance V.vec_isSetoid.
+
+#[local]
+Instance restrict_structure (STRUCTURE : isStructureOf L') : isStructureOf L :=
+  { domain_of_discourse := STRUCTURE.(domain_of_discourse)
+  ; equation_interpret := STRUCTURE.(equation_interpret)
+  ; function_interpret (f : L.(function_symbols)) := STRUCTURE.(function_interpret) f
+  ; constant_interpret (c : L.(constant_symbols)) := STRUCTURE.(constant_interpret) (inl c)
+  ; relation_interpret (R : L.(relation_symbols)) := STRUCTURE.(relation_interpret) R
+  ; domain_is_nonempty := STRUCTURE.(domain_is_nonempty)
+  ; function_interpret_preserves_eqProp := STRUCTURE.(function_interpret_preserves_eqProp)
+  ; relation_interpret_preserves_eqProp := STRUCTURE.(relation_interpret_preserves_eqProp)
+  }.
+
+Lemma restrict_structure_trm (STRUCTURE : isStructureOf L') (env : ivar -> domain_of_discourse) (t : trm L)
+  : interpret_trm STRUCTURE env (embed_trm t) == interpret_trm (restrict_structure STRUCTURE) env t
+with restrict_structure_trms n (STRUCTURE : isStructureOf L') (env : ivar -> domain_of_discourse) (ts : trms L n)
+  : interpret_trms STRUCTURE env (embed_trms ts) == interpret_trms (restrict_structure STRUCTURE) env ts.
+Proof.
+  - clear restrict_structure_trm; trm_ind t.
+    + reflexivity.
+    + simpl embed_trm. do 2 rewrite interpret_trm_unfold with (t := Fun_trm _ _); f_equal.
+      rewrite function_interpret_preserves_eqProp. 2: eapply restrict_structure_trms. reflexivity.
+    + reflexivity.
+  - clear restrict_structure_trms; trms_ind ts.
+    + reflexivity.
+    + simpl embed_trms. do 2 rewrite interpret_trms_unfold with (ts := S_trms _ _ _); f_equal. simpl. Fin.caseS i.
+      * simpl. eapply restrict_structure_trm.
+      * simpl. eapply IH.
+Qed.
+
+Lemma restrict_structure_frm (STRUCTURE : isStructureOf L') (env : ivar -> domain_of_discourse) (p : frm L)
+  : interpret_frm STRUCTURE env (embed_frm p) == interpret_frm (restrict_structure STRUCTURE) env p.
+Proof.
+  revert env. frm_ind p; simpl; i.
+  - rewrite relation_interpret_preserves_eqProp. 2: eapply restrict_structure_trms. reflexivity.
+  - split; intros H; do 2 rewrite restrict_structure_trm in *; eauto.
+  - done!.
+  - done!.
+  - done!.
+Qed.
+
+End RESTRICT_STRUCTURE.
+
 Fixpoint twilight_trm' (t : trm L') : trm L :=
   match t with
   | Var_trm x => @Var_trm L (x * 2)
@@ -1971,14 +2018,14 @@ Qed.
 
 End SIM.
 
-Context {enum_function_symbols : isEnumerable L.(function_symbols)} {enum_constant_symbols : isEnumerable L.(constant_symbols)} {enum_relation_symbols : isEnumerable L.(relation_symbols)}.
+Context {enum_frm_L' : isEnumerable (frm L')}.
 
 Fixpoint Henkin (n : nat) {struct n} : Vector.t (frm L') n -> Vector.t Henkin_constants n -> Prop :=
   match n with
   | O => fun thetas => fun cs => thetas = VNil /\ cs = VNil
   | S n' => fun thetas => fun cs =>
     let x : ivar := fst (cp n') in
-    let phi : frm L' := enum (isEnumerable := frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols) (snd (cp n')) in
+    let phi : frm L' := enum (snd (cp n')) in
     let PROP (c : Henkin_constants) : Prop := HC_occurs_in_frm c phi = false /\ V.forallb (fun theta_k => negb (HC_occurs_in_frm c theta_k)) (V.tail thetas) = true in
     V.head thetas = (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr (V.head cs)))) phi) (All_frm x phi)) /\ Henkin n' (V.tail thetas) (V.tail cs) /\ PROP (V.head cs) /\ ⟪ MIN : forall c, PROP c -> c >= V.head cs ⟫
   end.
@@ -2012,7 +2059,7 @@ Lemma Henkin_exists n
 Proof.
   induction n as [ | n [[thetas cs] IH]].
   - exists (VNil, VNil). simpl; split; trivial.
-  - simpl in *. set (x := fst (cp n)). set (phi := enum (isEnumerable := (frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols)) (snd (cp n))).
+  - simpl in *. set (x := fst (cp n)). set (phi := enum (snd (cp n))).
     exploit (@dec_finds_minimum_if_exists (fun c : Henkin_constants => andb (negb (HC_occurs_in_frm c phi)) (V.forallb (fun theta_k => negb (HC_occurs_in_frm c theta_k)) thetas) = true)).
     { intros m. destruct (negb (HC_occurs_in_frm m phi) && V.forallb (fun theta_k : frm L' => negb (HC_occurs_in_frm m theta_k)) thetas) as [ | ]; [left | right]; done!. }
     { exists (1 + max (maxs (accum_HCs_frm phi)) (maxs (map (maxs ∘ accum_HCs_frm)%prg (V.to_list thetas)))). s!. split.
@@ -2064,14 +2111,14 @@ Proof.
 Qed.
 
 Lemma Henkin_constant_does_not_occur_in_enum n
-  : HC_occurs_in_frm (nth_Henkin_constant n) (enum (isEnumerable := frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols) (snd (cp n))) = false.
+  : HC_occurs_in_frm (nth_Henkin_constant n) (enum (snd (cp n))) = false.
 Proof.
   unfold nth_Henkin_constant. destruct (Henkin_exists (S n)) as [[theta_n c_n] HENKIN_n]; simpl in *. des; trivial.
 Qed.
 
 Lemma Henkin_axiom_is_of_form n
   (x := fst (cp n))
-  (phi := enum (isEnumerable := frm_isEnumerable (L := L') enum_function_symbols (@sum_isEnumerable L.(constant_symbols) Henkin_constants enum_constant_symbols nat_isEnumerable) enum_relation_symbols) (snd (cp n)))
+  (phi := enum (snd (cp n)))
   : nth_Henkin_axiom n = (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr (nth_Henkin_constant n)))) phi) (All_frm x phi)).
 Proof.
   unfold nth_Henkin_axiom, nth_Henkin_constant. destruct (Henkin_exists (S n)) as [[theta c] HENKIN]; simpl in *.
