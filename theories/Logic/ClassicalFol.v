@@ -218,7 +218,7 @@ Proof with eauto with *.
     - simpl. intros t. unfold interpret_equation, ivar_interpret. simpl. eapply proves_reflexivity.
   }
   contradiction claim. intros ? ? ? SAT. unfold X in SATISFY.
-  red in SATISFY. contradiction (SATISFY (Neg_frm C)).
+  red in SATISFY. pose proof (SATISFY (Neg_frm C)) as CONTRA. simpl in CONTRA. contradiction CONTRA.
   - left. reflexivity.
   - eapply CONSEQUENCE. ii. eapply SATISFY. right. trivial.
 Qed.
