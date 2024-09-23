@@ -106,6 +106,24 @@ Proof.
   - f_equal; eauto.
 Qed.
 
+Fixpoint vec_to_trms {n : nat} (ts : Vector.t trm n) : trms n :=
+  match ts with
+  | VNil => O_trms
+  | VCons n t ts => S_trms n t (vec_to_trms ts)
+  end.
+
+Lemma vec_to_trms_to_vec arity (xs : Vector.t trm arity)
+  : trms_to_vec (vec_to_trms xs) = xs.
+Proof.
+  induction xs as [ | n x xs IH]; done!.
+Qed.
+
+Lemma trms_to_vec_to_trms arity (ts : trms arity)
+  : vec_to_trms (trms_to_vec ts) = ts.
+Proof.
+  induction ts as [ | n t ts IH]; done!.
+Qed.
+
 Definition Bot_frm : frm :=
   Neg_frm (All_frm 0 (Eqn_frm (Var_trm 0) (Var_trm 0))).
 
