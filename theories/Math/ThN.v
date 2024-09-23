@@ -1,6 +1,6 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.ConstructiveFacts.
-Require Import Coq.Arith.Wf_nat.
+Require Export Coq.Arith.Wf_nat.
 
 Lemma S_eq_O_elim {A : Type} {n : nat}
   (S_eq_O : S n = O)
