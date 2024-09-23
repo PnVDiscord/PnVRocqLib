@@ -617,6 +617,12 @@ Variant Th (X : ensemble formula) (b : formula) : Prop :=
 
 #[local] Hint Constructors Th : core.
 
+Lemma in_Th_iff (X : ensemble formula) (b : formula)
+  : b \in Th X <-> X ⊢ b.
+Proof.
+  split; eauto. intros [?]; trivial.
+Qed.
+
 #[global]
 Add Parametric Morphism :
   Th with signature (eqProp ==> eqProp)
@@ -785,6 +791,28 @@ Proof with eauto with *.
     eapply fact4_of_1_2_8. intros b [b_in | b_in].
     + left. econstructor. eapply ByAssumption...
     + right...
+Qed.
+
+Lemma axiom_set_equiconsistent (X : ensemble (frm L)) (n : nat)
+  : inconsistent (axiom_set X n) <-> inconsistent (axiom_set X (S n)).
+Proof with eauto with *.
+  split.
+  - do 2 rewrite inconsistent_iff. intros INCONSISTENT. eapply extend_infers... done!.
+  - do 2 rewrite inconsistent_iff. do 2 rewrite <- in_Th_iff. intros INCONSISTENT.
+    rewrite <- lemma1_of_1_3_9 in *. pose proof (lemma2_of_1_2_13 (Th X)) as claim. eapply fact5_of_1_2_8.
+    + eapply @lemma1_of_1_2_11 with (CBA := LindenbaumBooleanAlgebra). eapply lemma1_of_1_3_8.
+    + rewrite cl_eq_Th. rewrite in_Th_iff. rewrite <- inconsistent_iff. rewrite inconsistent_okay. rewrite cl_eq_Th.
+      enough (WTS : BooleanAlgebra.inconsistent (improveFilter (Th X) n)).
+      { eapply inconsistent_compatWith_isSubsetOf... ii. rewrite in_Th_iff. eapply ByAssumption... }
+      eapply claim with (n2 := S n).
+      * eapply lemma1_of_1_3_8.
+      * enough (INFERS : improveFilter (Th X) (S n) ⊢ Bot_frm).
+        { rewrite <- inconsistent_iff in INFERS. rewrite inconsistent_okay in INFERS.
+          eapply inconsistent_compatWith_isSubsetOf with (X := cl (improveFilter (Th X) (S n)))...
+          eapply fact5_of_1_2_8... eapply @lemma1_of_1_2_11 with (CBA := LindenbaumBooleanAlgebra). eapply lemma1_of_1_3_8.
+        }
+        simpl in INCONSISTENT. rewrite cl_eq_Th in INCONSISTENT. rewrite in_Th_iff in INCONSISTENT. simpl.
+        eapply extend_infers...
 Qed.
 
 Lemma completeness_theorem_prototype (X : ensemble formula) (b : formula) (STRUCTURE : isStructureOf L) (env : ivar -> domain_of_discourse)
@@ -1293,6 +1321,33 @@ Proof.
 Qed.
 
 #[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
+
+Lemma Th_X_equiconsistent_Th_AddHenkin (X : ensemble (frm L'))
+  (HC_free : forall A : frm L', forall c : Henkin_constants, A \in X -> HC_occurs_in_frm c A = false)
+  : equiconsistent (Th X) (Th (AddHenkin X)).
+Proof.
+  red. do 2 rewrite <- cl_eq_Th. do 2 rewrite <- inconsistent_okay. eapply AddHenkin_equiconsistent; trivial.
+Qed.
+
+Lemma Th_X_equiconsistent_MaximallyConsistentSet_AddHenkin (X : ensemble (frm L'))
+  (HC_free : forall A : frm L', forall c : Henkin_constants, A \in X -> HC_occurs_in_frm c A = false)
+  : equiconsistent (Th X) (MaximallyConsistentSet (AddHenkin X)).
+Proof with eauto with *.
+  split.
+  - intros INCONSISTENT. eapply inconsistent_compatWith_isSubsetOf... transitivity (Th (AddHenkin X)).
+    + intros p p_in. rewrite <- cl_eq_Th in *. eapply fact4_of_1_2_8... eapply @subset_union_f with (L := L') (f := addHenkin X) (n := 0).
+    + etransitivity. 2: eapply lemma3_of_1_3_9. intros p p_in. rewrite <- cl_eq_Th in *. eapply fact4_of_1_2_8... eapply @subset_union_f with (L := L') (f := axiom_set (AddHenkin X)) (n := 0).
+  - intros INCONSISTENT. rewrite <- cl_eq_Th. exists Bot_frm. split. 2: reflexivity. rewrite inconsistent_cl_iff.
+    assert (INCONSISTENT' : BooleanAlgebra.inconsistent (Th (full_axiom_set (AddHenkin X)))).
+    { eapply inconsistent_compatWith_isSubsetOf... eapply lemma2_of_1_3_9. }
+    rewrite <- cl_eq_Th in INCONSISTENT'. rewrite <- inconsistent_okay in INCONSISTENT'.
+    rewrite <- inconsistent_iff. rewrite equiconsistent_union_f with (f := addHenkin X).
+    + rewrite equiconsistent_union_f with (f := axiom_set (AddHenkin X))...
+      * intros n1 n2 LE. induction LE as [ | n2 LE IH]; done!.
+      * eapply axiom_set_equiconsistent.
+    + eapply addHenkin_incl.
+    + i. eapply addHenkin_equiconsistent...
+Qed.
 
 Theorem theorem_of_1_3_10 (Gamma : ensemble (frm L))
   : MaximallyConsistentSet_spec (E.image embed_frm Gamma) (MaximallyConsistentSet (AddHenkin (E.image embed_frm Gamma))).
