@@ -985,26 +985,4 @@ Definition ScottFix : `[`[D -> D] -> D] :=
 
 End SCOTT_FIX.
 
-Section WITH_CPO.
-
-Section MK_CPO_FROM_COLA.
-
-Context {D : Type} {PROSET : isProset D} {COLA : ColaDef.isCola D (PROSET := PROSET)}.
-
-#[global, program]
-Instance cola_isCpo : isCpo D :=
-  { supremum_cpo X _ := proj1_sig (ColaDef.supremum_cola X)
-  ; supremum_cpo_spec X _ := proj2_sig (ColaDef.supremum_cola X)
-  ; bottom_cpo := proj1_sig (ColaDef.supremum_cola E.empty)
-  ; bottom_cpo_spec := _
-  }.
-Next Obligation.
-  destruct (ColaDef.supremum_cola E.empty) as [bot bot_spec]; simpl.
-  eapply bot_spec. ii. inv IN.
-Qed.
-
-End MK_CPO_FROM_COLA.
-
-End WITH_CPO.
-
 End CPO_THEORY.

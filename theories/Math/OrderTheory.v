@@ -598,21 +598,21 @@ Variant isDirected {D : Type} `{PROSET : isProset D} (X : ensemble D) : Prop :=
 #[local] Hint Constructors isDirected : poset_hints.
 
 Lemma isDirected_iff {D : Type} `{PROSET : isProset D} (X : ensemble D)
-  : isDirected X <-> (forall xs, L.is_finsubset_of xs X -> exists y, y \in X /\ (forall x, L.In x xs -> x =< y)).
+  : isDirected X <-> (forall xs, L.is_finsubset_of xs X -> (exists u, u \in X /\ (forall x, L.In x xs -> x =< u))).
 Proof.
   split.
   - intros [? ?]. induction xs as [ | x' xs' IH]; simpl.
     + done!.
     + intros FINSUBSET. exploit IH. done!.
-      intros [y' [IN' BOUNDED']]. exploit (DIRECTED' x' y'); eauto.
-      intros (y & ? & ? & ?). exists y; done!.
+      intros [u' [IN' BOUNDED']]. exploit (DIRECTED' x' u'); eauto.
+      intros (u & ? & ? & ?). exists u; done!.
   - intros DIRECTED. split.
     + exploit (DIRECTED []); simpl.
       * done!.
-      * intros [y [IN ?]]. exists y; done!.
+      * intros [u [IN ?]]. exists u; done!.
     + ii. exploit (DIRECTED [x1; x2]); simpl. 
       * now intros ? [<- | [<- | []]].
-      * intros [y [IN ?]]. exists y; done!.
+      * intros [u [IN ?]]. exists u; done!.
 Qed.
 
 Lemma preservesDirectedness_if_isMonotonic {A : Type} {B : Type} {A_isProset : isProset A} {B_isProset : isProset B} (f : A -> B)
@@ -631,6 +631,24 @@ Class isCpo (D : Type) {PROSET : isProset D} : Type :=
   ; bottom_cpo_spec : forall x : D, bottom_cpo =< x
   ; supremum_cpo_spec (X : ensemble D) (DIRECTED : isDirected X) : is_supremum_of (supremum_cpo X DIRECTED) X
   }.
+
+Section MAKE_CPO_FROM_COLA.
+
+Context {D : Type} {PROSET : isProset D} {COLA : ColaDef.isCola D (PROSET := PROSET)}.
+
+#[global, program]
+Instance cola_isCpo : isCpo D :=
+  { bottom_cpo := proj1_sig (ColaDef.supremum_cola E.empty)
+  ; supremum_cpo X _ := proj1_sig (ColaDef.supremum_cola X)
+  ; bottom_cpo_spec := _
+  ; supremum_cpo_spec X _ := proj2_sig (ColaDef.supremum_cola X)
+  }.
+Next Obligation.
+  destruct (ColaDef.supremum_cola E.empty) as [bot bot_spec]; simpl in *.
+  eapply bot_spec. ii. inv IN.
+Qed.
+
+End MAKE_CPO_FROM_COLA.
 
 End CpoDef.
 
