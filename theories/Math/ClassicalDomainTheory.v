@@ -1,6 +1,7 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Math.OrderTheory.
+Require Import PnV.Math.DomainTheory.
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
@@ -881,7 +882,7 @@ Proof with eauto with *.
       { eapply H... econs... }
 Qed.
 
-Lemma getLfpOf_returns_the_least_fixed_point (f : `[D -> D])
+Lemma lfp_returns_the_least_fixed_point (f : `[D -> D])
   : is_lfpOf (lfp_cpo f) (proj1_sig f).
 Proof with eauto with *.
   pose proof (every_ScottContinuousMap_has_a_fixed_point f) as claim1.
@@ -983,5 +984,27 @@ Definition ScottFix : `[`[D -> D] -> D] :=
   @exist (`[D -> D] -> D) isContinuous lfp_cpo lfp_cpo_isContinuous.
 
 End SCOTT_FIX.
+
+Section WITH_CPO.
+
+Section MK_CPO_FROM_COLA.
+
+Context {D : Type} {PROSET : isProset D} {COLA : ColaDef.isCola D (PROSET := PROSET)}.
+
+#[global, program]
+Instance cola_isCpo : isCpo D :=
+  { supremum_cpo X _ := proj1_sig (ColaDef.supremum_cola X)
+  ; supremum_cpo_spec X _ := proj2_sig (ColaDef.supremum_cola X)
+  ; bottom_cpo := proj1_sig (ColaDef.supremum_cola E.empty)
+  ; bottom_cpo_spec := _
+  }.
+Next Obligation.
+  destruct (ColaDef.supremum_cola E.empty) as [bot bot_spec]; simpl.
+  eapply bot_spec. ii. inv IN.
+Qed.
+
+End MK_CPO_FROM_COLA.
+
+End WITH_CPO.
 
 End CPO_THEORY.
