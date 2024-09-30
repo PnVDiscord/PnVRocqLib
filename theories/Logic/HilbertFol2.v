@@ -526,7 +526,7 @@ Proof with done!.
   { eapply ImplicationI, ByAssumption. left... }
   { eapply extend_infers.
     - eapply Law_of_Excluded_Middle.
-    - ii...
+    - intros ? [].
   }
 Qed.
 
@@ -553,7 +553,8 @@ Proof.
       * eapply extend_infers with (Gamma := E.singleton (Imp_frm Bot_frm Bot_frm)).
         { eapply ConjunctionE2. eapply INFERS2. }
         { done!. }
-    + destruct LE as [INFERS1 INFERS2]. unfold leProp in IH. simpl in IH. eapply extend_proves with (Gamma := E.insert x (E.fromList xs)). done!. rewrite <- Deduction_theorem. eapply IH. split.
+    + destruct LE as [INFERS1 INFERS2]. unfold leProp in IH. simpl in IH. eapply extend_proves with (Gamma := E.insert x (E.fromList xs)). done!.
+      rewrite <- Deduction_theorem. eapply IH. split.
       * eapply ConjunctionE1. eapply ByAssumption. econs.
       * eapply ConjunctionI.
         { eapply ByAssumption. done!. }
@@ -571,7 +572,7 @@ Proof.
         + assert (PROVE : E.fromList ps ⊢ b).
           { exists ps. split. done!. econs. exact PF. }
           revert PROVE. clear. revert b. induction ps as [ | p ps IH]; simpl; i.
-          * eapply extend_infers. eapply PROVE. done!.
+          * eapply extend_infers. eapply PROVE. intros ? [].
           * exploit (IH (Imp_frm p b)).
             { eapply for_Imp_I. eapply extend_infers. exact PROVE. done!. }
             intros claim. rewrite Deduction_theorem in claim.

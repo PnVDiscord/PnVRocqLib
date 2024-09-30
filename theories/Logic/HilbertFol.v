@@ -468,6 +468,16 @@ Proof.
   - exact PF.
 Qed.
 
+Section ALPHA.
+
+Let EMPTY_INTRO (ps : list (frm L)) : E.fromList ps \subseteq E.empty -> ps = [] :=
+  match ps with
+  | [] => fun _ => eq_refl
+  | p :: ps => fun SUBSET =>
+    match SUBSET p (or_introl eq_refl) with
+    end
+  end.
+
 Lemma proves_alpha_comm_lemma (p : frm L) (q : frm L)
   (ALPHA : p ≡ q)
   : E.singleton p \proves q /\ E.singleton q \proves p.
@@ -475,7 +485,7 @@ Proof.
   revert q ALPHA. pattern p. revert p. eapply @frm_depth_lt_ind; ii. destruct ALPHA.
   - rewrite <- EQ. split; eapply for_ByHyp; done.
   - rewrite <- EQ1, <- EQ2. split; eapply for_ByHyp; done.
-  - assert (rank_LT1: frm_depth p1 < frm_depth (Neg_frm p1)) by now simpl; lia.
+  - assert (rank_LT1 : frm_depth p1 < frm_depth (Neg_frm p1)) by now simpl; lia.
     pose proof (IH p1 rank_LT1 _ ALPHA) as [PROVE1 PROVE2].
     split.
     + eapply for_Imp_E. 2:{ eapply for_ByHyp. rewrite E.in_singleton_iff. reflexivity. }
@@ -492,12 +502,12 @@ Proof.
     + eapply for_Imp_I.
       assert (PROVE5 : E.insert p1' (E.singleton (Imp_frm p1 p2)) \proves p1).
       { destruct PROVE2 as (ps&INCL&(PF)). exists ps. split.
-        - intros z z_in. pose proof (INCL z z_in) as H_IN. rewrite E.in_singleton_iff in H_IN; unnw. subst z. ss!.
+        - intros z z_in. pose proof (INCL z z_in) as H_IN. rewrite E.in_singleton_iff in H_IN; unnw. subst z. left. reflexivity.
         - econstructor. exact PF.
       }
       assert (PROVE6 : E.insert p1' (E.singleton (Imp_frm p1 p2)) \proves p2).
       { eapply for_Imp_E.
-        - eapply for_ByHyp. right. ss!.
+        - eapply for_ByHyp. right. reflexivity.
         - exact PROVE5.
       }
       eapply for_Imp_E. 2: exact PROVE6. eapply for_Imp_I.
@@ -512,7 +522,7 @@ Proof.
       }
       assert (PROVE6 : E.insert p1 (E.singleton (Imp_frm p1' p2')) \proves p2').
       { eapply for_Imp_E.
-        - eapply for_ByHyp. right. ss!.
+        - eapply for_ByHyp. right. reflexivity.
         - exact PROVE5.
       }
       eapply for_Imp_E. 2: exact PROVE6. eapply for_Imp_I.
@@ -533,9 +543,9 @@ Proof.
     assert (rank_LT4 : frm_depth (subst_frm (one_subst y (Var_trm y)) q) < frm_depth (All_frm x p)) by now rewrite subst_preserves_rank; simpl; lia.
     assert (rank_LT5 : frm_depth (subst_frm (one_subst x (Var_trm x)) p) < frm_depth (All_frm x p)) by now rewrite subst_preserves_rank; simpl; lia.
     assert (ALPHA1 : subst_frm (one_subst y (Var_trm y)) q ≡ q).
-    { eapply subst_nil_frm; intros w w_free. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec w y) as [ | ]; done. }
+    { eapply subst_nil_frm; intros w w_free. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec w y) as [ | ]; [congruence | reflexivity]. }
     assert (ALPHA2: subst_frm (one_subst x (Var_trm x)) p ≡ p).
-    { eapply subst_nil_frm; intros w w_free. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec w x) as [ | ]; done. }
+    { eapply subst_nil_frm; intros w w_free. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec w x) as [ | ]; [congruence | reflexivity]. }
     pose proof (IH p' rank_LT3 q' ALPHA) as [PROVE1 PROVE2].
     pose proof (IH _ rank_LT4 q ALPHA1) as [PROVE3 PROVE4].
     pose proof (IH _ rank_LT5 p ALPHA2) as [PROVE5 PROVE6].
@@ -547,28 +557,30 @@ Proof.
     assert (EQ1 : subst_frm (one_subst z (Var_trm y)) q' = subst_frm (one_subst y (Var_trm y)) q).
     { unfold q'. rewrite <- subst_compose_frm_spec. eapply equiv_subst_in_frm_implies_subst_frm_same.
       intros w FREE. unfold subst_compose, one_subst, cons_subst, nil_subst. destruct (eq_dec w y) as [EQ | NE].
-      - rewrite subst_trm_unfold. destruct (eq_dec z z) as [EQ' | NE']; done.
+      - rewrite subst_trm_unfold. destruct (eq_dec z z) as [EQ' | NE']; [reflexivity | contradiction].
       - rewrite subst_trm_unfold. destruct (eq_dec w z) as [EQ' | NE'].
-        + subst w. simpl in RFRESH. rewrite andb_false_iff, negb_false_iff, Nat.eqb_eq in RFRESH. destruct RFRESH as [? | ?]; done.
-        + done.
+        + subst w. simpl in RFRESH. rewrite andb_false_iff, negb_false_iff, Nat.eqb_eq in RFRESH. destruct RFRESH as [? | ?]; [rewrite H in FREE; discriminate FREE | contradiction NE].
+        + reflexivity.
     }
     assert (EQ2 : subst_frm (one_subst z (Var_trm x)) p' = subst_frm (one_subst x (Var_trm x)) p).
     { unfold p'. rewrite <- subst_compose_frm_spec. eapply equiv_subst_in_frm_implies_subst_frm_same.
       intros w FREE. unfold subst_compose, one_subst, cons_subst, nil_subst. destruct (eq_dec w x) as [EQ | NE].
-      - rewrite subst_trm_unfold. destruct (eq_dec z z) as [EQ' | NE']; done.
+      - rewrite subst_trm_unfold. destruct (eq_dec z z) as [EQ' | NE']; [reflexivity | contradiction].
       - rewrite subst_trm_unfold. destruct (eq_dec w z) as [EQ' | NE'].
-        + subst w. simpl in LFRESH. rewrite andb_false_iff, negb_false_iff, Nat.eqb_eq in LFRESH. destruct LFRESH as [? | ?]; done.
-        + done.
+        + simpl in LFRESH. rewrite andb_false_iff, negb_false_iff, Nat.eqb_eq in LFRESH. destruct LFRESH as [? | ?].
+          * subst w. rewrite FREE in H. discriminate H.
+          * congruence.
+        + reflexivity.
     }
     split.
     + assert (PROVE7 : E.singleton (All_frm x p) \proves All_frm z p').
-      { eapply for_Imp_E.
-        - exists []. split. done!. econstructor. eapply proof_rebind_All_frm. exact LFRESH.
-        - eapply for_ByHyp. done.
+      { eapply for_Imp_E with (p := All_frm x p).
+        - exists []. split. intros ? []. econstructor. subst p'. eapply proof_rebind_All_frm. exact LFRESH.
+        - eapply for_ByHyp. reflexivity.
       }
       assert (PROVE8 : E.singleton (All_frm x p) \proves (Imp_frm (All_frm z p') (All_frm z q'))).
       { enough (PROVE : E.empty \proves Imp_frm p' q').
-        - destruct PROVE as (ps&INCL&(PF)). assert (EQ: ps = []). destruct ps as [ | p'' ps'']; trivial.
+        - destruct PROVE as (ps&INCL&(PF)). assert (EQ : ps = []). destruct ps as [ | p'' ps'']; trivial.
           + assert (IN : p'' \in E.fromList (p'' :: ps'')) by now done!. apply INCL in IN. inv IN.
           + subst ps. exists []. split. ss!. econstructor. rewrite <- app_nil_l with (l := []). eapply MP.
             * eapply FA3.
@@ -592,7 +604,7 @@ Proof.
         assert (PROVE' : E.empty \proves (Imp_frm (subst_frm (one_subst y (Var_trm y)) q) q)).
         { eapply for_Imp_I. destruct PROVE3 as (ps&INCL&(PF)). exists ps. split. intros w w_in. pose proof (INCL w w_in) as H_IN. done!. econstructor. exact PF. }
         destruct PROVE' as (ps&INCL&(PF)).
-        assert (EQ: ps = []).
+        assert (EQ : ps = []).
         { destruct ps as [ | p'' ps'']. reflexivity. assert (IN : p'' \in E.fromList (p'' :: ps'')) by now done!. apply INCL in IN. inv IN. }
         subst ps. clear INCL. eapply for_Imp_I. destruct PROVE as (ps&INCL&(PF')). exists ps. split. exact INCL. econstructor.
         rewrite <- app_nil_l with (l := ps). eapply MP. 2: exact PF'. rewrite <- app_nil_l with (l := []). eapply MP. eapply FA3.
@@ -601,7 +613,7 @@ Proof.
       eapply for_Imp_E. exact PROVE10. exact PROVE9.
     + assert (PROVE7 : E.singleton (All_frm y q) \proves All_frm z q').
       { eapply for_Imp_E.
-        - exists []. split. intros ? []. econstructor. eapply proof_rebind_All_frm. exact RFRESH.
+        - exists []. split. intros ? []. econstructor. subst q'. eapply proof_rebind_All_frm. exact RFRESH.
         - eapply for_ByHyp. done.
       }
       assert (PROVE8 : E.singleton (All_frm y q) \proves (Imp_frm (All_frm z q') (All_frm z p'))).
@@ -631,7 +643,7 @@ Proof.
         assert (PROVE' : E.empty \proves (Imp_frm (subst_frm (one_subst x (Var_trm x)) p) p)).
         { eapply for_Imp_I. destruct PROVE5 as (ps&INCL&(PF)). exists ps. split. intros w w_in. pose proof (INCL w w_in) as H_IN. done!. econstructor. exact PF. }
         destruct PROVE' as (ps&INCL&(PF)).
-        assert (EQ: ps = []).
+        assert (EQ : ps = []).
         { destruct ps as [ | p'' ps'']. reflexivity. assert (IN : p'' \in E.fromList (p'' :: ps'')) by done!. apply INCL in IN. inv IN. }
         subst ps. clear INCL. eapply for_Imp_I. destruct PROVE as (ps&INCL&(PF')). exists ps. split. exact INCL. econstructor.
         rewrite <- app_nil_l with (l := ps). eapply MP. 2: exact PF'. rewrite <- app_nil_l with (l := []). eapply MP. eapply FA3.
@@ -639,6 +651,8 @@ Proof.
       }
       eapply for_Imp_E. exact PROVE10. exact PROVE9.
 Qed.
+
+End ALPHA.
 
 Lemma proves_alpha_proves (Gamma : ensemble (frm L)) (p : frm L) (q : frm L)
   (PROVE : Gamma \proves p)

@@ -979,12 +979,12 @@ Lemma distr_compose_one (s1 : subst L) (s2 : subst L) (x : ivar) (x' : ivar) (t 
   : cons_subst x' t (subst_compose s1 s2) z = subst_compose (cons_subst x' (Var_trm x) s1) (cons_subst x t s2) z.
 Proof.
   unfold subst_compose, cons_subst. destruct (eq_dec z x') as [H_eq | H_ne].
-  - subst z. simpl. destruct (eq_dec x x); done.
+  - subst z. simpl. destruct (eq_dec x x); [reflexivity | contradiction].
   - rewrite forallb_forall in FRESH. unfold "∘" in FRESH.
     assert (NOT_FREE : is_free_in_trm x (s1 z) = false).
     { rewrite <- negb_true_iff. eapply FRESH. ss!. }
     eapply equiv_subst_in_trm_implies_subst_trm_same.
-    intros z' FREE'. destruct (eq_dec z' x) as [EQ | NE]; ss!.
+    intros z' FREE'. destruct (eq_dec z' x) as [EQ | NE]; [congruence | reflexivity].
 Qed.
 
 Definition free_in_trm_wrt (x : ivar) (s : subst L) (t : trm L) : Prop :=
@@ -2442,7 +2442,7 @@ Theorem substitution_lemma_frm (env : ivar -> domain_of_discourse) (s : subst L)
   : interpret_frm (interpret_trm env ∘ s) p <-> interpret_frm env (subst_frm s p).
 Proof.
   revert env s. frm_ind p; simpl; i.
-  - f_equal. rewrite substitution_lemma_trms. done.
+  - rewrite substitution_lemma_trms. reflexivity.
   - f_equal. do 2 rewrite substitution_lemma_trm. done.
   - done!.
   - rewrite IH1, IH2. done.
@@ -2451,19 +2451,20 @@ Proof.
     assert (claim1 : forall z : ivar, is_free_in_frm z p1 = true -> interpret_trm (fun x : ivar => if eq_dec x (chi_frm s (All_frm y p1)) then v else env x) (cons_subst y (Var_trm (chi_frm s (All_frm y p1))) s z) = (if eq_dec z y then v else interpret_trm env (s z))).
     { intros z FREE. unfold cons_subst. destruct (eq_dec z y) as [z_eq_y | z_ne_y].
       - transitivity ((fun x : ivar => if eq_dec x (chi_frm s (All_frm y p1)) then v else env x) (chi_frm s (All_frm y p1))); try reflexivity.
-        destruct (eq_dec (chi_frm s (All_frm y p1)) (chi_frm s (All_frm y p1))); done.
-      - eapply interpret_trm_ext. intros z' FREE'. destruct (eq_dec z' (chi_frm s (All_frm y p1))) as [EQ | NE]; try done. subst z'.
-        enough (CONTRA: is_free_in_trm (chi_frm s (All_frm y p1)) (s z) = false) by done.
-        assert (BUT := chi_frm_is_fresh_in_subst (All_frm y p1) s).
+        destruct (eq_dec (chi_frm s (All_frm y p1)) (chi_frm s (All_frm y p1))); [reflexivity | contradiction].
+      - eapply interpret_trm_ext. intros z' FREE'. destruct (eq_dec z' (chi_frm s (All_frm y p1))) as [EQ | NE]; [ | reflexivity]. subst z'.
+        enough (CONTRA: is_free_in_trm (chi_frm s (All_frm y p1)) (s z) = false).
+        { rewrite FREE' in CONTRA. discriminate CONTRA. }
+        pose proof (BUT := chi_frm_is_fresh_in_subst (All_frm y p1) s).
         unfold frm_is_fresh_in_subst in BUT. rewrite forallb_forall in BUT.
         specialize BUT with (x := z). rewrite fvs_frm_unfold in BUT. rewrite L.in_remove_iff in BUT.
         rewrite fv_is_free_in_frm in BUT. specialize (BUT (conj FREE z_ne_y)).
-        unfold "∘" in BUT. rewrite negb_true_iff in BUT. done.
+        unfold "∘" in BUT. rewrite negb_true_iff in BUT. rewrite FREE' in BUT. discriminate BUT.
     }
-    symmetry. transitivity (interpret_frm (fun z : ivar => interpret_trm (fun w : ivar => if eq_dec w (chi_frm s (All_frm y p1)) then v else env w) (cons_subst y (Var_trm (chi_frm s (All_frm y p1))) s z)) p1). done. 
+    symmetry. transitivity (interpret_frm (fun z : ivar => interpret_trm (fun w : ivar => if eq_dec w (chi_frm s (All_frm y p1)) then v else env w) (cons_subst y (Var_trm (chi_frm s (All_frm y p1))) s z)) p1); [rewrite IH1; reflexivity | ].
     symmetry. eapply interpret_frm_ext. ii. destruct (eq_dec z y) as [? | ?].
-    + subst z. ss!. destruct (eq_dec y y) as [? | ?]. ss!. destruct (eq_dec (chi_frm s (All_frm y p1)) (chi_frm s (All_frm y p1))) as [? | ?]; ss!. ss!.
-    + apply claim1 in FREE. destruct (eq_dec z y) as [? | ?]; ss!.
+    + subst z. ss!. destruct (eq_dec y y) as [? | ?]. ss!. destruct (eq_dec (chi_frm s (All_frm y p1)) (chi_frm s (All_frm y p1))) as [? | ?]; [reflexivity | contradiction]. contradiction.
+    + apply claim1 in FREE. destruct (eq_dec z y) as [? | ?]; [contradiction | symmetry; eapply FREE].
 Qed.
 
 Lemma interpret_trm_ext_upto (env : ivar -> domain_of_discourse) (env' : ivar -> domain_of_discourse) (t : trm L)
