@@ -779,19 +779,23 @@ Qed.
 
 #[global] Hint Rewrite unfold_ensemble_eqProp : simplication_hints.
 
+Ltac anti_eq_rect_eq :=
+  repeat lazymatch goal with [ H : ?x = ?x |- _ ] => clear H end.
+
 Tactic Notation "s!" :=
   repeat (
     autorewrite with simplication_hints in *;
     E.unfold_E;
     simpl in *;
-    autounfold with simplication_hints in *
+    autounfold with simplication_hints in *;
+    anti_eq_rect_eq
   ).
 
 Tactic Notation "ss!" :=
-  s!; subst; eauto with *; firstorder (try first [lia | congruence | f_equal]).
+  s!; anti_eq_rect_eq; subst; anti_eq_rect_eq; eauto with *; firstorder (try first [lia | congruence | f_equal]).
 
 Tactic Notation "done!" :=
-  now ii; first [congruence | lia | repeat ss!; done].
+  now ii; first [congruence | lia | repeat ss!; anti_eq_rect_eq; done].
 
 Section OPERATION_PROPS.
 

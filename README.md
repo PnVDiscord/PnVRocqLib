@@ -22,17 +22,27 @@ The Coq Proof Assistant, version 8.18.0
 
 ## Contents
 
+Our main results are:
+
+- [x] The soundness, completeness and compactness theorems of propositional logic (`Theorem the_propositional_soundness_theorem`, `Theorem the_propositional_completeness_theorem` and `Corollary the_propositional_compactness_theorem` in [`ClassicalPropositionalLogic.v`](theories/Logic/ClassicalPropositionalLogic.v)).
+
+- [x] The soundness and completeness theorems of first-order logic. (`Theorem HilbertCalculus_sound` and `Theorem HilbertCalculus_complete` in [`ClassicalFol.v`](theories/Logic/ClassicalFol.v))
+
+- [x] The Kleene fixed-point theorem. (`Theorem lfp_returns_the_least_fixed_point` in [`ClassicalDomainTheory.v`](theories/Math/ClassicalDomainTheory.v))
+
 ### Data
 
 - `Aczel.v` : Aczel's Type Theoretic Interpretation of Set Theory.
+
+- `Graph.v` : Basic Graph Theory.
 
 - `Vector.v` : Replaces `Coq.Vectors.VectorDef.t`.
 
 ### Logic
 
-- `BasicFol.v` : Basic definitions of First-Order Logic
+- `BasicFol.v` : Basic definitions of First-Order Logic.
 
-- `BasicFol2.v` : Extra definitions of First-Order Logic
+- `BasicFol2.v` : Extra definitions of First-Order Logic.
 
 - `ClassicalFol.v` : Meta-theories on Classical First-Order Logic--such as Soundness Theorem and Completeness Theorem.
 

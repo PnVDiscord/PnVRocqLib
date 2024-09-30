@@ -1655,7 +1655,7 @@ Proof.
   - exploit IH1. done!. intros [p1' <-]. exists (All_frm y p1'). reflexivity.
 Qed.
 
-Lemma embed_frm_alpha p1 p2
+Theorem embed_frm_alpha p1 p2
   : p1 ≡ p2 <-> embed_frm p1 ≡ embed_frm p2.
 Proof.
   split; intros ALPHA.
