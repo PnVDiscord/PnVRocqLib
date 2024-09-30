@@ -1,6 +1,7 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Math.OrderTheory.
+Require Import PnV.Math.DomainTheory.
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
@@ -881,7 +882,7 @@ Proof with eauto with *.
       { eapply H... econs... }
 Qed.
 
-Lemma getLfpOf_returns_the_least_fixed_point (f : `[D -> D])
+Lemma lfp_returns_the_least_fixed_point (f : `[D -> D])
   : is_lfpOf (lfp_cpo f) (proj1_sig f).
 Proof with eauto with *.
   pose proof (every_ScottContinuousMap_has_a_fixed_point f) as claim1.

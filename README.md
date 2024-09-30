@@ -34,7 +34,7 @@ The Coq Proof Assistant, version 8.18.0
 
 - `BasicFol2.v` : Extra definitions of First-Order Logic
 
-- `ClassicalFol.v` : Meta-theories on Classical First-Order Logic.
+- `ClassicalFol.v` : Meta-theories on Classical First-Order Logic--such as Soundness Theorem and Completeness Theorem.
 
 - `ClassicalPropositionalLogic.v` : The Soundness, Completeness and Compactness Theorem for PropositionalLogic.
 
@@ -72,11 +72,13 @@ The Coq Proof Assistant, version 8.18.0
 
 - `Notations.v` : Reserves all notations to avoid the conflict.
 
-- `SfLib.v` : The copy of `snu-sf/sflib.v`. See `References`.
+- `SfLib.v` : The copy of `snu-sf/sflib.v`.
 
 - `Prelude.v` : The prelude code.
 
 ## References
+
+### Source Codes
 
 1. [sflib](https://github.com/snu-sf/sflib)
 
@@ -91,3 +93,7 @@ The Coq Proof Assistant, version 8.18.0
 6. [CoqGym/goedel](https://github.com/princeton-vl/CoqGym/tree/master/coq_projects/goedel)
 
 7. [formalmetatheory-stoughton](https://github.com/ernius/formalmetatheory-stoughton)
+
+### Articles
+
+8. [Constructive Completeness Proofs and Delimited Control](https://theses.hal.science/pastel-00530424/)

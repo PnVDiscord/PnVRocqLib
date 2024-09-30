@@ -145,9 +145,8 @@ Proof.
       * eapply IH.
 Qed.
 
-Hypothesis CONSISTENT : X ⊬ Bot_frm.
-
 Lemma mkModel_isModel (p : frm L')
+  (CONSISTENT : X ⊬ Bot_frm)
   : p \in Delta <-> interpret_frm mkModel ivar_interpret p.
 Proof with eauto with *.
   exploit (@theorem_of_1_2_14 (frm L') (@formula_isSetoid L') LindenbaumBooleanAlgebra (Th (AddHenkin (E.image embed_frm X)))).
@@ -196,29 +195,29 @@ End MODEL_EXISTENCE.
 
 #[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
 
-Theorem HilbertCalculus_complete (Gamma : ensemble (frm L)) (C : frm L)
-  (CONSEQUENCE : Gamma ⊨ C)
-  : Gamma ⊢ C.
+Theorem HilbertCalculus_complete (X : ensemble (frm L)) (b : frm L)
+  (CONSEQUENCE : X ⊨ b)
+  : X ⊢ b.
 Proof with eauto with *.
   eapply NNPP. intros NO.
-  set (X := E.insert (Neg_frm C) Gamma).
-  assert (CONSISTENT : X ⊬ Bot_frm).
+  set (Gamma := E.insert (Neg_frm b) X).
+  assert (CONSISTENT : Gamma ⊬ Bot_frm).
   { intros INCONSISTENT. contradiction NO. eapply NegationE... }
-  exploit (@theorem_of_1_2_14 (frm L') (@formula_isSetoid L') LindenbaumBooleanAlgebra (Th (AddHenkin (E.image embed_frm X)))).
+  exploit (@theorem_of_1_2_14 (frm L') (@formula_isSetoid L') LindenbaumBooleanAlgebra (Th (AddHenkin (E.image embed_frm Gamma)))).
   { eapply lemma1_of_1_3_8. }
-  intros [SUBSET' IS_FILTER' COMPLETE' EQUICONSISTENT']. fold (MaximallyConsistentSet (AddHenkin (E.image embed_frm X))) in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.
-  pose proof (theorem_of_1_3_10 X) as [? ? ? ? ? ?]. unnw.
-  assert (claim : X ⊭ Bot_frm).
-  { intros SAT. contradiction (SAT (restrict_structure (mkModel X)) (ivar_interpret X)).
-    - red. set (STRUCTURE := mkModel X). set (env := ivar_interpret X).
+  intros [SUBSET' IS_FILTER' COMPLETE' EQUICONSISTENT']. fold (MaximallyConsistentSet (AddHenkin (E.image embed_frm Gamma))) in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.
+  pose proof (theorem_of_1_3_10 Gamma) as [? ? ? ? ? ?]. unnw.
+  assert (claim : Gamma ⊭ Bot_frm).
+  { intros SAT. contradiction (SAT (restrict_structure (mkModel Gamma)) (ivar_interpret Gamma)).
+    - red. set (STRUCTURE := mkModel Gamma). set (env := ivar_interpret Gamma).
       assert (claim : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
       { intros p. eapply restrict_structure_frm. }
       ii. red. rewrite <- claim. unfold STRUCTURE, env. rewrite <- mkModel_isModel; trivial.
       eapply SUBSET. rewrite in_Th_iff. eapply ByAssumption. done!.
     - simpl. intros t. unfold interpret_equation, ivar_interpret. simpl. eapply proves_reflexivity.
   }
-  contradiction claim. intros ? ? ? SAT. unfold X in SATISFY.
-  red in SATISFY. contradiction (SATISFY (Neg_frm C)).
+  contradiction claim. intros ? ? ? SAT. unfold Gamma in SATISFY.
+  red in SATISFY. pose proof (SATISFY (Neg_frm b)) as CONTRA. simpl in CONTRA. contradiction CONTRA.
   - left. reflexivity.
   - eapply CONSEQUENCE. ii. eapply SATISFY. right. trivial.
 Qed.
