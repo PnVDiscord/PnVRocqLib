@@ -24,7 +24,7 @@ The Coq Proof Assistant, version 8.18.0
 
 Our main results are:
 
-- [x] The soundness, completeness and compactness theorems of propositional logic (`Theorem the_propositional_soundness_theorem`, `Theorem the_propositional_completeness_theorem` and `Corollary the_propositional_compactness_theorem` in [`ClassicalPropositionalLogic.v`](theories/Logic/ClassicalPropositionalLogic.v)).
+- [x] The soundness, completeness and compactness theorems of propositional logic. (`Theorem the_propositional_soundness_theorem`, `Theorem the_propositional_completeness_theorem` and `Corollary the_propositional_compactness_theorem` in [`ClassicalPropositionalLogic.v`](theories/Logic/ClassicalPropositionalLogic.v))
 
 - [x] The soundness and completeness theorems of first-order logic. (`Theorem HilbertCalculus_sound` and `Theorem HilbertCalculus_complete` in [`ClassicalFol.v`](theories/Logic/ClassicalFol.v))
 
