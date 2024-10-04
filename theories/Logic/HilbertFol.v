@@ -544,7 +544,7 @@ Proof.
     assert (rank_LT5 : frm_depth (subst_frm (one_subst x (Var_trm x)) p) < frm_depth (All_frm x p)) by now rewrite subst_preserves_rank; simpl; lia.
     assert (ALPHA1 : subst_frm (one_subst y (Var_trm y)) q ≡ q).
     { eapply subst_nil_frm; intros w w_free. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec w y) as [ | ]; [congruence | reflexivity]. }
-    assert (ALPHA2: subst_frm (one_subst x (Var_trm x)) p ≡ p).
+    assert (ALPHA2 : subst_frm (one_subst x (Var_trm x)) p ≡ p).
     { eapply subst_nil_frm; intros w w_free. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec w x) as [ | ]; [congruence | reflexivity]. }
     pose proof (IH p' rank_LT3 q' ALPHA) as [PROVE1 PROVE2].
     pose proof (IH _ rank_LT4 q ALPHA1) as [PROVE3 PROVE4].
@@ -580,11 +580,11 @@ Proof.
       }
       assert (PROVE8 : E.singleton (All_frm x p) \proves (Imp_frm (All_frm z p') (All_frm z q'))).
       { enough (PROVE : E.empty \proves Imp_frm p' q').
-        - destruct PROVE as (ps&INCL&(PF)). assert (EQ : ps = []). destruct ps as [ | p'' ps'']; trivial.
-          + assert (IN : p'' \in E.fromList (p'' :: ps'')) by now done!. apply INCL in IN. inv IN.
-          + subst ps. exists []. split. ss!. econstructor. rewrite <- app_nil_l with (l := []). eapply MP.
-            * eapply FA3.
-            * eapply GEN. intros ? []. exact PF.
+        - destruct PROVE as (ps&INCL&(PF)).
+          assert (EQ : ps = []) by now eapply EMPTY_INTRO.
+          subst ps. exists []. split. ss!. econstructor. rewrite <- app_nil_l with (l := []). eapply MP.
+          + eapply FA3.
+          + eapply GEN. intros ? []. exact PF.
         - destruct PROVE1 as (ps&INCL&(PF)). eapply for_Imp_I. exists ps. split.
           + intros w w_in. pose proof (INCL w w_in) as H_IN. done!.
           + econstructor. exact PF.
@@ -604,8 +604,7 @@ Proof.
         assert (PROVE' : E.empty \proves (Imp_frm (subst_frm (one_subst y (Var_trm y)) q) q)).
         { eapply for_Imp_I. destruct PROVE3 as (ps&INCL&(PF)). exists ps. split. intros w w_in. pose proof (INCL w w_in) as H_IN. done!. econstructor. exact PF. }
         destruct PROVE' as (ps&INCL&(PF)).
-        assert (EQ : ps = []).
-        { destruct ps as [ | p'' ps'']. reflexivity. assert (IN : p'' \in E.fromList (p'' :: ps'')) by now done!. apply INCL in IN. inv IN. }
+        assert (EQ : ps = []) by now eapply EMPTY_INTRO.
         subst ps. clear INCL. eapply for_Imp_I. destruct PROVE as (ps&INCL&(PF')). exists ps. split. exact INCL. econstructor.
         rewrite <- app_nil_l with (l := ps). eapply MP. 2: exact PF'. rewrite <- app_nil_l with (l := []). eapply MP. eapply FA3.
         eapply GEN. intros ? []. exact PF.
@@ -619,8 +618,7 @@ Proof.
       assert (PROVE8 : E.singleton (All_frm y q) \proves (Imp_frm (All_frm z q') (All_frm z p'))).
       { enough (PROVE: E.empty \proves Imp_frm q' p').
         - destruct PROVE as (ps&INCL&(PF)).
-          assert (EQ : ps = []).
-          { destruct ps as [ | p'' ps'']; trivial. assert (IN : p'' \in E.fromList (p'' :: ps'')) by done!. apply INCL in IN. inv IN. }
+          assert (EQ : ps = []) by now eapply EMPTY_INTRO.
           subst ps. exists []. split. intros ? []. econstructor. rewrite <- app_nil_l with (l := []). eapply MP.
           + eapply FA3.
           + eapply GEN. intros ? []. exact PF.
@@ -643,8 +641,7 @@ Proof.
         assert (PROVE' : E.empty \proves (Imp_frm (subst_frm (one_subst x (Var_trm x)) p) p)).
         { eapply for_Imp_I. destruct PROVE5 as (ps&INCL&(PF)). exists ps. split. intros w w_in. pose proof (INCL w w_in) as H_IN. done!. econstructor. exact PF. }
         destruct PROVE' as (ps&INCL&(PF)).
-        assert (EQ : ps = []).
-        { destruct ps as [ | p'' ps'']. reflexivity. assert (IN : p'' \in E.fromList (p'' :: ps'')) by done!. apply INCL in IN. inv IN. }
+        assert (EQ : ps = []) by now eapply EMPTY_INTRO.
         subst ps. clear INCL. eapply for_Imp_I. destruct PROVE as (ps&INCL&(PF')). exists ps. split. exact INCL. econstructor.
         rewrite <- app_nil_l with (l := ps). eapply MP. 2: exact PF'. rewrite <- app_nil_l with (l := []). eapply MP. eapply FA3.
         eapply GEN. intros ? []. exact PF.
