@@ -88,8 +88,6 @@ Our main results are:
 
 ## References
 
-### Source Codes
-
 1. [sflib](https://github.com/snu-sf/sflib)
 
 2. [stdpp](https://plv.mpi-sws.org/coqdoc/stdpp)
@@ -103,7 +101,3 @@ Our main results are:
 6. [CoqGym/goedel](https://github.com/princeton-vl/CoqGym/tree/master/coq_projects/goedel)
 
 7. [formalmetatheory-stoughton](https://github.com/ernius/formalmetatheory-stoughton)
-
-### Articles
-
-8. [Constructive Completeness Proofs and Delimited Control](https://theses.hal.science/pastel-00530424/)
