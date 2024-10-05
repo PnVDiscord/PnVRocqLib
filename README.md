@@ -24,11 +24,13 @@ The Coq Proof Assistant, version 8.18.0
 
 Our main results are:
 
+- [x] The Kleene fixed-point theorem. (`Theorem lfp_returns_the_least_fixed_point` in [`ClassicalDomainTheory.v`](theories/Math/ClassicalDomainTheory.v))
+
+- [x] The weak completeness of propositional logic. (`Corollary weak_completeness` in [`PropositionalLogic.v`](theories/Logic/PropositionalLogic.v))
+
 - [x] The soundness, completeness and compactness theorems of propositional logic. (`Theorem the_propositional_soundness_theorem`, `Theorem the_propositional_completeness_theorem` and `Corollary the_propositional_compactness_theorem` in [`ClassicalPropositionalLogic.v`](theories/Logic/ClassicalPropositionalLogic.v))
 
 - [x] The soundness and completeness theorems of first-order logic. (`Theorem HilbertCalculus_sound` and `Theorem HilbertCalculus_complete` in [`ClassicalFol.v`](theories/Logic/ClassicalFol.v))
-
-- [x] The Kleene fixed-point theorem. (`Theorem lfp_returns_the_least_fixed_point` in [`ClassicalDomainTheory.v`](theories/Math/ClassicalDomainTheory.v))
 
 ### Data
 
