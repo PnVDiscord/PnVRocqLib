@@ -1292,14 +1292,14 @@ Proof.
   eapply full_isOpen.
 Defined.
 
-Lemma unions_in_T {A : Type} `{TOPOLOGY : topology A} Os
+Lemma unions_in_T {A : Type} `{TOPOLOGY : topology A} (Os : ensemble (ensemble A))
   (OPENs : forall O, O \in Os -> isOpen O)
   : isOpen (@E.unions A Os).
 Proof.
   eapply unions_isOpen; eauto.
 Defined.
 
-Lemma intersection_in_T {A : Type} `{TOPOLOGY : topology A} O1 O2
+Lemma intersection_in_T {A : Type} `{TOPOLOGY : topology A} (O1 : ensemble A) (O2 : ensemble A)
   (OPEN1 : isOpen O1)
   (OPEN2 : isOpen O2)
   : isOpen (@E.intersection A O1 O2).
