@@ -145,7 +145,7 @@ Proof.
       * eapply IH.
 Qed.
 
-Lemma mkModel_isModel (p : frm L')
+Theorem mkModel_isModel (p : frm L')
   (CONSISTENT : X ⊬ Bot_frm)
   : p \in Delta <-> interpret_frm mkModel ivar_interpret p.
 Proof with eauto with *.
@@ -188,7 +188,7 @@ Proof with eauto with *.
     + intros INTERPRET. rewrite <- CLOSED_infers. eapply FORALL_FAITHFUL.
       intros t. eapply CLOSED_infers. rewrite -> IH with (p' := subst_frm (one_subst y t) p1). 2: rewrite subst_preserves_rank; lia.
       rewrite <- substitution_lemma_frm. eapply interpret_frm_ext with (env' := upd_env y (interpret_trm mkModel ivar_interpret t) ivar_interpret). ii. unfold compose, upd_env, one_subst, cons_subst, nil_subst.
-        destruct (eq_dec z y) as [EQ1 | NE1]; trivial. eapply INTERPRET.
+      destruct (eq_dec z y) as [EQ1 | NE1]; trivial. eapply INTERPRET.
 Qed.
 
 End MODEL_EXISTENCE.
