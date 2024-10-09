@@ -210,9 +210,9 @@ Proof with eauto with *.
   assert (claim : Gamma ⊭ Bot_frm).
   { intros SAT. contradiction (SAT (restrict_structure (mkModel Gamma)) (ivar_interpret Gamma)).
     - red. set (STRUCTURE := mkModel Gamma). set (env := ivar_interpret Gamma).
-      assert (claim : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
+      assert (MODEL : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
       { intros p. eapply restrict_structure_frm. }
-      ii. red. rewrite <- claim. unfold STRUCTURE, env. rewrite <- mkModel_isModel; trivial.
+      ii. red. rewrite <- MODEL. unfold STRUCTURE, env. rewrite <- mkModel_isModel; trivial.
       eapply SUBSET. rewrite in_Th_iff. eapply ByAssumption. done!.
     - simpl. intros t. unfold interpret_equation, ivar_interpret. simpl. eapply proves_reflexivity.
   }
