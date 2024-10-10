@@ -80,6 +80,19 @@ Proof.
     eapply NNPP. intros y_in_U_x. contradiction H_false. now exists (y).
 Qed.
 
+Lemma Scott_topology_T0' {D : Type} {PROSET : isProset D} (a : D) (b : D)
+  (NE : ~ a == b)
+  : exists O : ensemble D, isOpen O /\ ((a \in O /\ ~ b \in O) \/ (b \in O /\ ~ a \in O)).
+Proof.
+  pose proof (classic (a =< b)) as [YES | NO].
+  - assert (IN : b \in U a).
+    { intros LE. contradiction NE. eapply leProp_antisymmetry; trivial. }
+    exists (U a). split. eapply U_x_isOpen.
+    right. split; trivial. intros LE. contradiction LE. reflexivity.
+  - exists (U b). split. eapply U_x_isOpen.
+    left. split; trivial. intros LE. contradiction LE. reflexivity.
+Qed.
+
 Lemma ScottContinuousMap_isMonotonic {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} (f : D -> D')
   (CONTINUIOUS : isContinuous f)
   : isMonotonic1 f.
