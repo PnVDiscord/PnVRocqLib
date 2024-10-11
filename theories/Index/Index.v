@@ -14,6 +14,7 @@ Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Math.ClassicalDomainTheory.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.
+Require Import PnV.Math.Ordinal.
 Require Import PnV.Math.ThN.
 Require Import PnV.Prelude.AC.
 Require Import PnV.Prelude.ClassicalFacts.
