@@ -15,6 +15,7 @@ Require Import PnV.Math.ClassicalDomainTheory.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.
 Require Import PnV.Math.ThN.
+Require Import PnV.Prelude.AC.
 Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Prelude.Notations.

@@ -18,6 +18,7 @@ theories/Math/ClassicalDomainTheory.v #
 theories/Math/DomainTheory.v #
 theories/Math/OrderTheory.v #
 theories/Math/ThN.v #
+theories/Prelude/AC.v #
 theories/Prelude/ClassicalFacts.v #
 theories/Prelude/ConstructiveFacts.v #
 theories/Prelude/Notations.v #
