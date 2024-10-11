@@ -1,7 +1,8 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.ConstructiveFacts.
-Require Import Coq.Logic.EqdepFacts.
 Require Export Coq.Logic.Classical_Prop.
+
+Include EqdepTheory.
 
 Lemma projT2_eq {A : Type} {B : A -> Type} (x : A) (y1 : B x) (y2 : B x)
   (EQ : @existT A B x y1 = @existT A B x y2)

@@ -145,7 +145,7 @@ Proof.
       * eapply IH.
 Qed.
 
-Lemma mkModel_isModel (p : frm L')
+Theorem mkModel_isModel (p : frm L')
   (CONSISTENT : X ⊬ Bot_frm)
   : p \in Delta <-> interpret_frm mkModel ivar_interpret p.
 Proof with eauto with *.
@@ -156,7 +156,7 @@ Proof with eauto with *.
   pose proof (theorem_of_1_3_10 X) as [? ? ? ? ? ?]. fold Delta in SUBSET, EQUICONSISTENT, CLOSED_infers, META_DN, IMPLICATION_FAITHFUL, FORALL_FAITHFUL. unnw.
   assert (CONSISTENT' : Delta ⊬ Bot_frm).
   { intros INCONSISTENT.
-    assert (claim1 : ~ BooleanAlgebra.inconsistent Delta).
+    assert (claim1 : ~ inconsistent' Delta).
     { red in EQUICONSISTENT'. rewrite <- EQUICONSISTENT'. rewrite <- cl_eq_Th. rewrite <- inconsistent_okay. rewrite <- AddHenkin_equiconsistent.
       - rewrite <- similar_equiconsistent with (Gamma := X).
         + rewrite inconsistent_iff; trivial.
@@ -188,7 +188,7 @@ Proof with eauto with *.
     + intros INTERPRET. rewrite <- CLOSED_infers. eapply FORALL_FAITHFUL.
       intros t. eapply CLOSED_infers. rewrite -> IH with (p' := subst_frm (one_subst y t) p1). 2: rewrite subst_preserves_rank; lia.
       rewrite <- substitution_lemma_frm. eapply interpret_frm_ext with (env' := upd_env y (interpret_trm mkModel ivar_interpret t) ivar_interpret). ii. unfold compose, upd_env, one_subst, cons_subst, nil_subst.
-        destruct (eq_dec z y) as [EQ1 | NE1]; trivial. eapply INTERPRET.
+      destruct (eq_dec z y) as [EQ1 | NE1]; trivial. eapply INTERPRET.
 Qed.
 
 End MODEL_EXISTENCE.
@@ -210,9 +210,9 @@ Proof with eauto with *.
   assert (claim : Gamma ⊭ Bot_frm).
   { intros SAT. contradiction (SAT (restrict_structure (mkModel Gamma)) (ivar_interpret Gamma)).
     - red. set (STRUCTURE := mkModel Gamma). set (env := ivar_interpret Gamma).
-      assert (claim : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
+      assert (MODEL : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
       { intros p. eapply restrict_structure_frm. }
-      ii. red. rewrite <- claim. unfold STRUCTURE, env. rewrite <- mkModel_isModel; trivial.
+      ii. red. rewrite <- MODEL. unfold STRUCTURE, env. rewrite <- mkModel_isModel; trivial.
       eapply SUBSET. rewrite in_Th_iff. eapply ByAssumption. done!.
     - simpl. intros t. unfold interpret_equation, ivar_interpret. simpl. eapply proves_reflexivity.
   }

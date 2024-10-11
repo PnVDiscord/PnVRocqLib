@@ -18,6 +18,8 @@ Module FolHilbert.
 Infix "⊢" := HilbertFol.proves : type_scope.
 Notation "Gamma ⊬ C" := (~ Gamma ⊢ C) : type_scope.
 
+Notation inconsistent' := BooleanAlgebra.inconsistent.
+
 Section EXTRA1.
 
 Lemma extend_alpha_proves {L : language} (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L)) (C : frm L)
@@ -702,9 +704,9 @@ Proof with eauto with *.
 Qed.
 
 Lemma inconsistent_okay (Gamma : ensemble (frm L))
-  : inconsistent Gamma <-> BooleanAlgebra.inconsistent (cl Gamma).
+  : inconsistent Gamma <-> inconsistent' (cl Gamma).
 Proof.
-  unfold BooleanAlgebra.inconsistent. rewrite inconsistent_iff. split.
+  unfold inconsistent'. rewrite inconsistent_iff. split.
   - intros INFERS. exists Bot_frm. split; try reflexivity.
     rewrite cl_eq_Th. econs; trivial.
   - intros [botB [IN EQ]].
@@ -716,21 +718,21 @@ Qed.
 
 Section UNION.
 
-Definition union_f (f : nat -> ensemble (frm L)) : ensemble (frm L) :=
-  fun p => exists n, p \in f n.
-
 Variable f : nat -> ensemble (frm L).
+
+Definition union_f : ensemble (frm L) :=
+  fun p => exists n, p \in f n.
 
 Hypothesis incl : forall n1 : nat, forall n2 : nat, forall LE : n1 <= n2, f n1 \subseteq f n2.
 
 Lemma subset_union_f n
-  : f n \subseteq union_f f.
+  : f n \subseteq union_f.
 Proof.
   intros q q_in. exists n. exact q_in.
 Qed.
 
 Lemma union_f_proves_iff p
-  : union_f f ⊢ p <-> (exists n, f n ⊢ p).
+  : union_f ⊢ p <-> (exists n, f n ⊢ p).
 Proof.
   split.
   - intros (ps&INCL&(PF)).
@@ -748,7 +750,7 @@ Qed.
 Hypothesis equiconsistent : forall n : nat, inconsistent (f n) <-> inconsistent (f (S n)).
 
 Lemma equiconsistent_union_f
-  : inconsistent (f 0) <-> inconsistent (union_f f).
+  : inconsistent (f 0) <-> inconsistent union_f.
 Proof.
   split.
   - intros INCONSISTENT p. eapply extend_proves with (Gamma := f 0). eapply subset_union_f. eapply INCONSISTENT.
@@ -803,7 +805,7 @@ Proof with eauto with *.
     rewrite <- lemma1_of_1_3_9 in *. pose proof (lemma2_of_1_2_13 (Th X)) as claim. eapply fact5_of_1_2_8.
     + eapply @lemma1_of_1_2_11 with (CBA := LindenbaumBooleanAlgebra). eapply lemma1_of_1_3_8.
     + rewrite cl_eq_Th. rewrite in_Th_iff. rewrite <- inconsistent_iff. rewrite inconsistent_okay. rewrite cl_eq_Th.
-      enough (WTS : BooleanAlgebra.inconsistent (improveFilter (Th X) n)).
+      enough (WTS : inconsistent' (improveFilter (Th X) n)).
       { eapply inconsistent_compatWith_isSubsetOf... ii. rewrite in_Th_iff. eapply ByAssumption... }
       eapply claim with (n2 := S n).
       * eapply lemma1_of_1_3_8.
@@ -814,32 +816,6 @@ Proof with eauto with *.
         }
         simpl in INCONSISTENT. rewrite cl_eq_Th in INCONSISTENT. rewrite in_Th_iff in INCONSISTENT. simpl.
         eapply extend_infers...
-Qed.
-
-Lemma completeness_theorem_prototype (X : ensemble formula) (b : formula) (STRUCTURE : isStructureOf L) (env : ivar -> domain_of_discourse)
-  (ENTAILS : X ⊨ b)
-  (EQUICONSISTENT : inconsistent (Th (E.insert (Neg_frm b) X)) <-> inconsistent (interpret_frm STRUCTURE env))
-  (SUBSET : Th (E.insert (Neg_frm b) X) \subseteq interpret_frm STRUCTURE env)
-  (IS_FILTER : isFilter (interpret_frm STRUCTURE env))
-  : X ⊢ b.
-Proof with eauto with *.
-  revert EQUICONSISTENT SUBSET IS_FILTER. pose (interpret_frm STRUCTURE env) as X'. fold X'. ii.
-  assert (claim1 : interpret_frm STRUCTURE env b).
-  { eapply ENTAILS. ii.
-    eapply SUBSET. econstructor.
-    eapply ByAssumption. right...
-  }
-  assert (claim2 : inconsistent (cl X')).
-  { rewrite filter_inconsistent_iff... rewrite cl_eq_Th. econs. eapply ContradictionI with (A := b).
-    - eapply ByAssumption...
-    - eapply ByAssumption. eapply SUBSET. econs. eapply ByAssumption. done!.
-  }
-  assert (claim3 : inconsistent (Th (E.insert (Neg_frm b) X))).
-  { rewrite EQUICONSISTENT. rewrite filter_inconsistent_iff... rewrite filter_inconsistent_iff in claim2... eapply fact5_of_1_2_8... }
-  eapply NegationE. eapply inconsistent_cl_iff. rewrite cl_eq_Th. rewrite inconsistent_iff in claim3.
-  enough (WTS : cl (Th (E.insert (Neg_frm b) X)) \subseteq Th (E.insert (Neg_frm b) X)).
-  { eapply WTS. rewrite inconsistent_cl_iff... }
-  eapply fact5_of_1_2_8. rewrite <- cl_eq_Th...
 Qed.
 
 Definition MaximallyConsistentSet (X : ensemble formula) : ensemble formula :=
@@ -1339,7 +1315,7 @@ Proof with eauto with *.
     + intros p p_in. rewrite <- cl_eq_Th in *. eapply fact4_of_1_2_8... eapply @subset_union_f with (L := L') (f := addHenkin X) (n := 0).
     + etransitivity. 2: eapply lemma3_of_1_3_9. intros p p_in. rewrite <- cl_eq_Th in *. eapply fact4_of_1_2_8... eapply @subset_union_f with (L := L') (f := axiom_set (AddHenkin X)) (n := 0).
   - intros INCONSISTENT. rewrite <- cl_eq_Th. exists Bot_frm. split. 2: reflexivity. rewrite inconsistent_cl_iff.
-    assert (INCONSISTENT' : BooleanAlgebra.inconsistent (Th (full_axiom_set (AddHenkin X)))).
+    assert (INCONSISTENT' : inconsistent' (Th (full_axiom_set (AddHenkin X)))).
     { eapply inconsistent_compatWith_isSubsetOf... eapply lemma2_of_1_3_9. }
     rewrite <- cl_eq_Th in INCONSISTENT'. rewrite <- inconsistent_okay in INCONSISTENT'.
     rewrite <- inconsistent_iff. rewrite equiconsistent_union_f with (f := addHenkin X).

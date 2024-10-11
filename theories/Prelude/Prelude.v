@@ -17,8 +17,7 @@ Create HintDb simplication_hints.
 #[global] Hint Rewrite forallb_app orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq not_true_iff_false not_false_iff_true : simplication_hints.
 
 Ltac obs_eqb n m :=
-  let H_OBS := fresh "H_OBS" in
-  destruct (Nat.eqb n m) as [ | ] eqn: H_OBS; [rewrite Nat.eqb_eq in H_OBS | rewrite Nat.eqb_neq in H_OBS].
+  let H_OBS := fresh "H_OBS" in destruct (Nat.eqb n m) as [ | ] eqn: H_OBS; [rewrite Nat.eqb_eq in H_OBS | rewrite Nat.eqb_neq in H_OBS].
 
 #[local] Obligation Tactic := idtac.
 
@@ -1292,14 +1291,14 @@ Proof.
   eapply full_isOpen.
 Defined.
 
-Lemma unions_in_T {A : Type} `{TOPOLOGY : topology A} Os
+Lemma unions_in_T {A : Type} `{TOPOLOGY : topology A} (Os : ensemble (ensemble A))
   (OPENs : forall O, O \in Os -> isOpen O)
   : isOpen (@E.unions A Os).
 Proof.
   eapply unions_isOpen; eauto.
 Defined.
 
-Lemma intersection_in_T {A : Type} `{TOPOLOGY : topology A} O1 O2
+Lemma intersection_in_T {A : Type} `{TOPOLOGY : topology A} (O1 : ensemble A) (O2 : ensemble A)
   (OPEN1 : isOpen O1)
   (OPEN2 : isOpen O2)
   : isOpen (@E.intersection A O1 O2).
