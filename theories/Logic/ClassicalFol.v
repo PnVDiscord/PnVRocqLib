@@ -156,7 +156,7 @@ Proof with eauto with *.
   pose proof (theorem_of_1_3_10 X) as [? ? ? ? ? ?]. fold Delta in SUBSET, EQUICONSISTENT, CLOSED_infers, META_DN, IMPLICATION_FAITHFUL, FORALL_FAITHFUL. unnw.
   assert (CONSISTENT' : Delta ⊬ Bot_frm).
   { intros INCONSISTENT.
-    assert (claim1 : ~ BooleanAlgebra.inconsistent Delta).
+    assert (claim1 : ~ inconsistent' Delta).
     { red in EQUICONSISTENT'. rewrite <- EQUICONSISTENT'. rewrite <- cl_eq_Th. rewrite <- inconsistent_okay. rewrite <- AddHenkin_equiconsistent.
       - rewrite <- similar_equiconsistent with (Gamma := X).
         + rewrite inconsistent_iff; trivial.

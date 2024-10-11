@@ -18,6 +18,8 @@ Module FolHilbert.
 Infix "⊢" := HilbertFol.proves : type_scope.
 Notation "Gamma ⊬ C" := (~ Gamma ⊢ C) : type_scope.
 
+Notation inconsistent' := BooleanAlgebra.inconsistent.
+
 Section EXTRA1.
 
 Lemma extend_alpha_proves {L : language} (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L)) (C : frm L)
@@ -702,9 +704,9 @@ Proof with eauto with *.
 Qed.
 
 Lemma inconsistent_okay (Gamma : ensemble (frm L))
-  : inconsistent Gamma <-> BooleanAlgebra.inconsistent (cl Gamma).
+  : inconsistent Gamma <-> inconsistent' (cl Gamma).
 Proof.
-  unfold BooleanAlgebra.inconsistent. rewrite inconsistent_iff. split.
+  unfold inconsistent'. rewrite inconsistent_iff. split.
   - intros INFERS. exists Bot_frm. split; try reflexivity.
     rewrite cl_eq_Th. econs; trivial.
   - intros [botB [IN EQ]].
@@ -803,7 +805,7 @@ Proof with eauto with *.
     rewrite <- lemma1_of_1_3_9 in *. pose proof (lemma2_of_1_2_13 (Th X)) as claim. eapply fact5_of_1_2_8.
     + eapply @lemma1_of_1_2_11 with (CBA := LindenbaumBooleanAlgebra). eapply lemma1_of_1_3_8.
     + rewrite cl_eq_Th. rewrite in_Th_iff. rewrite <- inconsistent_iff. rewrite inconsistent_okay. rewrite cl_eq_Th.
-      enough (WTS : BooleanAlgebra.inconsistent (improveFilter (Th X) n)).
+      enough (WTS : inconsistent' (improveFilter (Th X) n)).
       { eapply inconsistent_compatWith_isSubsetOf... ii. rewrite in_Th_iff. eapply ByAssumption... }
       eapply claim with (n2 := S n).
       * eapply lemma1_of_1_3_8.
@@ -1313,7 +1315,7 @@ Proof with eauto with *.
     + intros p p_in. rewrite <- cl_eq_Th in *. eapply fact4_of_1_2_8... eapply @subset_union_f with (L := L') (f := addHenkin X) (n := 0).
     + etransitivity. 2: eapply lemma3_of_1_3_9. intros p p_in. rewrite <- cl_eq_Th in *. eapply fact4_of_1_2_8... eapply @subset_union_f with (L := L') (f := axiom_set (AddHenkin X)) (n := 0).
   - intros INCONSISTENT. rewrite <- cl_eq_Th. exists Bot_frm. split. 2: reflexivity. rewrite inconsistent_cl_iff.
-    assert (INCONSISTENT' : BooleanAlgebra.inconsistent (Th (full_axiom_set (AddHenkin X)))).
+    assert (INCONSISTENT' : inconsistent' (Th (full_axiom_set (AddHenkin X)))).
     { eapply inconsistent_compatWith_isSubsetOf... eapply lemma2_of_1_3_9. }
     rewrite <- cl_eq_Th in INCONSISTENT'. rewrite <- inconsistent_okay in INCONSISTENT'.
     rewrite <- inconsistent_iff. rewrite equiconsistent_union_f with (f := addHenkin X).
