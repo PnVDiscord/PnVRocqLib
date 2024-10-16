@@ -163,7 +163,7 @@ Qed.
 Definition isSubsetOf x y : Prop :=
   forall z, z \in x -> z \in y.
 
-#[local] Infix "\subseteq" := isSubsetOf.
+#[local] Infix "\subseteq" := isSubsetOf : type_scope.
 
 #[global] Hint Unfold isSubsetOf : aczel_hints.
 
@@ -848,6 +848,20 @@ Proof.
   split.
   - eapply well_founded_implies_Irreflexive. eapply rLt_wf.
   - intros x y z H_rLt1 H_rLt2. eapply rLe_rLt_rLt with (y := y); trivial. eapply rLt_implies_rLe; trivial.
+Qed.
+
+Lemma rLe_ext x y
+  (EXT : forall z, z <ᵣ x -> z <ᵣ y)
+  : x ≦ᵣ y.
+Proof.
+  econs. intros c. eapply EXT. eapply member_implies_rLt. eapply member_intro.
+Qed.
+
+Lemma rEq_ext x y
+  (EXT : forall z, z <ᵣ x <-> z <ᵣ y)
+  : x =ᵣ y.
+Proof.
+  rewrite rEq_iff. split; eapply rLe_ext; now firstorder.
 Qed.
 
 Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x) {struct ACC} : Tree :=
