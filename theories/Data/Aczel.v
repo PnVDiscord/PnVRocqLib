@@ -787,12 +787,12 @@ Proof.
   destruct IN as [c EQ]. exists c. eauto with *.
 Qed.
 
-Lemma subseteq_implies_rLe lhs rhs
-  (SUBSET : lhs \subseteq rhs)
-  : lhs ≦ᵣ rhs.
+Lemma subseteq_implies_rLe x y
+  (SUBSET : x \subseteq y)
+  : x ≦ᵣ y.
 Proof.
   econs. intros c. eapply member_implies_rLt.
-  exact (SUBSET (childnodes lhs c) (member_intro _ _ _)).
+  exact (SUBSET (childnodes x c) (member_intro _ _ _)).
 Qed.
 
 #[global] Hint Resolve rLt_implies_rLe member_implies_rLt : aczel_hints.

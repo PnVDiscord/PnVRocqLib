@@ -5,18 +5,19 @@ Require Import PnV.Math.OrderTheory.
 Require Import PnV.Data.Aczel.
 
 #[local] Infix "\in" := member : type_scope.
+
 #[local] Infix "\subseteq" := isSubsetOf : type_scope.
 
 Module Ord.
 
 Variant trichotomy (x : Tree) (y : Tree) : Prop :=
-  | trichotomy_lt
+  | Trichotomy_lt
     (LT : x \in y)
     : trichotomy x y
-  | trichotomy_eq
+  | Trichotomy_eq
     (EQ : x == y)
     : trichotomy x y
-  | trichotomy_gt
+  | Trichotomy_gt
     (GT : y \in x)
     : trichotomy x y.
 
@@ -31,6 +32,10 @@ Record t : Type :=
 
 End Ord.
 
+Notation isOrdinal := Ord.isOrdinal.
+
 Notation asSet := Ord.asSet.
+
 Notation isOrd := Ord.isOrd.
+
 Notation MkOrd o o_ord := (Ord.Mk o o_ord).
