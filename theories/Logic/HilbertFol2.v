@@ -744,7 +744,7 @@ Proof.
       exists (max n m). intros q q_in. s!. destruct q_in as [-> | q_in].
       * eapply incl with (n1 := m); done!.
       * eapply incl with (n1 := n); done!.
-  - intros [n INCONSISTENT]. eapply extend_proves with (Gamma := f n). eapply subset_union_f. exact INCONSISTENT.
+  - intros [n PROVE]. eapply extend_proves with (Gamma := f n). eapply subset_union_f. exact PROVE.
 Qed.
 
 Hypothesis equiconsistent : forall n : nat, inconsistent (f n) <-> inconsistent (f (S n)).
