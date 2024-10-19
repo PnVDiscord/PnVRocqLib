@@ -4,7 +4,7 @@ A Coq library written by members of PnV Discord Server.
 
 Currently, this library is standalone.
 
-## Quick Start.
+## 1. Quick Start
 
 ```
 git clone https://github.com/PnVDiscord/PnVRocqLib.git
@@ -20,7 +20,7 @@ make -j4 -k
 The Coq Proof Assistant, version 8.18.0
 ```
 
-## Contents.
+## 2. Contents
 
 Our main results are:
 
@@ -88,7 +88,7 @@ Our main results are:
 
 - `Prelude.v` : The prelude code.
 
-## References.
+## 3. References
 
 1. [sflib](https://github.com/snu-sf/sflib)
 
