@@ -103,3 +103,5 @@ Our main results are:
 6. [CoqGym/goedel](https://github.com/princeton-vl/CoqGym/tree/master/coq_projects/goedel)
 
 7. [formalmetatheory-stoughton](https://github.com/ernius/formalmetatheory-stoughton)
+
+8. [Constructive Analysis of First-Order Completeness](https://github.com/uds-psl/fol-completeness-theorems/tree/master)
