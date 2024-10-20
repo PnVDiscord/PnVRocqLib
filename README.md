@@ -74,11 +74,15 @@ Our main results are:
 
 - `OrderTheory.v` : Basic order theory.
 
+- `Ordinal.v` : Theory on ordinal numbers.
+
 - `ThN.v` : Basic facts on the natural numbers.
 
 ### Prelude
 
-- `Classical.v` : Facts about classical logic.
+- `AC.v` : Facts on `CIC` + Axiom of Choice.
+
+- `Classical.v` : Facts on `CIC` + `classic : forall P, P \/ ~ P`.
 
 - `ConstructiveFacts.v` : Facts on CIC.
 
