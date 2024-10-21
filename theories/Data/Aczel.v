@@ -163,7 +163,7 @@ Qed.
 Definition isSubsetOf x y : Prop :=
   forall z, z \in x -> z \in y.
 
-#[local] Infix "\subseteq" := isSubsetOf.
+#[local] Infix "\subseteq" := isSubsetOf : type_scope.
 
 #[global] Hint Unfold isSubsetOf : aczel_hints.
 
@@ -787,12 +787,12 @@ Proof.
   destruct IN as [c EQ]. exists c. eauto with *.
 Qed.
 
-Lemma subseteq_implies_rLe lhs rhs
-  (SUBSET : lhs \subseteq rhs)
-  : lhs ≦ᵣ rhs.
+Lemma subseteq_implies_rLe x y
+  (SUBSET : x \subseteq y)
+  : x ≦ᵣ y.
 Proof.
   econs. intros c. eapply member_implies_rLt.
-  exact (SUBSET (childnodes lhs c) (member_intro _ _ _)).
+  exact (SUBSET (childnodes x c) (member_intro _ _ _)).
 Qed.
 
 #[global] Hint Resolve rLt_implies_rLe member_implies_rLt : aczel_hints.
@@ -848,6 +848,20 @@ Proof.
   split.
   - eapply well_founded_implies_Irreflexive. eapply rLt_wf.
   - intros x y z H_rLt1 H_rLt2. eapply rLe_rLt_rLt with (y := y); trivial. eapply rLt_implies_rLe; trivial.
+Qed.
+
+Lemma rLe_ext x y
+  (EXT : forall z, z <ᵣ x -> z <ᵣ y)
+  : x ≦ᵣ y.
+Proof.
+  econs. intros c. eapply EXT. eapply member_implies_rLt. eapply member_intro.
+Qed.
+
+Lemma rEq_ext x y
+  (EXT : forall z, z <ᵣ x <-> z <ᵣ y)
+  : x =ᵣ y.
+Proof.
+  rewrite rEq_iff. split; eapply rLe_ext; now firstorder.
 Qed.
 
 Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x) {struct ACC} : Tree :=
@@ -914,119 +928,4 @@ Proof.
   intros alpha alpha_isTranstiveSet beta alpha_eq_beta.
   unfold isTransitiveSet in *; ii; des.
   rewrite <- alpha_eq_beta in *; eauto with *.
-Qed.
-
-Variant isOrdinal (x : Tree) : Prop :=
-  | transitive_set_of_transitive_sets_isOrdinal
-    (TRANS : isTransitiveSet x)
-    (TRANS' : forall y, y \in x -> isTransitiveSet y)
-    : isOrdinal x.
-
-#[global] Hint Constructors isOrdinal : aczel_hints.
-
-Lemma every_member_of_Ordinal_isOrdinal (x : Tree)
-  (ORDINAL : isOrdinal x)
-  : forall y, y \in x -> isOrdinal y.
-Proof.
-  inv ORDINAL; eauto with *.
-Qed.
-
-Lemma isOrdinal_compatWith_eqTree
-  : isCompatibleWith_eqProp isOrdinal.
-Proof with eauto with *.
-  intros alpha [? ?] beta alpha_eq_beta. split.
-  - eapply isTransitiveSet_compatWith_eqTree...
-  - intros gamma gamm_in_beta.
-    rewrite <- alpha_eq_beta in gamm_in_beta...
-Qed.
-
-Lemma member_implies_subseteq_forOrdinal alpha beta
-  (ORDINAL : isOrdinal alpha)
-  (IN : beta \in alpha)
-  : beta \subseteq alpha.
-Proof.
-  inv ORDINAL; eauto with *.
-Qed.
-
-#[global] Hint Resolve every_member_of_Ordinal_isOrdinal member_implies_subseteq_forOrdinal : aczel_hints.
-
-#[global]
-Add Parametric Morphism
-  : isOrdinal with signature (eqProp ==> iff)
-  as isOrdinal_compatWith_eqProp.
-Proof.
-  ii; split; i; eapply isOrdinal_compatWith_eqTree; eauto with *.
-Qed.
-
-Lemma fromWf_isOrdinal {A : Type@{Set_u}} `{WPOSET : isWellPoset A}
-  : isOrdinal (fromWf wltProp wltProp_well_founded).
-Proof.
-  econs.
-  - intros y [x EQ] z IN. simpl in *.
-    rewrite EQ in IN. clear y EQ. rewrite fromAcc_unfold in IN.
-    destruct IN as [[y H_LT] EQ]. simpl in EQ.
-    rewrite EQ. rewrite fromAcc_pirrel with (ACC' := wltProp_well_founded y).
-    exact (member_intro A (fun c => fromAcc c (wltProp_well_founded c)) y).
-  - intros x IN y IN' z IN''. destruct IN as [c EQ]. simpl in *.
-    rewrite EQ in IN'. rewrite fromAcc_unfold in IN'. destruct IN' as [[c' H_LT] EQ'].
-    simpl in *. rewrite EQ' in IN''. rewrite fromAcc_unfold in IN''.
-    destruct IN'' as [[c'' H_LT'] EQ'']. simpl in *.
-    rewrite EQ, EQ''. eapply fromAcc_member_fromAcc_intro. transitivity c'; trivial.
-Qed.
-
-Lemma sup_C_isOrdinal (C : Tree)
-  (ORDINAL : forall alpha, alpha \in C -> isOrdinal alpha)
-  : isOrdinal (unions C).
-Proof.
-  split; ii; rewrite unions_spec in *; des.
-  - pose proof (ORDINAL y0 H1) as [? ?]. eauto with *.
-  - pose proof (ORDINAL y1 H2) as [? ?]. eapply TRANS'; eauto with *.
-Qed.
-
-Lemma min_C_isOrdinal (C : ensemble Tree) (min_C : Tree)
-  (NONEMPTY : exists d, E.In d C)
-  (ORDINAL : forall alpha, E.In alpha C -> isOrdinal alpha)
-  (min_C_SPEC : forall z, z \in min_C <-> (forall alpha, E.In alpha C -> z \in alpha))
-  : isOrdinal min_C.
-Proof.
-  destruct NONEMPTY as [d IN]. split; ii; rewrite min_C_SPEC in *; ii.
-  - pose proof (ORDINAL alpha H1) as [? ?]. eauto with *.
-  - pose proof (ORDINAL d IN) as [? ?]. eapply TRANS'; eauto with *.
-Qed.
-
-Lemma empty_isOrdinal
-  : isOrdinal empty.
-Proof.
-  split; ii; rewrite empty_spec in H; done.
-Qed.
-
-Lemma succ_isOrdinal x
-  (ORDINAL : isOrdinal x)
-  : isOrdinal (succ x).
-Proof.
-  inv ORDINAL. split; ii.
-  - rewrite succ_spec in *. destruct H as [? | ?].
-    + left; eauto with *.
-    + left. now rewrite <- H.
-  - rewrite succ_spec in H. destruct H as [? | ?].
-    + eapply TRANS'; eauto with *.
-    + rewrite H. eapply TRANS with (y := y0); trivial. rewrite <- H; trivial.
-Qed.
-
-Lemma unions_isOrdinal x
-  (ORDINAL : isOrdinal x)
-  : isOrdinal (unions x).
-Proof.
-  eapply sup_C_isOrdinal; eauto with *.
-Qed.
-
-Lemma indexed_union_isOrdinal {I : Type@{Set_u}} (x : I -> Tree)
-  (ORDINAL : forall i, isOrdinal (x i))
-  : isOrdinal (indexed_union I x).
-Proof.
-  split; ii.
-  - rewrite indexed_union_spec in *. des. exists i.
-    pose proof (ORDINAL i) as [? ?]. eauto with *.
-  - rewrite indexed_union_spec in *. des.
-    pose proof (ORDINAL i) as [? ?]. eapply TRANS'; eauto with *.
 Qed.
