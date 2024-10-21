@@ -82,7 +82,7 @@ Our main results are:
 
 - `AC.v` : Facts on `CIC` + Axiom of Choice.
 
-- `Classical.v` : Facts on `CIC` + `classic : forall P, P \/ ~ P`.
+- `ClassicalFacts.v` : Facts on `CIC + (classic : forall P, P \/ ~ P)`.
 
 - `ConstructiveFacts.v` : Facts on CIC.
 
