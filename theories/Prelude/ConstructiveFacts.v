@@ -59,31 +59,29 @@ Defined.
 Fixpoint search_go (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (acc : Acc (flip (search_step P)) n) {struct acc} : A.
 Proof.
   destruct (B.Some_dec (decode n)) as [[y SOME] | NONE].
-  - destruct (P_dec y) as [EQ | NE].
+  - destruct (P_dec y) as [YES | NO].
     + exact y.
-    + exact (search_go P P_dec (S n) (Acc_inv acc (search_step_Some P n y NE SOME))).
+    + exact (search_go P P_dec (S n) (Acc_inv acc (search_step_Some P n y NO SOME))).
   - exact (search_go P P_dec (S n) (Acc_inv acc (search_step_None P n NONE))).
 Defined.
 
-Fixpoint search_go_correct (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (acc : Acc (flip (search_step P)) n) {struct acc}
-  : P (search_go P P_dec n acc).
+Fixpoint search_go_correct (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (acc : Acc (flip (search_step P)) n) {struct acc} : P (search_go P P_dec n acc).
 Proof.
-  destruct acc; simpl. destruct (B.Some_dec (decode n)) as [[? ?] | ?] eqn: ?.
-  - destruct (P_dec x).
-    + assumption.
+  destruct acc; simpl. destruct (B.Some_dec (decode n)) as [[? ?] | ?].
+  - destruct (P_dec x) as [YES | NO].
+    + exact YES.
     + eapply search_go_correct.
   - eapply search_go_correct.
 Qed.
 
-Lemma search_go_pirrel (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (acc : Acc (flip (search_step P)) n) (acc' : Acc (flip (search_step P)) n)
-  : search_go P P_dec n acc = search_go P P_dec n acc'.
+Fixpoint search_go_pirrel (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (acc : Acc (flip (search_step P)) n) (acc' : Acc (flip (search_step P)) n) {struct acc} : search_go P P_dec n acc = search_go P P_dec n acc'.
 Proof.
-  revert acc acc acc'. intros acc''. induction acc'' as [? _ IH]; intros [?] [?]. simpl.
-  destruct (B.Some_dec (decode x)) as [[? ?] | ?] eqn: ?.
-  - destruct (P_dec x0) as [? | ?].
+  destruct acc, acc'; simpl in *.
+  destruct (B.Some_dec (decode n)) as [[? ?] | ?] eqn: ?.
+  - destruct (P_dec x) as [? | ?].
     + reflexivity.
-    + eapply IH. eapply search_step_Some with (x := x0); trivial.
-  - eapply IH. eapply search_step_None; trivial.
+    + eapply search_go_pirrel.
+  - eapply search_go_pirrel.
 Qed.
 
 Definition search (n : nat) (BOUND : exists x, encode x = n) : A.

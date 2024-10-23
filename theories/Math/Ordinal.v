@@ -59,5 +59,3 @@ Notation isOrdinal := Ord.isOrdinal.
 Notation asSet := Ord.asSet.
 
 Notation isOrd := Ord.isOrd.
-
-Notation MkOrd o o_ord := (Ord.Mk o o_ord).
