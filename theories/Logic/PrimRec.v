@@ -6,7 +6,8 @@ Section PRIMITIVE_RECURSION. (* Reference: "https://github.com/princeton-vl/CoqG
 
 #[local] Open Scope program_scope.
 
-Let arity : Set := nat.
+Let arity : Set :=
+  nat.
 
 Fixpoint naryFun (n : arity) : Set :=
   match n with
@@ -114,53 +115,31 @@ with PrimRecs : arity -> arity -> Set :=
   | PRs_nil (n : arity) : PrimRecs n 0
   | PRs_cons (n : arity) (m : arity) (f : PrimRec n) (fs : PrimRecs n m) : PrimRecs n (S m).
 
-Section PrimRecs_case.
-
-Let cast (x : nat) (n : nat) (m : nat) (EQ : n = m) : PrimRecs x n -> PrimRecs x m :=
-  match EQ with
-  | eq_refl => fun xs => xs
-  end.
-
-Lemma PrimRecs_case0 (phi : forall x, PrimRecs x O -> Type)
-  (phi_nil : forall n, phi n (PRs_nil n))
-  : forall x, forall fs, phi x fs.
+Lemma PrimRecs_case0 {x : nat} (phi : PrimRecs x O -> Type)
+  (phi_nil : phi (PRs_nil x))
+  : forall fs, phi fs.
 Proof.
-  refine (fun x : nat =>
-    let claim1 (fs : PrimRecs x O) : forall H_eq : O = O, phi x (cast x O O H_eq fs) :=
-      match fs in PrimRecs x m return forall H_eq : m = O, phi x (cast x m O H_eq fs) with
-      | PRs_nil x => fun H_eq : O = O => _
-      | PRs_cons x n f' fs' => fun H_eq : S n = O => _
-      end
-    in _
+  intros fs. revert phi phi_nil.
+  exact (
+    match fs as fs in PrimRecs x n return (match n as m return PrimRecs x m -> Type with O => fun fs => forall phi : PrimRecs x O -> Type, phi (PRs_nil x) -> phi fs | S n' => fun _ => unit end) fs with
+    | PRs_nil x => fun phi : PrimRecs x O -> Type => fun phi_nil : phi (PRs_nil x) => phi_nil
+    | PRs_cons _ _ _ _ => tt
+    end
   ).
-  { intros fs. exact (claim1 fs eq_refl). }
-Unshelve.
-  - rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
-    exact (phi_nil x).
-  - inversion H_eq.
-Qed.
+Defined.
 
-Lemma PrimRecs_caseS {n' : nat} (phi : forall x, PrimRecs x (S n') -> Type)
-  (phi_cons: forall n, forall f', forall fs', phi n (PRs_cons n n' f' fs'))
-  : forall x, forall fs, phi x fs.
+Lemma PrimRecs_caseS {x : nat} {n' : nat} (phi : PrimRecs x (S n') -> Type)
+  (phi_cons : forall f', forall fs', phi (PRs_cons x n' f' fs'))
+  : forall fs, phi fs.
 Proof.
-  refine (fun x : nat =>
-    let claim1 (fs : PrimRecs x (S n')) : forall H_eq : S n' = S n', phi x (cast x (S n') (S n') H_eq fs) :=
-      match fs in PrimRecs x m return forall H_eq : m = S n', phi x (cast x m (S n') H_eq fs) with
-      | PRs_nil x => fun H_eq: O = S n' => _
-      | PRs_cons x n x' xs' => fun H_eq: S n = S n' => _
-      end
-    in _
+  intros fs. revert phi phi_cons.
+  exact (
+    match fs as fs in PrimRecs x n return (match n as m return PrimRecs x m -> Type with O => fun _ => unit | S n' => fun fs => forall phi : PrimRecs x (S n') -> Type, (forall f' : PrimRec x, forall fs' : PrimRecs x n', phi (PRs_cons x n' f' fs')) -> phi fs end) fs with 
+    | PRs_nil x => tt
+    | PRs_cons x n' f' fs' => fun phi : PrimRecs x (S n') -> Type => fun phi_cons : forall f' : PrimRec x, forall fs' : PrimRecs x n', phi (PRs_cons x n' f' fs') => phi_cons f' fs'
+    end
   ).
-  { intros fs. exact (claim1 fs eq_refl). }
-Unshelve.
-  - inversion H_eq.
-  - pose proof (f_equal Nat.pred H_eq) as n_eq_n'. simpl in n_eq_n'. subst n'.
-    rewrite eq_pirrel_fromEqDec with (EQ1 := H_eq) (EQ2 := eq_refl).
-    exact (phi_cons x x' xs').
-Qed.
-
-End PrimRecs_case.
+Defined.
 
 Fixpoint runPrimRec {n : arity} (f : PrimRec n) {struct f} : naryFun n :=
   match f with
@@ -299,13 +278,13 @@ Qed.
 Theorem PrimRecGraph_correct (n : arity) (f : PrimRec n) (xs : Vector.t nat n) (z : nat)
   : PrimRecGraph f xs z <-> PrimRecSpec n f xs z.
 Proof.
-  pose proof (LEFT := @PrimRecGraph_complete). pose proof (RIGHT := @PrimRecGraph_sound). now firstorder.
+  pose proof (FST := @PrimRecGraph_complete). pose proof (SND := @PrimRecGraph_sound). now firstorder.
 Qed.
 
 Theorem PrimRecsGraph_correct (n : arity) (m : arity) (f : PrimRecs n m) (xs : Vector.t nat n) (z : Vector.t nat m)
   : PrimRecsGraph f xs z <-> PrimRecsSpec n m f xs z.
 Proof.
-  pose proof (LEFT := @PrimRecsGraph_complete). pose proof (RIGHT := @PrimRecsGraph_sound). now firstorder.
+  pose proof (FST := @PrimRecsGraph_complete). pose proof (SND := @PrimRecsGraph_sound). now firstorder.
 Qed.
 
 Fixpoint PrimRecSpec_sound (n : arity) (f : PrimRec n) (xs : Vector.t nat n) (z : nat) (SPEC : PrimRecSpec n f xs z) {struct SPEC}

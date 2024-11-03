@@ -615,6 +615,22 @@ Proof.
       * intros [u [IN ?]]. exists u; done!.
 Qed.
 
+Lemma theSetOfNeighborhoods_isDirected {A : Type} {TOPOLOGY : topology A} (x : A) (X : ensemble (ensemble A))
+  (NEIGHBORHOOD : forall N, N \in X <-> (exists O, isOpen O /\ x \in O /\ O \subseteq N))
+  : isDirected (PROSET := dual_Proset E.ensemble_isProset) X.
+Proof.
+  split; simpl in *.
+  - exists E.full. rewrite NEIGHBORHOOD. exists E.full. split.
+    + eapply full_isOpen.
+    + done!.
+  - ii. exists (E.intersection x1 x2). split.
+    + rewrite NEIGHBORHOOD in *. destruct x1_IN as (O1&O1_open&IN1&SUBSET1), x2_IN as (O2&O2_open&IN2&SUBSET2).
+      exists (E.intersection O1 O2). split.
+      * eapply intersection_isOpen; eauto with *.
+      * done!.
+    + done!.
+Qed.
+
 Lemma preservesDirectedness_if_isMonotonic {A : Type} {B : Type} {A_isProset : isProset A} {B_isProset : isProset B} (f : A -> B)
   (MONOTONIC : isMonotonic1 f)
   : forall X, isDirected X -> isDirected (E.image f X).

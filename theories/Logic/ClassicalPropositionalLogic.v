@@ -65,7 +65,7 @@ Qed.
 Lemma ConjunctionE2_preserves (Gamma : ensemble formula) (A : formula) (B : formula)
   (ENTAILS1 : Gamma ⊨ ConjunctionF A B)
   : Gamma ⊨ B.
-Proof with (simpl in *; tauto) || eauto with *.
+Proof.
   ii. eapply ENTAILS1; done!.
 Qed.
 

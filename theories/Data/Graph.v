@@ -187,8 +187,8 @@ End GraphTheory_basic1.
 
 Module GraphNotations.
 
-#[global] Notation " src ~~~[ w ]~~> tgt " := (walk tgt src w) : type_scope.
-#[global] Notation " src ---[ p ]--> tgt " := (path tgt src p) : type_scope.
-#[global] Notation " src ===[ t ]==> tgt " := (trail tgt src t) : type_scope.
+Notation " src ~~~[ w ]~~>* tgt " := (walk tgt src w) : type_scope.
+Notation " src ---[ p ]-->* tgt " := (path tgt src p) : type_scope.
+Notation " src ===[ t ]==>* tgt " := (trail tgt src t) : type_scope.
 
 End GraphNotations.
