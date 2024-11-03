@@ -68,19 +68,24 @@ Defined.
 
 Variable F : nat -> nat -> Prop.
 
-Definition umin s y := F y 0 /\ Between (fun n => exists k, F n (S k)) s y.
+Definition umin s y : Prop :=
+  F y 0 /\ Between (fun n => exists k, F n (S k)) s y.
 
-Definition umin' y :=  F y 0 /\ forall n, n < y -> exists k, F n (S k).
+Definition umin' y : Prop
+  := F y 0 /\ forall n, n < y -> exists k, F n (S k).
 
 Variable Ffun : forall x, forall y1, forall y2, F x y1 -> F x y2 -> y1 = y2.
 
 Variable f : forall x : nat, (exists y, F x y) -> { y : nat | F x y }.
 
-Let T n := exists k, F n k.
+Let T n : Prop :=
+  exists k, F n k.
 
-Let P n := F n 0.
+Let P n : Prop :=
+  F n 0.
 
-Let Q n := exists k, F n (S k).
+Let Q n : Prop :=
+  exists k, F n (S k).
 
 Lemma PQ_absurd (n : nat)
   : P n -> Q n -> False.
@@ -181,7 +186,8 @@ Section MU_RECURSIVE.
 #[local] Notation " x :: xs " := (VCons _ x xs).
 #[local] Notation " [ x ] " := (VCons _ x VNil).
 
-Let Arity : Set := nat.
+Let Arity : Set :=
+  nat.
 
 Inductive MuRec : Arity -> Set :=
   | MR_succ : MuRec 1
@@ -194,9 +200,33 @@ with MuRecs : Arity -> Arity -> Set :=
   | MRs_nil {n : Arity} : MuRecs n 0
   | MRs_cons {n : Arity} {m : Arity} (f : MuRec n) (fs : MuRecs n m) : MuRecs n (S m).
 
-Let Value := nat.
+Lemma MuRecs_case0 {x : nat} (phi : MuRecs x O -> Type)
+  (phi_nil : phi MRs_nil)
+  : forall fs, phi fs.
+Proof.
+  intros fs. revert phi phi_nil.
+  exact (
+    match fs as fs in MuRecs x n return (match n as m return MuRecs x m -> Type with O => fun fs => forall phi : MuRecs x O -> Type, phi MRs_nil -> phi fs | S n' => fun _ => unit end) fs with
+    | @MRs_nil x => fun phi : MuRecs x O -> Type => fun phi_nil : phi MRs_nil => phi_nil
+    | @MRs_cons x _ _ _ => tt
+    end
+  ).
+Defined.
 
-Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t Value n -> Value -> Prop :=
+Lemma MuRecs_caseS {x : nat} {n' : nat} (phi : MuRecs x (S n') -> Type)
+  (phi_cons : forall f', forall fs', phi (MRs_cons f' fs'))
+  : forall fs, phi fs.
+Proof.
+  intros fs. revert phi phi_cons.
+  exact (
+    match fs as fs in MuRecs x n return (match n as m return MuRecs x m -> Type with O => fun _ => unit | S n' => fun fs => forall phi : MuRecs x (S n') -> Type, (forall f' : MuRec x, forall fs' : MuRecs x n', phi (MRs_cons f' fs')) -> phi fs end) fs with 
+    | @MRs_nil x => tt
+    | @MRs_cons x n' f' fs' => fun phi : MuRecs x (S n') -> Type => fun phi_cons : forall f' : MuRec x, forall fs' : MuRecs x n', phi (MRs_cons f' fs') => phi_cons f' fs'
+    end
+  ).
+Defined.
+
+Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t nat n -> nat -> Prop :=
   | MR_succ_spec x
     : MuRecSpec 1 (MR_succ) [x] (S x)
   | MR_zero_spec
@@ -218,7 +248,7 @@ Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t Value n -> Value -> 
     (g_spec : MuRecSpec (S n) g (z :: xs) 0)
     (MIN : forall y, y < z -> exists p, p > 0 /\ MuRecSpec (S n) g (y :: xs) p)
     : MuRecSpec n (MR_mu g) xs z
-with MuRecsSpec : forall n : Arity, forall m : Arity, MuRecs n m -> Vector.t Value n -> Vector.t Value m -> Prop :=
+with MuRecsSpec : forall n : Arity, forall m : Arity, MuRecs n m -> Vector.t nat n -> Vector.t nat m -> Prop :=
   | MRs_nil_spec n xs
     : MuRecsSpec n (O) (MRs_nil) xs []
   | MRs_cons_spec n m xs y ys f fs
@@ -226,7 +256,7 @@ with MuRecsSpec : forall n : Arity, forall m : Arity, MuRecs n m -> Vector.t Val
     (fs_spec : MuRecsSpec n m fs xs ys)
     : MuRecsSpec n (S m) (MRs_cons f fs) xs (y :: ys).
 
-Fixpoint MuRecGraph {n : Arity} (f : MuRec n) : Vector.t Value n -> Value -> Prop :=
+Fixpoint MuRecGraph {n : Arity} (f : MuRec n) : Vector.t nat n -> nat -> Prop :=
   match f with
   | MR_succ => fun xs => fun z => S (V.head xs) = z
   | MR_zero => fun xs => fun z => O = z
@@ -235,7 +265,7 @@ Fixpoint MuRecGraph {n : Arity} (f : MuRec n) : Vector.t Value n -> Value -> Pro
   | MR_primRec g h => fun xs => nat_rect _ (fun z => MuRecGraph g (V.tail xs) z) (fun a => fun ACC => fun z => exists y, ACC y /\ MuRecGraph h (a :: y :: V.tail xs) z) (V.head xs)
   | MR_mu g => fun xs => fun z => (forall y, y < z -> exists p, p > 0 /\ MuRecGraph g (y :: xs) p) /\ MuRecGraph g (z :: xs) 0
   end
-with MuRecsGraph {n : Arity} {m : Arity} (fs : MuRecs n m) : Vector.t Value n -> Vector.t Value m -> Prop :=
+with MuRecsGraph {n : Arity} {m : Arity} (fs : MuRecs n m) : Vector.t nat n -> Vector.t nat m -> Prop :=
   match fs with
   | MRs_nil => fun xs => fun z => [] = z
   | MRs_cons f fs => fun xs => fun z => exists y, exists ys, MuRecGraph f xs y /\ MuRecsGraph fs xs ys /\ y :: ys = z
@@ -269,9 +299,9 @@ Proof.
       * eapply MuRecsGraph_sound. exact CALLs.
 Qed.
 
-Fixpoint MuRecGraph_complete (n : Arity) (f : MuRec n) (xs : Vector.t Value n) (z : Value) (SPEC : MuRecSpec n f xs z) {struct SPEC}
+Fixpoint MuRecGraph_complete (n : Arity) (f : MuRec n) (xs : Vector.t nat n) (z : nat) (SPEC : MuRecSpec n f xs z) {struct SPEC}
   : MuRecGraph f xs z
-with MuRecsGraph_complete (n : Arity) (m : Arity) (fs : MuRecs n m) (xs : Vector.t Value n) (z : Vector.t Value m) (SPEC : MuRecsSpec n m fs xs z) {struct SPEC}
+with MuRecsGraph_complete (n : Arity) (m : Arity) (fs : MuRecs n m) (xs : Vector.t nat n) (z : Vector.t nat m) (SPEC : MuRecsSpec n m fs xs z) {struct SPEC}
   : MuRecsGraph fs xs z.
 Proof.
   - destruct SPEC; simpl.
@@ -298,21 +328,21 @@ Proof.
         { reflexivity. }
 Qed.
 
-Theorem MuRecGraph_correct (n : Arity) (f : MuRec n) (xs : Vector.t Value n) (z : Value)
+Theorem MuRecGraph_correct (n : Arity) (f : MuRec n) (xs : Vector.t nat n) (z : nat)
   : MuRecGraph f xs z <-> MuRecSpec n f xs z.
 Proof.
   pose proof (LEFT := @MuRecGraph_complete). pose proof (RIGHT := @MuRecGraph_sound). now firstorder.
 Qed.
 
-Theorem MuRecsGraph_correct (n : Arity) (m : Arity) (f : MuRecs n m) (xs : Vector.t Value n) (z : Vector.t Value m)
+Theorem MuRecsGraph_correct (n : Arity) (m : Arity) (f : MuRecs n m) (xs : Vector.t nat n) (z : Vector.t nat m)
   : MuRecsGraph f xs z <-> MuRecsSpec n m f xs z.
 Proof.
   pose proof (LEFT := @MuRecsGraph_complete). pose proof (RIGHT := @MuRecsGraph_sound). now firstorder.
 Qed.
 
-Fixpoint MuRec_isPartialFunction_aux (n : Arity) (f : MuRec n) (xs : Vector.t Value n) (z : Value) (SPEC : MuRecSpec n f xs z) {struct SPEC}
+Fixpoint MuRec_isPartialFunction_aux (n : Arity) (f : MuRec n) (xs : Vector.t nat n) (z : nat) (SPEC : MuRecSpec n f xs z) {struct SPEC}
   : forall z', MuRecGraph f xs z' -> z = z'
-with MuRecs_isPartialFunction_aux (n : Arity) (m : Arity) (fs : MuRecs n m) (xs : Vector.t Value n) (z : Vector.t Value m) (SPEC : MuRecsSpec n m fs xs z) {struct SPEC}
+with MuRecs_isPartialFunction_aux (n : Arity) (m : Arity) (fs : MuRecs n m) (xs : Vector.t nat n) (z : Vector.t nat m) (SPEC : MuRecsSpec n m fs xs z) {struct SPEC}
   : forall z', MuRecsGraph fs xs z' -> z = z'.
 Proof.
   - destruct SPEC; intros z' CALL.
@@ -361,7 +391,7 @@ Proof.
       * eapply MuRecs_isPartialFunction_aux; [exact SPEC | exact CALLs''].
 Qed.
 
-Theorem MuRec_isPartialFunction (n : Arity) (f : MuRec n) (xs : Vector.t Value n) (z : Value) (z' : Value)
+Theorem MuRec_isPartialFunction (n : Arity) (f : MuRec n) (xs : Vector.t nat n) (z : nat) (z' : nat)
   (SPEC : MuRecSpec n f xs z)
   (SPEC' : MuRecSpec n f xs z')
   : z = z'.
@@ -369,7 +399,7 @@ Proof.
   eapply MuRec_isPartialFunction_aux; [exact SPEC | rewrite MuRecGraph_correct; exact SPEC'].
 Qed.
 
-Theorem MuRecs_isPartialFunction (n : Arity) (m : Arity) (fs : MuRecs n m) (xs : Vector.t Value n) (z : Vector.t Value m) (z' : Vector.t Value m)
+Theorem MuRecs_isPartialFunction (n : Arity) (m : Arity) (fs : MuRecs n m) (xs : Vector.t nat n) (z : Vector.t nat m) (z' : Vector.t nat m)
   (SPEC : MuRecsSpec n m fs xs z)
   (SPEC' : MuRecsSpec n m fs xs z')
   : z = z'.
@@ -378,20 +408,20 @@ Proof.
 Qed.
 
 Fixpoint MuRecInterpreter (n : Arity) (f : MuRec n) {struct f}
-  : forall xs, (exists z, MuRecSpec n f xs z) -> { z : Value | MuRecSpec n f xs z }
+  : forall xs, (exists z, MuRecSpec n f xs z) -> { z : nat | MuRecSpec n f xs z }
 with MuRecsInterpreter (n : Arity) (m : Arity) (fs : MuRecs n m) {struct fs}
-  : forall xs, (exists z, MuRecsSpec n m fs xs z) -> { z : Vector.t Value m | MuRecsSpec n m fs xs z }.
+  : forall xs, (exists z, MuRecsSpec n m fs xs z) -> { z : Vector.t nat m | MuRecsSpec n m fs xs z }.
 Proof.
   - destruct f; simpl; intros xs EXISTENCE.
     + clear EXISTENCE. revert xs. introVCons x xs. revert xs. introVNil. exists (S x). econs 1.
     + clear EXISTENCE. revert xs. introVNil. exists O. econs 2.
     + clear EXISTENCE. exists (xs !! i). econs 3.
-    + assert (claim1 : exists z : Vector.t Value m, MuRecsSpec n m g xs z).
+    + assert (claim1 : exists z : Vector.t nat m, MuRecsSpec n m g xs z).
       { destruct EXISTENCE as [z SPEC]. rewrite <- MuRecGraph_correct in SPEC. simpl in SPEC.
         destruct SPEC as (ys&CALLs&CALL). exists ys. rewrite <- MuRecsGraph_correct. exact CALLs.
       }
       pose proof (MuRecsInterpreter n m g xs claim1) as [ys ys_spec].
-      assert (claim2 : exists z : Value, MuRecSpec m f ys z).
+      assert (claim2 : exists z : nat, MuRecSpec m f ys z).
       { destruct EXISTENCE as [z SPEC]. rewrite <- MuRecGraph_correct in SPEC. simpl in SPEC.
         destruct SPEC as (ys'&CALLs&CALL). exists z. rewrite <- MuRecGraph_correct. replace ys with ys'. exact CALL.
         eapply MuRecs_isPartialFunction.
@@ -403,19 +433,19 @@ Proof.
       * rewrite MuRecsGraph_correct. exact ys_spec.
       * rewrite MuRecGraph_correct. exact z_spec.
     + revert xs EXISTENCE. introVCons a xs. revert xs. induction a as [ | a IH]; simpl; i.
-      * assert (claim1 : exists z : Value, MuRecSpec n f1 xs z).
+      * assert (claim1 : exists z : nat, MuRecSpec n f1 xs z).
         { destruct EXISTENCE as [z SPEC]. rewrite <- MuRecGraph_correct in SPEC. simpl in SPEC.
           unfold V.tail in SPEC. simpl in SPEC. exists z. rewrite <- MuRecGraph_correct. exact SPEC.
         }
         pose proof (MuRecInterpreter n f1 xs claim1) as [z z_spec]. exists z.
         rewrite <- MuRecGraph_correct. simpl. unfold V.tail. simpl. rewrite MuRecGraph_correct. exact z_spec.
-      * assert (claim1 : exists z : Value, MuRecSpec (S n) (MR_primRec f1 f2) (VCons n a xs) z).
+      * assert (claim1 : exists z : nat, MuRecSpec (S n) (MR_primRec f1 f2) (VCons n a xs) z).
         { destruct EXISTENCE as [z SPEC]. rewrite <- MuRecGraph_correct in SPEC. simpl in SPEC.
           unfold V.tail, V.head in SPEC. simpl in SPEC. destruct SPEC as [acc [CALL CALL']]. exists acc. rewrite <- MuRecGraph_correct. simpl.
           unfold V.tail, V.head. simpl. exact CALL.
         }
         pose proof (IH xs claim1) as [acc acc_spec].
-        assert (claim2 : exists z : Value, MuRecSpec (S (S n)) f2 (VCons (S n) a (VCons n acc xs)) z).
+        assert (claim2 : exists z : nat, MuRecSpec (S (S n)) f2 (VCons (S n) a (VCons n acc xs)) z).
         { destruct EXISTENCE as [z SPEC]. rewrite <- MuRecGraph_correct in SPEC. simpl in SPEC.
           unfold V.tail, V.head in SPEC. simpl in SPEC. destruct SPEC as [acc' [CALL CALL']].
           assert (EQ : acc = acc').
@@ -457,11 +487,11 @@ Proof.
       * rewrite <- MuRecGraph_correct in SPEC. exact SPEC.
   - destruct fs; intros xs EXISTENCE.
     + exists []. econs 1.
-    + assert (claim1 : exists z : Value, MuRecSpec n f xs z).
+    + assert (claim1 : exists z : nat, MuRecSpec n f xs z).
       { destruct EXISTENCE as [z SPEC]. rewrite <- MuRecsGraph_correct in SPEC. simpl in SPEC.
         destruct SPEC as (y&ys&CALL&CALLs&EQ). exists y. rewrite <- MuRecGraph_correct. exact CALL.
       }
-      assert (claim2 : exists z : Vector.t Value m, MuRecsSpec n m fs xs z).
+      assert (claim2 : exists z : Vector.t nat m, MuRecsSpec n m fs xs z).
       { destruct EXISTENCE as [z SPEC]. rewrite <- MuRecsGraph_correct in SPEC. simpl in SPEC.
         destruct SPEC as (y&ys&CALL&CALLs&EQ). exists ys. rewrite <- MuRecsGraph_correct. exact CALLs.
       }

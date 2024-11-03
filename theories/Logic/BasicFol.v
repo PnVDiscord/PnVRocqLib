@@ -66,13 +66,13 @@ Proof.
 Defined.
 
 Definition head {n : nat} (ts : trms (S n)) : trm :=
-  match ts in trms n' return (match n' as n' return Type with O => unit | S n => trm end) with
+  match ts in trms n' return (match n' as n' return Set with O => unit | S n => trm end) with
   | O_trms => tt
   | S_trms _ t _ => t
   end.
 
 Definition tail {n : nat} (ts : trms (S n)) : trms n :=
-  match ts in trms n' return (match n' as n' return Type with O => unit | S n => trms n end) with
+  match ts in trms n' return (match n' as n' return Set with O => unit | S n => trms n end) with
   | O_trms => tt
   | S_trms _ _ ts => ts
   end.
@@ -85,7 +85,7 @@ Proof.
   induction ts as [ | n t ts IH].
   - eapply trms_case0. exact phi_O.
   - eapply trms_caseS. intros t' ts'. exact (phi_S n t t' ts ts' (IH ts')).
-Qed.
+Defined.
 
 Fixpoint trms_to_vec {n : nat} (ts : trms n) : Vector.t trm n :=
   match ts with

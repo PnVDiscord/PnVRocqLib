@@ -15,9 +15,9 @@ theories/Logic/PrimRec.v #
 theories/Logic/PropositionalLogic.v #
 theories/Math/BooleanAlgebra.v #
 theories/Math/ClassicalDomainTheory.v #
+theories/Math/ConstructiveOrdinal.v #
 theories/Math/DomainTheory.v #
 theories/Math/OrderTheory.v #
-theories/Math/Ordinal.v #
 theories/Math/ThN.v #
 theories/Prelude/AC.v #
 theories/Prelude/ClassicalFacts.v #
