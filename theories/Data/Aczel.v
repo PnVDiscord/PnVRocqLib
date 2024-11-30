@@ -203,6 +203,48 @@ Proof with eauto with *.
   - rewrite -> EQ1 in H_in...
 Qed.
 
+#[global]
+Instance member_isCompatibleWith_eqProp_fst z
+  : isCompatibleWith_eqProp (fun w => member w z).
+Proof.
+  intros x IN y EQ. rewrite <- EQ. exact IN.
+Qed.
+
+#[global]
+Instance member_isCompatibleWith_eqProp_snd z
+  : isCompatibleWith_eqProp (fun w => member z w).
+Proof.
+  intros x IN y EQ. rewrite <- EQ. exact IN.
+Qed.
+
+#[global]
+Instance eqProp_isCompatibleWith_eqProp_fst z
+  : isCompatibleWith_eqProp (fun w => w == z).
+Proof.
+  ii; etransitivity; eauto.
+Qed.
+
+#[global]
+Instance eqProp_isCompatibleWith_eqProp_snd z
+  : isCompatibleWith_eqProp (fun w => z == w).
+Proof.
+  ii; etransitivity; eauto.
+Qed.
+
+#[global]
+Instance eqProp_isCompatibleWith_isSubsetOf_fst z
+  : isCompatibleWith_eqProp (fun w => isSubsetOf z w).
+Proof.
+  now ii; eapply isSubsetOf_compatWith_eqProp; eauto.
+Qed.
+
+#[global]
+Instance eqProp_isCompatibleWith_isSubsetOf_snd z
+  : isCompatibleWith_eqProp (fun w => isSubsetOf w z).
+Proof.
+  intros x H1 y H2 w H3. eapply H1. rewrite H2. exact H3.
+Qed.
+
 (** Section SET_CONSTRUCTIONS. *)
 
 #[local] Opaque eqProp.
@@ -922,7 +964,8 @@ Definition isTransitiveSet (x : Tree) : Prop :=
 
 #[global] Hint Unfold isTransitiveSet : aczel_hints.
 
-Lemma isTransitiveSet_compatWith_eqTree
+#[global]
+Instance isTransitiveSet_compatWith_eqTree
   : isCompatibleWith_eqProp isTransitiveSet.
 Proof.
   intros alpha alpha_isTranstiveSet beta alpha_eq_beta.

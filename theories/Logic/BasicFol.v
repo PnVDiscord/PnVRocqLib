@@ -298,9 +298,9 @@ Proof.
   intros p. induction (relation_on_image_liftsWellFounded Nat.lt frm_depth lt_wf p) as [p _ IH]. exact (IND p IH).
 Defined.
 
-Hypothesis enum_function_symbols : isEnumerable L.(function_symbols).
+Hypothesis function_symbols_countable : isCountable L.(function_symbols).
 
-Hypothesis enum_constant_symbols : isEnumerable L.(constant_symbols).
+Hypothesis constant_symbols_countable : isCountable L.(constant_symbols).
 
 Fixpoint gen_trm (seed : nat) (rk : nat) {struct rk} : trm L :=
   match rk with
@@ -309,8 +309,16 @@ Fixpoint gen_trm (seed : nat) (rk : nat) {struct rk} : trm L :=
     let '(seed1, seed') := cp seed in
     let '(seed2, seed3) := cp seed' in
     match seed1 with
-    | 0 => Con_trm (enum seed')
-    | 1 => Fun_trm (enum seed2) (gen_trms seed3 rk')
+    | 0 =>
+      match decode seed' with
+      | Some c => Con_trm c
+      | None => Var_trm seed'
+      end
+    | 1 =>
+      match decode seed2 with
+      | Some f => Fun_trm f (gen_trms seed3 rk')
+      | None => Var_trm seed2
+      end
     | S (S i) => Var_trm i
     end
   end
@@ -334,8 +342,16 @@ Lemma gen_trm_unfold (seed : nat) (rk : nat) :
     let '(seed1, seed') := cp seed in
     let '(seed2, seed3) := cp seed' in
     match seed1 with
-    | 0 => Con_trm (enum seed')
-    | 1 => Fun_trm (enum seed2) (gen_trms seed3 rk')
+    | 0 =>
+      match decode seed' with
+      | Some c => Con_trm c
+      | None => Var_trm seed'
+      end
+    | 1 =>
+      match decode seed2 with
+      | Some f => Fun_trm f (gen_trms seed3 rk')
+      | None => Var_trm seed2
+      end
     | S (S i) => Var_trm i
     end
   end.
@@ -375,18 +391,17 @@ Proof.
         simpl. reflexivity.
     + destruct rk as [ | rk']; [lia | assert (RANK_LE' : trms_depth ts <= rk') by lia].
       pose proof (gen_trms_good _ ts rk' RANK_LE') as [seed2 H_OBS].
-      exists (cpInv 1 (cpInv (proj1_sig (enum_spec f)) seed2)). rewrite gen_trm_unfold.
-      destruct (cp (cpInv 1 (cpInv (proj1_sig (enum_spec f)) seed2))) as [x1 x2] eqn: H_OBS'.
+      exists (cpInv 1 (cpInv (encode f) seed2)). rewrite gen_trm_unfold.
+      destruct (cp (cpInv 1 (cpInv (encode f) seed2))) as [x1 x2] eqn: H_OBS'.
       rewrite cp_spec in H_OBS'. apply cpInv_inj in H_OBS'. destruct H_OBS' as [<- <-].
-      destruct (cp (cpInv (proj1_sig (enum_spec f)) seed2)) as [x2 y2] eqn: H_OBS''.
+      destruct (cp (cpInv (encode f) seed2)) as [x2 y2] eqn: H_OBS''.
       rewrite cp_spec in H_OBS''. apply cpInv_inj in H_OBS''. destruct H_OBS'' as [<- <-].
-      assert (claim : (enum (proj1_sig (enum_spec f))) = f) by now destruct (enum_spec f). rewrite claim. rewrite H_OBS. reflexivity.
+      rewrite decode_encode. congruence.
     + destruct rk as [ | rk']; [lia | assert (RANK_LE' : 0 <= rk') by lia].
-      exists (cpInv 0 (proj1_sig (enum_spec c))). rewrite gen_trm_unfold.
-      destruct (cp (cpInv 0 (proj1_sig (enum_spec c)))) as [x1 x2] eqn: H_OBS'.
-      assert (claim : enum (proj1_sig (enum_spec c)) = c) by now destruct (enum_spec c).
-      rewrite cp_spec in H_OBS'. apply cpInv_inj in H_OBS'. destruct H_OBS' as [<- <-]. rewrite claim.
-      destruct (cp (proj1_sig (enum_spec c))) as [x1 x2] eqn: H_OBS'. reflexivity.
+      exists (cpInv 0 (encode c)). rewrite gen_trm_unfold.
+      destruct (cp (cpInv 0 (encode c))) as [x1 x2] eqn: H_OBS'.
+      rewrite cp_spec in H_OBS'. apply cpInv_inj in H_OBS'. destruct H_OBS' as [<- <-].
+      destruct (cp (encode c)) as [x1 x2] eqn: H_OBS'. now rewrite decode_encode.
   - revert rk RANK_LE. trms_ind ts; simpl; i.
     + simpl. exists 0. rewrite gen_trms_unfold. reflexivity.
     + destruct rk as [ | rk'].
@@ -437,12 +452,12 @@ Instance trm_isEnumerable : isEnumerable (trm L) :=
   }.
 
 #[local]
-Instance trms_isRecursivelyEnumerable (n : nat) : isEnumerable (trms L n) :=
+Instance trms_isEnumerable (n : nat) : isEnumerable (trms L n) :=
   { enum := enum_trms
   ; enum_spec := trms_is_enumerable n
   }.
 
-Hypothesis enum_relation_symbols : isEnumerable L.(relation_symbols).
+Hypothesis relation_symbols_countable : isCountable L.(relation_symbols).
 
 Fixpoint gen_frm (seed : nat) (rk : nat) {struct rk} : frm L :=
   match rk with
@@ -451,7 +466,11 @@ Fixpoint gen_frm (seed : nat) (rk : nat) {struct rk} : frm L :=
     let '(seed2, seed3) := cp seed' in
     match seed1 with
     | 0 => Eqn_frm (enum seed2) (enum seed3)
-    | _ => Rel_frm (enum seed2) (enum seed3)
+    | _ =>
+      match decode seed2 with
+      | Some R => Rel_frm R (enum seed3)
+      | None => Eqn_frm (enum seed2) (enum seed3)
+      end
     end
   | S rk' =>
     let '(seed1, seed') := cp seed in
@@ -463,7 +482,11 @@ Fixpoint gen_frm (seed : nat) (rk : nat) {struct rk} : frm L :=
     | S (S (S i)) =>
       match i with
       | 0 => Eqn_frm (enum seed2) (enum seed3)
-      | _ => Rel_frm (enum seed2) (enum seed3)
+      | _ =>
+        match decode seed2 with
+        | Some R => Rel_frm R (enum seed3)
+        | None => Eqn_frm (enum seed2) (enum seed3)
+        end
       end
     end
   end.
@@ -476,7 +499,11 @@ Lemma gen_frm_unfold (seed : nat) (rk : nat) :
     let '(seed2, seed3) := cp seed' in
     match seed1 with
     | 0 => Eqn_frm (enum seed2) (enum seed3)
-    | _ => Rel_frm (enum seed2) (enum seed3)
+    | _ =>
+      match decode seed2 with
+      | Some R => Rel_frm R (enum seed3)
+      | None => Eqn_frm (enum seed2) (enum seed3)
+      end
     end
   | S rk' =>
     let '(seed1, seed') := cp seed in
@@ -488,7 +515,11 @@ Lemma gen_frm_unfold (seed : nat) (rk : nat) :
     | S (S (S i)) =>
       match i with
       | 0 => Eqn_frm (enum seed2) (enum seed3)
-      | _ => Rel_frm (enum seed2) (enum seed3)
+      | _ =>
+        match decode seed2 with
+        | Some R => Rel_frm R (enum seed3)
+        | None => Eqn_frm (enum seed2) (enum seed3)
+        end
       end
     end
   end.
@@ -502,18 +533,18 @@ Lemma gen_frm_spec (p : frm L) (rk : nat)
 Proof.
   revert rk LE. frm_ind p; simpl; i.
   - destruct rk as [ | rk'].
-    + exists (cpInv 1 (cpInv (proj1_sig (enum_spec R)) (proj1_sig (enum_spec ts)))).
-      rewrite gen_frm_unfold. destruct (cp (cpInv 1 (cpInv (proj1_sig (enum_spec R)) (proj1_sig (enum_spec ts))))) as [x y] eqn: H_OBS.
+    + exists (cpInv 1 (cpInv (encode R) (proj1_sig (enum_spec ts)))).
+      rewrite gen_frm_unfold. destruct (cp (cpInv 1 (cpInv (encode R) (proj1_sig (enum_spec ts))))) as [x y] eqn: H_OBS.
       rewrite cp_spec in H_OBS. apply cpInv_inj in H_OBS. destruct H_OBS as [<- <-].
-      destruct (cp (cpInv (proj1_sig (enum_spec R)) (proj1_sig (enum_spec ts)))) as [x y] eqn: H_OBS.
+      destruct (cp (cpInv (encode R) (proj1_sig (enum_spec ts)))) as [x y] eqn: H_OBS.
       rewrite cp_spec in H_OBS. apply cpInv_inj in H_OBS. destruct H_OBS as [<- <-].
-      destruct (enum_spec R) as [R_n H_R], (enum_spec ts) as [ts_n H_ts]; subst R ts. reflexivity.
-    + exists (cpInv 4 (cpInv (proj1_sig (enum_spec R)) (proj1_sig (enum_spec ts)))).
-      rewrite gen_frm_unfold. destruct (cp (cpInv 4 (cpInv (proj1_sig (enum_spec R)) (proj1_sig (enum_spec ts))))) as [x y] eqn: H_OBS.
+      rewrite decode_encode. destruct (enum_spec ts) as [ts_n H_ts]; subst ts. reflexivity.
+    + exists (cpInv 4 (cpInv (encode R) (proj1_sig (enum_spec ts)))).
+      rewrite gen_frm_unfold. destruct (cp (cpInv 4 (cpInv (encode R) (proj1_sig (enum_spec ts))))) as [x y] eqn: H_OBS.
       rewrite cp_spec in H_OBS. apply cpInv_inj in H_OBS. destruct H_OBS as [<- <-].
-      destruct (cp (cpInv (proj1_sig (enum_spec R)) (proj1_sig (enum_spec ts)))) as [x y] eqn: H_OBS.
+      destruct (cp (cpInv (encode R) (proj1_sig (enum_spec ts)))) as [x y] eqn: H_OBS.
       rewrite cp_spec in H_OBS. apply cpInv_inj in H_OBS. destruct H_OBS as [<- <-].
-      destruct (enum_spec R) as [R_n H_R], (enum_spec ts) as [ts_n H_ts]; subst R ts. reflexivity.
+      rewrite decode_encode. destruct (enum_spec ts) as [ts_n H_ts]; subst ts; try reflexivity.
   - destruct rk as [ | rk'].
     + exists (cpInv 0 (cpInv (proj1_sig (enum_spec t1)) (proj1_sig (enum_spec t2)))).
       rewrite gen_frm_unfold. destruct (cp (cpInv 0 (cpInv (proj1_sig (enum_spec t1)) (proj1_sig (enum_spec t2))))) as [x y] eqn: H_OBS.
