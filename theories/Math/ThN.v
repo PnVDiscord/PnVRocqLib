@@ -12,43 +12,23 @@ Proof.
   rewrite S_eq_O. econstructor.
 Defined.
 
-Lemma le_case_eq {n : nat} (phi : n <= n -> Prop)
-  (phi_eq : phi (@le_n n))
+Lemma case_le_n {n : nat} (phi : n <= n -> Prop)
+  (phi_le_n : phi (@le_n n))
   : forall H_le : n <= n, phi H_le.
 Proof.
-  intros H_le.
-  refine (
-    let claim :=
-      match H_le in le _ m return forall H_obs : m = n, phi (@eq_ind _ _ (fun m' : nat => n <= m') H_le _ H_obs) with
-      | @le_n _ => fun H_obs: n = n => _
-      | @le_S _ m' H_le' => fun H_obs: S m' = n => _
-      end
-    in _
-  ).
-  { eapply claim with (H_obs := eq_refl). }
-Unshelve.
-  - rewrite eq_pirrel_fromEqDec with (EQ1 := H_obs) (EQ2 := eq_refl). exact (phi_eq).
+  intros H_le. refine ((fun claim : forall EQ : n = n, phi (eq_ind n (fun m' : nat => n <= m') H_le n EQ) => claim eq_refl) (match H_le in le _ m return forall H_obs : m = n, phi (@eq_ind _ _ (fun m' : nat => n <= m') H_le _ H_obs) with @le_n _ => fun H_obs: n = n => _ | @le_S _ m' H_le' => fun H_obs: S m' = n => _ end)).
+  - rewrite eq_pirrel_fromEqDec with (EQ1 := H_obs) (EQ2 := eq_refl). exact (phi_le_n).
   - lia.
 Qed.
 
-Lemma le_case_lt {n : nat} {m : nat} (H_le : m <= n) (phi : m <= S n -> Prop)
-  (phi_lt : forall H_le' : m <= n, phi (@le_S m n H_le'))
+Lemma case_le_S {n : nat} {m : nat} (H_le : m <= n) (phi : m <= S n -> Prop)
+  (phi_le_S : forall H_le' : m <= n, phi (@le_S m n H_le'))
   : forall H_lt : m <= S n, phi H_lt.
 Proof.
-  intros H_lt.
-  refine (
-    let claim :=
-      match H_lt in le _ n' return forall H_obs : n' = S n, phi (@eq_ind _ _ (fun n' => m <= n') H_lt _ H_obs) with
-      | @le_n _ => _
-      | @le_S _ m' H_le' => _
-      end
-    in _
-  ).
-  { eapply claim with (H_obs := eq_refl). }
-Unshelve.
-  - lia. 
-  - intros H_obs. assert (m' = n) as H_eq by now apply f_equal with (f := pred) in H_obs. subst m'.
-    rewrite eq_pirrel_fromEqDec with (EQ1 := H_obs) (EQ2 := eq_refl). exact (phi_lt H_le').
+  intros H_lt. refine ((fun claim : forall EQ : S n = S n, phi (eq_ind (S n) (fun n' : nat => m <= n') H_lt (S n) EQ) => claim eq_refl) (match H_lt in le _ n' return forall H_obs : n' = S n, phi (@eq_ind _ _ (fun n' => m <= n') H_lt _ H_obs) with @le_n _ => fun H_obs : m = S n => _ | @le_S _ m' H_le' => fun H_obs : S m' = S n => _ end)).
+  - lia.
+  - assert (m' = n) as H_eq by now apply f_equal with (f := pred) in H_obs. subst m'.
+    rewrite eq_pirrel_fromEqDec with (EQ1 := H_obs) (EQ2 := eq_refl). exact (phi_le_S H_le').
 Qed.
 
 Theorem le_pirrel (n : nat) (m : nat)
@@ -61,13 +41,13 @@ Proof.
   clear H_eq. revert n m LE1 LE2 claim.
   induction k as [ | k IH]; simpl.
   - i. subst m.
-    induction LE1 using le_case_eq.
-    induction LE2 using le_case_eq.
+    induction LE1 using case_le_n.
+    induction LE2 using case_le_n.
     reflexivity.
   - i. subst m.
     assert (n <= k + n) as LE by lia.
-    induction LE1 using (le_case_lt LE).
-    induction LE2 using (le_case_lt LE).
+    induction LE1 using (case_le_S LE).
+    induction LE2 using (case_le_S LE).
     eapply f_equal. eapply IH. reflexivity.
 Qed.
 
@@ -645,6 +625,36 @@ Next Obligation.
   intros ? ? ? ? [x y]. exists (cpInv (proj1_sig (enum_spec x)) (proj1_sig (enum_spec y))). destruct (enum_spec x) as [n n_spec], (enum_spec y) as [m m_spec]; simpl proj1_sig. f_equal.
   - rewrite <- n_spec. f_equal. rewrite cpInv_rightInv. reflexivity.
   - rewrite <- m_spec. f_equal. rewrite cpInv_rightInv. reflexivity.
+Qed.
+
+#[local] Obligation Tactic := i.
+
+#[global, program]
+Instance sum_isCountable {A : Type} {A' : Type} `{COUNTABLE : isCountable A} `{COUNTABLE' : isCountable A'} : isCountable (A + A') :=
+  { encode it := match it with inl y => 2 * encode y | inr z => 2 * encode z + 1 end
+  ; decode n := if Nat.eqb (n mod 2) 0 then fmap inl (decode (n / 2)) else fmap inr (decode (n / 2))
+  }.
+Next Obligation.
+  destruct x as [y | z]; cbn beta zeta.
+  - obs_eqb ((2 * encode y) mod 2) 0.
+    + exploit (Nat.div_mod (2 * encode y) 2). lia. rewrite H_OBS. rewrite Nat.add_0_r. intros EQ.
+      assert (claim1 : encode y = 2 * encode y / 2) by lia.
+      rewrite <- claim1. rewrite decode_encode. reflexivity.
+    + contradiction H_OBS. rewrite Nat.mul_comm. eapply Nat.Div0.mod_mul.
+  - obs_eqb ((2 * encode z + 1) mod 2) 0.
+    + pose proof (claim := @mod_congruence_r (2 * encode z + 1) 2 (encode z) 1). rewrite H_OBS in claim. discriminate claim; lia.
+    + exploit (div_mod_uniqueness (2 * encode z + 1) 2 (encode z) 1); try lia. intros [claim1 claim2]. rewrite claim1. rewrite decode_encode; reflexivity.
+Qed.
+
+#[global, program]
+Instance prod_isCountable {A : Type} {A' : Type} `{COUNTABLE : isCountable A} `{COUNTABLE' : isCountable A'} : isCountable (A * A') :=
+  { encode it := cpInv (encode (fst it)) (encode (snd it))
+  ; decode n := liftM2 (@pair A A') (decode (fst (cp n))) (decode (snd (cp n)))
+  }.
+Next Obligation.
+  destruct x as [y z]; cbn beta; simpl fst; simpl snd.
+  rewrite cpInv_rightInv. simpl fst; simpl snd.
+  do 2 rewrite decode_encode. reflexivity.
 Qed.
 
 Fixpoint downto (n : nat) : list nat :=

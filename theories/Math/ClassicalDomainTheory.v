@@ -37,7 +37,7 @@ Proof.
     eapply NNPP. intros y_in_U_x. contradiction H_false. now exists (y).
 Qed.
 
-Lemma Scott_topology_T0' {D : Type} {PROSET : isProset D} (a : D) (b : D)
+Lemma Scott_topology_T0_aux {D : Type} {PROSET : isProset D} (a : D) (b : D)
   (NE : ~ a == b)
   : exists O : ensemble D, isOpen O /\ ((a \in O /\ ~ b \in O) \/ (b \in O /\ ~ a \in O)).
 Proof.
@@ -48,6 +48,13 @@ Proof.
     right. split; trivial. intros LE. contradiction LE. reflexivity.
   - exists (U b). split. eapply U_x_isOpen.
     left. split; trivial. intros LE. contradiction LE. reflexivity.
+Qed.
+
+Lemma Scott_topology_T0 {D : Type} {POSET : isPoset D} (a : D) (b : D)
+  (NE : a <> b)
+  : exists O : ensemble D, isOpen O /\ ((a \in O /\ ~ b \in O) \/ (b \in O /\ ~ a \in O)).
+Proof.
+  eapply Scott_topology_T0_aux. now rewrite Poset_eqProp_spec.
 Qed.
 
 Lemma ScottContinuousMap_isMonotonic {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} (f : D -> D')
@@ -190,6 +197,13 @@ Proof with eauto with *.
       destruct claim1 as [y [y_in_image_f_X y_in_Y]].
       inversion y_in_image_f_X; subst y.
       exists x. done!.
+Qed.
+
+Corollary isContinuous_iff_preserves_supremum {D : Type} {D' : Type} {POSET : isPoset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (f : D -> D')
+  : isContinuous f <-> preserves_supremum f.
+Proof.
+  eapply the_main_reason_for_introducing_ScottTopology.
+  ii. rewrite Poset_eqProp_spec in x_EQ. now subst x2.
 Qed.
 
 Lemma supOfScottContinuousMaps_isWellDefined {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (F : ensemble `[D -> D'])

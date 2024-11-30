@@ -213,7 +213,7 @@ Proof.
   ).
 Defined.
 
-Lemma MuRecs_caseS {x : nat} {n' : nat} (phi : MuRecs x (S n') -> Type)
+Lemma MuRecs_caseS {x : nat} {n' : Arity} (phi : MuRecs x (S n') -> Type)
   (phi_cons : forall f', forall fs', phi (MRs_cons f' fs'))
   : forall fs, phi fs.
 Proof.
@@ -226,7 +226,10 @@ Proof.
   ).
 Defined.
 
-Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t nat n -> nat -> Prop :=
+Let Value : Set :=
+  nat.
+
+Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t Value n -> Value -> Prop :=
   | MR_succ_spec x
     : MuRecSpec 1 (MR_succ) [x] (S x)
   | MR_zero_spec
@@ -248,7 +251,7 @@ Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t nat n -> nat -> Prop
     (g_spec : MuRecSpec (S n) g (z :: xs) 0)
     (MIN : forall y, y < z -> exists p, p > 0 /\ MuRecSpec (S n) g (y :: xs) p)
     : MuRecSpec n (MR_mu g) xs z
-with MuRecsSpec : forall n : Arity, forall m : Arity, MuRecs n m -> Vector.t nat n -> Vector.t nat m -> Prop :=
+with MuRecsSpec : forall n : Arity, forall m : Arity, MuRecs n m -> Vector.t Value n -> Vector.t Value m -> Prop :=
   | MRs_nil_spec n xs
     : MuRecsSpec n (O) (MRs_nil) xs []
   | MRs_cons_spec n m xs y ys f fs
@@ -331,13 +334,13 @@ Qed.
 Theorem MuRecGraph_correct (n : Arity) (f : MuRec n) (xs : Vector.t nat n) (z : nat)
   : MuRecGraph f xs z <-> MuRecSpec n f xs z.
 Proof.
-  pose proof (LEFT := @MuRecGraph_complete). pose proof (RIGHT := @MuRecGraph_sound). now firstorder.
+  pose proof (RIGHT := @MuRecGraph_complete). pose proof (LEFT := @MuRecGraph_sound). now firstorder.
 Qed.
 
 Theorem MuRecsGraph_correct (n : Arity) (m : Arity) (f : MuRecs n m) (xs : Vector.t nat n) (z : Vector.t nat m)
   : MuRecsGraph f xs z <-> MuRecsSpec n m f xs z.
 Proof.
-  pose proof (LEFT := @MuRecsGraph_complete). pose proof (RIGHT := @MuRecsGraph_sound). now firstorder.
+  pose proof (RIGHT := @MuRecsGraph_complete). pose proof (LEFT := @MuRecsGraph_sound). now firstorder.
 Qed.
 
 Fixpoint MuRec_isPartialFunction_aux (n : Arity) (f : MuRec n) (xs : Vector.t nat n) (z : nat) (SPEC : MuRecSpec n f xs z) {struct SPEC}
@@ -503,17 +506,17 @@ Qed.
 End MU_RECURSIVE.
 
 Fixpoint fromPrimRec {n : nat} (f : PrimRec n) : MuRec n :=
-  match f with
-  | PR_succ => MR_succ
-  | PR_zero => MR_zero
-  | PR_proj n i => MR_proj i
-  | PR_compose n m g h => MR_compose (fromPrimRecs g) (fromPrimRec h)
-  | PR_primRec n g h => MR_primRec (fromPrimRec g) (fromPrimRec h)
+  match f in PrimRec n return MuRec n with
+  | @PR_succ => @MR_succ
+  | @PR_zero => @MR_zero
+  | @PR_proj n i => @MR_proj n i
+  | @PR_compose n m g h => @MR_compose n m (fromPrimRecs g) (fromPrimRec h)
+  | @PR_primRec n g h => @MR_primRec n (fromPrimRec g) (fromPrimRec h)
   end
 with fromPrimRecs {n : nat} {m : nat} (fs : PrimRecs n m) : MuRecs n m :=
-  match fs with
-  | PRs_nil n => MRs_nil
-  | PRs_cons n m f fs => MRs_cons (fromPrimRec f) (fromPrimRecs fs)
+  match fs in PrimRecs n m return MuRecs n m with
+  | @PRs_nil n => @MRs_nil n
+  | @PRs_cons n m f fs => @MRs_cons n m (fromPrimRec f) (fromPrimRecs fs)
   end.
 
 Fixpoint fromPrimRec_good (n : nat) (f : PrimRec n) (xs : Vector.t nat n) (z : nat) (SPEC : PrimRecSpec n f xs z) {struct SPEC}
