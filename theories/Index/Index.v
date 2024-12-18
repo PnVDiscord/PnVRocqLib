@@ -1,10 +1,14 @@
+Require Import PnV.Control.Category.
+Require Import PnV.Control.Monad.
 Require Import PnV.Data.Aczel.
 Require Import PnV.Data.Graph.
+Require Import PnV.Data.ITree.
 Require Import PnV.Data.Vector.
 Require Import PnV.Logic.BasicFol.
 Require Import PnV.Logic.BasicFol2.
 Require Import PnV.Logic.ClassicalFol.
 Require Import PnV.Logic.ClassicalPropositionalLogic.
+Require Import PnV.Logic.ExtraFol.
 Require Import PnV.Logic.HilbertFol.
 Require Import PnV.Logic.HilbertFol2.
 Require Import PnV.Logic.MuRec.

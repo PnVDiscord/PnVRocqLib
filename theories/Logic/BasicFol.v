@@ -613,9 +613,6 @@ Section FOL_SYNTAX. (* Reference: "https://github.com/ernius/formalmetatheory-st
 
 Import ListNotations.
 
-Definition renaming : Set :=
-  ivar -> ivar.
-
 Definition subst (L : language) : Set :=
   ivar -> trm L.
 
@@ -1148,39 +1145,6 @@ Proof.
 Qed.
 
 #[local] Hint Rewrite <- subst_compose_frm_spec : simplication_hints.
-
-Definition rename_trm (eta : renaming) : trm L -> trm L :=
-  subst_trm (Var_trm ∘ eta)%prg.
-
-Definition rename_trms {n : nat} (eta : renaming) : trms L n -> trms L n :=
-  subst_trms (Var_trm ∘ eta)%prg.
-
-Definition rename_frm (eta : renaming) : frm L -> frm L :=
-  subst_frm (Var_trm ∘ eta)%prg.
-
-Lemma rename_frm_subst (s : subst L) (eta : renaming) (eta' : renaming) (p : frm L)
-  (eta_inj : forall z : ivar, is_free_in_frm z p = true -> eta' (eta z) = z)
-  : rename_frm eta (subst_frm s p) = subst_frm (rename_trm eta ∘ s ∘ eta')%prg (rename_frm eta p).
-Proof.
-  unfold rename_frm. do 2 rewrite <- subst_compose_frm_spec. eapply equiv_subst_in_frm_implies_subst_frm_same.
-  ii; unfold "∘"%prg in *; unfold subst_compose in *. symmetry. rewrite subst_trm_unfold. rewrite eta_inj; done.
-Qed.
-
-Lemma rename_frm_one_subst (eta : renaming) (x : ivar) (t : trm L) (p : frm L)
-  (eta_inj : exists eta' : renaming, forall z : ivar, is_free_in_frm z p = true \/ z = x -> eta' (eta z) = z)
-  : rename_frm eta (subst_frm (one_subst x t) p) = subst_frm (one_subst (eta x) (rename_trm eta t)) (rename_frm eta p).
-Proof.
-  destruct eta_inj as [eta' eta_inj].
-  assert (claim1 : eta' (eta x) = x) by done!.
-  assert (claim2 : forall z : ivar, is_free_in_frm z p = true -> eta' (eta z) = z) by done!.
-  rewrite rename_frm_subst with (eta' := eta'); trivial.
-  unfold rename_frm. do 2 rewrite <- subst_compose_frm_spec. eapply equiv_subst_in_frm_implies_subst_frm_same.
-  ii. unfold subst_compose. unfold "∘"%prg. simpl. rewrite claim2; trivial.
-  unfold one_subst, cons_subst, nil_subst. destruct (eq_dec (eta z) (eta x)) as [eta_EQ | eta_NE].
-  - eapply f_equal with (f := eta') in eta_EQ. rewrite claim1 in eta_EQ. rewrite claim2 in eta_EQ; trivial.
-    subst z. destruct (eq_dec x x); done.
-  - destruct (eq_dec z x); done!.
-Qed.
 
 Lemma trivial_subst (x : ivar) (p : frm L)
   : subst_frm (one_subst x (Var_trm x)) p = subst_frm nil_subst p.

@@ -1012,7 +1012,31 @@ Instance option_isMonad : isMonad option :=
   ; bind {A} {B} (m : option A) (k : A -> option B) := maybe (@None B) k m
   }.
 
+#[universes(polymorphic=yes)]
+Definition Rel_id@{u} {A : Type@{u}} : ensemble@{u} (A * A) :=
+  fun '(x1, x2) => x1 = x2.
+
+#[universes(polymorphic=yes)]
+Definition Rel_flip@{u} {A : Type@{u}} {B : Type@{u}} (R1 : ensemble@{u} (A * B)) : ensemble@{u} (B * A) :=
+  fun '(x1, x2) => R1 (x2, x1).
+
+#[universes(polymorphic=yes)]
+Definition Rel_compose@{u} {A : Type@{u}} {B : Type@{u}} {C : Type@{u}} (R1 : ensemble@{u} (B * C)) (R2 : ensemble@{u} (A * B)) : ensemble@{u} (A * C) :=
+  fun '(x1, x2) => exists x, R2 (x1, x) /\ R1 (x, x2).
+
+Inductive sum1 (X : Type -> Type) (Y : Type -> Type) (A : Type) : Type :=
+  | inl1 (INL : X A) : sum1 X Y A
+  | inr1 (INR : Y A) : sum1 X Y A.
+
+#[global] Arguments sum1 X%type Y%type.
+#[global] Arguments inl1 {X} {Y} {A}.
+#[global] Arguments inr1 {X} {Y} {A}.
+
+Inductive void1 (A : Type) : Type :=.
+
 End B.
+
+Infix "+'" := B.sum1 (at level 50, left associativity) : type_scope.
 
 Infix "$" := B.dollar.
 Infix ">>=" := bind.
