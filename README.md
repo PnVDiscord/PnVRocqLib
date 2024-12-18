@@ -46,17 +46,17 @@ Our main results are:
 
 - `BasicFol2.v` : Extra definitions of First-Order Logic.
 
-- `ClassicalFol.v` : Meta-theories on Classical First-Order Logic--such as Soundness Theorem and Completeness Theorem.
+- `ClassicalFol.v` : The meta-theory on Classical First-Order Logic--such as Soundness Theorem and Completeness Theorem.
 
 - `ClassicalPropositionalLogic.v` : The Soundness, Completeness, and Compactness Theorem for PropositionalLogic.
 
-- `HilbertFol.v` : Basic facts on Hilbert calculus for First-Order Logic.
+- `HilbertFol.v` : Basic facts about Hilbert calculus for First-Order Logic.
 
-- `HilbertFol2.v` : Advanced facts on Hilbert calculus for First-Order Logic.
+- `HilbertFol2.v` : Advanced facts about Hilbert calculus for First-Order Logic.
 
-- `MuRec.v` : Basic facts on μ-recursive functions.
+- `MuRec.v` : Basic facts about μ-recursive functions.
 
-- `PrimRec.v` : Basic facts on primitive recursive functions.
+- `PrimRec.v` : Basic facts about primitive recursive functions.
 
 - `PropositionalLogic.v` : Contructive meta-theory on the Propositional Logic, Weak Completeness Theorem for PropoistionalLogic.
 
@@ -76,15 +76,15 @@ Our main results are:
 
 - `Ordinal.v` : Theory on ordinal numbers.
 
-- `ThN.v` : Basic facts on the natural numbers.
+- `ThN.v` : Basic facts about the natural numbers.
 
 ### Prelude
 
-- `AC.v` : Facts on `CIC` + Axiom of Choice.
+- `AC.v` : Facts about `CIC` + Axiom of Choice.
 
-- `ClassicalFacts.v` : Facts on `CIC + (classic : forall P, P \/ ~ P)`.
+- `ClassicalFacts.v` : Facts about `CIC + (classic : forall P, P \/ ~ P)`.
 
-- `ConstructiveFacts.v` : Facts on CIC.
+- `ConstructiveFacts.v` : Facts about CIC.
 
 - `Notations.v` : Reserves all notations to avoid the conflict.
 

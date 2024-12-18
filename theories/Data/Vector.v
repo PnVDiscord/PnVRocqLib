@@ -158,6 +158,21 @@ Proof with eauto.
   rewrite evalFin_unfold. eapply f_equal...
 Qed.
 
+#[global, program]
+Instance Fin_isCountable {n : nat} : isCountable (Fin.t n) :=
+  { encode := evalFin
+  ; decode i :=
+    match le_lt_dec n i with
+    | left _ => None
+    | right H_lt => Some (getFin i H_lt)
+    end
+  }.
+Next Obligation.
+  destruct (le_lt_dec n (evalFin x)) as [H_ge | H_lt].
+  - unfold evalFin in H_ge. destruct (runFin x) as [i H_i]; simpl in *. lia.
+  - f_equal. erewrite le_pirrel with (LE1 := H_lt). eapply getFin_runFin_id.
+Qed.
+
 End Fin.
 
 Notation FZ := Fin.FZ.
