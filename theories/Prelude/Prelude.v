@@ -377,9 +377,10 @@ Qed.
 
 (** Section MONAD. *)
 
-Class isMonad (M : Type -> Type) : Type :=
-  { bind {A : Type} {B : Type} (m : M A) (k : A -> M B) : M B
-  ; pure {A : Type} : A -> M A
+#[universes(polymorphic=yes)]
+Class isMonad@{d c} (M : Type@{d} -> Type@{c}) : Type :=
+  { bind {A : Type@{d}} {B : Type@{d}} (m : M A) (k : A -> M B) : M B
+  ; pure {A : Type@{d}} : A -> M A
   }.
 
 Class MonadLaws (M : Type -> Type) `{SETOID1 : isSetoid1 M} `{MONAD : isMonad M} : Prop :=
