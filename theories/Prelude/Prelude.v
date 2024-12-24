@@ -32,7 +32,7 @@ Definition reify@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} (f : f
   @exist (A -> B) (fun f => forall x, P x (f x)) (fun x => proj1_sig (f x)) (fun x => proj2_sig (f x)).
 
 #[universes(polymorphic=yes)]
-Definition reify_lemma@{u v} {A : Type@{u}} {B : Type@{u}} {P : A -> B -> Prop} (f : forall x : A, { y : B | P x y }) : forall x, P x (proj1_sig (@reify@{u v} A B P f) x) :=
+Definition reify_lemma@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} (f : forall x : A, { y : B | P x y }) : forall x, P x (proj1_sig (@reify@{u v} A B P f) x) :=
   proj2_sig (@reify@{u v} A B P f).
 
 (** Section SETOID. *)
@@ -377,9 +377,10 @@ Qed.
 
 (** Section MONAD. *)
 
-Class isMonad (M : Type -> Type) : Type :=
-  { bind {A : Type} {B : Type} (m : M A) (k : A -> M B) : M B
-  ; pure {A : Type} : A -> M A
+#[universes(polymorphic=yes)]
+Class isMonad@{d c} (M : Type@{d} -> Type@{c}) : Type :=
+  { bind {A : Type@{d}} {B : Type@{d}} (m : M A) (k : A -> M B) : M B
+  ; pure {A : Type@{d}} : A -> M A
   }.
 
 Class MonadLaws (M : Type -> Type) `{SETOID1 : isSetoid1 M} `{MONAD : isMonad M} : Prop :=
