@@ -14,16 +14,16 @@ Variant itreeF (itree : Type) (E : Type -> Type) (R : Type) : Type :=
   | TauF (t : itree) : itreeF itree E R
   | VisF (X : Type) (e : E X) (k : X -> itree) : itreeF itree E R.
 
-#[global] Arguments RetF {itree} {E}%type_scope {R}%type_scope r.
-#[global] Arguments TauF {itree} {E}%type_scope {R}%type_scope t%itree_scope.
-#[global] Arguments VisF {itree} {E}%type_scope {R}%type_scope X%type_scope e k%itree_scope.
+#[global] Arguments RetF {itree} {E}%_type_scope {R}%_type_scope r.
+#[global] Arguments TauF {itree} {E}%_type_scope {R}%_type_scope t%_itree_scope.
+#[global] Arguments VisF {itree} {E}%_type_scope {R}%_type_scope X%_type_scope e k%_itree_scope.
 
 #[projections(primitive)]
 CoInductive itree (E : Type -> Type) (R : Type) : Type :=
   go { observe : itreeF (itree E R) E R }.
 
-#[global] Arguments go {E}%type_scope {R}%type_scope observe.
-#[global] Arguments observe {E}%type_scope {R}%type_scope.
+#[global] Arguments go {E}%_type_scope {R}%_type_scope observe.
+#[global] Arguments observe {E}%_type_scope {R}%_type_scope.
 
 Bind Scope itree_scope with itree.
 Delimit Scope itree_scope with itree.
@@ -498,7 +498,7 @@ Proof with eauto with *.
   assert (k0_lhs_is : k0_lhs = (lhs >>= k0)) by exact (@f_equal _ _ fst _ _ H_EQ).
   assert (k0_rhs_is : k0_rhs = (rhs >>= k0)) by exact (@f_equal _ _ snd _ _ H_EQ).
   clear H_EQ. subst k0_lhs k0_rhs. apply paco_unfold in H_IN...
-  do 2 red in H_IN |- *. unfold ">>="; simpl. do 2 rewrite itree_bind_unfold_observed.
+  do 2 red in H_IN |- *. simpl (itree_isMonad.(bind)). cbn beta. do 2 rewrite itree_bind_unfold_observed.
   destruct H_IN as [r1 r2 REL | t1 t2 REL | X e k1 k2 REL]; simpl in *.
   - assert (claim1 : (k0 r1, k0 r2) \in B.Rel_id) by congruence.
     pose proof (eqITree_reflexivity (SETOID := mkSetoid_from_eq) (k0 r1, k0 r2) claim1) as claim2.

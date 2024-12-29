@@ -12,6 +12,8 @@ Require Export Coq.Relations.Relation_Definitions.
 Require Export Coq.Relations.Relation_Operators.
 Require Export Coq.Setoids.Setoid.
 
+Unset Automatic Proposition Inductives.
+
 Create HintDb simplication_hints.
 
 #[global] Hint Rewrite forallb_app orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq not_true_iff_false not_false_iff_true : simplication_hints.
@@ -1029,7 +1031,7 @@ Inductive sum1 (X : Type -> Type) (Y : Type -> Type) (A : Type) : Type :=
   | inl1 (INL : X A) : sum1 X Y A
   | inr1 (INR : Y A) : sum1 X Y A.
 
-#[global] Arguments sum1 X%type Y%type.
+#[global] Arguments sum1 X%_type Y%_type.
 #[global] Arguments inl1 {X} {Y} {A}.
 #[global] Arguments inr1 {X} {Y} {A}.
 
@@ -1197,15 +1199,6 @@ Proof.
 Qed.
 
 #[global] Hint Rewrite in_remove_iff : simplication_hints.
-
-Lemma rev_inj {A : Type} (xs1 : list A) (xs2 : list A)
-  (rev_EQ : rev xs1 = rev xs2)
-  : xs1 = xs2.
-Proof.
-  rewrite <- rev_involutive with (l := xs1).
-  rewrite <- rev_involutive with (l := xs2).
-  now f_equal.
-Qed.
 
 Lemma list_rev_dual {A : Type} (phi : list A -> Prop)
   (H_rev : forall n, phi (L.rev n))

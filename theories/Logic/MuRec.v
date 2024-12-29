@@ -180,7 +180,7 @@ End UNBOUNDED_MINIMIZATION.
 Section MU_RECURSIVE.
 
 #[local] Close Scope list_scope.
-#[local] Open Scope vector_scope.
+#[local] Open Scope vec_scope.
 
 #[local] Notation " [ ] " := (VNil).
 #[local] Notation " x :: xs " := (VCons _ x xs).

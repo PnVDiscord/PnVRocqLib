@@ -1506,7 +1506,7 @@ with interpret_trms_trmModel_ivar_interpret n (ts : trms L' n)
 Proof.
   - trm_ind t; simpl.
     + reflexivity.
-    + rewrite interpret_trm_unfold. simpl. f_equal. eapply interpret_trms_trmModel_ivar_interpret.
+    + f_equal. eapply interpret_trms_trmModel_ivar_interpret.
     + reflexivity.
   - trms_ind ts.
     + reflexivity.

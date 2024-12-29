@@ -170,15 +170,13 @@ Ltac sflib__clarsimp1 :=
 
 Ltac clarsimp := intros; simpl in *; sflib__clarsimp1.
 
-Ltac autos   := clarsimp; auto with sflib.
+Ltac autos := clarsimp; auto with sflib.
 
 (* hdesH, hdes: more general des *)
 
-Definition  NW A (P: () -> A) : A := P ().
+Definition NW A (P: () -> A) : A := P ().
 
-Notation "<< x : t >>" := (NW (fun x => (t):Prop)) (at level 80, x name, no associativity).
-Notation "<< t >>" := (NW (fun _ => t)) (at level 79, no associativity, only printing).
-Notation "<< t >>" := (NW (fun _ => (t):Prop)) (at level 79, no associativity, only printing).
+Notation "<< x : t >>" := (NW (fun x : () => t)) (at level 0, x name, t at level 100, no associativity).
 
 Ltac unnw := unfold NW in *.
 Ltac rednw := red; unnw.

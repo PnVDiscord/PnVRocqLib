@@ -32,7 +32,7 @@ End DoNotations.
 Class isMonadIter (M : Type -> Type) {MONAD : isMonad M} : Type :=
   monad_iter (I : Type) (R : Type) (step : I -> M (I + R)%type) (i0 : I) : M R.
 
-#[global] Arguments monad_iter {M}%type {MONAD} {isMonadIter} {I}%type {R}%type step%monad_scope i0.
+#[global] Arguments monad_iter {M}%_type {MONAD} {isMonadIter} {I}%_type {R}%_type step%_monad_scope i0.
 
 Class MonadIterSpec (M : Type -> Type) {MONAD : isMonad M} {MONADITER : isMonadIter M} {SETOID1 : isSetoid1 M} : Prop :=
   monad_iter_unfold (I : Type) (R : Type) (step : I -> M (I + R)%type)

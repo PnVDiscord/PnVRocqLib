@@ -368,7 +368,7 @@ Proof.
     forall phi_a_b : forall a, forall b, forall EQNS : interpret_trms STRUCTURE env a == interpret_trms STRUCTURE env b, interpret_frm STRUCTURE env (phi a b),
     interpret_frm STRUCTURE env (nat_rec (fun _ => frm L) (prod_rec (fun _ => frm L) phi (varcouples (function_arity_table L f))) (fun n => fun q => Imp_frm (Eqn_frm (Var_trm (n + n)) (Var_trm (S (n + n)))) q) (function_arity_table L f))
   ).
-  { unfold Fun_eqAxm. eapply HACK. ii. simpl. do 2 rewrite interpret_trm_unfold. eapply function_interpret_preserves_eqProp. exact EQNS. }
+  { unfold Fun_eqAxm. eapply HACK. ii. simpl. eapply function_interpret_preserves_eqProp. exact EQNS. }
   simpl. induction (function_arity_table L f) as [ | n IH].
   - ii. eapply phi_a_b. reflexivity.
   - ii. specialize IH with (phi := fun ts => fun ts' => phi (S_trms n (Var_trm (n + n)) ts) (S_trms n (Var_trm (S (n + n))) ts')).

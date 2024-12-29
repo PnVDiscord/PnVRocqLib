@@ -8,8 +8,8 @@ Inductive t : nat -> Set :=
   | FZ (n : nat) : t (S n)
   | FS (n : nat) (i : t n) : t (S n).
 
-#[global] Arguments FZ {n}%nat.
-#[global] Arguments FS {n}%nat (i).
+#[global] Arguments FZ {n}%_nat.
+#[global] Arguments FS {n}%_nat (i).
 
 Lemma case0 {phi : Fin.t O -> Type}
   : forall i, phi i.
