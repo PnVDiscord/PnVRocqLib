@@ -239,61 +239,61 @@ Lemma ideaOf_enumFormula' (p : formula) (rk : nat)
   : { seed0 : nat | enumFormula' rk seed0 = p }.
 Proof with tac.
   revert p rk RANK_LE.
-  pose proof (claim1 := fun x: nat => fun y: nat => fun z: nat => proj2 (cp_spec x y z)).
+  pose proof (claim1 := fun x : nat => fun y : nat => fun z : nat => proj2 (cp_spec x y z)).
   induction p as [i | | p1 IH1 | p1 IH1 p2 IH2 | p1 IH1 p2 IH2 | p1 IH1 p2 IH2 | p1 IH1 p2 IH2]; simpl.
   { intros [ | r'] H.
     - exists (i)...
-    - assert (H0: cp (sum_from_0_to (0 + plus6 i) + plus6 i) = (0, plus6 i)) by now apply claim1.
+    - assert (H0 : cp (sum_from_0_to (0 + plus6 i) + plus6 i) = (0, plus6 i)) by now apply claim1.
       exists (sum_from_0_to (0 + plus6 i) + plus6 i)...
   }
-  all: intros r H; set (rk := pred r); (assert (H0: S rk = r) by lia); rewrite <- H0.
+  all: intros r H; set (rk := pred r); (assert (H0 : S rk = r) by lia); rewrite <- H0.
   { set (piece := 0).
     exists (piece)...
   }
   { set (piece := 1).
-    assert (H1: depth p1 <= rk) by lia.
+    assert (H1 : depth p1 <= rk) by lia.
     pose proof (IH1 rk H1) as [seed2 H2].
-    assert (H3: cp (sum_from_0_to (seed2 + piece) + piece) = (seed2, piece)) by now apply claim1.
+    assert (H3 : cp (sum_from_0_to (seed2 + piece) + piece) = (seed2, piece)) by now apply claim1.
     exists (sum_from_0_to (seed2 + piece) + piece)...
   }
   { set (piece := 2).
-    assert (H1: max (depth p1) (depth p2) <= rk) by lia.
-    assert (H2: depth p1 <= rk) by lia.
-    assert (H3: depth p2 <= rk) by lia.
+    assert (H1 : max (depth p1) (depth p2) <= rk) by lia.
+    assert (H2 : depth p1 <= rk) by lia.
+    assert (H3 : depth p2 <= rk) by lia.
     pose proof (IH1 rk H2) as [seed2 H4].
     pose proof (IH2 rk H3) as [seed3 H5].
-    assert (H6: cp (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece) = (sum_from_0_to (seed2 + seed3) + seed3, piece)) by now apply claim1.
-    assert (H7: cp (sum_from_0_to (seed2 + seed3) + seed3) = (seed2, seed3)) by now apply claim1.
+    assert (H6 : cp (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece) = (sum_from_0_to (seed2 + seed3) + seed3, piece)) by now apply claim1.
+    assert (H7 : cp (sum_from_0_to (seed2 + seed3) + seed3) = (seed2, seed3)) by now apply claim1.
     exists (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece)...
   }
   { set (piece := 3).
-    assert (H1: max (depth p1) (depth p2) <= rk) by lia.
-    assert (H2: depth p1 <= rk) by lia.
-    assert (H3: depth p2 <= rk) by lia.
+    assert (H1 : max (depth p1) (depth p2) <= rk) by lia.
+    assert (H2 : depth p1 <= rk) by lia.
+    assert (H3 : depth p2 <= rk) by lia.
     pose proof (IH1 rk H2) as [seed2 H4].
     pose proof (IH2 rk H3) as [seed3 H5].
-    assert (H6: cp (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece) = (sum_from_0_to (seed2 + seed3) + seed3, piece)) by now apply claim1.
-    assert (H7: cp (sum_from_0_to (seed2 + seed3) + seed3) = (seed2, seed3)) by now apply claim1.
+    assert (H6 : cp (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece) = (sum_from_0_to (seed2 + seed3) + seed3, piece)) by now apply claim1.
+    assert (H7 : cp (sum_from_0_to (seed2 + seed3) + seed3) = (seed2, seed3)) by now apply claim1.
     exists (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece)...
   }
   { set (piece := 4).
-    assert (H1: max (depth p1) (depth p2) <= rk) by lia.
-    assert (H2: depth p1 <= rk) by lia.
-    assert (H3: depth p2 <= rk) by lia.
+    assert (H1 : max (depth p1) (depth p2) <= rk) by lia.
+    assert (H2 : depth p1 <= rk) by lia.
+    assert (H3 : depth p2 <= rk) by lia.
     pose proof (IH1 rk H2) as [seed2 H4].
-    pose proof (IH2 rk H3) as [seed3 H5].
-    assert (H6: cp (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece) = (sum_from_0_to (seed2 + seed3) + seed3, piece)) by now apply claim1.
-    assert (H7: cp (sum_from_0_to (seed2 + seed3) + seed3) = (seed2, seed3)) by now apply claim1.
+    pose proof  (IH2 rk H3) as [seed3 H5].
+    assert (H6 : cp (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece) = (sum_from_0_to (seed2 + seed3) + seed3, piece)) by now apply claim1.
+    assert (H7 : cp (sum_from_0_to (seed2 + seed3) + seed3) = (seed2, seed3)) by now apply claim1.
     exists (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece)...
   }
   { set (piece := 5).
-    assert (H1: max (depth p1) (depth p2) <= rk) by lia.
-    assert (H2: depth p1 <= rk) by lia.
-    assert (H3: depth p2 <= rk) by lia.
+    assert (H1 : max (depth p1) (depth p2) <= rk) by lia.
+    assert (H2 : depth p1 <= rk) by lia.
+    assert (H3 : depth p2 <= rk) by lia.
     pose proof (IH1 rk H2) as [seed2 H4].
     pose proof (IH2 rk H3) as [seed3 H5].
-    assert (H6: cp (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece) = (sum_from_0_to (seed2 + seed3) + seed3, piece)) by now apply claim1.
-    assert (H7: cp (sum_from_0_to (seed2 + seed3) + seed3) = (seed2, seed3)) by now apply claim1.
+    assert (H6 : cp (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece) = (sum_from_0_to (seed2 + seed3) + seed3, piece)) by now apply claim1.
+    assert (H7 : cp (sum_from_0_to (seed2 + seed3) + seed3) = (seed2, seed3)) by now apply claim1.
     exists (sum_from_0_to ((sum_from_0_to (seed2 + seed3) + seed3) + piece) + piece)...
   }
 Qed.
