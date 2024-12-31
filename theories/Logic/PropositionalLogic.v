@@ -10,7 +10,8 @@ Require Import PnV.Math.BooleanAlgebra.
 
 Section PROPOSITONAL_LOGIC.
 
-Definition propLetter : Set := nat.
+Definition propLetter : Set :=
+  nat.
 
 Inductive formula : Set :=
   | AtomF (i : propLetter) : formula
@@ -46,7 +47,7 @@ Fixpoint evalFormula (env : propLetter -> Prop) (p : formula) {struct p} : Prop 
 Definition entails (Gamma : ensemble formula) (C : formula) : Prop :=
   forall e : propLetter -> Prop, (forall H : formula, H \in Gamma -> evalFormula e H) -> evalFormula e C.
 
-Infix "⊨" := entails : type_scope.
+#[local] Infix "⊨" := entails : type_scope.
 
 #[local] Hint Unfold entails : core.
 
@@ -112,8 +113,8 @@ Inductive infers (Gamma : ensemble formula) : forall C : formula, Prop :=
 #[local] Hint Constructors infers : core.
 
 Lemma extend_entails Gamma Gamma' C
-  (ENTAILS: Gamma ⊨ C)
-  (SUBSET: Gamma \subseteq Gamma')
+  (ENTAILS : Gamma ⊨ C)
+  (SUBSET : Gamma \subseteq Gamma')
   : Gamma' ⊨ C.
 Proof.
   ii. eapply ENTAILS. eauto.
