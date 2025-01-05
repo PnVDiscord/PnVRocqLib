@@ -25,6 +25,17 @@ Notation "m1 ';' m2" := (m1 >>= fun _ => m2) (in custom do_notation at level 0, 
 Notation "'ret' t" := (pure t) (in custom do_notation at level 10, t constr, format "'ret'  t").
 Notation "t" := t (in custom do_notation at level 0, t constr).
 
+Example do_notation_example : Some 6 = do
+  Some 1;
+  'x <- Some 2;
+  Some 3;
+  let y := 4;
+  Some 5;
+  ret (x + y).
+Proof.
+  reflexivity.
+Qed.
+
 End DoNotations.
 
 #[local] Open Scope program_scope.

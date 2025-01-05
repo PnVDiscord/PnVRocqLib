@@ -144,8 +144,14 @@ Class isProset (A : Type) : Type :=
 
 Infix "=<" := leProp : type_scope.
 
+Definition dualPreOrder {A : Type} {ge : A -> A -> Prop} (gePreOrder : PreOrder ge) : PreOrder (flip ge) :=
+  {|
+    PreOrder_Reflexive (x : A) := @PreOrder_Reflexive A ge gePreOrder x;
+    PreOrder_Transitive (x : A) (y : A) (z : A) := flip (@PreOrder_Transitive A ge gePreOrder z y x);
+  |}.
+
 Definition Prop_isProset : isProset Prop :=
-  let impl_PreOrder : PreOrder impl := {| PreOrder_Reflexive (A : Prop) := @id A; PreOrder_Transitive (A : Prop) (B : Prop) (C : Prop) := @flip (B -> C) (A -> B) (A -> C) (@compose A B C); |} in
+  let impl_PreOrder : @PreOrder Prop impl := dualPreOrder {| PreOrder_Reflexive (A : Prop) := @id A; PreOrder_Transitive (A : Prop) (B : Prop) (C : Prop) := @compose C B A; |} in
   {|
     leProp P Q := P -> Q;
     Proset_isSetoid := mkSetoidFromPreOrder impl_PreOrder;
@@ -934,7 +940,8 @@ Module B.
 #[local] Open Scope program_scope.
 
 #[universes(polymorphic=yes)]
-Definition dollar@{u v} {A : Type@{u}} {B : Type@{v}} (f : A -> B) (x : A) : B := f x.
+Definition dollar@{u v} {A : Type@{u}} {B : A -> Type@{v}} (f : forall x : A, B x) (x : A) : B x :=
+  f x.
 
 #[local] Infix "$" := dollar.
 #[local] Infix ">>=" := bind.
@@ -989,13 +996,16 @@ Proof.
   intros EQ. rewrite EQ in TRUE. exact TRUE.
 Defined.
 
-Definition maybe {A : Type} {B : Type} (d : B) (f : A -> B) (m : option A) : B :=
+Definition maybe {A : Type} {B : option A -> Type} (d : B None) (f : forall x : A, B (Some x)) (m : option A) : B m :=
   match m with
   | None => d
   | Some x => f x
   end.
 
-Definition either {A : Type} {B : Type} {C : Type} (f : A -> C) (g : B -> C) (z : A + B) : C :=
+Definition fromSome {A : Type} (d : A) (m : option A) : A :=
+  maybe d (fun x : A => x) m.
+
+Definition either {A : Type} {B : Type} {C : (A + B) -> Type} (f : forall x : A, C (inl x)) (g : forall y : B, C (inr y)) (z : A + B) : C z :=
   match z with
   | inl x => f x
   | inr y => g y
@@ -1012,7 +1022,7 @@ Defined.
 #[global]
 Instance option_isMonad : isMonad option :=
   { pure {A} := @Some A
-  ; bind {A} {B} (m : option A) (k : A -> option B) := maybe (@None B) k m
+  ; bind {A} {B} (m : option A) (k : A -> option B) := maybe None k m
   }.
 
 #[universes(polymorphic=yes)]

@@ -44,7 +44,7 @@ Our main results are:
 
 - `Graph.v` : Basic Graph Theory.
 
-- `ITree.v` : Basic Definitions on ITree.
+- `ITree.v` : Basic Definitions on Interaction Tree.
 
 - `Vector.v` : Replaces `Coq.Vectors.VectorDef.t`.
 
