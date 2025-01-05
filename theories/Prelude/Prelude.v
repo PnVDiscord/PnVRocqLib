@@ -144,8 +144,14 @@ Class isProset (A : Type) : Type :=
 
 Infix "=<" := leProp : type_scope.
 
+Definition dualPreOrder {A : Type} {ge : A -> A -> Prop} (gePreOrder : PreOrder ge) : PreOrder (flip ge) :=
+  {|
+    PreOrder_Reflexive (x : A) := @PreOrder_Reflexive A ge gePreOrder x;
+    PreOrder_Transitive (x : A) (y : A) (z : A) := flip (@PreOrder_Transitive A ge gePreOrder z y x);
+  |}.
+
 Definition Prop_isProset : isProset Prop :=
-  let impl_PreOrder : PreOrder impl := {| PreOrder_Reflexive (A : Prop) := @id A; PreOrder_Transitive (A : Prop) (B : Prop) (C : Prop) := @flip (B -> C) (A -> B) (A -> C) (@compose A B C); |} in
+  let impl_PreOrder : @PreOrder Prop impl := dualPreOrder {| PreOrder_Reflexive (A : Prop) := @id A; PreOrder_Transitive (A : Prop) (B : Prop) (C : Prop) := @compose C B A; |} in
   {|
     leProp P Q := P -> Q;
     Proset_isSetoid := mkSetoidFromPreOrder impl_PreOrder;
