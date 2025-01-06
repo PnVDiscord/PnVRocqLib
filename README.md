@@ -34,17 +34,17 @@ Our main results are:
 
 ### Control
 
-- `Category.v` : Basic Theory on Category
+- `Category.v` : Basic theory on category
 
-- `Monad.v` : Basic Definitions about Monad
+- `Monad.v` : Basic definitions about monad
 
 ### Data
 
-- `Aczel.v` : Aczel's Type Theoretic Interpretation of Set Theory.
+- `Aczel.v` : Aczel's type theoretic interpretation of set theory.
 
-- `Graph.v` : Basic Graph Theory.
+- `Graph.v` : Basic graph theory.
 
-- `ITree.v` : Basic Definitions on Interaction Tree.
+- `ITree.v` : Basic Definitions on interaction tree.
 
 - `Vector.v` : Replaces `Coq.Vectors.VectorDef.t`.
 
@@ -76,7 +76,7 @@ Our main results are:
 
 ### Math
 
-- `BooleanAlgebra.v` : Basic theory on Boolean Algebras.
+- `BooleanAlgebra.v` : Basic theory on Boolean algebras.
 
 - `ClassicalDomainTheory.v` : Classical domain theory.
 
@@ -101,6 +101,12 @@ Our main results are:
 - `SfLib.v` : The copy of `snu-sf/sflib.v`.
 
 - `Prelude.v` : The prelude code.
+
+### System
+
+- `BasicITreeTh.v` : A basic theory on interaction trees.
+
+- `Regex.v` : A theory on regular expression.
 
 ## 3. References
 

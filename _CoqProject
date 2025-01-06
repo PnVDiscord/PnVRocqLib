@@ -28,3 +28,5 @@ theories/Prelude/ConstructiveFacts.v #
 theories/Prelude/Notations.v #
 theories/Prelude/Prelude.v #
 theories/Prelude/SfLib.v #
+theories/System/BasicITreeTh.v #
+theories/System/Regex.v #

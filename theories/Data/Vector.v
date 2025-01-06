@@ -203,9 +203,9 @@ Notation " [ x ] " := (@Vector.VCons _ _ x (@Vector.VNil _)) : vec_scope.
 Notation VNil := Vector.VNil.
 Notation VCons := Vector.VCons.
 
-#[local] Open Scope vec_scope.
-
 Module V.
+
+#[local] Open Scope vec_scope.
 
 Section Accessories.
 
