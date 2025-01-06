@@ -66,9 +66,8 @@ Instance itree_isMonad : isMonad (itree E) :=
 
 #[global]
 Instance itree_isMonadIter : isMonadIter (itree E) :=
-  { monad_iter {I : Type} {R : Type} (step : I -> itree E (I + R)) :=
-    cofix iter' (i : I) : itree E R := itree_bind' (B.either (fun i' : I => Tau (iter' i')) (fun r : R => Ret r)) (step i)
-  }.
+  fun I : Type => fun R : Type => fun step : I -> itree E (I + R) =>
+  cofix iter (i : I) : itree E R := itree_isMonad.(bind) (step i) (B.either (fun i' : I => Tau (iter i')) (fun r : R => Ret r)).
 
 Definition itree_trigger {E : Type -> Type} : E ~~> itree E :=
   fun R : Type => fun e : E R => Vis R e (fun x : R => Ret x).
