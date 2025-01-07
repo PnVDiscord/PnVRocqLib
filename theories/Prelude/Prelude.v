@@ -357,8 +357,9 @@ Instance subProset {A : Type} {PROSET : isProset A} (P : A -> Prop) : isProset (
 
 (** Section FUNCTOR. *)
 
-Class isFunctor (F : Type -> Type) : Type :=
-  fmap (A : Type) (B : Type) (f : A -> B) : F A -> F B.
+#[universes(polymorphic=yes)]
+Class isFunctor@{d c} (F : Type@{d} -> Type@{c}) : Type :=
+  fmap (A : Type@{d}) (B : Type@{d}) (f : A -> B) : F A -> F B.
 
 #[global] Arguments fmap {F} {isFunctor} {A} {B} f.
 
@@ -418,9 +419,9 @@ Proof.
   reflexivity.
 Qed.
 
-#[global]
-Instance mkFunctorFromMonad {M : Type -> Type} `(MONAD : isMonad M) : isFunctor M :=
-  fun A : Type => fun B : Type => fun f : A -> B => fun m : M A => bind m (fun x : A => pure (f x)).
+#[global, universes(polymorphic=yes)]
+Instance mkFunctorFromMonad@{d c} {M : Type@{d} -> Type@{c}} `(MONAD : isMonad@{d c} M) : isFunctor@{d c} M :=
+  fun A : Type@{d} => fun B : Type@{d} => fun f : A -> B => fun m : M A => bind m (fun x : A => pure (f x)).
 
 Lemma mkFunctorFromMonad_good {M : Type -> Type} `{SETOID1 : isSetoid1 M} `{MONAD : isMonad M}
   `(MONAD_LAWS : @MonadLaws M SETOID1 MONAD)
