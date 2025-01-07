@@ -14,20 +14,20 @@ Require Export Coq.Setoids.Setoid.
 
 #[local] Unset Automatic Proposition Inductives.
 
-Create HintDb simplication_hints.
+#[local] Obligation Tactic := idtac.
+
+#[global] Create HintDb simplication_hints.
 
 #[global] Hint Rewrite forallb_app orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq not_true_iff_false not_false_iff_true : simplication_hints.
+
+Tactic Notation "rewrite!" :=
+  autorewrite with simplication_hints in *.
 
 Ltac obs_eqb n m :=
   let H_OBS := fresh "H_OBS" in destruct (Nat.eqb n m) as [ | ] eqn: H_OBS; [rewrite Nat.eqb_eq in H_OBS | rewrite Nat.eqb_neq in H_OBS].
 
-#[local] Obligation Tactic := idtac.
-
 Ltac property X :=
   eapply (proj2_sig X).
-
-Tactic Notation "rewrite!" :=
-  autorewrite with simplication_hints in *.
 
 #[universes(polymorphic=yes)]
 Definition reify@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} (f : forall x : A, { y : B | P x y }) : { f : A -> B | forall x, P x (f x) } :=
@@ -60,7 +60,7 @@ Next Obligation.
   - intros f1 x. reflexivity.
   - intros f1 f2 EQ x. symmetry; exact (EQ x).
   - intros f1 f2 f3 EQ EQ' x. transitivity (f2 x); [exact (EQ x) | exact (EQ' x)].
-Qed.
+Defined.
 
 #[program]
 Definition mkSetoidFromPreOrder {A : Type} {leProp : A -> A -> Prop} `(leProp_PreOrder : @PreOrder A leProp) : isSetoid A :=
@@ -76,7 +76,7 @@ Lemma mkSetoidFromPreOrder_good {A : Type} {leProp : A -> A -> Prop} `(leProp_Pr
   (SETOID := mkSetoidFromPreOrder leProp_PreOrder)
   : PartialOrder SETOID.(eqProp) leProp.
 Proof.
-  cbv. intros x y. split; exact (fun H => H).
+  intros x y; split; exact (fun H => H).
 Defined.
 
 #[program]

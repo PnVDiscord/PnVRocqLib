@@ -124,21 +124,28 @@ Proof with eauto with *.
 Qed.
 
 #[local, universes(polymorphic=yes)]
-Instance CovariantFunctor_isFunctor@{u1 v1 u2 v2} (FUNCTOR : isCovariantFunctor@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2}) : isFunctor@{v1 v2} FUNCTOR.(fmap_ob) :=
-  @fmap_hom@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2} FUNCTOR.
+Instance CovariantFunctor_isFunctor@{u1 v1 u2 v2} (F : isCovariantFunctor@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2}) : isFunctor@{v1 v2} F.(fmap_ob) :=
+  @fmap_hom@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2} F.
 
-#[global]
-Instance CovariantFunctor_isFunctor_good {FUNCTOR : isCovariantFunctor Hask Hask}
-  (FUNCTOR_LAWS : isLawfulCovariantFunctor FUNCTOR (SETOID := Setoid_on_Hask) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => Setoid_on_Hask (FUNCTOR.(fmap_ob) X) (FUNCTOR.(fmap_ob) Y)))
-  : FunctorLaws fmap_ob (FUNCTOR := CovariantFunctor_isFunctor FUNCTOR) (SETOID1 := fun X : Type => fun _ : isSetoid X => mkSetoid_from_eq).
+Theorem CovariantFunctor_isFunctor_good {F : isCovariantFunctor Hask Hask}
+  : FunctorLaws fmap_ob (FUNCTOR := CovariantFunctor_isFunctor F) (SETOID1 := fun X : Type => fun _ : isSetoid X => mkSetoid_from_eq) <-> isLawfulCovariantFunctor F (SETOID := Setoid_on_Hask) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => Setoid_on_Hask (F.(fmap_ob) X) (F.(fmap_ob) Y)).
 Proof with reflexivity || eauto with *.
-  split; intros.
-  - cbv; intros x1 x2 ->...
-  - unfold fmap. unfold CovariantFunctor_isFunctor. rewrite CAT.fmap_compose...
-  - unfold fmap. unfold CovariantFunctor_isFunctor. rewrite CAT.fmap_id...
-  - exploit (proj1 (CAT.fmap_comm f1 (fmap f2))).
-    + exists f2. split...
-    + intros (fmap_f&EQ1&EQ2). rewrite -> EQ1, <- EQ2...
+  split; intros LAW.
+  - destruct F as [F fmap]; split; i.
+    + exact (@Prelude.fmap_compose F _ _ LAW A B C f g).
+    + exact (@Prelude.fmap_id F _ _ LAW A).
+    + intros f fmap_f'. split.
+      * intros (f'&f_EQ&fmap_f_EQ). exists (fmap_hom f); split...
+        rewrite <- fmap_f_EQ. exact (@Prelude.fmap_lifts_ext_eq F _ _ LAW _ _ _ _ f_EQ).
+      * intros (fmap_f&fmap_f_EQ&fmap_f_EQ'). exists f; split...
+        rewrite -> fmap_f_EQ, <- fmap_f_EQ'...
+  - split; i.
+    + cbv; intros x1 x2 ->...
+    + unfold fmap. unfold CovariantFunctor_isFunctor. rewrite CAT.fmap_compose...
+    + unfold fmap. unfold CovariantFunctor_isFunctor. rewrite CAT.fmap_id...
+    + exploit (proj1 (CAT.fmap_comm f1 (fmap f2))).
+      { exists f2; split... }
+      intros (fmap_f&EQ1&EQ2). rewrite -> EQ1, <- EQ2...
 Qed.
 
 End HASK.
