@@ -10,10 +10,10 @@ Record t : Type :=
 
 End GRAPH.
 
-Notation vertices := GRAPH.vertices.
-Notation edges := GRAPH.edges.
-
 Section GraphTheory_basic1.
+
+#[local] Notation vertices := GRAPH.vertices.
+#[local] Notation edges := GRAPH.edges.
 
 Context {G : GRAPH.t}.
 
@@ -192,3 +192,14 @@ Notation " src ---[ p ]-->* tgt " := (path tgt src p) : type_scope.
 Notation " src ===[ t ]==>* tgt " := (trail tgt src t) : type_scope.
 
 End GraphNotations.
+
+Module LabeledGraph.
+
+#[projections(primitive)]
+Record t : Type :=
+  { vertices : Type
+  ; labels : Type
+  ; edges : vertices -> labels -> vertices -> Prop
+  }.
+
+End LabeledGraph.

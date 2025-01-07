@@ -79,7 +79,7 @@ Proof.
         end
       ).
       apply f_equal2 with (f := f) (x1 := FS i1') (y1 := FS i2') (x2 := i1') (y2 := i1') in H_eq.
-      { exact (H_eq). }
+      { exact H_eq. }
       { reflexivity. }
 Defined.
 
@@ -107,7 +107,7 @@ Lemma runFin_getFin_id {m : nat} {n : nat} (hyp_lt : m < n)
 Proof.
   revert n hyp_lt. induction m as [ | m IH]; intros [ | n'] hyp_lt; cbn in *.
   - exact (lt_elim_n_lt_0 hyp_lt).
-  - eapply f_equal, le_pirrel.
+  - f_equal; eapply le_pirrel.
   - exact (lt_elim_n_lt_0 hyp_lt).
   - rewrite IH; cbn. eapply f_equal, le_pirrel.
 Qed.
@@ -117,7 +117,7 @@ Lemma getFin_runFin_id {n : nat} (i : Fin.t n)
 Proof.
   induction i as [n' | n' i' IH].
   - reflexivity.
-  - cbn. eapply f_equal. etransitivity; [eapply f_equal, le_pirrel | exact (IH)].
+  - cbn. f_equal. etransitivity; cycle 1; [exact IH | f_equal; eapply le_pirrel].
 Qed.
 
 Definition evalFin {n : nat} (i : Fin.t n) : nat :=
@@ -142,7 +142,7 @@ Proof.
   rewrite <- getFin_runFin_id with (i := i2).
   destruct (runFin i1) as [m1 hyp_lt1].
   destruct (runFin i2) as [m2 hyp_lt2].
-  cbn in *. subst m1. eapply f_equal. eapply le_pirrel.
+  cbn in *. subst m1. f_equal. eapply le_pirrel.
 Qed.
 
 Fixpoint incrFin {m : nat} (n : nat) (i : Fin.t m) {struct n} : Fin.t (n + m) :=
@@ -155,7 +155,7 @@ Lemma incrFin_spec {m : nat} (n : nat) (i : Fin.t m)
   : evalFin (incrFin n i) = n + evalFin i.
 Proof with eauto.
   induction n as [ | n IH]; simpl...
-  rewrite evalFin_unfold. eapply f_equal...
+  rewrite evalFin_unfold. f_equal...
 Qed.
 
 #[global, program]

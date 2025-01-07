@@ -1,6 +1,6 @@
 Require Import PnV.Prelude.Prelude.
 
-Notation " E ~~> F " := (forall X : Type, E X -> F X) (at level 95, right associativity) : type_scope.
+Notation "E '~~>' F" := (forall X : Type, E X -> F X) (at level 95, right associativity) : type_scope.
 
 Module CAT.
 
@@ -27,3 +27,15 @@ Class hasInitial@{u v} (C : isCategory@{u v}) : Type :=
   }.
 
 End CAT.
+
+Section HASK.
+
+#[local, universes(polymorphic=yes)]
+Instance Hask@{u v} : CAT.isCategory@{u v} :=
+  { ob := Type@{v}
+  ; hom (D : Type@{v}) (C : Type@{v}) := D -> C
+  ; compose {A : Type@{v}} {B : Type@{v}} {C : Type@{v}} (g : B -> C) (f : A -> B) := fun x : A => g (f x)
+  ; id {A : Type@{v}} := fun x : A => x
+  }.
+
+End HASK.
