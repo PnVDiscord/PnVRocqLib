@@ -54,9 +54,9 @@ Class isCovariantFunctor@{u1 v1 u2 v2} (Dom : isCategory@{u1 v1}) (Cod : isCateg
   }.
 
 #[universes(polymorphic=yes)]
-Definition FunctorCategory@{u v} {Dom : isCategory@{u v}} {Cod : isCategory@{u v}} : isCategory@{u v} :=
+Definition FunctorCategory@{u1 v1 u2 v2 u3 v3} (Dom : isCategory@{u1 v1}) (Cod : isCategory@{u2 v2}) : isCategory@{u3 v3} :=
   {|
-    ob := isCovariantFunctor@{u v u v} Dom Cod;
+    ob := isCovariantFunctor@{u1 v1 u2 v2} Dom Cod;
     hom F G := forall X : Dom.(ob), Cod.(hom) (F.(fmap_ob) X) (G.(fmap_ob) X);
     compose _ _ _ eta2 eta1 := fun X : Dom.(ob) => Cod.(compose) (eta2 X) (eta1 X);
     id _ := fun X : Dom.(ob) => Cod.(id);
@@ -177,18 +177,16 @@ Section CAYLEY.
 
 Import CAT.
 
-Context (CAT : isCategory).
-
 #[local]
-Instance CayleyFunctor : isCovariantFunctor CAT Hask :=
+Instance CayleyFunctor (CAT : isCategory) : isCovariantFunctor CAT Hask :=
   { fmap_ob (C : CAT.(ob)) := { D : CAT.(ob) & CAT.(hom) D C }
   ; fmap_hom {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B) := fun g : { X : CAT.(ob) & CAT.(hom) X A } => @existT CAT.(ob) (fun Y : CAT.(ob) => CAT.(hom) Y B) (projT1 g) (compose f (projT2 g))
   }.
 
 #[local]
-Instance CayleyCategory : isCategory :=
-  { ob := { C : CAT.(ob) & CayleyFunctor.(fmap_ob) C }
-  ; hom D C := CayleyFunctor.(fmap_ob) (projT1 D) -> CayleyFunctor.(fmap_ob) (projT1 C)
+Instance CayleyCategory (CAT : isCategory) : isCategory :=
+  { ob := { C : CAT.(ob) & (CayleyFunctor CAT).(fmap_ob) C }
+  ; hom D C := (CayleyFunctor CAT).(fmap_ob) (projT1 D) -> (CayleyFunctor CAT).(fmap_ob) (projT1 C)
   ; compose _ _ _ G F := fun X => G (F X)
   ; id _ := fun X => X
   }.
