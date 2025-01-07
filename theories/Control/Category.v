@@ -65,6 +65,16 @@ Class isLawfulCovariantFunctor {Dom : isCategory} {Cod : isCategory} (FUNCTOR : 
     : commutes eqProp eqProp (fun f : Dom.(hom) A B => fun fmap_f : Cod.(hom) (fmap_ob A) (fmap_ob B) => fmap_hom f == fmap_f)
   }.
 
+Lemma op_isLawfulCategory {CAT : isCategory} {SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)}
+  (CATEGORY_LAW : isLawfulCategory CAT (SETOID := SETOID))
+  : isLawfulCategory (op CAT) (SETOID := fun Cod : CAT.(ob) => fun Dom : CAT.(ob) => SETOID Dom Cod).
+Proof.
+  split; cbn; ii.
+  - now rewrite compose_assoc.
+  - now rewrite compose_id_r.
+  - now rewrite compose_id_l.
+Qed.
+
 End LAW.
 
 End CAT.
@@ -82,14 +92,14 @@ Instance Hask@{u v} : isCategory@{u v} :=
   }.
 
 #[local]
-Instance Setoid_on_Hask (Dom : Hask.(CAT.ob)) (Cod : Hask.(CAT.ob)) : isSetoid (Hask.(CAT.hom) Dom Cod) :=
+Instance Setoid_on_Hask (Dom : Hask.(ob)) (Cod : Hask.(ob)) : isSetoid (Hask.(hom) Dom Cod) :=
   pi_isSetoid (fun _ : Dom => mkSetoid_from_eq).
 
 #[global]
 Instance Hask_isLawfulCategory
   : isLawfulCategory Hask (SETOID := Setoid_on_Hask).
 Proof.
-  split; cbv; reflexivity.
+  split; reflexivity.
 Qed.
 
 #[local, universes(polymorphic=yes)]
@@ -103,7 +113,7 @@ Instance Functor_isCovariantFunctor_good {F : Type -> Type} {F_isFunctor : isFun
   (FUNCTOR_LAWS : FunctorLaws F (FUNCTOR := F_isFunctor) (SETOID1 := F_isSetoid1))
   : isLawfulCovariantFunctor (Functor_isCovariantFunctor F) (SETOID := Setoid_on_Hask) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => pi_isSetoid (fun _ : F X => liftSetoid1 (isSetoid1 := F_isSetoid1) Y mkSetoid_from_eq)).
 Proof with eauto with *.
-  split; cbn; intros.
+  split; cbn; i.
   - eapply Prelude.fmap_compose.
   - eapply Prelude.fmap_id.
   - red. intros f fmap_f. split.
