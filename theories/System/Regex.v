@@ -123,16 +123,7 @@ Proof.
   ii. rewrite <- app_assoc. rewrite IH; eauto.
 Qed.
 
-Lemma pow_star (n : nat) (s1 : list A) (s2 : list A) (e : regex A)
-  (H_in1 : s1 ∈ e)
-  (H_in2 : s2 ∈ Star e)
-  : s1 ^ n ++ s2 ∈ Star e.
-Proof.
-  revert s1 s2 e H_in1 H_in2. induction n as [ | n IH]; simpl; eauto.
-  ii. rewrite <- app_assoc; eauto with *.
-Qed.
-
-Lemma star1 (s : list A) (e : regex A)
+Lemma star_intro1 (s : list A) (e : regex A)
   (H_in : s ∈ e)
   : s ∈ Star e.
 Proof.
@@ -140,6 +131,15 @@ Proof.
   rewrite <- app_nil_r with (l := s).
   econstructor; eauto with *.
   rewrite -> eval_regex_good; trivial.
+Qed.
+
+Lemma pow_app_star (n : nat) (s1 : list A) (s2 : list A) (e : regex A)
+  (H_in1 : s1 ∈ e)
+  (H_in2 : s2 ∈ Star e)
+  : s1 ^ n ++ s2 ∈ Star e.
+Proof.
+  revert s1 s2 e H_in1 H_in2. induction n as [ | n IH]; simpl; eauto.
+  ii. rewrite <- app_assoc; eauto with *.
 Qed.
 
 Fixpoint pumping_constant (e : regex A) : nat :=
@@ -207,7 +207,7 @@ Proof.
       { eauto. }
       { discriminate. }
       { simpl in *. lia. }
-      { simpl. ii. eapply pow_star; eauto. }
+      { simpl. ii. eapply pow_app_star; eauto. }
     + specialize (IH1 H_ge1). destruct IH1 as [s' s2' s3' ? ? ? ?].
       exists s' s2' (s3' ++ s2).
       { rewrite H_split. now repeat rewrite <- app_assoc. }
