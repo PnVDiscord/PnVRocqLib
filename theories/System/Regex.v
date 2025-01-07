@@ -166,11 +166,12 @@ Variant pumping (e : regex A) (s : list A) : Prop :=
     (H_pumping : forall m : nat, s1 ++ s2 ^ m ++ s3 ∈ e)
     : pumping e s.
 
-Theorem pumping_lemma (e : regex A)
+Theorem pumping_lemma (e : regex A) (s : list A)
+  (H_in : s ∈ e)
   (pumping_constant_le : pumping_constant e <= length s)
-  : forall s, s ∈ e -> pumping e s.
+  : pumping e s.
 Proof.
-  intros s H_in; induction H_in as [ | c | s e1 e2 H_INL IHL | s e1 e2 H_INR IHR | s1 s2 e1 e2 H_IN1 IH1 H_IN2 IH2 | e1 | e1 s1 s2 H_IN1 IH1 H_IN2 IH2]; simpl in *.
+  induction H_in as [ | c | s e1 e2 H_INL IHL | s e1 e2 H_INR IHR | s1 s2 e1 e2 H_IN1 IH1 H_IN2 IH2 | e1 | e1 s1 s2 H_IN1 IH1 H_IN2 IH2]; simpl in *.
   - lia.
   - lia.
   - assert (H_le : pumping_constant e1 <= length s) by lia.
