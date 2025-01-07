@@ -12,6 +12,7 @@ Require Export Coq.Relations.Relation_Definitions.
 Require Export Coq.Relations.Relation_Operators.
 Require Export Coq.Setoids.Setoid.
 
+#[local]
 Unset Automatic Proposition Inductives.
 
 Create HintDb simplication_hints.

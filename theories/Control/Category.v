@@ -56,7 +56,7 @@ Class isLawfulCategory (CAT : isCategory) {SETOID : forall Dom : CAT.(ob), foral
     : compose f id == f
   }.
 
-Class isLawfulCovariantFunctor {Dom : isCategory} {Cod : isCategory} {SETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y)} (FUNCTOR : isCovariantFunctor Dom Cod) {liftSETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y) -> isSetoid (Cod.(hom) (fmap_ob X) (fmap_ob Y))} : Prop :=
+Class isLawfulCovariantFunctor {Dom : isCategory} {Cod : isCategory} (FUNCTOR : isCovariantFunctor Dom Cod) {SETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y)} {liftSETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y) -> isSetoid (Cod.(hom) (fmap_ob X) (fmap_ob Y))} : Prop :=
   { fmap_compose {A : Dom.(ob)} {B : Dom.(ob)} {C : Dom.(ob)} (g : Dom.(hom) B C) (f : Dom.(hom) A B)
     : fmap_hom (Dom.(@compose) A B C g f) == compose (fmap_hom g) (fmap_hom f)
   ; fmap_id {A : Dom.(ob)}
@@ -95,13 +95,13 @@ Qed.
 #[local, universes(polymorphic=yes)]
 Instance Functor_isCovariantFunctor@{u1 v1 u2 v2} (F : Type@{v1} -> Type@{v2}) {F_isFunctor : isFunctor@{v1 v2} F} : isCovariantFunctor@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2} :=
   { fmap_ob := F
-  ; fmap_hom {A : Type@{v1}} {B : Type@{v1}} (f : A -> B) := fmap f
+  ; fmap_hom := @fmap@{v1 v2} F F_isFunctor
   }.
 
 #[global]
 Instance Functor_isCovariantFunctor_good {F : Type -> Type} {F_isFunctor : isFunctor F} {F_isSetoid1 : isSetoid1 F}
   (FUNCTOR_LAWS : FunctorLaws F (FUNCTOR := F_isFunctor) (SETOID1 := F_isSetoid1))
-  : isLawfulCovariantFunctor (SETOID := Setoid_on_Hask) (Functor_isCovariantFunctor F) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => pi_isSetoid (fun _ : F X => liftSetoid1 (isSetoid1 := F_isSetoid1) Y mkSetoid_from_eq)).
+  : isLawfulCovariantFunctor (Functor_isCovariantFunctor F) (SETOID := Setoid_on_Hask) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => pi_isSetoid (fun _ : F X => liftSetoid1 (isSetoid1 := F_isSetoid1) Y mkSetoid_from_eq)).
 Proof with eauto with *.
   split; cbn; intros.
   - eapply Prelude.fmap_compose.
@@ -114,13 +114,13 @@ Proof with eauto with *.
 Qed.
 
 #[local, universes(polymorphic=yes)]
-Instance CovariantFunctor_isFunctor@{u1 v1 u2 v2} (FUNCTOR : isCovariantFunctor@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2}) : isFunctor@{v1 v2} CAT.fmap_ob :=
-  fun A : Type@{v1} => fun B : Type@{v1} => fun f : A -> B => CAT.fmap_hom@{u1 v1 u2 v2} f.
+Instance CovariantFunctor_isFunctor@{u1 v1 u2 v2} (FUNCTOR : isCovariantFunctor@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2}) : isFunctor@{v1 v2} FUNCTOR.(fmap_ob) :=
+  @fmap_hom@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2} FUNCTOR.
 
 #[global]
 Instance CovariantFunctor_isFunctor_good {FUNCTOR : isCovariantFunctor Hask Hask}
-  (FUNCTOR_LAWS : isLawfulCovariantFunctor (SETOID := Setoid_on_Hask) FUNCTOR (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => Setoid_on_Hask (FUNCTOR.(CAT.fmap_ob) X) (FUNCTOR.(CAT.fmap_ob) Y)))
-  : FunctorLaws CAT.fmap_ob (FUNCTOR := CovariantFunctor_isFunctor FUNCTOR) (SETOID1 := fun X : Type => fun _ : isSetoid X => mkSetoid_from_eq).
+  (FUNCTOR_LAWS : isLawfulCovariantFunctor FUNCTOR (SETOID := Setoid_on_Hask) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => Setoid_on_Hask (FUNCTOR.(fmap_ob) X) (FUNCTOR.(fmap_ob) Y)))
+  : FunctorLaws fmap_ob (FUNCTOR := CovariantFunctor_isFunctor FUNCTOR) (SETOID1 := fun X : Type => fun _ : isSetoid X => mkSetoid_from_eq).
 Proof with reflexivity || eauto with *.
   split; intros.
   - cbv; intros x1 x2 ->...
