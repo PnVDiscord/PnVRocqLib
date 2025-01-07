@@ -185,10 +185,10 @@ Instance CayleyFunctor (CAT : isCategory) : isCovariantFunctor CAT Hask :=
 
 #[local]
 Instance CayleyCategory (CAT : isCategory) : isCategory :=
-  { ob := { C : CAT.(ob) & (CayleyFunctor CAT).(fmap_ob) C }
-  ; hom D C := (CayleyFunctor CAT).(fmap_ob) (projT1 D) -> (CayleyFunctor CAT).(fmap_ob) (projT1 C)
-  ; compose _ _ _ G F := fun X => G (F X)
-  ; id _ := fun X => X
+  { ob := CAT.(ob)
+  ; hom D C := forall r : CAT.(ob), CAT.(hom) r D -> CAT.(hom) r C
+  ; compose _ _ _ G F := fun r => fun X => G r (F r X)
+  ; id _ := fun r => fun X => X
   }.
 
 End CAYLEY.
