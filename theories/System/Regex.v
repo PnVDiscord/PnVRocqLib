@@ -41,7 +41,7 @@ End Re.
 
 Notation regex := Re.t.
 
-Section LANGUAGE.
+Section REGULAR_LANGUAGE.
 
 #[local] Notation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
@@ -60,7 +60,7 @@ Let lang : Type :=
 Inductive star (L : lang) : lang :=
   | star_nil
     : [] \in star L
-  | Star_app s1 s2
+  | star_app s1 s2
     (H_IN1 : s1 \in L)
     (H_IN2 : s2 \in star L)
     : s1 ++ s2 \in star L.
@@ -216,6 +216,6 @@ Proof.
       { ii. replace (s' ++ s2' ^ m ++ s3' ++ s2) with ((s' ++ s2' ^ m ++ s3') ++ s2) by now repeat rewrite <- app_assoc. eauto with *. }
 Qed.
 
-End LANGUAGE.
+End REGULAR_LANGUAGE.
 
 #[global] Hint Constructors star : simplication_hints.
