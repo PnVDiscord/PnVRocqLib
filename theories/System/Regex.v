@@ -33,7 +33,7 @@ Inductive in_regex {A : Type} : Re.t A -> list A -> Prop :=
     (H_in1 : s1 ∈ e1)
     (H_in2 : s2 ∈ Star e1)
     : s1 ++ s2 ∈ Star e1
-  where "s ∈ e" := (in_regex e s).
+  where "s ∈ e" := (in_regex e s) : type_scope.
 
 #[global] Hint Constructors in_regex : simplication_hints.
 
@@ -158,20 +158,19 @@ Proof.
   induction e; simpl; lia.
 Qed.
 
-Variant PUMPING_spec (e : regex A) (s : list A) : Prop :=
-  | PUMPING_spec_intro (s1 : list A) (s2 : list A) (s3 : list A)
+Variant pumping (e : regex A) (s : list A) : Prop :=
+  | pumping_intro (s1 : list A) (s2 : list A) (s3 : list A)
     (H_split : s = s1 ++ s2 ++ s3)
     (H_ne_nil : s2 <> [])
     (H_constant_ge : length s1 + length s2 <= pumping_constant e)
     (H_pumping : forall m : nat, s1 ++ s2 ^ m ++ s3 ∈ e)
-    : PUMPING_spec e s.
+    : pumping e s.
 
-Theorem pumping_lemma (e : regex A) (s : list A)
-  (H_in : s ∈ e)
+Theorem pumping_lemma (e : regex A)
   (pumping_constant_le : pumping_constant e <= length s)
-  : PUMPING_spec e s.
+  : forall s, s ∈ e -> pumping e s.
 Proof.
-  induction H_in as [ | c | s e1 e2 H_INL IHL | s e1 e2 H_INR IHR | s1 s2 e1 e2 H_IN1 IH1 H_IN2 IH2 | e1 | e1 s1 s2 H_IN1 IH1 H_IN2 IH2]; simpl in *.
+  intros s H_in; induction H_in as [ | c | s e1 e2 H_INL IHL | s e1 e2 H_INR IHR | s1 s2 e1 e2 H_IN1 IH1 H_IN2 IH2 | e1 | e1 s1 s2 H_IN1 IH1 H_IN2 IH2]; simpl in *.
   - lia.
   - lia.
   - assert (H_le : pumping_constant e1 <= length s) by lia.
