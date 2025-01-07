@@ -43,23 +43,21 @@ Class isCovariantFunctor@{u1 v1 u2 v2} (Dom : isCategory@{u1 v1}) (Cod : isCateg
 
 Section LAW.
 
-#[universes(polymorphic=yes)]
-Class isLawfulCategory@{u v} (CAT : isCategory@{u v}) {SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)} : Prop :=
-  { compose_assoc {A} {B} {C} {D} (f : CAT.(hom) A B) (g : CAT.(hom) B C) (h : CAT.(hom) C D)
+Class isLawfulCategory (CAT : isCategory) {SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)} : Prop :=
+  { compose_assoc {A : CAT.(ob)} {B : CAT.(ob)} {C : CAT.(ob)} {D : CAT.(ob)} (h : CAT.(hom) C D) (g : CAT.(hom) B C) (f : CAT.(hom) A B)
     : compose h (compose g f) == compose (compose h g) f
-  ; compose_id_l {A} {B} (f : CAT.(hom) A B)
+  ; compose_id_l {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B)
     : compose id f == f
-  ; compose_id_r {A} {B} (f : CAT.(hom) A B)
+  ; compose_id_r {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B)
     : compose f id == f
   }.
 
-#[universes(polymorphic=yes)]
-Class isLawfulCovariantFunctor@{u1 v1 u2 v2} {Dom : isCategory@{u1 v1}} {Cod : isCategory@{u2 v2}} {SETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y)} (FUNCTOR : isCovariantFunctor@{u1 v1 u2 v2} Dom Cod) {liftSETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y) -> isSetoid (Cod.(hom) (fmap_ob X) (fmap_ob Y))} : Prop :=
-  { fmap_compose {A} {B} {C} (f : Dom.(hom) A B) (g : Dom.(hom) B C)
+Class isLawfulCovariantFunctor {Dom : isCategory} {Cod : isCategory} {SETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y)} (FUNCTOR : isCovariantFunctor Dom Cod) {liftSETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y) -> isSetoid (Cod.(hom) (fmap_ob X) (fmap_ob Y))} : Prop :=
+  { fmap_compose {A : Dom.(ob)} {B : Dom.(ob)} {C : Dom.(ob)} (g : Dom.(hom) B C) (f : Dom.(hom) A B)
     : fmap_hom (Dom.(@compose) A B C g f) == compose (fmap_hom g) (fmap_hom f)
-  ; fmap_id {A}
+  ; fmap_id {A : Dom.(ob)}
     : fmap_hom (Dom.(@id) A) == id
-  ; fmap_lifts_ext_eq {A} {B} (f : Dom.(hom) A B) (f' : Dom.(hom) A B)
+  ; fmap_lifts_ext_eq {A : Dom.(ob)} {B : Dom.(ob)} (f : Dom.(hom) A B) (f' : Dom.(hom) A B)
     (f_EQ : f == f')
     : fmap_hom f == fmap_hom f'
   }.
@@ -78,9 +76,16 @@ Instance Hask@{u v} : CAT.isCategory@{u v} :=
   ; id {A : Type@{v}} := fun x : A => x
   }.
 
-#[local, universes(polymorphic=yes)]
-Instance Setoid_on_Hask@{u v} (Dom : Hask@{u v}.(CAT.ob)) (Cod : Hask@{u v}.(CAT.ob)) : isSetoid (Hask@{u v}.(CAT.hom) Dom Cod) :=
+#[local]
+Instance Setoid_on_Hask (Dom : Hask.(CAT.ob)) (Cod : Hask.(CAT.ob)) : isSetoid (Hask.(CAT.hom) Dom Cod) :=
   pi_isSetoid (fun _ => mkSetoid_from_eq).
+
+#[global]
+Instance Hask_isLawfulCategory
+  : CAT.isLawfulCategory Hask (SETOID := Setoid_on_Hask).
+Proof.
+  split; cbv; reflexivity.
+Qed.
 
 #[local, universes(polymorphic=yes)]
 Instance Functor_CAT_Functor@{u1 v1 u2 v2} (F : Type@{v1} -> Type@{v2}) {F_isFunctor : isFunctor@{v1 v2} F} : CAT.isCovariantFunctor@{u1 v1 u2 v2} Hask@{u2 v2} Hask@{u2 v2} :=
@@ -90,8 +95,8 @@ Instance Functor_CAT_Functor@{u1 v1 u2 v2} (F : Type@{v1} -> Type@{v2}) {F_isFun
 
 #[global]
 Instance Functor_CAT_Functor_good {F : Type -> Type} {F_isFunctor : isFunctor F} {F_isSetoid1 : isSetoid1 F}
-  (FUNCTOR_LAWS : FunctorLaws F)
-  : CAT.isLawfulCovariantFunctor (SETOID := Setoid_on_Hask) (Functor_CAT_Functor F) (liftSETOID := fun X : Type => fun Y : Type => fun SETOID : isSetoid (X -> Y) => pi_isSetoid (fun _ => liftSetoid1 (isSetoid1 := F_isSetoid1) _ mkSetoid_from_eq)).
+  (FUNCTOR_LAWS : FunctorLaws F (FUNCTOR := F_isFunctor) (SETOID1 := F_isSetoid1))
+  : CAT.isLawfulCovariantFunctor (SETOID := Setoid_on_Hask) (Functor_CAT_Functor F) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => pi_isSetoid (fun _ : F X => liftSetoid1 (isSetoid1 := F_isSetoid1) Y mkSetoid_from_eq)).
 Proof.
   destruct FUNCTOR_LAWS. split; cbn in fmap_compose, fmap_id |- *; intros.
   - eapply fmap_compose.
