@@ -13,6 +13,15 @@ Class isCategory@{u v} : Type :=
   }.
 
 #[universes(polymorphic=yes)]
+Definition op@{u v} (CAT : isCategory@{u v}) : isCategory@{u v} :=
+  {|
+    ob := CAT.(ob);
+    hom (Cod : CAT.(ob)) (Dom : CAT.(ob)) := CAT.(hom) Dom Cod;
+    compose (C : CAT.(ob)) (B : CAT.(ob)) (A : CAT.(ob)) (f : CAT.(hom) A B) (g : CAT.(hom) B C) := CAT.(@compose) A B C g f;
+    id (A : CAT.(ob)) := CAT.(@id) A;
+  |}.
+
+#[universes(polymorphic=yes)]
 Class hasCoproduct@{u v} (C : isCategory@{u v}) : Type :=
   { sum (X : C.(ob)) (Y : C.(ob)) : C.(ob)
   ; inl {X : C.(ob)} {Y : C.(ob)} : C.(hom) X (sum X Y)

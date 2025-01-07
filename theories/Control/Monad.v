@@ -25,6 +25,7 @@ Notation "m1 ';' m2" := (m1 >>= fun _ => m2) (in custom do_notation at level 0, 
 Notation "'ret' t" := (pure t) (in custom do_notation at level 10, t constr, format "'ret'  t").
 Notation "t" := t (in custom do_notation at level 0, t constr).
 
+#[local]
 Example do_notation_example : Some 6 = do
   Some 1;
   'x <- Some 2;

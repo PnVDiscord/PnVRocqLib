@@ -691,9 +691,9 @@ with rLe (lhs : Tree) (rhs : Tree) : Prop :=
 
 #[global] Hint Constructors rLt rLe : aczel_hints.
 
-Fixpoint rLt_inv x y (H_rLt : y <ᵣ x) {struct H_rLt}
+Fixpoint rLt_inv (x : Tree) (y : Tree) (H_rLt : y <ᵣ x) {struct H_rLt}
   : exists c1 : children x, forall c2 : children y, childnodes y c2 <ᵣ childnodes x c1
-with rLe_inv x y (H_rLe : x ≦ᵣ y) {struct H_rLe}
+with rLe_inv (x : Tree) (y : Tree) (H_rLe : x ≦ᵣ y) {struct H_rLe}
   : forall c1 : children x, exists c2 : children y, childnodes x c1 ≦ᵣ childnodes y c2.
 Proof.
   - destruct H_rLt as [c2 H_rLe]. exists c2. intros c1.
