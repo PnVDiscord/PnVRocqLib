@@ -1,8 +1,12 @@
 Require Import PnV.Prelude.Prelude.
+Require Import PnV.Data.Vector.
+Require Import PnV.Math.ThN.
 
 Notation "E '~~>' F" := (forall X : Type, E X -> F X) (at level 95, right associativity) : type_scope.
 
 Module CAT.
+
+#[local] Obligation Tactic := i.
 
 #[universes(polymorphic=yes)]
 Class isCategory@{u v} : Type :=
@@ -19,6 +23,14 @@ Definition op@{u v} (CAT : isCategory@{u v}) : isCategory@{u v} :=
     hom (Cod : CAT.(ob)) (Dom : CAT.(ob)) := CAT.(hom) Dom Cod;
     compose (C : CAT.(ob)) (B : CAT.(ob)) (A : CAT.(ob)) (f : CAT.(hom) A B) (g : CAT.(hom) B C) := CAT.(@compose) A B C g f;
     id (A : CAT.(ob)) := CAT.(@id) A;
+  |}.
+
+Definition fin (n : nat) : isCategory@{Set Set} :=
+  {|
+    ob := Fin.t n;
+    hom i1 i2 := Fin.evalFin i1 <= Fin.evalFin i2;
+    compose i i' i'' H_LE' H_LE := le_transitivity H_LE H_LE';
+    id i := le_reflexivity;
   |}.
 
 #[universes(polymorphic=yes)]
@@ -40,6 +52,15 @@ Class isCovariantFunctor@{u1 v1 u2 v2} (Dom : isCategory@{u1 v1}) (Cod : isCateg
   { fmap_ob : Dom.(ob) -> Cod.(ob)
   ; fmap_hom {A} {B} (f : Dom.(hom) A B) : Cod.(hom) (fmap_ob A) (fmap_ob B)
   }.
+
+#[universes(polymorphic=yes)]
+Definition FunctorCategory@{u v} {Dom : isCategory@{u v}} {Cod : isCategory@{u v}} : isCategory@{u v} :=
+  {|
+    ob := isCovariantFunctor@{u v u v} Dom Cod;
+    hom F G := forall X : Dom.(ob), Cod.(hom) (F.(fmap_ob) X) (G.(fmap_ob) X);
+    compose _ _ _ eta2 eta1 := fun X : Dom.(ob) => Cod.(compose) (eta2 X) (eta1 X);
+    id _ := fun X : Dom.(ob) => Cod.(id);
+  |}.
 
 Section LAW.
 
@@ -149,3 +170,27 @@ Proof with reflexivity || eauto with *.
 Qed.
 
 End HASK.
+
+Section CAYLEY.
+
+#[local] Obligation Tactic := i.
+
+Import CAT.
+
+Context (CAT : isCategory).
+
+#[local]
+Instance CayleyFunctor : isCovariantFunctor CAT Hask :=
+  { fmap_ob (C : CAT.(ob)) := { D : CAT.(ob) & CAT.(hom) D C }
+  ; fmap_hom {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B) := fun g : { X : CAT.(ob) & CAT.(hom) X A } => @existT CAT.(ob) (fun Y : CAT.(ob) => CAT.(hom) Y B) (projT1 g) (compose f (projT2 g))
+  }.
+
+#[local]
+Instance CayleyCategory : isCategory :=
+  { ob := { C : CAT.(ob) & CayleyFunctor.(fmap_ob) C }
+  ; hom D C := CayleyFunctor.(fmap_ob) (projT1 D) -> CayleyFunctor.(fmap_ob) (projT1 C)
+  ; compose _ _ _ G F := fun X => G (F X)
+  ; id _ := fun X => X
+  }.
+
+End CAYLEY.
