@@ -49,15 +49,15 @@ Class hasInitial@{u v} (C : isCategory@{u v}) : Type :=
 
 #[universes(polymorphic=yes)]
 Class isCovariantFunctor@{u1 v1 u2 v2} (Dom : isCategory@{u1 v1}) (Cod : isCategory@{u2 v2}) : Type :=
-  { fmap_ob : Dom.(ob) -> Cod.(ob)
-  ; fmap_hom {A} {B} (f : Dom.(hom) A B) : Cod.(hom) (fmap_ob A) (fmap_ob B)
+  { map_ob : Dom.(ob) -> Cod.(ob)
+  ; map_hom {A} {B} (f : Dom.(hom) A B) : Cod.(hom) (map_ob A) (map_ob B)
   }.
 
 #[universes(polymorphic=yes)]
 Definition FunctorCategory@{u1 v1 u2 v2 u3 v3} (Dom : isCategory@{u1 v1}) (Cod : isCategory@{u2 v2}) : isCategory@{u3 v3} :=
   {|
     ob := isCovariantFunctor@{u1 v1 u2 v2} Dom Cod;
-    hom F G := forall X : Dom.(ob), Cod.(hom) (F.(fmap_ob) X) (G.(fmap_ob) X);
+    hom F G := forall X : Dom.(ob), Cod.(hom) (F.(map_ob) X) (G.(map_ob) X);
     compose _ _ _ eta2 eta1 := fun X : Dom.(ob) => Cod.(compose) (eta2 X) (eta1 X);
     id _ := fun X : Dom.(ob) => Cod.(id);
   |}.
@@ -69,7 +69,8 @@ Definition commutes@{d c} {Src : Type@{d}} {Tgt : Type@{c}} (REL_Src : Src -> Sr
   forall x : Src, forall y' : Tgt, (exists x' : Src, REL_Src x x' /\ MAP x' y') <-> (exists y : Tgt, MAP x y /\ REL_Tgt y y').
 
 Class isLawfulCategory (CAT : isCategory) {SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)} : Prop :=
-  { compose_assoc {A : CAT.(ob)} {B : CAT.(ob)} {C : CAT.(ob)} {D : CAT.(ob)} (h : CAT.(hom) C D) (g : CAT.(hom) B C) (f : CAT.(hom) A B)
+  { compose_compatWith_eqProp {A : CAT.(ob)} {B : CAT.(ob)} {C : CAT.(ob)} :: eqPropCompatible2 (CAT.(@compose) A B C)
+  ; compose_assoc {A : CAT.(ob)} {B : CAT.(ob)} {C : CAT.(ob)} {D : CAT.(ob)} (h : CAT.(hom) C D) (g : CAT.(hom) B C) (f : CAT.(hom) A B)
     : compose h (compose g f) == compose (compose h g) f
   ; compose_id_l {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B)
     : compose id f == f
@@ -77,13 +78,13 @@ Class isLawfulCategory (CAT : isCategory) {SETOID : forall Dom : CAT.(ob), foral
     : compose f id == f
   }.
 
-Class isLawfulCovariantFunctor {Dom : isCategory} {Cod : isCategory} (FUNCTOR : isCovariantFunctor Dom Cod) {SETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y)} {liftSETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y) -> isSetoid (Cod.(hom) (fmap_ob X) (fmap_ob Y))} : Prop :=
+Class isLawfulCovariantFunctor {Dom : isCategory} {Cod : isCategory} (FUNCTOR : isCovariantFunctor Dom Cod) {SETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y)} {liftSETOID : forall X : Dom.(ob), forall Y : Dom.(ob), isSetoid (Dom.(hom) X Y) -> isSetoid (Cod.(hom) (map_ob X) (map_ob Y))} : Prop :=
   { fmap_compose {A : Dom.(ob)} {B : Dom.(ob)} {C : Dom.(ob)} (g : Dom.(hom) B C) (f : Dom.(hom) A B)
-    : fmap_hom (Dom.(@compose) A B C g f) == compose (fmap_hom g) (fmap_hom f)
+    : map_hom (Dom.(@compose) A B C g f) == compose (map_hom g) (map_hom f)
   ; fmap_id {A : Dom.(ob)}
-    : fmap_hom (Dom.(@id) A) == id
+    : map_hom (Dom.(@id) A) == id
   ; fmap_comm {A : Dom.(ob)} {B : Dom.(ob)}
-    : commutes eqProp eqProp (fun f : Dom.(hom) A B => fun fmap_f : Cod.(hom) (fmap_ob A) (fmap_ob B) => fmap_hom f == fmap_f)
+    : commutes eqProp eqProp (fun f : Dom.(hom) A B => fun fmap_f : Cod.(hom) (map_ob A) (map_ob B) => map_hom f == fmap_f)
   }.
 
 Lemma op_isLawfulCategory {CAT : isCategory} {SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)}
@@ -91,6 +92,7 @@ Lemma op_isLawfulCategory {CAT : isCategory} {SETOID : forall Dom : CAT.(ob), fo
   : isLawfulCategory (op CAT) (SETOID := fun Cod : CAT.(ob) => fun Dom : CAT.(ob) => SETOID Dom Cod).
 Proof.
   split; cbn; ii.
+  - now rewrite compose_compatWith_eqProp.
   - now rewrite compose_assoc.
   - now rewrite compose_id_r.
   - now rewrite compose_id_l.
@@ -120,13 +122,13 @@ Instance Setoid_on_Hask (Dom : Hask.(ob)) (Cod : Hask.(ob)) : isSetoid (Hask.(ho
 Instance Hask_isLawfulCategory
   : isLawfulCategory Hask (SETOID := Setoid_on_Hask).
 Proof.
-  split; reflexivity.
+  split; cbv; congruence.
 Qed.
 
 #[local, universes(polymorphic=yes)]
 Instance Functor_isCovariantFunctor@{u1 v1 u2 v2} (F : Type@{v1} -> Type@{v2}) {F_isFunctor : isFunctor@{v1 v2} F} : isCovariantFunctor@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2} :=
-  { fmap_ob := F
-  ; fmap_hom := @fmap@{v1 v2} F F_isFunctor
+  { map_ob := F
+  ; map_hom := @fmap@{v1 v2} F F_isFunctor
   }.
 
 #[global]
@@ -145,18 +147,18 @@ Proof with eauto with *.
 Qed.
 
 #[local, universes(polymorphic=yes)]
-Instance CovariantFunctor_isFunctor@{u1 v1 u2 v2} (F : isCovariantFunctor@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2}) : isFunctor@{v1 v2} F.(fmap_ob) :=
-  @fmap_hom@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2} F.
+Instance CovariantFunctor_isFunctor@{u1 v1 u2 v2} (F : isCovariantFunctor@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2}) : isFunctor@{v1 v2} F.(map_ob) :=
+  @map_hom@{u1 v1 u2 v2} Hask@{u1 v1} Hask@{u2 v2} F.
 
 Theorem CovariantFunctor_isFunctor_good {F : isCovariantFunctor Hask Hask}
-  : FunctorLaws fmap_ob (FUNCTOR := CovariantFunctor_isFunctor F) (SETOID1 := fun X : Type => fun _ : isSetoid X => mkSetoid_from_eq) <-> isLawfulCovariantFunctor F (SETOID := Setoid_on_Hask) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => Setoid_on_Hask (F.(fmap_ob) X) (F.(fmap_ob) Y)).
+  : FunctorLaws map_ob (FUNCTOR := CovariantFunctor_isFunctor F) (SETOID1 := fun X : Type => fun _ : isSetoid X => mkSetoid_from_eq) <-> isLawfulCovariantFunctor F (SETOID := Setoid_on_Hask) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => Setoid_on_Hask (F.(map_ob) X) (F.(map_ob) Y)).
 Proof with reflexivity || eauto with *.
   split; intros LAW.
   - destruct F as [F fmap]; split; i.
     + exact (@Prelude.fmap_compose F _ _ LAW A B C f g).
     + exact (@Prelude.fmap_id F _ _ LAW A).
     + intros f fmap_f'. split.
-      * intros (f'&f_EQ&fmap_f_EQ). exists (fmap_hom f); split...
+      * intros (f'&f_EQ&fmap_f_EQ). exists (map_hom f); split...
         rewrite <- fmap_f_EQ. exact (@Prelude.fmap_lifts_ext_eq F _ _ LAW _ _ _ _ f_EQ).
       * intros (fmap_f&fmap_f_EQ&fmap_f_EQ'). exists f; split...
         rewrite -> fmap_f_EQ, <- fmap_f_EQ'...
@@ -171,6 +173,30 @@ Qed.
 
 End HASK.
 
+Section SLICE.
+
+#[local] Obligation Tactic := idtac.
+
+Import CAT.
+
+#[local, program]
+Instance SliceCategory {CAT : isCategory} {SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)} {CATEGORY_LAW : isLawfulCategory CAT (SETOID := SETOID)} (C : CAT.(ob)) : isCategory :=
+  { ob := { D : CAT.(ob) & CAT.(hom) D C }
+  ; hom A B := { arr : CAT.(hom) (projT1 A) (projT1 B) | projT2 A == CAT.(compose) (projT2 B) arr }
+  ; compose {X} {Y} {Z} arr' arr := @exist _ _ (CAT.(compose) (proj1_sig arr') (proj1_sig arr)) _
+  ; id {X} := @exist _ _ (CAT.(id)) _
+  }.
+Next Obligation.
+  intros CAT SETOID CATEGORY_LAW C [X f] [Y g] [Z h] [arr' EQ'] [arr EQ]; simpl in *.
+  rewrite -> compose_assoc. rewrite -> EQ. now eapply compose_compatWith_eqProp.
+Qed.
+Next Obligation.
+  intros CAT SETOID CATEGORY_LAW C [X f]; simpl in *.
+  now rewrite -> compose_id_r.
+Qed.
+
+End SLICE.
+
 Section CAYLEY.
 
 #[local] Obligation Tactic := i.
@@ -179,8 +205,8 @@ Import CAT.
 
 #[local]
 Instance CayleyFunctor (CAT : isCategory) : isCovariantFunctor CAT Hask :=
-  { fmap_ob (C : CAT.(ob)) := { D : CAT.(ob) & CAT.(hom) D C }
-  ; fmap_hom {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B) := fun g : { X : CAT.(ob) & CAT.(hom) X A } => @existT CAT.(ob) (fun Y : CAT.(ob) => CAT.(hom) Y B) (projT1 g) (compose f (projT2 g))
+  { map_ob (C : CAT.(ob)) := { D : CAT.(ob) & CAT.(hom) D C }
+  ; map_hom {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B) := fun g : { X : CAT.(ob) & CAT.(hom) X A } => @existT CAT.(ob) (fun Y : CAT.(ob) => CAT.(hom) Y B) (projT1 g) (compose f (projT2 g))
   }.
 
 #[local]
