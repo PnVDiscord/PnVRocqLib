@@ -36,6 +36,8 @@ Notation " '⟪' x ':' t '⟫' " := (NW (fun x : unit => match x with tt => t en
 
 Reserved Notation " '`[' A '->' B ']' " (A at level 0, B at level 0, no associativity, at level 0, format "`[ A  ->  B ]").
 
+Reserved Infix "~~>" (no associativity, at level 95).
+
 Reserved Notation " src '~~~[' x ']~~>' tgt " (at level 70, no associativity).
 Reserved Notation " src '---[' x ']-->' tgt " (at level 70, no associativity).
 Reserved Notation " src '===[' x ']==>' tgt " (at level 70, no associativity).

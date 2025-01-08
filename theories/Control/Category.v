@@ -4,7 +4,7 @@ Require Import PnV.Math.ThN.
 
 #[local] Set Printing Universes.
 
-Notation "E '~~>' F" := (forall X : Type, E X -> F X) (at level 95, right associativity) : type_scope.
+Notation "E '~~>' F" := (forall X : Type, E X -> F X) : type_scope.
 
 Module CAT.
 
