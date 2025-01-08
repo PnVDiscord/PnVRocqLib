@@ -2,6 +2,8 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Data.Vector.
 Require Import PnV.Math.ThN.
 
+#[local] Set Printing Universes.
+
 Notation "E '~~>' F" := (forall X : Type, E X -> F X) (at level 95, right associativity) : type_scope.
 
 Module CAT.
@@ -215,8 +217,8 @@ Section CAYLEY.
 
 Import CAT.
 
-#[local, universes(polymorphic=yes)]
-Instance CayleyFunctor@{u v w} (CAT : isCategory@{u v}) : isCovariantFunctor@{u v w v} CAT Hask@{w v} :=
+#[local]
+Instance CayleyFunctor (CAT : isCategory) : isCovariantFunctor CAT Hask :=
   { map_ob (C : CAT.(ob)) := { D : CAT.(ob) & CAT.(hom) D C }
   ; map_hom {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B) := fun g : { X : CAT.(ob) & CAT.(hom) X A } => @existT CAT.(ob) (fun Y : CAT.(ob) => CAT.(hom) Y B) (projT1 g) (compose f (projT2 g))
   }.
@@ -230,7 +232,7 @@ Instance CayleyCategory@{u v w} (CAT : isCategory@{u v}) : isCategory@{u w} :=
   }.
 
 #[local, universes(polymorphic=yes)]
-Instance toCayleyCategory_isCovariantFunctor@{u v w} (CAT : isCategory@{u v}) : isCovariantFunctor@{u v w v} CAT (CayleyCategory@{u v w} CAT) :=
+Instance toCayleyCategory_isCovariantFunctor@{u v w} (CAT : isCategory@{u v}) : isCovariantFunctor@{u v u w} CAT (CayleyCategory@{u v w} CAT) :=
   { map_ob (A : CAT.(ob)) := A
   ; map_hom {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B) := fun C : CAT.(ob) => fun g : CAT.(hom) B C => CAT.(compose) g f
   }.
