@@ -182,7 +182,7 @@ Import CAT.
 #[local, program]
 Instance SliceCategory {CAT : isCategory} {SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)} {CATEGORY_LAW : isLawfulCategory CAT (SETOID := SETOID)} (C : CAT.(ob)) : isCategory :=
   { ob := { D : CAT.(ob) & CAT.(hom) D C }
-  ; hom A B := { arr : CAT.(hom) (projT1 A) (projT1 B) | projT2 A == CAT.(compose) (projT2 B) arr }
+  ; hom X Y := { arr : CAT.(hom) (projT1 X) (projT1 Y) | projT2 X == CAT.(compose) (projT2 Y) arr }
   ; compose {X} {Y} {Z} arr' arr := @exist _ _ (CAT.(compose) (proj1_sig arr') (proj1_sig arr)) _
   ; id {X} := @exist _ _ (CAT.(id)) _
   }.
@@ -195,6 +195,18 @@ Next Obligation.
   now rewrite -> compose_id_r.
 Qed.
 
+#[local]
+Instance SliceCategory_good (CAT : isCategory) (SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)) (C : CAT.(ob))
+ (CATEGORY_LAW : isLawfulCategory CAT (SETOID := SETOID))
+  : isLawfulCategory (SliceCategory (CAT := CAT) (SETOID := SETOID) (CATEGORY_LAW := CATEGORY_LAW) C) (SETOID := fun Dom => fun Cod => @subSetoid _ (SETOID (projT1 Dom) (projT1 Cod)) _).
+Proof with eauto with *.
+  split; cbn.
+  - intros [X f] [Y g] [Z h] [arr2' EQ2'] [arr2 EQ2] [arr1' EQ1'] [arr1 EQ1]; simpl in *; intros arr2_EQ arr1_EQ. eapply compose_compatWith_eqProp...
+  - intros [X f] [Y g] [Z h] [W i]; simpl in *; intros [arr'' EQ''] [arr' EQ'] [arr EQ]; simpl in *. eapply compose_assoc.
+  - intros [X f] [Y g]; simpl in *; intros [arr EQ]; simpl in *. eapply compose_id_l.
+  - intros [X f] [Y g]; simpl in *; intros [arr EQ]; simpl in *. eapply compose_id_r.
+Qed.
+
 End SLICE.
 
 Section CAYLEY.
@@ -203,18 +215,24 @@ Section CAYLEY.
 
 Import CAT.
 
-#[local]
-Instance CayleyFunctor (CAT : isCategory) : isCovariantFunctor CAT Hask :=
+#[local, universes(polymorphic=yes)]
+Instance CayleyFunctor@{u v w} (CAT : isCategory@{u v}) : isCovariantFunctor@{u v w v} CAT Hask@{w v} :=
   { map_ob (C : CAT.(ob)) := { D : CAT.(ob) & CAT.(hom) D C }
   ; map_hom {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B) := fun g : { X : CAT.(ob) & CAT.(hom) X A } => @existT CAT.(ob) (fun Y : CAT.(ob) => CAT.(hom) Y B) (projT1 g) (compose f (projT2 g))
   }.
 
-#[local]
-Instance CayleyCategory (CAT : isCategory) : isCategory :=
+#[local, universes(polymorphic=yes)]
+Instance CayleyCategory@{u v w} (CAT : isCategory@{u v}) : isCategory@{u w} :=
   { ob := CAT.(ob)
-  ; hom D C := forall r : CAT.(ob), CAT.(hom) r D -> CAT.(hom) r C
-  ; compose _ _ _ G F := fun r => fun X => G r (F r X)
+  ; hom D C := forall r : CAT.(ob), CAT.(hom) C r -> CAT.(hom) D r
+  ; compose _ _ _ G F := fun r => fun X => F r (G r X)
   ; id _ := fun r => fun X => X
+  }.
+
+#[local, universes(polymorphic=yes)]
+Instance toCayleyCategory_isCovariantFunctor@{u v w} (CAT : isCategory@{u v}) : isCovariantFunctor@{u v w v} CAT (CayleyCategory@{u v w} CAT) :=
+  { map_ob (A : CAT.(ob)) := A
+  ; map_hom {A : CAT.(ob)} {B : CAT.(ob)} (f : CAT.(hom) A B) := fun C : CAT.(ob) => fun g : CAT.(hom) B C => CAT.(compose) g f
   }.
 
 End CAYLEY.
