@@ -2107,7 +2107,7 @@ Proof.
   unfold nth_Henkin_constant, nth_Henkin_axiom. destruct (Henkin_exists (S n)) as [[theta_n c_n] H_n]. destruct (Henkin_exists (S k)) as [[theta_k c_k] H_k].
   simpl fst in *; simpl snd in *. pose proof H_k as [? [? [[? ?] ?]]]; unnw. rewrite <- negb_true_iff. revert theta_n c_n H_n. introVCons theta thetas; introVCons c cs.
   intros [? [HENKIN_n [[? ?] ?]]]. simpl in *. rewrite V.forallb_forall in H6. pose proof (Henkin_seq k n theta_k thetas c_k cs LT H_k HENKIN_n) as [IN _].
-  assert (LT1 : n - S k < n) by lia. erewrite V.nth_error_to_list with (LT := LT1) in IN. apply f_equal with (f := B.fromSome (V.head theta_k)) in IN. simpl in IN. rewrite <- IN. eapply H6.
+  assert (LT1 : n - S k < n) by lia. erewrite V.nth_error_to_list with (LT := LT1) in IN. apply f_equal with (f := B.fromMaybe (V.head theta_k)) in IN. simpl in IN. rewrite <- IN. eapply H6.
 Qed.
 
 Lemma Henkin_constant_does_not_occur_in_enum n

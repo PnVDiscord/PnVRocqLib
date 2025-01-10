@@ -1003,7 +1003,7 @@ Definition maybe {A : Type} {B : option A -> Type} (d : B None) (f : forall x : 
   | Some x => f x
   end.
 
-Definition fromSome {A : Type} (d : A) (m : option A) : A :=
+Definition fromMaybe {A : Type} (d : A) (m : option A) : A :=
   maybe d (fun x : A => x) m.
 
 Definition either {A : Type} {B : Type} {C : (A + B) -> Type} (f : forall x : A, C (inl x)) (g : forall y : B, C (inr y)) (z : A + B) : C z :=
