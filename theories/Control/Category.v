@@ -4,18 +4,16 @@ Require Import PnV.Math.ThN.
 
 #[local] Set Printing Universes.
 
-Notation "E '~~>' F" := (forall X : Type, E X -> F X) : type_scope.
-
 Module CAT.
 
 #[local] Obligation Tactic := i.
 
 #[universes(polymorphic=yes)]
-Class isCategory@{u v} : Type :=
+Class isCategory@{u v} : Type@{max(u + 1, v + 1)} :=
   { ob : Type@{u}
   ; hom (D : ob) (C : ob) : Type@{v}
-  ; compose {A} {B} {C} (g : hom B C) (f : hom A B) : hom A C
-  ; id {A} : hom A A
+  ; compose {A : ob} {B : ob} {C : ob} (g : hom B C) (f : hom A B) : hom A C
+  ; id {A : ob} : hom A A
   }.
 
 #[universes(polymorphic=yes)]
@@ -36,7 +34,7 @@ Definition fin (n : nat) : isCategory@{Set Set} :=
   |}.
 
 #[universes(polymorphic=yes)]
-Class hasCoproduct@{u v} (C : isCategory@{u v}) : Type :=
+Class hasCoproduct@{u v} (C : isCategory@{u v}) : Type@{max(u, v)} :=
   { sum (X : C.(ob)) (Y : C.(ob)) : C.(ob)
   ; inl {X : C.(ob)} {Y : C.(ob)} : C.(hom) X (sum X Y)
   ; inr {X : C.(ob)} {Y : C.(ob)} : C.(hom) Y (sum X Y)
@@ -44,13 +42,13 @@ Class hasCoproduct@{u v} (C : isCategory@{u v}) : Type :=
   }.
 
 #[universes(polymorphic=yes)]
-Class hasInitial@{u v} (C : isCategory@{u v}) : Type :=
+Class hasInitial@{u v} (C : isCategory@{u v}) : Type@{max(u, v)} :=
   { void : C.(ob)
   ; exfalso {X : C.(ob)} : C.(hom) void X
   }.
 
 #[universes(polymorphic=yes)]
-Class isCovariantFunctor@{u1 v1 u2 v2} (Dom : isCategory@{u1 v1}) (Cod : isCategory@{u2 v2}) : Type :=
+Class isCovariantFunctor@{u1 v1 u2 v2} (Dom : isCategory@{u1 v1}) (Cod : isCategory@{u2 v2}) : Type@{max(u1, v1, u2, v2)} :=
   { map_ob : Dom.(ob) -> Cod.(ob)
   ; map_hom {A} {B} (f : Dom.(hom) A B) : Cod.(hom) (map_ob A) (map_ob B)
   }.
@@ -200,7 +198,7 @@ Qed.
 #[local]
 Instance SliceCategory_good (CAT : isCategory) (SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)) (C : CAT.(ob))
  (CATEGORY_LAW : isLawfulCategory CAT (SETOID := SETOID))
-  : isLawfulCategory (SliceCategory (CAT := CAT) (SETOID := SETOID) (CATEGORY_LAW := CATEGORY_LAW) C) (SETOID := fun Dom => fun Cod => @subSetoid _ (SETOID (projT1 Dom) (projT1 Cod)) _).
+  : isLawfulCategory (SliceCategory (CAT := CAT) (SETOID := SETOID) (CATEGORY_LAW := CATEGORY_LAW) C) (SETOID := fun Dom => fun Cod => @subSetoid (CAT.(hom) (projT1 Dom) (projT1 Cod)) (SETOID (projT1 Dom) (projT1 Cod)) (fun arr : CAT.(hom) (projT1 Dom) (projT1 Cod) => projT2 Dom == CAT.(compose) (projT2 Cod) arr)).
 Proof with eauto with *.
   split; cbn.
   - intros [X f] [Y g] [Z h] [arr2' EQ2'] [arr2 EQ2] [arr1' EQ1'] [arr1 EQ1]; simpl in *; intros arr2_EQ arr1_EQ. eapply compose_compatWith_eqProp...
@@ -212,8 +210,6 @@ Qed.
 End SLICE.
 
 Section CAYLEY.
-
-#[local] Obligation Tactic := i.
 
 Import CAT.
 
@@ -238,3 +234,5 @@ Instance toCayleyCategory_isCovariantFunctor@{u v w} (CAT : isCategory@{u v}) : 
   }.
 
 End CAYLEY.
+
+Notation "E '~~>' F" := (forall X : Type, E X -> F X) : type_scope.
