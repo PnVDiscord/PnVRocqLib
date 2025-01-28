@@ -23,6 +23,12 @@ Require Export Coq.Setoids.Setoid.
 Tactic Notation "rewrite!" :=
   autorewrite with simplication_hints in *.
 
+Universe U_discourse.
+
+Universe U_small.
+
+Constraint U_small < U_discourse.
+
 Ltac obs_eqb n m :=
   let H_OBS := fresh "H_OBS" in destruct (Nat.eqb n m) as [ | ] eqn: H_OBS; [rewrite Nat.eqb_eq in H_OBS | rewrite Nat.eqb_neq in H_OBS].
 
@@ -39,7 +45,7 @@ Definition reify_lemma@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} 
 
 (** Section SETOID. *)
 
-Class isSetoid (A : Type) : Type :=
+Class isSetoid (A : Type@{U_discourse}) : Type@{U_discourse} :=
   { eqProp (lhs : A) (rhs : A) : Prop
   ; eqProp_Equivalence :: Equivalence eqProp
   }.
@@ -135,7 +141,7 @@ Defined.
 
 (** Section PROSET. *)
 
-Class isProset (A : Type) : Type :=
+Class isProset (A : Type@{U_discourse}) : Type@{U_discourse} :=
   { leProp (lhs : A) (rhs : A) : Prop
   ; Proset_isSetoid :: isSetoid A
   ; leProp_PreOrder :: PreOrder leProp
@@ -280,8 +286,8 @@ Proof.
   firstorder.
 Qed.
 
-Class isSetoid1 (F : Type -> Type) : Type :=
-  liftSetoid1 (X : Type) `(SETOID : isSetoid X) : isSetoid (F X).
+Class isSetoid1 (F : Type@{U_discourse} -> Type@{U_discourse}) : Type@{U_discourse + 1} :=
+  liftSetoid1 (X : Type@{U_discourse}) `(SETOID : isSetoid X) : isSetoid (F X).
 
 Definition mkSetoid_from_eq {A : Type} : isSetoid A :=
   {| eqProp := @eq A; eqProp_Equivalence := eq_equivalence |}.
@@ -446,10 +452,12 @@ Definition liftM2 {M : Type -> Type} {A : Type} {B : Type} {C : Type} `{MONAD : 
 Module E.
 
 #[universes(polymorphic=yes)]
-Definition t@{u} (A : Type@{u}) : Type@{u} := A -> Prop.
+Definition t@{u} (A : Type@{u}) : Type@{u} :=
+  A -> Prop.
 
 #[universes(polymorphic=yes)]
-Definition In@{u} {A : Type@{u}} (x : A) (X : t@{u} A) : Prop := X x.
+Definition In@{u} {A : Type@{u}} (x : A) (X : t@{u} A) : Prop :=
+  X x.
 
 #[universes(polymorphic=yes)]
 Definition isSubsetOf@{u} {A : Type@{u}} (X1 : t@{u} A) (X2 : t@{u} A) : Prop :=

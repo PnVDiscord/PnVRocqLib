@@ -5,10 +5,10 @@ Require Import PnV.Control.Category.
 Declare Scope itree_scope.
 Open Scope itree_scope.
 
-Variant itreeF (itree : Type) (E : Type -> Type) (R : Type) : Type :=
+Variant itreeF (itree : Type@{U_discourse}) (E : Type@{U_discourse} -> Type@{U_discourse}) (R : Type@{U_discourse}) : Type@{U_discourse} :=
   | RetF (r : R) : itreeF itree E R
   | TauF (t : itree) : itreeF itree E R
-  | VisF (X : Type) (e : E X) (k : X -> itree) : itreeF itree E R.
+  | VisF (X : Type@{U_small}) (e : E X) (k : X -> itree) : itreeF itree E R.
 
 #[global] Arguments RetF {itree} {E}%_type_scope {R}%_type_scope r.
 #[global] Arguments TauF {itree} {E}%_type_scope {R}%_type_scope t%_itree_scope.
