@@ -15,7 +15,7 @@ Variant itreeF (itree : Type@{U_discourse}) (E : Type@{U_discourse} -> Type@{U_d
 #[global] Arguments VisF {itree} {E}%_type_scope {R}%_type_scope X%_type_scope e k%_itree_scope.
 
 #[projections(primitive)]
-CoInductive itree (E : Type -> Type) (R : Type) : Type :=
+CoInductive itree (E : Type@{U_discourse} -> Type@{U_discourse}) (R : Type@{U_discourse}) : Type@{U_discourse} :=
   go { observe : itreeF (itree E R) E R }.
 
 #[global] Arguments go {E}%_type_scope {R}%_type_scope observe.
@@ -28,17 +28,16 @@ Notation Ret r := (go (RetF r)).
 Notation Tau t := (go (TauF t)).
 Notation Vis X e k := (go (VisF X e k)).
 
-Inductive callE (I : Type) (R : Type) : Type -> Type :=
-  | Call : I -> callE I R R.
+Inductive callE {I : Type} {R : Type} : Type -> Type :=
+  | Call : I -> callE R.
 
-#[global] Arguments Call {I} {R}.
+#[global] Arguments callE : clear implicits.
 
-Inductive stateE (S : Type) : Type -> Type :=
-  | GetS : stateE S S
-  | PutS : S -> stateE S unit.
+Inductive stateE {S : Type} : Type -> Type :=
+  | GetS : stateE S
+  | PutS : S -> stateE unit.
 
-#[global] Arguments GetS {S}.
-#[global] Arguments PutS {S}.
+#[global] Arguments stateE : clear implicits.
 
 Section ITREE_METHOD.
 
@@ -74,12 +73,12 @@ Definition callE_handler {E : Type -> Type} {I : Type} {R : Type} (callee : I ->
 Definition stateE_handler {S : Type} : stateE S ~~> B.stateT S (itree E) :=
   @stateE_rect S (fun X : Type => fun _ : stateE S X => B.stateT S (itree E) X) get put.
 
-Definition itree_interpret {M : Type -> Type} {M_isMonad : isMonad M} {M_isMonadIter : isMonadIter M} (handle : E ~~> M) : itree E ~~> M :=
+Definition itree_interpret {M : Type -> Type} {M_isMonad : isMonad M} {M_isMonadIter : isMonadIter M} (handler : E ~~> M) : itree E ~~> M :=
   fun R : Type => monad_iter $ fun t0 : itree E R =>
     match observe t0 with
     | RetF r => pure (inr r)
     | TauF t => pure (inl t)
-    | VisF X e k => bind (handle X e) (fun x : X => pure (inl (k x)))
+    | VisF X e k => bind (handler X e) (fun x : X => pure (inl (k x)))
     end.
 
 End ITREE_METHOD.
