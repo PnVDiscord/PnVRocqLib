@@ -23,7 +23,7 @@ Next Obligation.
   intros x y. cbn. unfold flip. split; firstorder try congruence. contradiction (StrictOrder_Irreflexive x). firstorder.
 Qed.
 
-Class isPoset (A : Type) : Type :=
+Class isPoset (A : Type@{U_discourse}) : Type@{U_discourse} :=
   { Poset_isProset :: isProset A
   ; Poset_eqProp_spec (x : A) (y : A)
     : x == y <-> x = y
@@ -43,12 +43,12 @@ Instance mkProsetFrom_ltProp_isPoset {A : Type} {ltProp : A -> A -> Prop} (ltPro
   ; Poset_eqProp_spec x y := conj (fun H : x = y => H) (fun H : x = y => H)
   }.
 
-Class has_ltProp (A : Type) : Type :=
+Class has_ltProp (A : Type@{U_discourse}) : Type@{U_discourse} :=
   ltProp (lhs : A) (rhs : A) : Prop.
 
 Infix "≨" := ltProp : type_scope.
 
-Class hasStrictOrder (A : Type) : Type :=
+Class hasStrictOrder (A : Type@{U_discourse}) : Type@{U_discourse} :=
   { lt :: has_ltProp A
   ; lt_StrictOrder :: StrictOrder lt
   }.
@@ -75,7 +75,7 @@ Proof.
   reflexivity.
 Qed.
 
-Class isWellPoset (A : Type) : Type :=
+Class isWellPoset (A : Type@{U_discourse}) : Type@{U_discourse} :=
   { wltProp :: has_ltProp A
   ; wltProp_Transitive :: Transitive wltProp
   ; wltProp_well_founded : well_founded wltProp
@@ -437,7 +437,7 @@ Qed.
 
 End BASIC1.
 
-Class isUpperSemilattice (D : Type) {PROSET : isProset D} : Type :=
+Class isUpperSemilattice (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
   { join_lattice (x : D) (y : D) : D
   ; bot_lattice : D
   ; join_lattice_spec (x : D) (y : D)
@@ -488,7 +488,7 @@ Qed.
 
 End UPPER_SEMILATTICE.
 
-Class isLowerSemilattice (D : Type) {PROSET : isProset D} : Type :=
+Class isLowerSemilattice (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
   { meet_lattice (x : D) (y : D) : D
   ; top_lattice : D
   ; meet_lattice_spec (x1 : D) (x2 : D)
@@ -511,7 +511,7 @@ Qed.
 
 End LOWER_SEMILATTICE.
 
-Class isLattice (D : Type) {PROSET : isProset D} : Type :=
+Class isLattice (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
   { Lattice_asUpperSemilattice :: isUpperSemilattice D (PROSET := PROSET)
   ; Lattice_asLowerSemilattice :: isLowerSemilattice D (PROSET := PROSET)
   }.
@@ -566,7 +566,7 @@ Import ListNotations.
 
 Notation "`[ A -> B ]" := { f : A -> B | isMonotonic1 f }.
 
-Class isCola (D : Type) {PROSET : isProset D} : Type :=
+Class isCola (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
   supremum_cola (X : ensemble D) : { sup_X : D | is_supremum_of sup_X X }.
 
 #[program]
@@ -712,7 +712,7 @@ End MAKE_CPO_FROM_COLA.
 
 End CpoDef.
 
-Class hsOrd (A : Type) `{PROSET : isProset A} : Type :=
+Class hsOrd (A : Type@{U_discourse}) `{PROSET : isProset A} : Type@{U_discourse} :=
   { compare (x : A) (y : A) : comparison
   ; compare_Lt x y
     (OBS_Lt : compare x y = Lt)
