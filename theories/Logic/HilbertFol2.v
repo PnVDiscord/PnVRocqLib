@@ -221,7 +221,7 @@ Qed.
 
 Lemma ExistentialE (Gamma : ensemble (frm L)) x y A B
   (FRESH1 : forall p, p \in Gamma -> is_free_in_frm y p = false)
-  (FRESH2 : is_free_in_frm y (All_frm x A) = false)
+  (FRESH2 : is_free_in_frm y (Exs_frm x A) = false)
   (FRESH3 : is_free_in_frm y B = false)
   (INFERS1 : Gamma ⊢ Exs_frm x A)
   (INFERS2 : E.insert (subst_frm (one_subst x (Var_trm y)) A) Gamma ⊢ B)

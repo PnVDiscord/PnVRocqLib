@@ -11,6 +11,7 @@ theories/Logic/BasicFol.v #
 theories/Logic/BasicFol2.v #
 theories/Logic/ClassicalFol.v #
 theories/Logic/ClassicalPropositionalLogic.v #
+theories/Logic/ExtraFol.v #
 theories/Logic/HilbertFol.v #
 theories/Logic/HilbertFol2.v #
 theories/Logic/MuRec.v #
