@@ -30,4 +30,5 @@ theories/Prelude/Notations.v #
 theories/Prelude/Prelude.v #
 theories/Prelude/SfLib.v #
 theories/System/BasicITreeTh.v #
+theories/System/Lambda1.v #
 theories/System/Regex.v #
