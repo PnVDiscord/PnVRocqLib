@@ -1028,10 +1028,16 @@ Proof.
   - right. reflexivity.
 Defined.
 
+Definition ne_None_elim {A : Type} (x : option A) (ne_None : x <> None) : { x' : A | x = Some x' } :=
+  match Some_dec x with
+  | inleft x' => x'
+  | inright eq_None => False_rect _ (ne_None eq_None)
+  end.
+
 #[global]
 Instance option_isMonad : isMonad option :=
-  { pure {A} := @Some A
-  ; bind {A} {B} (m : option A) (k : A -> option B) := maybe None k m
+  { pure {A : Type} := @Some A
+  ; bind {A : Type} {B : Type} (m : option A) (k : A -> option B) := maybe None k m
   }.
 
 #[universes(polymorphic=yes)]

@@ -1,4 +1,8 @@
 Require Import PnV.Prelude.Prelude.
+Require Import PnV.Control.Category.
+
+#[local] Notation In := L.In.
+#[local] Infix "\in" := E.In : type_scope.
 
 Module GRAPH.
 
@@ -19,9 +23,6 @@ Context {G : GRAPH.t}.
 
 #[local] Notation V := G.(vertices).
 #[local] Notation E := G.(edges).
-
-#[local] Notation In := L.In.
-#[local] Infix "\in" := E.In : type_scope.
 
 Inductive walk (v : V) : V -> list V -> Prop :=
   | walk_refl
@@ -183,7 +184,36 @@ Proof.
   - eapply L.no_dup_mk_edge_seq. exact NO_DUP.
 Qed.
 
+Inductive Walk (v : V) : V -> Type :=
+  | Walk_nil
+    : `[ v -> v ]
+  | Walk_cons v0 v1
+    (H_edge : (v0, v1) \in E)
+    (H_Walk : `[ v1 -> v ])
+    : `[ v0 -> v ]
+  where " `[ v -> v' ] " := (Walk v' v).
+
+#[local] Arguments Walk_nil {v}.
+#[local] Arguments Walk_cons {v} {v0} {v1}.
+
+Fixpoint Walk_app {v0 : V} {v1 : V} {v2 : V} (H_walk_1 : `[ v0 -> v1 ]) : `[ v1 -> v2 ] -> `[ v0 -> v2 ] :=
+  match H_walk_1 with
+  | Walk_nil => fun H_walk_2 => H_walk_2
+  | Walk_cons H_edge H_walk_1' => fun H_walk_2 => Walk_cons H_edge (Walk_app H_walk_1' H_walk_2)
+  end.
+
+#[global]
+Instance Walk_cat : CAT.isCategory :=
+  { ob := G.(GRAPH.vertices)
+  ; hom v v' := `[ v -> v' ]
+  ; compose {v0} {v1} {V2} WALK WALK' := Walk_app WALK' WALK
+  ; id {v0} := Walk_nil
+  }.
+
 End GraphTheory_basic1.
+
+#[global] Arguments Walk_nil {G} {v}.
+#[global] Arguments Walk_cons {G} {v} {v0} {v1}.
 
 Module GraphNotations.
 
@@ -196,10 +226,17 @@ End GraphNotations.
 Module LabeledGraph.
 
 #[projections(primitive)]
-Record t : Type :=
-  { vertices : Type
-  ; labels : Type
-  ; edges : vertices -> labels -> vertices -> Prop
+Record t {G : GRAPH.t} : Type :=
+  { labels : Type
+  ; labeling (v : G.(GRAPH.vertices)) (v' : G.(GRAPH.vertices)) (E_v_v' : (v, v') \in G.(GRAPH.edges)) : ensemble labels
   }.
+
+#[global] Arguments t : clear implicits.
+
+Fixpoint labeledWalk {G : GRAPH.t} {G_labeled : LabeledGraph.t G} {v} {v'} (H_Walk : Walk v v') : ensemble (list G_labeled.(labels)) :=
+  match H_Walk with
+  | Walk_nil => E.singleton (@L.nil G_labeled.(labels))
+  | Walk_cons H_edge H_Walk' => liftM2 (MONAD := E.t_isMonad) (@L.cons G_labeled.(labels)) (G_labeled.(labeling) _ _ H_edge) (labeledWalk H_Walk')
+  end.
 
 End LabeledGraph.
