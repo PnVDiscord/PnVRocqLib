@@ -191,7 +191,7 @@ Inductive Walk (v : V) : V -> Type :=
     (H_edge : (v0, v1) \in E)
     (H_Walk : `[ v1 -> v ])
     : `[ v0 -> v ]
-  where " `[ v -> v' ] " := (Walk v' v).
+  where " `[ v -> v' ] " := (Walk v' v) : type_scope.
 
 #[local] Arguments Walk_nil {v}.
 #[local] Arguments Walk_cons {v} {v0} {v1}.
@@ -210,10 +210,18 @@ Instance Walk_cat : CAT.isCategory :=
   ; id {v0} := Walk_nil
   }.
 
+Fixpoint Walk_to_walk {v} {v'} (WALK : `[ v -> v' ]) : list V :=
+  match WALK with
+  | Walk_nil => []
+  | Walk_cons H_edge WALK' => v :: Walk_to_walk WALK'
+  end.
+
 End GraphTheory_basic1.
 
 #[global] Arguments Walk_nil {G} {v}.
 #[global] Arguments Walk_cons {G} {v} {v0} {v1}.
+
+#[local] Notation " `[ v -> v' ] " := (Walk v' v) : type_scope.
 
 Module GraphNotations.
 
@@ -223,20 +231,16 @@ Notation " src ===[ t ]==>* tgt " := (trail tgt src t) : type_scope.
 
 End GraphNotations.
 
-Module LabeledGraph.
-
 #[projections(primitive)]
-Record t {G : GRAPH.t} : Type :=
+Record Labeled {G : GRAPH.t} : Type :=
   { labels : Type
-  ; labeling (v : G.(GRAPH.vertices)) (v' : G.(GRAPH.vertices)) (E_v_v' : (v, v') \in G.(GRAPH.edges)) : ensemble labels
+  ; labeling {v} {v'} (E_v_v' : (v, v') \in G.(GRAPH.edges)) : ensemble labels
   }.
 
-#[global] Arguments t : clear implicits.
+#[global] Arguments Labeled : clear implicits.
 
-Fixpoint labeledWalk {G : GRAPH.t} {G_labeled : LabeledGraph.t G} {v} {v'} (H_Walk : Walk v v') : ensemble (list G_labeled.(labels)) :=
+Fixpoint labeledWalk {G} {G_labeled : Labeled G} {v} {v'} (H_Walk : `[ v -> v' ]) : ensemble (list G_labeled.(labels)) :=
   match H_Walk with
-  | Walk_nil => E.singleton (@L.nil G_labeled.(labels))
-  | Walk_cons H_edge H_Walk' => liftM2 (MONAD := E.t_isMonad) (@L.cons G_labeled.(labels)) (G_labeled.(labeling) _ _ H_edge) (labeledWalk H_Walk')
+  | Walk_nil => pure (@L.nil G_labeled.(labels))
+  | Walk_cons H_edge H_Walk' => liftM2 (@L.cons G_labeled.(labels)) (G_labeled.(labeling) H_edge) (labeledWalk H_Walk')
   end.
-
-End LabeledGraph.
