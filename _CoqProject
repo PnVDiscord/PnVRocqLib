@@ -22,6 +22,7 @@ theories/Math/ClassicalDomainTheory.v #
 theories/Math/ConstructiveOrdinal.v #
 theories/Math/DomainTheory.v #
 theories/Math/OrderTheory.v #
+theories/Math/SetTheory.v #
 theories/Math/ThN.v #
 theories/Prelude/AC.v #
 theories/Prelude/ClassicalFacts.v #

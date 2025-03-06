@@ -19,6 +19,7 @@ Require Import PnV.Math.ClassicalDomainTheory.
 Require Import PnV.Math.ConstructiveOrdinal.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.
+Require Import PnV.Math.SetTheory.
 Require Import PnV.Math.ThN.
 Require Import PnV.Prelude.AC.
 Require Import PnV.Prelude.ClassicalFacts.
