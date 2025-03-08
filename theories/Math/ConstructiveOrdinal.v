@@ -22,7 +22,7 @@ Instance Ord_isWellPoset : isWellPoset Ord :=
 
 Section TRANSFINITE.
 
-Context {D : Type@{Set_V}} (suc : D -> D) (lim : forall A : Type@{Set_u}, (A -> D) -> D).
+Context {D : Type@{U_discourse}} (suc : D -> D) (lim : forall A : Type@{Set_u}, (A -> D) -> D).
 
 Fixpoint transfinite_rec (o : Ord) {struct o} : D :=
   match o with

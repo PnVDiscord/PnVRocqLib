@@ -7,6 +7,8 @@ Universe Set_V.
 
 Constraint Set_u < Set_V.
 
+Constraint Set_V <= U_discourse.
+
 Create HintDb aczel_hints.
 
 Inductive Tree : Type@{Set_V} :=
