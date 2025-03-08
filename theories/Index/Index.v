@@ -16,7 +16,6 @@ Require Import PnV.Logic.PrimRec.
 Require Import PnV.Logic.PropositionalLogic.
 Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Math.ClassicalDomainTheory.
-Require Import PnV.Math.ConstructiveOrdinal.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.
 Require Import PnV.Math.SetTheory.

@@ -1,7 +1,6 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Math.OrderTheory.
 Require Import PnV.Data.Aczel.
-Require Import PnV.Math.ConstructiveOrdinal.
 
 Module Type SetTheoreticConcepts.
 
@@ -62,3 +61,129 @@ Parameter _Card_mul : Card -> Card -> Card.
 Parameter _Card_exp : Card -> Card -> Card.
 
 End SetTheoreticConcepts.
+
+Module TypeTheoreticImplementation <: SetTheoreticConcepts.
+
+Definition V : Type@{Set_V} :=
+  @Tree.
+
+Definition _eq : V -> V -> Prop :=
+  @eqTree.
+
+Definition _in : V -> V -> Prop :=
+  @member.
+
+Definition _subseteq : V -> V -> Prop :=
+  @isSubsetOf.
+
+Definition _comprehension : (V -> Prop) -> V -> V :=
+  @filter.
+
+Definition _emptyset : V :=
+  @empty.
+
+Definition _powerset : V -> V :=
+  @power.
+
+Definition _unordered_pair : V -> V -> V :=
+  @upair.
+
+Definition _unions : V -> V :=
+  @unions.
+
+Definition Ord : Type@{Set_V} :=
+  @Tree.
+
+Definition _Ord_eq : Ord -> Ord -> Prop :=
+  @rEq.
+
+Definition _Ord_lt : Ord -> Ord -> Prop :=
+  @rLt.
+
+Definition _Ord_le : Ord -> Ord -> Prop :=
+  @rLe.
+
+Definition _zer : Ord :=
+  @empty.
+
+Definition _suc : Ord -> Ord :=
+  @succ.
+
+Definition _lim : forall A : Type@{Set_u}, (A -> Ord) -> Ord :=
+  @indexed_union.
+
+#[global]
+Instance Ord_isWellPoset : isWellPoset Ord :=
+  { wltProp := rLt
+  ; wltProp_Transitive := rLt_StrictOrder.(StrictOrder_Transitive)
+  ; wltProp_well_founded := rLt_wf 
+  }.
+
+Section TRANSFINITE.
+
+Context {D : Type@{U_discourse}} (suc : D -> D) (lim : forall A : Type@{Set_u}, (A -> D) -> D).
+
+Fixpoint transfinite_rec (o : Ord) {struct o} : D :=
+  match o with
+  | mkNode cs ts => lim cs (fun c => suc (transfinite_rec (ts c)))
+  end.
+
+End TRANSFINITE.
+
+Definition _transfinite_rec : forall D : Type@{U_discourse}, (D -> D) -> (forall A : Type@{Set_u}, (A -> D) -> D) -> Ord -> D :=
+  @transfinite_rec.
+
+Definition _Ord_add : Ord -> Ord -> Ord.
+Admitted.
+
+Definition _Ord_mul : Ord -> Ord -> Ord.
+Admitted.
+
+Definition _Ord_exp : Ord -> Ord -> Ord.
+Admitted.
+
+Section HARTOGS.
+
+Definition Hartogs (D : Type@{Set_u}) : Ord :=
+  mkNode { R : D -> D -> Prop | well_founded R } (fun RWF => @fromWf D (proj1_sig RWF) (proj2_sig RWF)).
+
+End HARTOGS.
+
+Section TOTALIFY.
+
+Context {A : Type@{Set_u}}.
+
+Variable R : A -> A -> Prop.
+
+Hypothesis R_wf : well_founded R.
+
+Definition toSet_eqProp (lhs : A) (rhs : A) : Prop :=
+  fromAcc lhs (R_wf lhs) =ᵣ fromAcc rhs (R_wf rhs).
+
+End TOTALIFY.
+
+Definition Card : Type@{Set_V} :=
+  Tree.
+
+Definition _Card_eq : Card -> Card -> Prop.
+Admitted.
+
+Definition _Card_lt : Card -> Card -> Prop.
+Admitted.
+
+Definition _Card_le : Card -> Card -> Prop.
+Admitted.
+
+Definition _card : forall A : Type@{Set_u}, isSetoid A -> Card.
+Admitted.
+
+Definition _Card_add : Card -> Card -> Card.
+Admitted.
+
+Definition _Card_mul : Card -> Card -> Card.
+Admitted.
+
+Definition _Card_exp : Card -> Card -> Card.
+Admitted.
+
+End TypeTheoreticImplementation.

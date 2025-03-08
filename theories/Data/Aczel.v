@@ -974,3 +974,32 @@ Proof.
   unfold isTransitiveSet in *; ii; des.
   rewrite <- alpha_eq_beta in *; eauto with *.
 Qed.
+
+Section ToSet.
+
+Inductive le_insert_top {A : Type@{U_discourse}} (le : A -> A -> Prop) (x : option A) : option A -> Prop :=
+  | le_insert_top_rhs_None
+    : le_insert_top le x None
+  | le_insert_top_rhs_Some x' y'
+    (EQ : x = Some x')
+    (LE : le x' y')
+    : le_insert_top le x (Some y').
+
+Definition toSet_lt {Idx : Type@{Set_u}} {A : Idx -> Type@{U_discourse}} (lt : forall i : Idx, A i -> A i -> Prop) (lhs : { i : Idx & option (A i) }) (rhs : { i : Idx & option (A i) }) : Prop :=
+  exists x : option (A (projT1 rhs)), le_insert_top (fun a : A (projT1 rhs) => fun a' : A (projT1 rhs) => lt (projT1 rhs) a a' \/ a = a') x (projT2 rhs) /\ lhs = @existT _ _ (projT1 rhs) x /\ rhs <> @existT _ _ (projT1 rhs) x.
+
+Lemma toSet_lt_well_founded {Idx : Type@{Set_u}} {A : Idx -> Type@{U_discourse}} (lt : forall i : Idx, A i -> A i -> Prop)
+  (lt_wf : forall i : Idx, well_founded (lt i))
+  : well_founded (toSet_lt lt).
+Proof.
+  enough (WTS : forall i : Idx, forall x' : A i, Acc (toSet_lt lt) (@existT _ _ i (Some x'))).
+  { intros [i1 [x1' | ]]; eauto. econs. intros [i2 x2]. unfold toSet_lt at 1. intros (x3 & H_le_insert_top & EQ & NE); simpl in *. rewrite EQ. destruct x3 as [x3' | ]; eauto. congruence. }
+  intros i x. induction (lt_wf i x) as [x _ IH]. i. econs. i. inv H. des; subst. inv H0. destruct LE; eauto. subst x'. simpl in *; congruence.
+Qed.
+
+Fixpoint toSet (t : Tree) : { D : Type@{Set_V} & D -> D -> Prop } :=
+  match t with
+  | mkNode cs ts => @existT Type@{Set_V} (fun D : Type@{Set_V} => D -> D -> Prop) { c : cs & option (projT1 (toSet (ts c))) } (toSet_lt (fun c : cs => projT2 (toSet (ts c))))
+  end.
+
+End ToSet.
