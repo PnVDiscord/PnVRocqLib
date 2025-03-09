@@ -2077,6 +2077,8 @@ End FOL_SYNTAX.
 
 Section EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
 
+#[local] Infix "≡" := alpha_equiv : type_scope.
+
 #[local] Infix "=~=" := is_similar_to : type_scope.
 
 Section SIMILARITY.
@@ -2094,7 +2096,9 @@ Definition mkL_with_constant_symbols (_constant_symbols : Set) : language :=
     relation_arity_table := _relation_arity_table;
   |}.
 
-Context (_constant_symbols : Set) (L := mkL_with_constant_symbols _constant_symbols).
+Context (_constant_symbols : Set).
+
+#[local] Notation L := (mkL_with_constant_symbols _constant_symbols).
 
 Section GENERAL_CASE.
 
@@ -2268,9 +2272,667 @@ Qed.
 
 End GENERAL_CASE.
 
+#[local] Hint Rewrite @fv_is_free_in_trm @fv_is_free_in_trms @fv_is_free_in_frm : simplication_hints.
+
+#[local] Hint Unfold compose : simplication_hints.
+
+Context (Henkin_constants : Set).
+
+#[local] Notation L' := (mkL_with_constant_symbols (_constant_symbols + Henkin_constants)).
+
+#[global]
+Instance constant_symbols_sim : Similarity _constant_symbols (_constant_symbols + Henkin_constants) :=
+  fun c : L.(constant_symbols) => fun c' : L'.(constant_symbols) => inl c = c'.
+
+#[global]
+Instance trm_sim : Similarity (trm L) (trm L') :=
+  trm_similarity_instance (L.(constant_symbols) + Henkin_constants) constant_symbols_sim.
+
+#[global]
+Instance trms_sim (n : nat) : Similarity (trms L n) (trms L' n) :=
+  trms_similarity_instance (L.(constant_symbols) + Henkin_constants) constant_symbols_sim n.
+
+#[global]
+Instance frm_sim : Similarity (frm L) (frm L') :=
+  frm_similarity_instance (L.(constant_symbols) + Henkin_constants) constant_symbols_sim.
+
+#[global]
+Instance frms_sim : Similarity (ensemble (frm L)) (ensemble (frm L')) :=
+  frms_similarity_instance (L.(constant_symbols) + Henkin_constants) constant_symbols_sim.
+
+Fixpoint embed_trm (t : trm L) : trm L' :=
+  match t with
+  | Var_trm x => @Var_trm L' x
+  | Fun_trm f ts => @Fun_trm L' f (embed_trms ts)
+  | Con_trm c => @Con_trm L' (inl c)
+  end
+with embed_trms {n : nat} (ts : trms L n) : trms L' n :=
+  match ts with
+  | O_trms => @O_trms L'
+  | S_trms n t ts => @S_trms L' n (embed_trm t) (embed_trms ts)
+  end.
+
+Lemma embed_trm_unfold (t : trm L) :
+  embed_trm t =
+  match t with
+  | Var_trm x => @Var_trm L' x
+  | Fun_trm f ts => @Fun_trm L' f (embed_trms ts)
+  | Con_trm c => @Con_trm L' (inl c)
+  end.
+Proof.
+  destruct t; reflexivity.
+Defined.
+
+Lemma embed_trms_unfold n (ts : trms L n) :
+  embed_trms ts =
+  match ts with
+  | O_trms => @O_trms L'
+  | S_trms n t ts => @S_trms L' n (embed_trm t) (embed_trms ts)
+  end.
+Proof.
+  destruct ts; reflexivity.
+Defined.
+
+Fixpoint embed_frm (p : frm L) : frm L' :=
+  match p with
+  | Rel_frm R ts => @Rel_frm L' R (embed_trms ts)
+  | Eqn_frm t1 t2 => @Eqn_frm L' (embed_trm t1) (embed_trm t2)
+  | Neg_frm p1 => @Neg_frm L' (embed_frm p1)
+  | Imp_frm p1 p2 => @Imp_frm L' (embed_frm p1) (embed_frm p2)
+  | All_frm y p1 => @All_frm L' y (embed_frm p1)
+  end.
+
+Lemma embed_trm_from (t : trm L)
+  : t =~= embed_trm t
+with embed_trms_from n (ts : trms L n)
+  : ts =~= embed_trms ts.
+Proof.
+  - trm_ind t; simpl.
+    + econs.
+    + econs. eapply embed_trms_from.
+    + econs. reflexivity.
+  - trms_ind ts; simpl.
+    + econs.
+    + econs.
+      * eapply embed_trm_from.
+      * eapply IH.
+Qed.
+
+Lemma embed_trm_to (t : trm L) (t' : trm L')
+  (SIM : t =~= t')
+  : embed_trm t = t'
+with embed_trms_to n (ts : trms L n) (ts' : trms L' n)
+  (SIM : ts =~= ts')
+  : embed_trms ts = ts'.
+Proof.
+  - induction SIM.
+    + reflexivity.
+    + simpl. f_equal. eapply embed_trms_to. exact ts_SIM.
+    + hinv c_SIM.
+  - induction SIM.
+    + reflexivity.
+    + simpl; f_equal.
+      * eapply embed_trm_to. exact t_SIM.
+      * eapply IHSIM.
+Qed.
+
+Lemma embed_frm_from (p : frm L)
+  : p =~= embed_frm p.
+Proof.
+  frm_ind p; simpl.
+  - econs. eapply embed_trms_from.
+  - econs; eapply embed_trm_from.
+  - econs. eapply IH1.
+  - econs; [eapply IH1 | eapply IH2].
+  - econs; eapply IH1.
+Qed.
+
+Lemma embed_frm_to (p : frm L) (p' : frm L')
+  (SIM : p =~= p')
+  : embed_frm p = p'.
+Proof.
+  induction SIM; simpl.
+  - f_equal; eapply embed_trms_to; trivial.
+  - f_equal; eapply embed_trm_to; trivial.
+  - f_equal; trivial.
+  - f_equal; trivial.
+  - f_equal; trivial.
+Qed.
+
+Theorem embed_trm_spec (t : trm L) (t' : trm L')
+  : embed_trm t = t' <-> t =~= t'.
+Proof.
+  split; [intros <- | intros SIM]; [eapply embed_trm_from | eapply embed_trm_to]; trivial.
+Qed.
+
+Theorem embed_trms_spec n (ts : trms L n) (ts' : trms L' n)
+  : embed_trms ts = ts' <-> ts =~= ts'.
+Proof.
+  split; [intros <- | intros SIM]; [eapply embed_trms_from | eapply embed_trms_to]; trivial.
+Qed.
+
+Theorem embed_frm_spec (p : frm L) (p' : frm L')
+  : embed_frm p = p' <-> p =~= p'.
+Proof.
+  split; [intros <- | intros SIM]; [eapply embed_frm_from | eapply embed_frm_to]; trivial.
+Qed.
+
+Theorem embed_frms_spec (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L'))
+  : E.image embed_frm Gamma == Gamma' <-> Gamma =~= Gamma'.
+Proof.
+  split.
+  - intros EQ. split.
+    + ii. exists (embed_frm p). split.
+      * eapply embed_frm_from.
+      * rewrite <- EQ. exists p; trivial.
+    + ii. rewrite <- EQ in H. rewrite E.in_image_iff in H. destruct H as [p [-> IN]].
+      exists p. split; trivial. eapply embed_frm_from.
+  - intros EQ p. destruct EQ as [? ?]. split.
+    + ii. s!. destruct H as [q [-> IN]]. pose proof (FWD q IN) as [q' [SIM IN']].
+      rewrite <- embed_frm_spec in SIM. subst q'; trivial.
+    + ii. s!. pose proof (BWD p H) as [q' [SIM IN']].
+      rewrite <- embed_frm_spec in SIM. subst p. exists q'; split; trivial.
+Qed.
+
+Fixpoint embed_trm_graph (t' : trm L') : forall t : trm L, Prop :=
+  match t' with
+  | Var_trm x => fun t => @Var_trm L x = t
+  | Fun_trm f ts' => fun t => exists ts, embed_trms_graph ts' ts /\ @Fun_trm L f ts = t
+  | Con_trm c => fun t => match c with inl cc => @Con_trm L cc = t | inr hc => False end
+  end
+with embed_trms_graph {n : nat} (ts' : trms L' n) : forall ts : trms L n, Prop :=
+  match ts' with
+  | O_trms => fun ts => O_trms = ts
+  | S_trms n t' ts' => fun ts => embed_trm_graph t' (head ts) /\ embed_trms_graph ts' (tail ts)
+  end.
+
+Fixpoint embed_frm_graph (p' : frm L') : forall p : frm L, Prop :=
+  match p' with
+  | Rel_frm R ts' => fun p => exists ts, embed_trms_graph ts' ts /\ @Rel_frm L R ts = p
+  | Eqn_frm t1' t2' => fun p => exists t1, exists t2, embed_trm_graph t1' t1 /\ embed_trm_graph t2' t2 /\ @Eqn_frm L t1 t2 = p
+  | Neg_frm p1' => fun p => exists p1, embed_frm_graph p1' p1 /\ @Neg_frm L p1 = p
+  | Imp_frm p1' p2' => fun p => exists p1, exists p2, embed_frm_graph p1' p1 /\ embed_frm_graph p2' p2 /\ @Imp_frm L p1 p2 = p
+  | All_frm y p1' => fun p => exists p1, embed_frm_graph p1' p1 /\ @All_frm L y p1 = p
+  end.
+
+Lemma embed_trm_graph_sound t' (t : trm L)
+  (GRAPH : embed_trm_graph t' t)
+  : t =~= t'
+with embed_trms_graph_sound n ts' (ts : trms L n)
+  (GRAPH : embed_trms_graph ts' ts)
+  : ts =~= ts'.
+Proof.
+  - revert t GRAPH; trm_ind t'; simpl; i.
+    + subst t. econs.
+    + des. subst t. econs. eapply embed_trms_graph_sound. exact GRAPH.
+    + destruct c as [cc | hc].
+      * subst t. econs. reflexivity.
+      * tauto.
+  - revert ts GRAPH; trms_ind ts'; simpl; i.
+    + subst ts. econs.
+    + revert GRAPH. pattern ts. revert ts. eapply trms_caseS. intros t' ts [GRAPH GRAPH']. econs.
+      * eapply embed_trm_graph_sound. exact GRAPH.
+      * eapply IH. exact GRAPH'.
+Qed.
+
+Lemma embed_trm_graph_complete (t : trm L) t'
+  (SIM : t =~= t')
+  : embed_trm_graph t' t
+with embed_trms_graph_complete n (ts : trms L n) ts'
+  (SIM : ts =~= ts')
+  : embed_trms_graph ts' ts.
+Proof.
+  - induction SIM; simpl.
+    + reflexivity.
+    + exists ts. split.
+      * eapply embed_trms_graph_complete. exact ts_SIM.
+      * reflexivity.
+    + inv c_SIM. reflexivity.
+  - induction SIM; simpl.
+    + reflexivity.
+    + split.
+      * eapply embed_trm_graph_complete. exact t_SIM.
+      * eapply embed_trms_graph_complete. exact ts_SIM.
+Qed.
+
+Lemma embed_frm_graph_sound (p : frm L) p'
+  (GRAPH : embed_frm_graph p' p)
+  : p =~= p'.
+Proof.
+  revert p GRAPH. frm_ind p'; simpl; ii.
+  - des. subst p. econs. eapply embed_trms_graph_sound; trivial.
+  - des. subst p. econs; eapply embed_trm_graph_sound; trivial.
+  - des. subst p. econs; eauto.
+  - des. subst p. econs; eauto.
+  - des. subst p. econs; eauto.
+Qed.
+
+Lemma embed_frm_graph_complete (p : frm L) p'
+  (SIM : p =~= p')
+  : embed_frm_graph p' p.
+Proof.
+  induction SIM; simpl.
+  - exists ts. split; trivial. eapply embed_trms_graph_complete; trivial.
+  - exists t1, t2. split. eapply embed_trm_graph_complete; trivial. split; trivial. eapply embed_trm_graph_complete; trivial.
+  - exists p1. split; eauto.
+  - exists p1, p2. split; eauto.
+  - exists p1. split; eauto.
+Qed.
+
+Lemma embed_trm_inj_aux (t : trm L) t'
+  (GRAPH : embed_trm_graph (embed_trm t') t)
+  : t' = t
+with embed_trms_inj_aux n (ts : trms L n) ts'
+  (GRAPH : embed_trms_graph (embed_trms ts') ts)
+  : ts' = ts.
+Proof.
+  - revert t GRAPH. trm_ind t'; simpl; i.
+    + exact GRAPH.
+    + des. rewrite <- GRAPH0. f_equal. eapply embed_trms_inj_aux; exact GRAPH.
+    + exact GRAPH.
+  - revert ts GRAPH. trms_ind ts'; simpl; i.
+    + exact GRAPH.
+    + revert GRAPH. pattern ts. revert ts. eapply trms_caseS. intros t' ts [GRAPH GRAPH']. f_equal.
+      * eapply embed_trm_inj_aux. exact GRAPH.
+      * eapply IH. exact GRAPH'.
+Qed.
+
+Lemma embed_frm_inj_aux (p : frm L) p'
+  (GRAPH : embed_frm_graph (embed_frm p') p)
+  : p' = p.
+Proof.
+  revert p GRAPH; frm_ind p'; simpl; i.
+  - des. rewrite <- GRAPH0. f_equal. eapply embed_trms_inj_aux. exact GRAPH.
+  - des. rewrite <- GRAPH1. f_equal; eapply embed_trm_inj_aux; trivial.
+  - des. rewrite <- GRAPH0. f_equal. eapply IH1; trivial.
+  - des. rewrite <- GRAPH1. f_equal; eauto.
+  - des. rewrite <- GRAPH0. f_equal; eauto.
+Qed.
+
+Theorem embed_trm_inj (t1 : trm L) (t2 : trm L)
+  (EQ : embed_trm t1 = embed_trm t2)
+  : t1 = t2.
+Proof.
+  symmetry. eapply embed_trm_inj_aux. rewrite <- EQ. eapply embed_trm_graph_complete. eapply embed_trm_spec. reflexivity.
+Qed.
+
+Theorem embed_trms_inj n (ts1 : trms L n) (ts2 : trms L n)
+  (EQ : embed_trms ts1 = embed_trms ts2)
+  : ts1 = ts2.
+Proof.
+  symmetry. eapply embed_trms_inj_aux. rewrite <- EQ. eapply embed_trms_graph_complete. eapply embed_trms_spec. reflexivity.
+Qed.
+
+Theorem embed_frm_inj (p1 : frm L) (p2 : frm L)
+  (EQ : embed_frm p1 = embed_frm p2)
+  : p1 = p2.
+Proof.
+  symmetry. eapply embed_frm_inj_aux. rewrite <- EQ. eapply embed_frm_graph_complete. eapply embed_frm_spec. reflexivity.
+Qed.
+
+Lemma embed_fvs_trm (t : trm L)
+  : forall z, is_free_in_trm z (embed_trm t) = is_free_in_trm z t
+with embed_fvs_trms n (ts : trms L n)
+  : forall z, is_free_in_trms z (embed_trms ts) = is_free_in_trms z ts.
+Proof.
+  - trm_ind t; simpl; i.
+    + reflexivity.
+    + eapply embed_fvs_trms.
+    + reflexivity.
+  - trms_ind ts; simpl; i.
+    + reflexivity.
+    + rewrite embed_fvs_trm; rewrite IH; reflexivity.
+Qed.
+
+#[local] Hint Rewrite embed_fvs_trm embed_fvs_trms : simplication_hints.
+
+Lemma embed_fvs_frm (p : frm L)
+  : forall z, is_free_in_frm z (embed_frm p) = is_free_in_frm z p.
+Proof.
+  frm_ind p; done!.
+Qed.
+
+#[local] Hint Rewrite embed_fvs_frm : simplication_hints.
+
+Lemma embed_subst_trm (s : subst L) (t : trm L)
+  : embed_trm (subst_trm s t) = subst_trm (embed_trm ∘ s)%prg (embed_trm t)
+with embed_subst_trms n (s : subst L) (ts : trms L n)
+  : embed_trms (subst_trms s ts) = subst_trms (embed_trm ∘ s)%prg (embed_trms ts).
+Proof.
+  - trm_ind t; simpl; i.
+    + reflexivity.
+    + simpl. f_equal. eapply embed_subst_trms.
+    + reflexivity.
+  - trms_ind ts; simpl; i.
+    + reflexivity.
+    + simpl. f_equal.
+      * eapply embed_subst_trm.
+      * eapply IH.
+Qed.
+
+#[local] Hint Rewrite embed_subst_trm embed_subst_trms : simplication_hints.
+
+Lemma embed_chi_frm (s : subst L) (p : frm L)
+  : chi_frm s p = chi_frm (embed_trm ∘ s)%prg (embed_frm p).
+Proof.
+  unfold chi_frm. f_equal. eapply maxs_ext. i; s!.
+  split; intros [x [<- IN]]; exists x; split; ss!; unfold last_ivar_trm; eapply maxs_ext; i; ss!.
+Qed.
+
+#[local] Hint Rewrite embed_chi_frm : simplication_hints.
+
+Lemma embed_subst_frm (s : subst L) (p : frm L)
+  : embed_frm (subst_frm s p) = subst_frm (embed_trm ∘ s)%prg (embed_frm p).
+Proof.
+  revert s; frm_ind p; try done!. simpl; ii. rewrite embed_chi_frm. f_equal.
+  rewrite IH1. eapply equiv_subst_in_frm_implies_subst_frm_same. ii. s!.
+  unfold cons_subst. destruct (eq_dec z y) as [EQ1 | NE1]; done!.
+Qed.
+
+Theorem embed_frm_alpha p1 p2
+  : p1 ≡ p2 <-> embed_frm p1 ≡ embed_frm p2.
+Proof.
+  split; intros ALPHA.
+  - induction ALPHA; simpl.
+    + econs; congruence.
+    + econs; congruence.
+    + econs; congruence.
+    + econs; congruence.
+    + do 2 rewrite embed_subst_frm in IHALPHA. eapply alpha_All_frm with (z := z).
+      * etransitivity. etransitivity. 2: exact IHALPHA.
+        { eapply alpha_equiv_eq_intro. eapply equiv_subst_in_frm_implies_subst_frm_same.
+          intros u u_free. unfold compose. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec u y) as [EQ1 | NE1]; done!.
+        }
+        { eapply alpha_equiv_eq_intro. eapply equiv_subst_in_frm_implies_subst_frm_same.
+          intros u u_free. unfold compose. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec u y') as [EQ1 | NE1]; done!.
+        }
+      * change (is_free_in_frm z (embed_frm (All_frm y p1)) = false). rewrite embed_fvs_frm; trivial.
+      * change (is_free_in_frm z (embed_frm (All_frm y' p1')) = false). rewrite embed_fvs_frm; trivial.
+  - remember (embed_frm p1) as p1' eqn: H_p1'; remember (embed_frm p2) as p2' eqn: H_p2'. revert p1 p2 H_p1' H_p2'. induction ALPHA; i.
+    + subst ts'. rewrite H_p1' in H_p2'. apply embed_frm_inj in H_p2'. subst p2. reflexivity.
+    + subst t1' t2'. rewrite H_p1' in H_p2'. apply embed_frm_inj in H_p2'. subst p2. reflexivity.
+    + destruct p0; simpl in H_p1'; try congruence. destruct p2; simpl in H_p2'; try congruence.
+      inv H_p1'. inv H_p2'. econs. eapply IHALPHA; trivial.
+    + destruct p0; simpl in H_p1'; try congruence. destruct p3; simpl in H_p2'; try congruence.
+      inv H_p1'. inv H_p2'. econs; eauto.
+    + destruct p0; simpl in H_p1'; try congruence. destruct p2; simpl in H_p2'; try congruence.
+      inv H_p1'. inv H_p2'. eapply alpha_All_frm with (z := z).
+      * etransitivity. etransitivity.
+        2:{ eapply IHALPHA; [rewrite embed_subst_frm with (p := p0) (s := one_subst y0 (Var_trm z)) | rewrite embed_subst_frm with (p := p2) (s := one_subst y1 (Var_trm z))].
+          - eapply equiv_subst_in_frm_implies_subst_frm_same. intros u u_free. unfold compose, one_subst, cons_subst, nil_subst. destruct (eq_dec u y0) as [EQ1 | NE1]; done!.
+          - eapply equiv_subst_in_frm_implies_subst_frm_same. intros u u_free. unfold compose, one_subst, cons_subst, nil_subst. destruct (eq_dec u y1) as [EQ1 | NE1]; done!.
+        }
+        { eapply alpha_equiv_eq_intro. eapply equiv_subst_in_frm_implies_subst_frm_same.
+          intros u u_free. unfold compose. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec u y0) as [EQ1 | NE1]; done!.
+        }
+        { eapply alpha_equiv_eq_intro. eapply equiv_subst_in_frm_implies_subst_frm_same.
+          intros u u_free. unfold compose. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec u y1) as [EQ1 | NE1]; done!.
+        }
+      * change (is_free_in_frm z (embed_frm (All_frm y0 p0)) = false) in LFRESH. rewrite embed_fvs_frm in LFRESH; trivial.
+      * change (is_free_in_frm z (embed_frm (All_frm y1 p2)) = false) in RFRESH. rewrite embed_fvs_frm in RFRESH; trivial.
+Qed.
+
+Fixpoint shift_trm (t : trm L') : trm L :=
+  match t with
+  | Var_trm x => @Var_trm L (x + 1)
+  | Fun_trm f ts => @Fun_trm L f (shift_trms ts)
+  | Con_trm c => match c with inl cc => @Con_trm L cc | inr hc => @Var_trm L 0 end
+  end
+with shift_trms {n : nat} (ts : trms L' n) : trms L n :=
+  match ts with
+  | O_trms => @O_trms L
+  | S_trms n t ts => @S_trms L n (shift_trm t) (shift_trms ts)
+  end.
+
+Lemma shift_trm_fv (z : ivar) (t : trm L')
+  : is_free_in_trm (z + 1) (shift_trm t) = is_free_in_trm z t
+with shift_trms_fv n (z : ivar) (ts : trms L' n)
+  : is_free_in_trms (z + 1) (shift_trms ts) = is_free_in_trms z ts.
+Proof.
+  - trm_ind t; simpl; i.
+    + destruct (Nat.eqb x z) as [ | ] eqn: H_OBS.
+      * rewrite Nat.eqb_eq in H_OBS |- *. lia.
+      * rewrite Nat.eqb_neq in H_OBS |- *. lia.
+    + eapply shift_trms_fv.
+    + destruct c as [cc | hc].
+      * simpl. lia.
+      * rewrite is_free_in_trm_unfold. rewrite Nat.eqb_neq. lia.
+  - trms_ind ts; simpl; i.
+    + reflexivity.
+    + s!. rewrite shift_trm_fv. rewrite IH. reflexivity.
+Qed.
+
+Lemma shift_trm_fv_0 (t : trm L)
+  : is_free_in_trm 0 (shift_trm (embed_trm t)) = false
+with shift_trms_fv_0 n (ts : trms L n)
+  : is_free_in_trms 0 (shift_trms (embed_trms ts)) = false.
+Proof.
+  - trm_ind t; simpl; i.
+    + rewrite Nat.eqb_neq. lia.
+    + eapply shift_trms_fv_0.
+    + reflexivity.
+  - trms_ind ts; simpl; i.
+    + reflexivity.
+    + s!. split; [eapply shift_trm_fv_0 | exact IH].
+Qed.
+
+#[local] Hint Rewrite shift_trm_fv shift_trms_fv shift_trm_fv_0 shift_trms_fv_0  : simplication_hints.
+
+Fixpoint shift_frm (p : frm L') : frm L :=
+  match p with
+  | Rel_frm R ts => @Rel_frm L R (shift_trms ts)
+  | Eqn_frm t1 t2 => @Eqn_frm L (shift_trm t1) (shift_trm t2)
+  | Neg_frm p1 => @Neg_frm L (shift_frm p1)
+  | Imp_frm p1 p2 => @Imp_frm L (shift_frm p1) (shift_frm p2)
+  | All_frm y p1 => @All_frm L (y + 1) (shift_frm p1)
+  end.
+
+Lemma shift_frm_fv (z : ivar) (p : frm L')
+  : is_free_in_frm (z + 1) (shift_frm p) = is_free_in_frm z p.
+Proof.
+  frm_ind p; simpl; done!.
+Qed.
+
+Lemma shift_frm_fv_0 (p : frm L)
+  : is_free_in_frm 0 (shift_frm (embed_frm p)) = false.
+Proof.
+  frm_ind p; simpl; done!.
+Qed.
+
+Lemma shift_trm_inv (t : trm L)
+  : subst_trm (fun z : ivar => Var_trm (z - 1)) (shift_trm (embed_trm t)) = t
+with shift_trms_inv n (ts : trms L n)
+  : subst_trms (fun z : ivar => Var_trm (z - 1)) (shift_trms (embed_trms ts)) = ts.
+Proof.
+  - trm_ind t; simpl; i.
+    + f_equal. lia.
+    + simpl. f_equal. eapply shift_trms_inv.
+    + reflexivity.
+  - trms_ind ts; simpl; i.
+    + reflexivity.
+    + simpl. f_equal.
+      * eapply shift_trm_inv.
+      * eapply IH.
+Qed.
+
+#[local] Hint Rewrite shift_trm_inv shift_trms_inv : simplication_hints.
+
+Lemma shift_frm_inv (p : frm L)
+  : subst_frm (fun z : ivar => Var_trm (z - 1)) (shift_frm (embed_frm p)) ≡ p.
+Proof.
+  frm_ind p; try (econs; done!).
+  simpl. set (s := fun z : ivar => Var_trm (z - 1)) in *. set (chi := chi_frm s (All_frm (y + 1) (shift_frm (embed_frm p1)))).
+  eapply alpha_All_frm with (z := y).
+  - rewrite <- IH1 at -1. do 2 rewrite <- subst_compose_frm_spec. eapply alpha_equiv_eq_intro. eapply equiv_subst_in_frm_implies_subst_frm_same.
+    intros u u_free. unfold subst_compose, one_subst, cons_subst, nil_subst. simpl. destruct (eq_dec u (y + 1)) as [EQ1 | NE1], (eq_dec _ _) as [EQ2 | NE2]; simpl.
+    + destruct (eq_dec _ _) as [EQ3 | NE3]; done.
+    + lia.
+    + destruct u as [ | u]; [now rewrite shift_frm_fv_0 in u_free | lia].
+    + destruct (eq_dec _ _) as [EQ3 | NE3]; try done. destruct u as [ | u]; [now rewrite shift_frm_fv_0 in u_free | replace (S u) with (u + 1) in * by lia; rewrite shift_frm_fv in u_free].
+      assert (u = chi) as -> by lia.
+      pose proof (BUT := chi_frm_is_fresh_in_subst (All_frm (y + 1) (shift_frm (embed_frm p1))) s).
+      fold chi in BUT. unfold frm_is_fresh_in_subst in BUT. rewrite L.forallb_forall in BUT.
+      specialize BUT with (x := chi + 1). exploit BUT.
+      * rewrite fv_is_free_in_frm. rewrite is_free_in_frm_unfold. rewrite andb_true_iff. rewrite negb_true_iff. rewrite Nat.eqb_neq. split; trivial.
+        rewrite embed_fvs_frm in u_free.
+        assert (claim1 : is_free_in_frm chi (subst_frm s (shift_frm (embed_frm p1))) = true).
+        { eapply is_free_in_frm_compat_alpha_equiv; [symmetry | exact u_free]. done. }
+        rewrite <- free_in_frm_wrt_iff in claim1. destruct claim1 as (z & z_free & FREE).
+        unfold s in FREE. simpl in FREE. rewrite Nat.eqb_eq in FREE.
+        assert (z = chi + 1) as ->.
+        { destruct z as [ | z]; [now rewrite shift_frm_fv_0 in z_free | lia]. }
+        done.
+      * intros H_contra. unfold compose in H_contra. rewrite negb_true_iff in H_contra. unfold s in H_contra. rewrite is_free_in_trm_unfold in H_contra. rewrite Nat.eqb_neq in H_contra. lia.
+  - s!. pose proof (eq_dec y chi) as [EQ1 | NE1]; [right | left]; trivial.
+    rewrite <- frm_is_fresh_in_subst_iff. unfold frm_is_fresh_in_subst. rewrite L.forallb_forall.
+    intros u u_free. s!. unfold cons_subst. destruct (eq_dec _ _) as [EQ2 | NE2].
+    + subst u. rewrite is_free_in_trm_unfold. rewrite Nat.eqb_neq. lia.
+    + unfold s. rewrite is_free_in_trm_unfold. rewrite Nat.eqb_neq. destruct u as [ | u]; [now rewrite shift_frm_fv_0 in u_free | lia].
+  - ss!.
+Qed.
+
+Lemma shift_trm_embed_trm (t : trm L)
+  : shift_trm (embed_trm t) = subst_trm (fun z : ivar => Var_trm (z + 1)) t
+with shift_trms_embed_trms n (ts : trms L n)
+  : shift_trms (embed_trms ts) = subst_trms (fun z : ivar => Var_trm (z + 1)) ts.
+Proof.
+  - trm_ind t; simpl; i.
+    + reflexivity.
+    + simpl. f_equal. eapply shift_trms_embed_trms.
+    + reflexivity.
+  - trms_ind ts; simpl; i.
+    + reflexivity.
+    + simpl. f_equal.
+      * eapply shift_trm_embed_trm.
+      * eapply IH.
+Qed.
+
+#[local] Hint Rewrite shift_trm_embed_trm shift_trms_embed_trms : simplication_hints.
+
+Lemma shift_frm_embed_frm (p : frm L)
+  : shift_frm (embed_frm p) ≡ subst_frm (fun z : ivar => Var_trm (z + 1)) p.
+Proof.
+  frm_ind p; simpl; try (econs; done!).
+  simpl. set (s := fun z : ivar => Var_trm (z + 1)) in *. set (chi := chi_frm s (All_frm y p1)).
+  eapply alpha_All_frm with (z := y + 1).
+  - rewrite IH1 at 1. do 2 rewrite <- subst_compose_frm_spec. eapply alpha_equiv_eq_intro. eapply equiv_subst_in_frm_implies_subst_frm_same.
+    intros u u_free. unfold subst_compose, one_subst, cons_subst, nil_subst. simpl. destruct (eq_dec (u + 1) (y + 1)) as [EQ1 | NE1]; simpl; destruct (eq_dec _ _) as [EQ2 | NE2]; simpl.
+    + destruct (eq_dec _ _) as [EQ3 | NE3]; simpl; destruct (eq_dec _ _) as [EQ4 | NE4]; (done || lia).
+    + lia.
+    + destruct (eq_dec _ _) as [EQ3 | NE3]; simpl; destruct (eq_dec _ _) as [EQ4 | NE4]; (done || lia).
+    + destruct (eq_dec _ _) as [EQ3 | NE3]; simpl; destruct (eq_dec _ _) as [EQ4 | NE4]; try (done || lia).
+      assert (u = chi - 1) as -> by lia.
+      pose proof (BUT := chi_frm_is_fresh_in_subst (All_frm y p1) s). 
+      fold chi in BUT. unfold frm_is_fresh_in_subst in BUT. rewrite L.forallb_forall in BUT.
+      specialize BUT with (x := chi - 1). exploit BUT.
+      * rewrite fv_is_free_in_frm. rewrite is_free_in_frm_unfold. rewrite andb_true_iff. rewrite negb_true_iff. rewrite Nat.eqb_neq. split; trivial.
+      * intros H_contra. unfold compose in H_contra. rewrite negb_true_iff in H_contra. unfold s in H_contra. rewrite is_free_in_trm_unfold in H_contra. rewrite Nat.eqb_neq in H_contra. lia.
+  - ss!.
+  - s!. pose proof (eq_dec (y + 1) chi) as [EQ1 | NE1]; [right | left]; trivial.
+    rewrite <- frm_is_fresh_in_subst_iff. unfold frm_is_fresh_in_subst. rewrite L.forallb_forall.
+    intros u u_free. s!. unfold cons_subst. destruct (eq_dec _ _) as [EQ2 | NE2].
+    + subst u. rewrite is_free_in_trm_unfold. rewrite Nat.eqb_neq. lia.
+    + unfold s. rewrite is_free_in_trm_unfold. rewrite Nat.eqb_neq. lia.
+Qed.
+
+Lemma shift_trm_subst_trm (s : subst L') (t : trm L')
+  : shift_trm (subst_trm s t) = subst_trm (fun z : ivar => if eq_dec z 0 then Var_trm z else shift_trm (s (z - 1))) (shift_trm t)
+with shift_trms_subst_trms n (s : subst L') (ts : trms L' n)
+  : shift_trms (subst_trms s ts) = subst_trms (fun z : ivar => if eq_dec z 0 then Var_trm z else shift_trm (s (z - 1))) (shift_trms ts).
+Proof.
+  - trm_ind t; simpl.
+    + destruct (eq_dec _ _) as [EQ1 | NE1].
+      * lia.
+      * f_equal. f_equal. lia.
+    + f_equal. eapply shift_trms_subst_trms.
+    + destruct c as [cc | hc]; simpl.
+      * reflexivity.
+      * reflexivity.
+  - trms_ind ts; simpl.
+    + reflexivity.
+    + f_equal.
+      * eapply shift_trm_subst_trm.
+      * eapply IH.
+Qed.
+
+#[local] Hint Rewrite shift_trm_subst_trm shift_trms_subst_trms : simplication_hints.
+
+Lemma shift_frm_subst_frm (s : subst L') (p : frm L')
+  : shift_frm (subst_frm s p) ≡ subst_frm (fun z : ivar => if eq_dec z 0 then Var_trm z else shift_trm (s (z - 1))) (shift_frm p).
+Proof.
+  revert s; frm_ind p; i; try (simpl; econs; done!).
+  set (s' := fun z : ivar => if eq_dec z 0 then Var_trm z else shift_trm (s (z - 1))) in *.
+  rewrite subst_frm_unfold. cbn zeta. set (chi := chi_frm s (All_frm y p1)).
+  unfold shift_frm at 1. fold shift_frm. unfold shift_frm at 2. fold shift_frm.
+  rewrite subst_frm_unfold with (s := s'). cbn zeta. set (chi' := chi_frm s' (All_frm (y + 1) (shift_frm p1))).
+  rewrite IH1. eapply alpha_All_frm with (z := chi').
+  - eapply alpha_equiv_eq_intro. do 2 rewrite <- subst_compose_frm_spec. eapply equiv_subst_in_frm_implies_subst_frm_same.
+    intros u u_free. unfold subst_compose, one_subst, cons_subst, nil_subst.
+    destruct (eq_dec u 0) as [EQ1 | NE1], (eq_dec _ _) as [EQ2 | NE2].
+    + lia.
+    + rewrite subst_trm_unfold. destruct (eq_dec _ _) as [EQ3 | NE3]; [lia | unfold s'].
+      destruct (eq_dec _ _) as [EQ4 | NE4]; [rewrite subst_trm_unfold | lia].
+      destruct (eq_dec _ _) as [EQ5 | NE5]; trivial.
+      f_equal; trivial.
+    + assert (u = y + 1) as -> by lia.
+      destruct (eq_dec _ _) as [EQ3 | NE3]; [unfold shift_trm | lia].
+      rewrite subst_trm_unfold. destruct (eq_dec _ _) as [EQ4 | NE4]; [unfold subst_trm | lia].
+      destruct (eq_dec _ _) as [EQ5 | NE5]; [trivial | lia].
+    + destruct (eq_dec _ _) as [EQ3 | NE3]; [lia | unfold s'].
+      destruct (eq_dec _ _) as [EQ4 | NE4]; [lia | eapply equiv_subst_in_trm_implies_subst_trm_same].
+      intros z z_free. destruct (eq_dec _ _) as [EQ5 | NE5].
+      * subst z. rewrite shift_trm_fv in z_free. destruct (eq_dec _ _) as [EQ6 | NE6]; trivial.
+        pose proof (BUT := chi_frm_is_fresh_in_subst (All_frm y p1) s). 
+        fold chi in BUT. unfold frm_is_fresh_in_subst in BUT. rewrite L.forallb_forall in BUT. exploit (BUT (u - 1)).
+        { s!. split; trivial. destruct u as [ | u]; [lia | replace (S u) with (u + 1) in u_free by lia]. rewrite shift_frm_fv in u_free. replace (S u - 1) with u by lia; trivial. }
+        intros claim1. unfold compose in claim1. rewrite negb_true_iff in claim1. unfold s' in claim1. congruence.
+      * destruct (eq_dec _ _) as [EQ6 | NE6]; [f_equal; trivial | trivial].
+  - rewrite is_free_in_frm_unfold. rewrite andb_false_iff, negb_false_iff, Nat.eqb_eq. pose proof (eq_dec chi' (chi + 1)) as [EQ1 | NE1]; [right | left]; trivial.
+    rewrite <- frm_is_fresh_in_subst_iff. unfold frm_is_fresh_in_subst. rewrite L.forallb_forall. intros u u_free. unfold compose. rewrite negb_true_iff. destruct (eq_dec u 0) as [EQ2 | NE2].
+    + rewrite is_free_in_trm_unfold. rewrite Nat.eqb_neq. subst u. rewrite fv_is_free_in_frm in u_free.
+      intros H_contra. unfold chi' in H_contra. unfold chi_frm in H_contra. lia.
+    + unfold cons_subst. destruct (eq_dec _ _) as [EQ3 | NE3].
+      * unfold shift_trm. rewrite is_free_in_trm_unfold. rewrite Nat.eqb_neq. lia.
+      * rewrite fv_is_free_in_frm in u_free. destruct u as [ | u]; [lia | replace (S u - 1) with u in * by lia].
+        replace (S u) with (u + 1) in u_free by lia. rewrite shift_frm_fv in u_free.
+        enough (WTS : is_free_in_trm chi' (shift_trm (s u)) <> true) by now destruct (is_free_in_trm chi' (shift_trm (s u))).
+        intros H_contra. clear NE2.
+        pose proof (BUT := chi_frm_is_fresh_in_subst (All_frm (y + 1) (shift_frm p1)) s'). 
+        fold chi' in BUT. unfold frm_is_fresh_in_subst in BUT. rewrite L.forallb_forall in BUT. exploit (BUT (u + 1)).
+        { s!. split; [rewrite shift_frm_fv | lia]; trivial. }
+        intros claim1. unfold compose in claim1. rewrite negb_true_iff in claim1. unfold s' in claim1. destruct (eq_dec _ _) as [EQ4 | NE4]; [lia | replace (u + 1 - 1) with u in claim1 by lia; congruence].
+  - ss!.
+Qed.
+
+Lemma shift_frm_subst_frm_once (x : ivar) (t : trm L') (p : frm L')
+  : shift_frm (subst_frm (one_subst x t) p) ≡ subst_frm (one_subst (x + 1) (shift_trm t)) (shift_frm p).
+Proof.
+  rewrite shift_frm_subst_frm. eapply alpha_equiv_eq_intro. eapply equiv_subst_in_frm_implies_subst_frm_same.
+  intros u u_free. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec u (x + 1)) as [EQ1 | NE1].
+  - destruct (eq_dec _ _) as [EQ2 | NE2].
+    + lia.
+    + destruct (eq_dec _ _) as [EQ3 | NE3].
+      * reflexivity.
+      * lia.
+  - destruct (eq_dec _ _) as [EQ2 | NE2].
+    + destruct u as [ | u].
+      * reflexivity.
+      * lia.
+    + destruct (eq_dec _ _) as [EQ3 | NE3].
+      * lia.
+      * simpl. f_equal. lia.
+Qed.
+
 End SIMILARITY.
 
 End EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
+
+#[global] Arguments embed_trm {_} {_} {_} {_} {_} {_}.
+#[global] Arguments embed_trms {_} {_} {_} {_} {_} {_} {_}.
+#[global] Arguments embed_frm {_} {_} {_} {_} {_} {_}.
+#[global] Arguments shift_trm {_} {_} {_} {_} {_} {_}.
+#[global] Arguments shift_trms {_} {_} {_} {_} {_} {_} {_}.
+#[global] Arguments shift_frm {_} {_} {_} {_} {_} {_}.
 
 #[global] Opaque fvs_trm fvs_trms.
 #[global] Hint Rewrite @fvs_trm_unfold @fvs_trms_unfold : simplication_hints.
@@ -2640,3 +3302,51 @@ Lemma extend_entails {L : language} (Gamma : ensemble (@frm L)) (Gamma' : ensemb
 Proof.
   ii. eapply ENTAILS; done!.
 Qed.
+
+Section RESTRICT_STRUCTURE.
+
+Context {L : language} {Henkin_constants : Set}.
+
+#[local] Notation L' := (mkL_with_constant_symbols L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) (L.(constant_symbols) + Henkin_constants)).
+
+#[local]
+Instance restrict_structure (STRUCTURE : isStructureOf L') : isStructureOf L :=
+  { domain_of_discourse := STRUCTURE.(domain_of_discourse)
+  ; equation_interpret := STRUCTURE.(equation_interpret)
+  ; function_interpret (f : L.(function_symbols)) := STRUCTURE.(function_interpret) f
+  ; constant_interpret (c : L.(constant_symbols)) := STRUCTURE.(constant_interpret) (inl c)
+  ; relation_interpret (R : L.(relation_symbols)) := STRUCTURE.(relation_interpret) R
+  ; domain_is_nonempty := STRUCTURE.(domain_is_nonempty)
+  ; function_interpret_preserves_eqProp := STRUCTURE.(function_interpret_preserves_eqProp)
+  ; relation_interpret_preserves_eqProp := STRUCTURE.(relation_interpret_preserves_eqProp)
+  }.
+
+Lemma restrict_structure_trm (STRUCTURE : isStructureOf L') (env : ivar -> domain_of_discourse) (t : trm L)
+  : interpret_trm STRUCTURE env (embed_trm t) == interpret_trm (restrict_structure STRUCTURE) env t
+with restrict_structure_trms n (STRUCTURE : isStructureOf L') (env : ivar -> domain_of_discourse) (ts : trms L n)
+  : interpret_trms STRUCTURE env (embed_trms ts) == interpret_trms (restrict_structure STRUCTURE) env ts.
+Proof.
+  - clear restrict_structure_trm; trm_ind t.
+    + reflexivity.
+    + simpl embed_trm. do 2 rewrite interpret_trm_unfold with (t := Fun_trm _ _); f_equal.
+      rewrite function_interpret_preserves_eqProp. 2: eapply restrict_structure_trms. reflexivity.
+    + reflexivity.
+  - clear restrict_structure_trms; trms_ind ts.
+    + reflexivity.
+    + simpl embed_trms. do 2 rewrite interpret_trms_unfold with (ts := S_trms _ _ _); f_equal. simpl. Fin.caseS i.
+      * simpl. eapply restrict_structure_trm.
+      * simpl. eapply IH.
+Qed.
+
+Lemma restrict_structure_frm (STRUCTURE : isStructureOf L') (env : ivar -> domain_of_discourse) (p : frm L)
+  : interpret_frm STRUCTURE env (embed_frm p) == interpret_frm (restrict_structure STRUCTURE) env p.
+Proof.
+  revert env. frm_ind p; simpl; i.
+  - rewrite relation_interpret_preserves_eqProp. 2: eapply restrict_structure_trms. reflexivity.
+  - split; intros H; do 2 rewrite restrict_structure_trm in *; eauto.
+  - done!.
+  - done!.
+  - done!.
+Qed.
+
+End RESTRICT_STRUCTURE.
