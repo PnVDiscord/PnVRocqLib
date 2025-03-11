@@ -873,7 +873,7 @@ Variant MaximallyConsistentSet_spec (X : ensemble formula) (F : ensemble formula
     (CLOSED_infers : forall A : formula, A \in F <-> F ⊢ A)
     (META_DN : forall A : formula, << NEGATION : Neg_frm A \in F -> Bot_frm \in F >> -> A \in F)
     (IMPLICATION_FAITHFUL : forall A : formula, forall B : formula, Imp_frm A B \in F <-> << IMPLICATION : A \in F -> B \in F >>)
-    (FORALL_FAITHFUL : forall x : ivar, forall A : formula, All_frm x A \in F <-> << IMPLICATION : forall t : trm L, subst_frm (one_subst x t) A \in F >>)
+    (FORALL_FAITHFUL : forall x : ivar, forall A : formula, All_frm x A \in F <-> << FORALL : forall t : trm L, subst_frm (one_subst x t) A \in F >>)
     : MaximallyConsistentSet_spec X F.
 
 End EXTRA1.
