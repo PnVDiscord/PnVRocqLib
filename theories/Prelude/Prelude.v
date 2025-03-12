@@ -95,6 +95,30 @@ Next Obligation.
   - intros p1 p2 p3 EQ EQ'. split; etransitivity. exact (proj1 EQ). exact (proj1 EQ'). exact (proj2 EQ). exact (proj2 EQ').
 Defined.
 
+Inductive option_eqProp {A : Type} (eqProp : A -> A -> Prop) : forall lhs : option A, forall rhs : option A, Prop :=
+  | option_eqProp_None
+    : @option_eqProp A eqProp (@None A) (@None A)
+  | option_eqProp_Some (x : A) (y : A)
+    (x_eq_y : eqProp x y)
+    : @option_eqProp A eqProp (@Some A x) (@Some A y).
+
+#[global]
+Instance option_eqProp_Equivalence {A : Type} (eqProp : A -> A -> Prop)
+  (eqProp_Equivalence : Equivalence eqProp)
+  : Equivalence (option_eqProp eqProp).
+Proof with eauto.
+  split.
+  - intros [x | ]; econs. reflexivity...
+  - intros ? ? [ | x y x_eq_y]; econs. symmetry...
+  - intros ? ? ? [ | x y x_eq_y] EQ; inv EQ; econs. etransitivity...
+Qed.
+
+#[global, program]
+Instance option_isSetoid {A : Type@{U_discourse}} (SETOID : isSetoid A) : isSetoid (option A) :=
+  { eqProp := option_eqProp eqProp
+  ; eqProp_Equivalence := option_eqProp_Equivalence eqProp eqProp_Equivalence
+  }.
+
 Lemma eqProp_refl {A : Type} `{A_isSetoid : isSetoid A}
   : forall x : A, x == x.
 Proof.
@@ -121,7 +145,7 @@ Class eqPropCompatible2 {A : Type} {B : Type} {C : Type} `{A_isSetoid : isSetoid
 
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} `{A_isSetoid : isSetoid A} `{B_isSetoid : isSetoid B} (f : A -> B)
-  `(COMPAT : @eqPropCompatible1 A B A_isSetoid B_isSetoid f)
+  (COMPAT : @eqPropCompatible1 A B A_isSetoid B_isSetoid f)
   : f with signature (eqProp ==> eqProp)
   as compatibleWith_eqProp_1'.
 Proof.
@@ -130,7 +154,7 @@ Defined.
 
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isSetoid : isSetoid A} `{B_isSetoid : isSetoid B} `{C_isSetoid : isSetoid C} (f : A -> B -> C)
-  `(COMPAT : @eqPropCompatible2 A B C A_isSetoid B_isSetoid C_isSetoid f)
+  (COMPAT : @eqPropCompatible2 A B C A_isSetoid B_isSetoid C_isSetoid f)
   : f with signature (eqProp ==> eqProp ==> eqProp)
   as compatibleWith_eqProp_2'.
 Proof.
@@ -213,7 +237,7 @@ Class isMonotonic2 {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `
 
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} (f : A -> B)
-  `(MONOTONIC : @isMonotonic1 A B A_isProset B_isProset f)
+  (MONOTONIC : @isMonotonic1 A B A_isProset B_isProset f)
   : f with signature (eqProp ==> eqProp)
   as isMonotonic1_compatWith_eqProp.
 Proof.
@@ -224,7 +248,7 @@ Defined.
 
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} (f : A -> B)
-  `(MONOTONIC : @isMonotonic1 A B A_isProset B_isProset f)
+  (MONOTONIC : @isMonotonic1 A B A_isProset B_isProset f)
   : f with signature (leProp ==> leProp)
   as compatibleWith_leProp_1'.
 Proof.
@@ -233,7 +257,7 @@ Defined.
 
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
+  (MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (eqProp ==> eqProp ==> eqProp)
   as isMonotonic2_compatWith_eqProp.
 Proof.
@@ -244,7 +268,7 @@ Defined.
 
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
+  (MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (leProp ==> leProp ==> leProp)
   as compatibleWith_leProp_2'.
 Proof.
@@ -253,7 +277,7 @@ Defined.
 
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
+  (MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (eqProp ==> leProp ==> leProp)
   as compatibleWith_leProp_2_eqProp_l.
 Proof.
@@ -262,7 +286,7 @@ Defined.
 
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
+  (MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (leProp ==> eqProp ==> leProp)
   as compatibleWith_leProp_2_eqProp_r.
 Proof.
@@ -271,7 +295,7 @@ Defined.
 
 #[global]
 Add Parametric Morphism {A : Type} {B : Type} {C : Type} `{A_isProset : isProset A} `{B_isProset : isProset B} `{C_isProset : isProset C} (f : A -> B -> C)
-  `(MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
+  (MONOTONIC : @isMonotonic2 A B C A_isProset B_isProset C_isProset f)
   : f with signature (eqProp ==> eqProp ==> leProp)
   as compatibleWith_leProp_2_eqProp_lr.
 Proof.
@@ -323,8 +347,8 @@ Defined.
 
 #[local]
 Instance relation_on_image_liftsPartialOrder {A : Type} {B : Type} {eqProp : B -> B -> Prop} {leProp : B -> B -> Prop}
-  `{isEquivalence : @Equivalence B eqProp}
-  `{isPreOrder : @PreOrder B leProp}
+  {isEquivalence : @Equivalence B eqProp}
+  {isPreOrder : @PreOrder B leProp}
   (isPartialOrder : PartialOrder eqProp leProp)
   : forall f : A -> B, PartialOrder (binary_relation_on_image eqProp f) (binary_relation_on_image leProp f).
 Proof.
@@ -984,7 +1008,7 @@ Instance stateT_isSetoid1 {S} {M} `{SETOID1 : isSetoid1 M} : isSetoid1 (B.stateT
 
 #[local]
 Instance stateT_satisfiesMonadLaws {S} {M} `{SETOID1 : isSetoid1 M} `{MONAD : isMonad M}
-  `(MONAD_LAWS : @MonadLaws M SETOID1 MONAD)
+  (MONAD_LAWS : @MonadLaws M SETOID1 MONAD)
   : MonadLaws (B.stateT S M).
 Proof.
   split; i.
@@ -1035,10 +1059,34 @@ Definition ne_None_elim {A : Type} (x : option A) (ne_None : x <> None) : { x' :
   end.
 
 #[global]
+Instance option_isSetoid1 : isSetoid1 option :=
+  @option_isSetoid.
+
+#[global]
 Instance option_isMonad : isMonad option :=
   { pure {A : Type} := @Some A
   ; bind {A : Type} {B : Type} (m : option A) (k : A -> option B) := maybe None k m
   }.
+
+#[global]
+Instance option_satisfiesMonadLaws
+  : MonadLaws option (SETOID1 := option_isSetoid1) (MONAD := option_isMonad).
+Proof.
+  split; i; simpl in *.
+  - inv m_EQ; simpl.
+    + econs.
+    + reflexivity.
+  - destruct m as [x | ]; simpl.
+    + specialize k_EQ with (x := x). trivial.
+    + econs.
+  - destruct m as [x | ]; simpl.
+    + reflexivity.
+    + econs.
+  - reflexivity.
+  - destruct m as [x | ]; simpl.
+    + reflexivity.
+    + econs.
+Qed.
 
 #[universes(polymorphic=yes)]
 Definition Rel_id@{u} {A : Type@{u}} : ensemble@{u} (A * A) :=

@@ -123,9 +123,9 @@ Section TRANSFINITE.
 
 Context {D : Type@{U_discourse}} (suc : D -> D) (lim : forall A : Type@{Set_u}, (A -> D) -> D).
 
-Fixpoint transfinite_rec (o : Ord) {struct o} : D :=
-  match o with
-  | mkNode cs ts => lim cs (fun c => suc (transfinite_rec (ts c)))
+Fixpoint transfinite_rec (t : Ord) {struct t} : D :=
+  match t with
+  | mkNode cs ts => lim cs (fun c : cs => suc (transfinite_rec (ts c)))
   end.
 
 End TRANSFINITE.
@@ -158,7 +158,7 @@ Variable R : A -> A -> Prop.
 Hypothesis R_wf : well_founded R.
 
 Definition toSet_eqProp (lhs : A) (rhs : A) : Prop :=
-  fromAcc lhs (R_wf lhs) =ᵣ fromAcc rhs (R_wf rhs).
+  @fromAcc A R lhs (R_wf lhs) =ᵣ @fromAcc A R rhs (R_wf rhs).
 
 End TOTALIFY.
 

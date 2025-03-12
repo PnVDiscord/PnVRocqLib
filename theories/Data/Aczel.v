@@ -997,9 +997,16 @@ Proof.
   intros i x. induction (lt_wf i x) as [x _ IH]. i. econs. i. inv H. des; subst. inv H0. destruct LE; eauto. subst x'. simpl in *; congruence.
 Qed.
 
-Fixpoint toSet (t : Tree) : { D : Type@{Set_V} & D -> D -> Prop } :=
+Fixpoint toSet (t : Tree) : { D : Type@{Set_u} & D -> D -> Prop } :=
   match t with
-  | mkNode cs ts => @existT Type@{Set_V} (fun D : Type@{Set_V} => D -> D -> Prop) { c : cs & option (projT1 (toSet (ts c))) } (toSet_lt (fun c : cs => projT2 (toSet (ts c))))
+  | mkNode cs ts => @existT Type@{Set_u} (fun D : Type@{Set_u} => D -> D -> Prop) { c : cs & option (projT1 (toSet (ts c))) } (toSet_lt (fun c : cs => projT2 (toSet (ts c))))
   end.
+
+Lemma toSet_well_founded (t : Tree)
+  : @well_founded (projT1 (toSet t)) (projT2 (toSet t)).
+Proof.
+  induction t as [cs ts IH]; simpl in *.
+  eapply toSet_lt_well_founded. exact IH.
+Defined.
 
 End ToSet.
