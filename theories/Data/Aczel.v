@@ -153,7 +153,7 @@ Qed.
 
 #[global] Hint Resolve member_intro : aczel_hints.
 
-Theorem extenesionality x y
+Theorem extensionality x y
   (EXT_EQ : forall z, z \in x <-> z \in y)
   : x == y.
 Proof.
@@ -182,7 +182,7 @@ Instance isSubsetOf_PartialOrder
 Proof.
   intros x y. cbn. unfold flip. rewrite eqTree_unfold. split.
   - intros EQ. split; ii; rewrite EQ in *; done.
-  - intros [LE GE]. eapply extenesionality; done.
+  - intros [LE GE]. eapply extensionality; done.
 Qed.
 
 Lemma eqTree_intro (lhs : Tree) (rhs : Tree)
