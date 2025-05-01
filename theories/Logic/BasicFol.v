@@ -236,7 +236,8 @@ Section ENUMERATION.
 
 Context {L : language}.
 
-Let rank : Set := nat.
+Let rank : Set :=
+  nat.
 
 Fixpoint trm_depth (t : trm L) : rank :=
   match t with
@@ -2085,7 +2086,8 @@ Section EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
 
 Section SIMILARITY.
 
-Let arity : Set := nat.
+Let arity : Set :=
+  nat.
 
 Context (_function_symbols : Set) (_relation_symbols : Set) (_function_arity_table : _function_symbols -> arity) (_relation_arity_table : _relation_symbols -> arity) (_function_arity_gt_0 : forall f : _function_symbols, _function_arity_table f > 0) (_relation_arity_gt_0 : forall R : _relation_symbols, _relation_arity_table R > 0).
 
