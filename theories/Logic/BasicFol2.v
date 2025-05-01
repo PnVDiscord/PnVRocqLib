@@ -26,6 +26,8 @@ Definition augmented_language (L : language) (Henkin_constants : Set) : language
     relation_symbols := L.(relation_symbols);
     function_arity_table := L.(function_arity_table);
     relation_arity_table := L.(relation_arity_table);
+    function_arity_gt_0 := L.(function_arity_gt_0);
+    relation_arity_gt_0 := L.(relation_arity_gt_0);
   |}.
 
 Definition Henkin_constants : Set :=

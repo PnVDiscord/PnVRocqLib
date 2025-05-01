@@ -1034,7 +1034,7 @@ Proof.
 Qed.
 
 Theorem similar_equiconsistent (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L'))
-  (SIM : is_similar_to (Similarity := frms_sim _ _ _ _ _ Henkin_constants) Gamma Gamma')
+  (SIM : is_similar_to (Similarity := frms_sim _ _ _ _ _ _ _ Henkin_constants) Gamma Gamma')
   : inconsistent Gamma <-> inconsistent Gamma'.
 Proof.
   split; intros INCONSISTENT.
@@ -1066,7 +1066,7 @@ Lemma proves_shift (Gamma : ensemble (frm L')) (p : frm L')
   (PROVE : Gamma ⊢ p)
   : E.image shift_frm Gamma ⊢ shift_frm p.
 Proof.
-  assert (empty_proof_intro : forall q : frm (mkL_with_constant_symbols (function_symbols L) (relation_symbols L) (function_arity_table L) (relation_arity_table L) (constant_symbols L)), proof [] q -> E.empty ⊢ q).
+  assert (empty_proof_intro : forall q : frm (mkL_with_constant_symbols (function_symbols L) (relation_symbols L) (function_arity_table L) (relation_arity_table L) (function_arity_gt_0 L) (relation_arity_gt_0 L) (constant_symbols L)), proof [] q -> E.empty ⊢ q).
   { ii. exists []. split. intros ?. done. econstructor. eassumption. }
   destruct PROVE as (ps&INCL&(PF)).
   assert (PROVE : E.fromList ps ⊢ p).

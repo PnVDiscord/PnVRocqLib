@@ -15,6 +15,8 @@ Record language : Type :=
   ; relation_symbols : Set
   ; function_arity_table : function_symbols -> nat
   ; relation_arity_table : relation_symbols -> nat
+  ; function_arity_gt_0 : forall f : function_symbols, function_arity_table f > 0
+  ; relation_arity_gt_0 : forall R : relation_symbols, relation_arity_table R > 0
   }.
 
 Section FOL_DEF.
@@ -2085,7 +2087,7 @@ Section SIMILARITY.
 
 Let arity : Set := nat.
 
-Context (_function_symbols : Set) (_relation_symbols : Set) (_function_arity_table : _function_symbols -> arity) (_relation_arity_table : _relation_symbols -> arity).
+Context (_function_symbols : Set) (_relation_symbols : Set) (_function_arity_table : _function_symbols -> arity) (_relation_arity_table : _relation_symbols -> arity) (_function_arity_gt_0 : forall f : _function_symbols, _function_arity_table f > 0) (_relation_arity_gt_0 : forall R : _relation_symbols, _relation_arity_table R > 0).
 
 Definition mkL_with_constant_symbols (_constant_symbols : Set) : language :=
   {|
@@ -2094,6 +2096,8 @@ Definition mkL_with_constant_symbols (_constant_symbols : Set) : language :=
     relation_symbols := _relation_symbols;
     function_arity_table := _function_arity_table;
     relation_arity_table := _relation_arity_table;
+    function_arity_gt_0 := _function_arity_gt_0;
+    relation_arity_gt_0 := _relation_arity_gt_0;
   |}.
 
 Context (_constant_symbols : Set).
@@ -2927,12 +2931,12 @@ End SIMILARITY.
 
 End EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
 
-#[global] Arguments embed_trm {_} {_} {_} {_} {_} {_}.
-#[global] Arguments embed_trms {_} {_} {_} {_} {_} {_} {_}.
-#[global] Arguments embed_frm {_} {_} {_} {_} {_} {_}.
-#[global] Arguments shift_trm {_} {_} {_} {_} {_} {_}.
-#[global] Arguments shift_trms {_} {_} {_} {_} {_} {_} {_}.
-#[global] Arguments shift_frm {_} {_} {_} {_} {_} {_}.
+#[global] Arguments embed_trm {_} {_} {_} {_} {_} {_} {_} {_}.
+#[global] Arguments embed_trms {_} {_} {_} {_} {_} {_} {_} {_} {_}.
+#[global] Arguments embed_frm {_} {_} {_} {_} {_} {_} {_} {_}.
+#[global] Arguments shift_trm {_} {_} {_} {_} {_} {_} {_} {_}.
+#[global] Arguments shift_trms {_} {_} {_} {_} {_} {_} {_} {_} {_}.
+#[global] Arguments shift_frm {_} {_} {_} {_} {_} {_} {_} {_}.
 
 #[global] Opaque fvs_trm fvs_trms.
 #[global] Hint Rewrite @fvs_trm_unfold @fvs_trms_unfold : simplication_hints.
@@ -3307,7 +3311,7 @@ Section RESTRICT_STRUCTURE.
 
 Context {L : language} {Henkin_constants : Set}.
 
-#[local] Notation L' := (mkL_with_constant_symbols L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) (L.(constant_symbols) + Henkin_constants)).
+#[local] Notation L' := (mkL_with_constant_symbols L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(function_arity_gt_0) L.(relation_arity_gt_0) (L.(constant_symbols) + Henkin_constants)).
 
 #[local]
 Instance restrict_structure (STRUCTURE : isStructureOf L') : isStructureOf L :=
