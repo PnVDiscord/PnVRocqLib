@@ -23,7 +23,11 @@ Require Export Coq.Setoids.Setoid.
 Tactic Notation "rewrite!" :=
   autorewrite with simplication_hints in *.
 
+Universe U_cosmos.
+
 Universe U_discourse.
+
+Constraint U_discourse < U_cosmos.
 
 Universe U_small.
 
@@ -310,7 +314,7 @@ Proof.
   firstorder.
 Qed.
 
-Class isSetoid1 (F : Type@{U_discourse} -> Type@{U_discourse}) : Type@{U_discourse + 1} :=
+Class isSetoid1 (F : Type@{U_discourse} -> Type@{U_discourse}) : Type@{U_cosmos} :=
   liftSetoid1 (X : Type@{U_discourse}) `(SETOID : isSetoid X) : isSetoid (F X).
 
 Definition mkSetoid_from_eq {A : Type} : isSetoid A :=

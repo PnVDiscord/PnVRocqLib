@@ -2,14 +2,10 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Control.Monad.
 Require Import PnV.Control.Category.
 
-Universe U_itree.
-
-Constraint U_small < U_itree.
-
 Declare Scope itree_scope.
 Open Scope itree_scope.
 
-Variant itreeF (itree : Type@{U_itree}) (E : Type@{U_itree} -> Type@{U_itree}) (R : Type@{U_itree}) : Type@{U_itree} :=
+Variant itreeF (itree : Type@{U_discourse}) (E : Type@{U_discourse} -> Type@{U_discourse}) (R : Type@{U_discourse}) : Type@{U_discourse} :=
   | RetF (r : R) : itreeF itree E R
   | TauF (t : itree) : itreeF itree E R
   | VisF (X : Type@{U_small}) (e : E X) (k : X -> itree) : itreeF itree E R.
@@ -19,7 +15,7 @@ Variant itreeF (itree : Type@{U_itree}) (E : Type@{U_itree} -> Type@{U_itree}) (
 #[global] Arguments VisF {itree} {E}%_type_scope {R}%_type_scope X%_type_scope e k%_itree_scope.
 
 #[projections(primitive)]
-CoInductive itree (E : Type@{U_itree} -> Type@{U_itree}) (R : Type@{U_itree}) : Type@{U_itree} :=
+CoInductive itree (E : Type@{U_discourse} -> Type@{U_discourse}) (R : Type@{U_discourse}) : Type@{U_discourse} :=
   go { observe : itreeF (itree E R) E R }.
 
 #[global] Arguments go {E}%_type_scope {R}%_type_scope observe.
@@ -91,26 +87,29 @@ Section CATEGORY.
 
 Import CAT.
 
+Let U : Type@{U_cosmos} :=
+  Type@{U_discourse}.
+
 #[global]
-Instance handlerCat : isCategory :=
-  { ob := Type -> Type
-  ; hom (E : Type -> Type) (E' : Type -> Type) := E ~~> itree E'
-  ; compose {E : Type -> Type} {E' : Type -> Type} {E'' : Type -> Type} (h2 : E' ~~> itree E'') (h1 : E ~~> itree E') := fun R : Type => fun e : E R => itree_interpret (E := E') (M := itree E'') h2 R (h1 R e)
-  ; id {E : Type -> Type} := itree_trigger (E := E)
+Instance handlerCat : isCategory@{U_cosmos U_discourse} :=
+  { ob := U -> U
+  ; hom (E : U -> U) (E' : U -> U) := E ~~> itree E'
+  ; compose {E : U -> U} {E' : U -> U} {E'' : U -> U} (h2 : E' ~~> itree E'') (h1 : E ~~> itree E') := fun R : Type@{U_small} => fun e : E R => itree_interpret (E := E') (M := itree E'') h2 R (h1 R e)
+  ; id {E : U -> U} := itree_trigger (E := E)
   }.
 
 #[global]
-Instance handlerCat_hasCoproduct : hasCoproduct handlerCat :=
+Instance handlerCat_hasCoproduct : hasCoproduct@{U_cosmos U_discourse} handlerCat :=
   { sum := B.sum1
-  ; inl {E : Type -> Type} {E' : Type -> Type} := fun R : Type => fun e : E R => itree_trigger R (@B.inl1 E E' R e)
-  ; inr {E : Type -> Type} {E' : Type -> Type} := fun R : Type => fun e : E' R => itree_trigger R (@B.inr1 E E' R e)
-  ; case {E : Type -> Type} {E' : Type -> Type} {E'' : Type -> Type} (h1 : E ~~> itree E'') (h2 : E' ~~> itree E'') := fun R : Type => @B.sum1_rect _ _ _ (fun _ : B.sum1 E E' R => itree E'' R) (h1 R) (h2 R)
+  ; inl {E : U -> U} {E' : U -> U} := fun R : Type@{U_small} => fun e : E R => itree_trigger R (@B.inl1 E E' R e)
+  ; inr {E : U -> U} {E' : U -> U} := fun R : Type@{U_small} => fun e : E' R => itree_trigger R (@B.inr1 E E' R e)
+  ; case {E : U -> U} {E' : U -> U} {E'' : U -> U} (h1 : E ~~> itree E'') (h2 : E' ~~> itree E'') := fun R : Type@{U_small} => @B.sum1_rect _ _ _ (fun _ : B.sum1 E E' R => itree E'' R) (h1 R) (h2 R)
   }.
 
 #[global]
-Instance handlerCat_hasInitial : hasInitial handlerCat :=
+Instance handlerCat_hasInitial : hasInitial@{U_cosmos U_discourse} handlerCat :=
   { void := B.void1
-  ; exfalso {E : Type -> Type} := fun R : Type => @B.void1_rect _ (fun _ : B.void1 R => itree E R)
+  ; exfalso {E : U -> U} := fun R : Type@{U_small} => @B.void1_rect _ (fun _ : B.void1 R => itree E R)
   }.
 
 End CATEGORY.
@@ -119,8 +118,8 @@ Section RECURSION.
 
 #[local] Notation endo X := (X -> X).
 
-Definition itree_interpret_mrec {E1 : Type -> Type} {E2 : Type -> Type} (ctx : E1 ~~> itree (E1 +' E2)) : itree (E1 +' E2) ~~> itree E2 :=
-  fun R : Type => monad_iter $ fun t0 : itree (E1 +' E2) R =>
+Definition itree_interpret_mrec {E1 : handlerCat.(CAT.ob)} {E2 : handlerCat.(CAT.ob)} (ctx : E1 ~~> itree (E1 +' E2)) : itree (E1 +' E2) ~~> itree E2 :=
+  fun R : Type@{U_small} => monad_iter $ fun t0 : itree (E1 +' E2) R =>
     match observe t0 with
     | RetF r => Ret (inr r)
     | TauF t => Ret (inl t)
@@ -131,19 +130,19 @@ Definition itree_interpret_mrec {E1 : Type -> Type} {E2 : Type -> Type} (ctx : E
       end
     end.
 
-Definition itree_mrec {E : Type -> Type} {E' : Type -> Type} (ctx : E ~~> itree (E +' E')) : E ~~> itree E' :=
-  fun R : Type => fun e : E R => itree_interpret_mrec (E1 := E) (E2 := E') ctx R (ctx R e).
+Definition itree_mrec {E : handlerCat.(CAT.ob)} {E' : handlerCat.(CAT.ob)} (ctx : E ~~> itree (E +' E')) : E ~~> itree E' :=
+  fun R : Type@{U_small} => fun e : E R => itree_interpret_mrec (E1 := E) (E2 := E') ctx R (ctx R e).
 
-Definition itree_mrec_fix {E : Type -> Type} {E' : Type -> Type} (ctx : endo (E ~~> itree (E +' E'))) : E ~~> itree E' :=
+Definition itree_mrec_fix {E : handlerCat.(CAT.ob)} {E' : handlerCat.(CAT.ob)} (ctx : endo (E ~~> itree (E +' E'))) : E ~~> itree E' :=
   itree_mrec (E := E) (E' := E') (ctx handlerCat_hasCoproduct.(CAT.inl)).
 
-Definition itree_rec {E : Type -> Type} {I : Type} {R : Type} (body : I -> itree (callE I R +' E) R) (arg : I) : itree E R :=
+Definition itree_rec {E : handlerCat.(CAT.ob)} {I : Type@{U_small}} {R : Type@{U_small}} (body : I -> itree (callE I R +' E) R) (arg : I) : itree E R :=
   itree_mrec (E := callE I R) (E' := E) (callE_handler body) R (Call arg).
 
-Definition itree_call {E : Type -> Type} {I : Type} {R : Type} (arg : I) : itree (callE I R +' E) R :=
+Definition itree_call {E : handlerCat.(CAT.ob)} {I : Type@{U_small}} {R : Type@{U_small}} (arg : I) : itree (callE I R +' E) R :=
   handlerCat_hasCoproduct.(CAT.inl) R (Call arg).
 
-Definition itree_rec_fix {E : Type -> Type} {I : Type} {R : Type} (body : endo (I -> itree (callE I R +' E) R)) : I -> itree E R :=
+Definition itree_rec_fix {E : handlerCat.(CAT.ob)} {I : Type@{U_small}} {R : Type@{U_small}} (body : endo (I -> itree (callE I R +' E) R)) : I -> itree E R :=
   itree_rec (E := E) (I := I) (R := R) (body itree_call).
 
 End RECURSION.
