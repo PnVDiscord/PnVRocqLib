@@ -701,7 +701,7 @@ Proof.
   rewrite claim1 in PROVE1. rewrite <- Deduction_theorem in PROVE1.
   destruct PROVE1 as (ps1&INCL1&(PF1)), PROVE2 as (ps2&INCL2&(PF2)).
   exists ps2. split. done. econstructor. rewrite <- app_nil_l with (l := ps2).
-  assert (claim2: ps1 = []).
+  assert (claim2 : ps1 = []).
   { destruct ps1 as [ | p' ps']. reflexivity. assert (IN : p' \in E.fromList (p' :: ps')) by now done!. apply INCL1 in IN. inv IN. }
   subst ps1. eapply MP; [exact PF1 | exact PF2].
 Qed.

@@ -116,7 +116,7 @@ Proof.
   induction n as [ | n IH]; simpl; eauto with *.
 Qed.
 
-Lemma pow_concat (n1 : nat) (n2 : nat) (s : list A)
+Lemma pow_app (n1 : nat) (n2 : nat) (s : list A)
   : s ^ (n1 + n2) = s ^ n1 ++ s ^ n2.
 Proof.
   revert n2 s. induction n1 as [ | n1 IH]; simpl; eauto.
