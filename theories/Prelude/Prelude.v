@@ -526,7 +526,7 @@ Proof.
 Qed.
 
 Lemma liftM2_spec {A : Type} {B : Type} {C : Type} (f : A -> B -> C) (X : E.t A) (Y : E.t B)
-  : forall z, z \in liftM2 f X Y <-> exists x, x \in X /\ exists y, y \in Y /\ z = f x y.
+  : forall z, z \in liftM2 f X Y <-> (exists x, x \in X /\ exists y, y \in Y /\ z = f x y).
 Proof.
   cbv; firstorder.
 Qed.
@@ -1137,7 +1137,7 @@ Proof.
 Qed.
 
 Theorem eqb_spec {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A) (b : bool)
-  : eqb x y = b <-> if b then x = y else x <> y.
+  : eqb x y = b <-> (if b then x = y else x <> y).
 Proof.
   destruct b; [eapply eqb_eq | eapply eqb_neq].
 Qed.

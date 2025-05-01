@@ -2,10 +2,14 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Control.Monad.
 Require Import PnV.Control.Category.
 
+Universe U_itree.
+
+Constraint U_small < U_itree.
+
 Declare Scope itree_scope.
 Open Scope itree_scope.
 
-Variant itreeF (itree : Type@{U_discourse}) (E : Type@{U_discourse} -> Type@{U_discourse}) (R : Type@{U_discourse}) : Type@{U_discourse} :=
+Variant itreeF (itree : Type@{U_itree}) (E : Type@{U_itree} -> Type@{U_itree}) (R : Type@{U_itree}) : Type@{U_itree} :=
   | RetF (r : R) : itreeF itree E R
   | TauF (t : itree) : itreeF itree E R
   | VisF (X : Type@{U_small}) (e : E X) (k : X -> itree) : itreeF itree E R.
@@ -15,7 +19,7 @@ Variant itreeF (itree : Type@{U_discourse}) (E : Type@{U_discourse} -> Type@{U_d
 #[global] Arguments VisF {itree} {E}%_type_scope {R}%_type_scope X%_type_scope e k%_itree_scope.
 
 #[projections(primitive)]
-CoInductive itree (E : Type@{U_discourse} -> Type@{U_discourse}) (R : Type@{U_discourse}) : Type@{U_discourse} :=
+CoInductive itree (E : Type@{U_itree} -> Type@{U_itree}) (R : Type@{U_itree}) : Type@{U_itree} :=
   go { observe : itreeF (itree E R) E R }.
 
 #[global] Arguments go {E}%_type_scope {R}%_type_scope observe.
