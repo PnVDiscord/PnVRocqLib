@@ -1299,6 +1299,55 @@ Proof.
   - eapply TAIL. exact IH.
 Qed.
 
+Lemma list_rev_inj {A : Type} (l1 : list A) (l2 : list A)
+  (EQ : rev l1 = rev l2)
+  : l1 = l2.
+Proof.
+  rewrite <- rev_involutive with (l := l1). rewrite <- rev_involutive with (l := l2). congruence.
+Qed.
+
+Lemma app_cancel_l {A : Type} (prefix : list A) (suffix1 : list A) (suffix2 : list A)
+  (EQ : prefix ++ suffix1 = prefix ++ suffix2)
+  : suffix1 = suffix2.
+Proof.
+  revert suffix1 suffix2 EQ; induction prefix as [ | x xs IH]; simpl; intros; eauto. eapply IH; congruence.
+Qed.
+
+Lemma list_rev_app {A : Type} (l1 : list A) (l2 : list A)
+  : rev (l1 ++ l2) = (rev l2 ++ rev l1).
+Proof.
+  induction l1 as [ | x1 l1 IH]; simpl.
+  - rewrite app_nil_r. reflexivity.
+  - rewrite IH. now rewrite <- app_assoc.
+Qed.
+
+Lemma app_cancel_r {A : Type} (prefix1 : list A) (prefix2 : list A) (suffix : list A)
+  (EQ : prefix1 ++ suffix = prefix2 ++ suffix)
+  : prefix1 = prefix2.
+Proof.
+  revert prefix1 prefix2 EQ. induction suffix as [suffix] using list_rev_dual.
+  induction prefix1 as [prefix1] using list_rev_dual. induction prefix2 as [prefix2] using list_rev_dual.
+  do 2 rewrite <- list_rev_app. intros EQ. apply rev_inj in EQ. apply app_cancel_l in EQ. congruence.
+Qed.
+
+Lemma forallb_spec {A : Type} (p : A -> bool) (xs : list A)
+  : forall b, forallb p xs = b <-> (if b then forall x, In x xs -> p x = true else exists x, In x xs /\ p x = false).
+Proof with try now firstorder.
+  intros [ | ]; [exact (forallb_forall p xs) | induction xs as [ | x xs IH]; simpl in *]...
+  rewrite andb_false_iff; firstorder; subst...
+Qed.
+
+#[local] Infix "!!" := nth_error : list_scope.
+
+Lemma In_lookup {A : Type} (xs : list A) (x : A)
+  (IN : In x xs)
+  : exists n, xs !! n = Some x /\ n < length xs.
+Proof with try (lia || done).
+  revert x IN; induction xs as [ | x1 xs IH]; simpl; intros x0 IN... destruct IN as [<- | IN].
+  - exists 0%nat; split...
+  - pose proof (IH x0 IN) as (n & EQ & LE). exists (S n). split...
+Qed.
+
 Lemma last_cons {A : Type} (x0 : A) (x1 : A) (xs : list A)
   : last (x0 :: xs) x1 = last xs x0.
 Proof.
