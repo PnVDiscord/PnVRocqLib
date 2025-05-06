@@ -227,7 +227,8 @@ Proof with try first [now right; congruence | now left; congruence].
   - pose proof (ivar_hasEqDec y y') as [? | ?]; pose proof (IH1 p1') as [? | ?]...
 Defined.
 
-#[global] Instance frm_hasEqDec : hasEqDec (frm L) :=
+#[global]
+Instance frm_hasEqDec : hasEqDec (frm L) :=
   frm_eq_dec.
 
 End EQ_DEC.
