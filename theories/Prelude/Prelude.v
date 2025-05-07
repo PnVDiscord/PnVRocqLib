@@ -25,6 +25,9 @@ Tactic Notation "rewrite!" :=
 
 Universe U_cosmos.
 
+Class isGood (A : Type@{U_cosmos}) : Type@{U_cosmos} :=
+  is_good : A -> Prop.
+
 Universe U_discourse.
 
 Constraint U_discourse < U_cosmos.
@@ -516,10 +519,10 @@ Defined.
 Instance t_isSetoid1 : isSetoid1 E.t :=
   fun X : Type => fun _ : isSetoid X => (@ensemble_isProset X).(Proset_isSetoid).
 
-#[global]
-Instance t_isMonad : isMonad E.t :=
-  { bind {A : Type} {B : Type} (m : E.t A) (k : A -> E.t B) := fun z => exists x, x \in m /\ z \in k x
-  ; pure {A : Type} (x : A) := fun z => x = z
+#[global, universes(polymorphic=yes)]
+Instance t_isMonad@{d} : isMonad@{d d} E.t@{d} :=
+  { bind {A : Type@{d}} {B : Type@{d}} (m : E.t A) (k : A -> E.t B) := fun z => exists x, x \in m /\ z \in k x
+  ; pure {A : Type@{d}} (x : A) := fun z => x = z
   }.
 
 #[global]
@@ -814,6 +817,38 @@ Notation ensemble := E.t.
 
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
+
+Section EQUIVALENT_CLASS.
+
+Context {A : Type} {SETOID : isSetoid A}.
+
+Definition eq_cls (x : A) : ensemble A :=
+  fun z => z == x.
+
+Lemma in_eq_cls (x : A)
+  : x \in eq_cls x.
+Proof.
+  do 2 red; reflexivity.
+Qed.
+
+Lemma eq_cls_eq_iff (x1 : A) (x2 : A)
+  : eq_cls x1 == eq_cls x2 <-> x1 == x2.
+Proof.
+  split; intros EQ.
+  - pose proof (in_eq_cls x1) as claim1. rewrite EQ in claim1. exact claim1.
+  - intros x. unfold "\in", eq_cls. rewrite <- EQ. reflexivity.
+Qed.
+
+Definition natProj (x : A) : { X : ensemble A | exists y : A, eq_cls y == X } :=
+  @exist (ensemble A) (fun X => exists x, eq_cls x == X) (eq_cls x) (@ex_intro A (fun y => eq_cls y == eq_cls x) x (@eqProp_refl (ensemble A) _ (eq_cls x))).
+
+Theorem eq_cls_natProj (x : A)
+  : eq_cls x == proj1_sig (natProj x).
+Proof.
+  unfold natProj. simpl. reflexivity.
+Qed.
+
+End EQUIVALENT_CLASS.
 
 Lemma unfold_ensemble_eqProp (A : Type) (X1 : ensemble A) (X2 : ensemble A)
   : X1 == X2 <-> (X1 \subseteq X2 /\ X2 \subseteq X1).
@@ -1530,7 +1565,7 @@ Instance Subspace_topology {A : Type} {P : A -> Prop} (TOPOLOGY : topology A) : 
 Next Obligation.
   ii. split.
   - exists E.full. done!.
-  - i. exists (E.unions (bind Os (fun U => fun O => (forall z, proj1_sig z \in O <-> z \in U) /\ isOpen O))). split.
+  - i. exists (E.unions (Os >>= (fun U => fun O => (forall z, proj1_sig z \in O <-> z \in U) /\ isOpen O))). split.
     { eapply unions_in_T. done!. }
     { done!. }
   - i. ss!. exists (E.intersection x0 x). split.
@@ -1546,3 +1581,34 @@ Proof.
 Qed.
 
 End SUBSPACE_TOPOLOGY.
+
+Class TopologyOnSetoid (X : Type) {SETOID : isSetoid X} (T : ensemble (ensemble X)) : Prop :=
+  { full_in_Tq
+    : E.full \in T
+  ; unions_in_Tq (Os : ensemble (ensemble X))
+    (SUBSET : Os \subseteq T)
+    : E.unions Os \in T
+  ; intersection_in_Tq (O1 : ensemble X) (O2 : ensemble X)
+    (IN1 : O1 \in T)
+    (IN2 : O2 \in T)
+    : E.intersection O1 O2 \in T
+  ; Tq_compatWith_eqProp (O1 : ensemble X) (O2 : ensemble X)
+    (EQ : O1 == eqProp_cl O2)
+    : O1 \in T <-> O2 \in T
+  }.
+
+Lemma AxiomsForTopology_iff_TopologyOnSetoid {X : Type} {T : ensemble (ensemble X)}
+  : AxiomsForTopology X T <-> TopologyOnSetoid X (SETOID := mkSetoid_from_eq) T.
+Proof with try done!.
+  split; intros [H1 H2 H3 H4].
+  - split; trivial; i; split; intros OPEN; eapply H4...
+  - split; trivial; i; eapply H4... intros x. rewrite <- EXT_EQ. unfold eqProp_cl, "\in". simpl "=="...
+Qed.
+
+(* Theorem TopologyOnQuotientSet {X : Type} {SETOID : isSetoid X} {T : ensemble (ensemble X)}
+  (Tq : TopologyOnSetoid X (SETOID := SETOID) T)
+  (Q := { U : ensemble X | exists x : X, eq_cls x == U })
+  (isOpen := fun O : ensemble Q => eqProp_cl (E.preimage natProj O) \in T)
+  : AxiomsForTopology Q isOpen.
+Proof with reflexivity || eauto.
+Admitted. *)
