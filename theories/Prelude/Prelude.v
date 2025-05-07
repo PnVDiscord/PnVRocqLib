@@ -1605,7 +1605,8 @@ Proof with try done!.
   - split; trivial; i; eapply H4... intros x. rewrite <- EXT_EQ. unfold eqProp_cl, "\in". simpl "=="...
 Qed.
 
-Theorem TopologyOnQuotientSet {X : Type} {SETOID : isSetoid X} {T : ensemble (ensemble X)}
+#[global]
+Instance TopologyOnQuotientSet {X : Type} {SETOID : isSetoid X} {T : ensemble (ensemble X)}
   (Tq : TopologyOnSetoid X (SETOID := SETOID) T)
   (Q := { U : ensemble X | exists x : X, eq_cls x == U })
   (isOpen := fun O : ensemble Q => eqProp_cl (E.preimage natProj O) \in T)
@@ -1633,14 +1634,15 @@ Proof with reflexivity || eauto.
         { exists O. split... }
     + eapply claim2. intros x H_x. red in H_x. destruct H_x as (O & O_in & x_in & EQ).
       eapply claim5 with (O1 := eqProp_cl (E.preimage natProj O))...
-  - subst isOpen. i. red in OPEN1, OPEN2 |- *. rewrite -> claim4 with (O2 := (E.intersection (E.preimage natProj O1) (E.preimage natProj O2))).
+  - subst isOpen. i. red in OPEN1, OPEN2 |- *. rewrite -> claim4 with (O2 := E.intersection (E.preimage natProj O1) (E.preimage natProj O2)).
     + eapply claim3.
       * rewrite <- claim4; [exact OPEN1 | reflexivity].
       * rewrite <- claim4; [exact OPEN2 | reflexivity].
     + intros x. split; intros H_IN; s!.
       * destruct H_IN as (z & z_eq & H_z). s!. destruct H_z as (? & -> & H_z).
         exists z. split... econs; ss!.
-      * destruct H_IN as (z & z_eq & H_z). exists z. split... s!. destruct H_z as [(? & -> & H1_in) (? & -> & H2_in)]. exists (natProj z). split... econs...
+      * destruct H_IN as (z & z_eq & H_z). exists z. split... 
+        s!. destruct H_z as [(? & -> & H1_in) (? & -> & H2_in)]. exists (natProj z). split... econs...
   - subst isOpen. i. red in OPEN |- *. eapply claim5 with (O1 := eqProp_cl (E.preimage natProj O1))...
     change (O1 == O2) in EXT_EQ. rewrite EXT_EQ...
 Qed.
