@@ -19,6 +19,7 @@ Reserved Infix "\in" (no associativity, at level 70).
 Reserved Infix "\subseteq" (no associativity, at level 70).
 
 Reserved Infix "∈" (no associativity, at level 70).
+Reserved Infix "⊆" (no associativity, at level 70).
 
 Reserved Infix "⊢" (no associativity, at level 70).
 Reserved Infix "⊨" (no associativity, at level 70).
