@@ -1550,6 +1550,30 @@ Qed.
 
 End SUBSPACE_TOPOLOGY.
 
+Definition eq_cls {A : Type} {SETOID : isSetoid A} (x : A) : ensemble A :=
+  fun z => z == x.
+
+Lemma in_eq_cls {A : Type} {SETOID : isSetoid A} (x : A)
+  : x \in eq_cls x.
+Proof.
+  do 2 red; reflexivity.
+Qed.
+
+Lemma eq_cls_eq_iff {A : Type} {SETOID : isSetoid A} (x1 : A) (x2 : A)
+  : eq_cls x1 == eq_cls x2 <-> x1 == x2.
+Proof.
+  split; intros EQ.
+  - pose proof (in_eq_cls x1) as claim1. rewrite EQ in claim1. exact claim1.
+  - intros x. unfold "\in", eq_cls. rewrite <- EQ. reflexivity.
+Qed.
+
+#[global]
+Instance eq_cls_isCompatibleWith_eqProp {A : Type} {SETOID : isSetoid A} (z : A)
+  : isCompatibleWith_eqProp (SETOID := SETOID) (eq_cls z).
+Proof.
+  ii. do 1 red in H |- *. transitivity x; done!.
+Qed.
+
 Module Setoidism.
 
 Class TopologyOnSetoid (X : Type) {SETOID : isSetoid X} (T : ensemble (ensemble X)) : Prop :=
@@ -1567,33 +1591,9 @@ Class TopologyOnSetoid (X : Type) {SETOID : isSetoid X} (T : ensemble (ensemble 
     : O1 \in T <-> O2 \in T
   }.
 
-Section EQUIVALENT_CLASS.
+Section POWERSET_OF_SETOID.
 
 Context {X : Type} {SETOID : isSetoid X}.
-
-Definition eq_cls x : ensemble X :=
-  fun z => z == x.
-
-Lemma in_eq_cls x
-  : x \in eq_cls x.
-Proof.
-  do 2 red; reflexivity.
-Qed.
-
-Lemma eq_cls_eq_iff x1 x2
-  : eq_cls x1 == eq_cls x2 <-> x1 == x2.
-Proof.
-  split; intros EQ.
-  - pose proof (in_eq_cls x1) as claim1. rewrite EQ in claim1. exact claim1.
-  - intros x. unfold "\in", eq_cls. rewrite <- EQ. reflexivity.
-Qed.
-
-#[global]
-Instance eq_cls_isCompatibleWith_eqProp z
-  : isCompatibleWith_eqProp (SETOID := SETOID) (eq_cls z).
-Proof.
-  ii. do 1 red in H |- *. transitivity x; done!.
-Qed.
 
 Let POWERSET : Type :=
   { U : ensemble X | isCompatibleWith_eqProp U }.
@@ -1601,11 +1601,11 @@ Let POWERSET : Type :=
 Let Q : Type :=
   { U : POWERSET | exists x, eq_cls x == proj1_sig U }.
 
-Definition proj (x : X) : Q :=
+Definition proj x : Q :=
   @exist POWERSET (fun U => exists x, eq_cls x == proj1_sig U) (@exist (ensemble X) isCompatibleWith_eqProp (eq_cls x) (eq_cls_isCompatibleWith_eqProp x)) (@ex_intro _ _ x (@eqProp_refl (ensemble X) _ (eq_cls x))).
 
-Lemma eq_cls_natProj x
-  : eq_cls x == proj1_sig (proj1_sig (proj x)).
+Lemma eq_cls_eq_proj x
+  : eq_cls x = proj1_sig (proj1_sig (proj x)).
 Proof.
   reflexivity.
 Qed.
@@ -1624,7 +1624,7 @@ Proof with reflexivity || eauto.
   assert (claim5 : forall O1, forall O2, O1 == O2 -> O1 \in T' -> O2 \in T').
   { intros O1 O2 EQ OPEN. rewrite <- claim4 with (O1 := eqProp_cl O1)...
     - rewrite -> claim4 with (O2 := O1)...
-    - rewrite EQ...
+    - rewrite -> EQ...
   }
   split.
   - subst isOpen. red. eapply claim5 with (O1 := E.full)...
@@ -1639,8 +1639,7 @@ Proof with reflexivity || eauto.
         exists (E.preimage proj O). split.
         { econs... }
         { exists O. split... split... eapply OPENs... }
-    + eapply claim2... intros x H_x. red in H_x. destruct H_x as (O & O_in & x_in & EQ).
-      eapply claim5 with (O1 := E.preimage proj O)...
+    + eapply claim2... intros x H_x. red in H_x. destruct H_x as (O & O_in & x_in & EQ). eapply claim5 with (O1 := E.preimage proj O)...
   - subst isOpen. i. red in OPEN1, OPEN2 |- *. rewrite -> claim4 with (O2 := E.intersection (E.preimage proj O1) (E.preimage proj O2)).
     + eapply claim3...
     + pose proof (EQ1 := claim0 _ OPEN1). pose proof (EQ2 := claim0 _ OPEN2).
@@ -1653,6 +1652,6 @@ Proof with reflexivity || eauto.
     change (O1 == O2) in EXT_EQ. rewrite EXT_EQ...
 Qed.
 
-End EQUIVALENT_CLASS.
+End POWERSET_OF_SETOID.
 
 End Setoidism.
