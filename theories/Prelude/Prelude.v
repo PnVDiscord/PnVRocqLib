@@ -818,38 +818,6 @@ Notation ensemble := E.t.
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
 
-Section EQUIVALENT_CLASS.
-
-Context {A : Type} {SETOID : isSetoid A}.
-
-Definition eq_cls (x : A) : ensemble A :=
-  fun z => z == x.
-
-Lemma in_eq_cls (x : A)
-  : x \in eq_cls x.
-Proof.
-  do 2 red; reflexivity.
-Qed.
-
-Lemma eq_cls_eq_iff (x1 : A) (x2 : A)
-  : eq_cls x1 == eq_cls x2 <-> x1 == x2.
-Proof.
-  split; intros EQ.
-  - pose proof (in_eq_cls x1) as claim1. rewrite EQ in claim1. exact claim1.
-  - intros x. unfold "\in", eq_cls. rewrite <- EQ. reflexivity.
-Qed.
-
-Definition natProj (x : A) : { X : ensemble A | exists y : A, eq_cls y == X } :=
-  @exist (ensemble A) (fun X => exists x, eq_cls x == X) (eq_cls x) (@ex_intro A (fun y => eq_cls y == eq_cls x) x (@eqProp_refl (ensemble A) _ (eq_cls x))).
-
-Theorem eq_cls_natProj (x : A)
-  : eq_cls x == proj1_sig (natProj x).
-Proof.
-  unfold natProj. simpl. reflexivity.
-Qed.
-
-End EQUIVALENT_CLASS.
-
 Lemma unfold_ensemble_eqProp (A : Type) (X1 : ensemble A) (X2 : ensemble A)
   : X1 == X2 <-> (X1 \subseteq X2 /\ X2 \subseteq X1).
 Proof.
@@ -1582,6 +1550,8 @@ Qed.
 
 End SUBSPACE_TOPOLOGY.
 
+Module Setoidism.
+
 Class TopologyOnSetoid (X : Type) {SETOID : isSetoid X} (T : ensemble (ensemble X)) : Prop :=
   { full_in_Tq
     : E.full \in T
@@ -1597,52 +1567,92 @@ Class TopologyOnSetoid (X : Type) {SETOID : isSetoid X} (T : ensemble (ensemble 
     : O1 \in T <-> O2 \in T
   }.
 
-Lemma AxiomsForTopology_iff_TopologyOnSetoid {X : Type} {T : ensemble (ensemble X)}
-  : AxiomsForTopology X T <-> TopologyOnSetoid X (SETOID := mkSetoid_from_eq) T.
-Proof with try done!.
-  split; intros [H1 H2 H3 H4].
-  - split; trivial; i; split; intros OPEN; eapply H4...
-  - split; trivial; i; eapply H4... intros x. rewrite <- EXT_EQ. unfold eqProp_cl, "\in". simpl "=="...
+Section EQUIVALENT_CLASS.
+
+Context {X : Type} {SETOID : isSetoid X}.
+
+Definition eq_cls x : ensemble X :=
+  fun z => z == x.
+
+Lemma in_eq_cls x
+  : x \in eq_cls x.
+Proof.
+  do 2 red; reflexivity.
+Qed.
+
+Lemma eq_cls_eq_iff x1 x2
+  : eq_cls x1 == eq_cls x2 <-> x1 == x2.
+Proof.
+  split; intros EQ.
+  - pose proof (in_eq_cls x1) as claim1. rewrite EQ in claim1. exact claim1.
+  - intros x. unfold "\in", eq_cls. rewrite <- EQ. reflexivity.
 Qed.
 
 #[global]
-Instance TopologyOnQuotientSet {X : Type} {SETOID : isSetoid X} {T : ensemble (ensemble X)}
-  (Tq : TopologyOnSetoid X (SETOID := SETOID) T)
-  (Q := { U : ensemble X | exists x : X, eq_cls x == U })
-  (isOpen := fun O : ensemble Q => eqProp_cl (E.preimage natProj O) \in T)
+Instance eq_cls_isCompatibleWith_eqProp z
+  : isCompatibleWith_eqProp (SETOID := SETOID) (eq_cls z).
+Proof.
+  ii. do 1 red in H |- *. transitivity x; done!.
+Qed.
+
+Let POWERSET : Type :=
+  { U : ensemble X | isCompatibleWith_eqProp U }.
+
+Let Q : Type :=
+  { U : POWERSET | exists x, eq_cls x == proj1_sig U }.
+
+Definition proj (x : X) : Q :=
+  @exist POWERSET (fun U => exists x, eq_cls x == proj1_sig U) (@exist (ensemble X) isCompatibleWith_eqProp (eq_cls x) (eq_cls_isCompatibleWith_eqProp x)) (@ex_intro _ _ x (@eqProp_refl (ensemble X) _ (eq_cls x))).
+
+Lemma eq_cls_natProj x
+  : eq_cls x == proj1_sig (proj1_sig (proj x)).
+Proof.
+  reflexivity.
+Qed.
+
+Theorem TopologyOnQuotientSet (T : ensemble POWERSET)
+  (T' := E.image (@proj1_sig (ensemble X) isCompatibleWith_eqProp) T)
+  (isOpen := fun O : ensemble Q => E.preimage proj O \in T')
+  (T_Q : TopologyOnSetoid X (SETOID := SETOID) T')
   : AxiomsForTopology Q isOpen.
 Proof with reflexivity || eauto.
-  destruct Tq as [claim1 claim2 claim3 claim4].
-  assert (claim5 : forall O1, forall O2, O1 == O2 -> O1 \in T -> O2 \in T).
+  assert (claim0 : forall U, U \in T' -> eqProp_cl U == U).
+  { intros U U_IN; ii. subst T'. s!. destruct U_IN as (V & -> & V_IN). destruct V as [U H_U]; simpl.
+    split; intros H_IN; [destruct H_IN as (z & z_eq & z_in); symmetry in z_eq; eapply H_U with (x := z) | exists x; split]...
+  }
+  destruct T_Q as [claim1 claim2 claim3 claim4].
+  assert (claim5 : forall O1, forall O2, O1 == O2 -> O1 \in T' -> O2 \in T').
   { intros O1 O2 EQ OPEN. rewrite <- claim4 with (O1 := eqProp_cl O1)...
     - rewrite -> claim4 with (O2 := O1)...
     - rewrite EQ...
   }
   split.
   - subst isOpen. red. eapply claim5 with (O1 := E.full)...
-    intros x. unfold eqProp_cl; split; intros IN...
-    red. exists x; split... econs...
-  - subst isOpen. i. red in OPENs |- *. eapply claim5 with (O1 := E.unions (fun U => exists O, O \in Os /\ U \in T /\ eqProp_cl (E.preimage natProj O) == U)).
+    intros x. unfold eqProp_cl; split; intros IN... econs...
+  - ii. i. red in OPENs |- *. eapply claim5 with (O1 := E.unions (fun U => exists O, O \in Os /\ U \in T' /\ E.preimage proj O == U)).
     + intros x. split; intros H_IN; s!.
       * destruct H_IN as (U & x_in & O & O_IN & U_in & EQ).
         assert (this : x \in U) by exact x_in.
-        rewrite <- EQ in this. destruct this as (z & z_eq & IN).
-        exists z. split... econs... econs... inv IN...
-      * destruct H_IN as (z & z_eq & IN). inv IN. destruct H_IN as [O H_IN O_in].
-        exists (eqProp_cl (E.preimage natProj O)). split.
-        { exists z. split... s!. exists (natProj z)... }
-        { exists O. split... }
-    + eapply claim2. intros x H_x. red in H_x. destruct H_x as (O & O_in & x_in & EQ).
-      eapply claim5 with (O1 := eqProp_cl (E.preimage natProj O))...
-  - subst isOpen. i. red in OPEN1, OPEN2 |- *. rewrite -> claim4 with (O2 := E.intersection (E.preimage natProj O1) (E.preimage natProj O2)).
-    + eapply claim3.
-      * rewrite <- claim4; [exact OPEN1 | reflexivity].
-      * rewrite <- claim4; [exact OPEN2 | reflexivity].
-    + intros x. split; intros H_IN; s!.
-      * destruct H_IN as (z & z_eq & H_z). s!. destruct H_z as (? & -> & H_z).
-        exists z. split... econs; ss!.
-      * destruct H_IN as (z & z_eq & H_z). exists z. split... 
-        s!. destruct H_z as [(? & -> & H1_in) (? & -> & H2_in)]. exists (natProj z). split... econs...
-  - subst isOpen. i. red in OPEN |- *. eapply claim5 with (O1 := eqProp_cl (E.preimage natProj O1))...
+        rewrite <- EQ in this. s!. destruct this as (? & -> & IN).
+        exists (proj x). split... econs...
+      * destruct H_IN as (? & -> & IN). destruct IN as [O H_IN O_in].
+        exists (E.preimage proj O). split.
+        { econs... }
+        { exists O. split... split... eapply OPENs... }
+    + eapply claim2... intros x H_x. red in H_x. destruct H_x as (O & O_in & x_in & EQ).
+      eapply claim5 with (O1 := E.preimage proj O)...
+  - subst isOpen. i. red in OPEN1, OPEN2 |- *. rewrite -> claim4 with (O2 := E.intersection (E.preimage proj O1) (E.preimage proj O2)).
+    + eapply claim3...
+    + pose proof (EQ1 := claim0 _ OPEN1). pose proof (EQ2 := claim0 _ OPEN2).
+      transitivity (E.intersection (E.preimage proj O1) (E.preimage proj O2)).
+      { clear EQ1 EQ2. intros x. s!. split; [intros (? & -> & [H_IN1 H_IN2]) | intros [(? & -> & H_IN1) (? & -> & H_IN2)]]; ss!. }
+      intros x. split; [intros [H_IN1 H_IN2] | intros (z & z_eq & [H_IN1 H_IN2])].
+      * exists x. split... ss!.
+      * rewrite <- EQ1, <- EQ2. econs; exists z; split...
+  - subst isOpen. i. red in OPEN |- *. eapply claim5 with (O1 := E.preimage proj O1)...
     change (O1 == O2) in EXT_EQ. rewrite EXT_EQ...
 Qed.
+
+End EQUIVALENT_CLASS.
+
+End Setoidism.
