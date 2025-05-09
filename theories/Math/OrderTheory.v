@@ -668,7 +668,7 @@ Instance isOpen_Scott_lawful
   : AxiomsForTopology D isOpen_Scott.
 Proof.
   split; ii.
-  - split; done!.
+  - split; try done!; ss!. exists x; ss!.
   - split.
     + intros x y x_IN LE. rewrite E.in_unions_iff in x_IN. destruct x_IN as [O [x_IN H_IN]]. ss!. exists O; done!.
     + intros X sup_X DIRECTED SUPREMUM sup_IN. rewrite E.in_unions_iff in sup_IN. destruct sup_IN as [O [sup_IN H_IN]]. ss!.
