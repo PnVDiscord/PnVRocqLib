@@ -1618,41 +1618,7 @@ Proof.
   reflexivity.
 Defined.
 
-Lemma Topology_onQuotientSet_ver1 (T_X : ensemble (ensemble X))
-  (TOP' : TopologyOnSetoid X (SETOID := SETOID) T_X)
-  (T_Q := fun U : ensemble (Quot X) => eqProp_cl (E.preimage proj U) \in T_X)
-  : AxiomsForTopology (Quot X) T_Q.
-Proof with reflexivity || eauto.
-  destruct TOP' as [claim1 claim2 claim3 claim4].
-  assert (claim5 : forall O1, forall O2, O1 == O2 -> O1 \in T_X -> O2 \in T_X).
-  { intros O1 O2 EQ OPEN. rewrite <- claim4 with (O1 := eqProp_cl O1)...
-    - rewrite -> claim4 with (O2 := O1)...
-    - rewrite -> EQ...
-  }
-  split.
-  - subst T_Q. red. eapply claim5 with (O1 := E.full)... intros x. unfold eqProp_cl; split; intros IN... red. exists x; split... econs...
-  - subst T_Q. ii. i. red in OPENs |- *. eapply claim5 with (O1 := E.unions (fun U => exists O, O \in Os /\ U \in T_X /\ eqProp_cl (E.preimage proj O) == U)).
-    + intros x. split; intros H_IN; s!.
-      * destruct H_IN as (U & x_in & O & O_IN & U_in & EQ).
-        assert (this : x \in U) by exact x_in.
-        rewrite <- EQ in this. clear x_in. revert x this.
-        change (eqProp_cl (E.preimage proj O) =< eqProp_cl (E.preimage proj (E.unions Os))).
-        eapply cl_op_monotonic. intros x x_in. inv x_in. econs... econs...
-      * destruct H_IN as (z & z_eq & IN). inv IN. destruct H_IN as [O H_IN O_in]. exists (eqProp_cl (E.preimage proj O)). split.
-        { exists z. split... s!. exists (proj z)... }
-        { exists O. split... }
-    + eapply claim2. intros x H_x. red in H_x. destruct H_x as (O & O_in & x_in & EQ). eapply claim5 with (O1 := eqProp_cl (E.preimage proj O))...
-  - subst T_Q. i. red in OPEN1, OPEN2 |- *. rewrite -> claim4 with (O2 := E.intersection (E.preimage proj O1) (E.preimage proj O2)).
-    + eapply claim3.
-      * rewrite <- claim4; [exact OPEN1 | reflexivity].
-      * rewrite <- claim4; [exact OPEN2 | reflexivity].
-    + intros x. split; intros H_IN; s!.
-      * destruct H_IN as (z & z_eq & H_z). s!. destruct H_z as (? & -> & H_z). exists z. split... econs; ss!.
-      * destruct H_IN as (z & z_eq & H_z). exists z. split... s!. destruct H_z as [(? & -> & H1_in) (? & -> & H2_in)]. exists (proj z). split... econs...
-  - subst T_Q. i. red in OPEN |- *. eapply claim5 with (O1 := eqProp_cl (E.preimage proj O1))... change (O1 == O2) in EXT_EQ. rewrite -> EXT_EQ...
-Qed.
-
-Lemma Topology_onQuotientSet_ver2 (T : ensemble (POWER X))
+Lemma Topology_onQuotientSet_ver1 (T : ensemble (POWER X))
   (T_X := E.image (@proj1_sig (ensemble X) (@isCompatibleWith_eqProp X SETOID)) T)
   (T_Q := fun U : ensemble (Quot X) => E.preimage proj U \in T_X)
   (TOP' : TopologyOnSetoid X (SETOID := SETOID) T_X)
@@ -1688,6 +1654,47 @@ Proof with reflexivity || eauto.
       * exists x. split... ss!.
       * rewrite <- EQ1, <- EQ2. econs; exists z; split...
   - subst T_Q. i. red in OPEN |- *. eapply claim5 with (O1 := E.preimage proj O1)... change (O1 == O2) in EXT_EQ. rewrite -> EXT_EQ...
+Qed.
+
+Context (T_X : ensemble (ensemble X)) (TOP' : TopologyOnSetoid X (SETOID := SETOID) T_X) (T_Q := fun U : ensemble (Quot X) => eqProp_cl (E.preimage proj U) \in T_X).
+
+Lemma Topology_onQuotientSet_ver2
+  : AxiomsForTopology (Quot X) T_Q.
+Proof with reflexivity || eauto.
+  destruct TOP' as [claim1 claim2 claim3 claim4].
+  assert (claim5 : forall O1, forall O2, O1 == O2 -> O1 \in T_X -> O2 \in T_X).
+  { intros O1 O2 EQ OPEN. rewrite <- claim4 with (O1 := eqProp_cl O1)...
+    - rewrite -> claim4 with (O2 := O1)...
+    - rewrite -> EQ...
+  }
+  split.
+  - subst T_Q. red. eapply claim5 with (O1 := E.full)... intros x. unfold eqProp_cl; split; intros IN... red. exists x; split... econs...
+  - subst T_Q. ii. i. red in OPENs |- *. eapply claim5 with (O1 := E.unions (fun U => exists O, O \in Os /\ U \in T_X /\ eqProp_cl (E.preimage proj O) == U)).
+    + intros x. split; intros H_IN; s!.
+      * destruct H_IN as (U & x_in & O & O_IN & U_in & EQ).
+        assert (this : x \in U) by exact x_in.
+        rewrite <- EQ in this. clear x_in. revert x this.
+        change (eqProp_cl (E.preimage proj O) =< eqProp_cl (E.preimage proj (E.unions Os))).
+        eapply cl_op_monotonic. intros x x_in. inv x_in. econs... econs...
+      * destruct H_IN as (z & z_eq & IN). inv IN. destruct H_IN as [O H_IN O_in]. exists (eqProp_cl (E.preimage proj O)). split.
+        { exists z. split... s!. exists (proj z)... }
+        { exists O. split... }
+    + eapply claim2. intros x H_x. red in H_x. destruct H_x as (O & O_in & x_in & EQ). eapply claim5 with (O1 := eqProp_cl (E.preimage proj O))...
+  - subst T_Q. i. red in OPEN1, OPEN2 |- *. rewrite -> claim4 with (O2 := E.intersection (E.preimage proj O1) (E.preimage proj O2)).
+    + eapply claim3.
+      * rewrite <- claim4; [exact OPEN1 | reflexivity].
+      * rewrite <- claim4; [exact OPEN2 | reflexivity].
+    + intros x. split; intros H_IN; s!.
+      * destruct H_IN as (z & z_eq & H_z). s!. destruct H_z as (? & -> & H_z). exists z. split... econs; ss!.
+      * destruct H_IN as (z & z_eq & H_z). exists z. split... s!. destruct H_z as [(? & -> & H1_in) (? & -> & H2_in)]. exists (proj z). split... econs...
+  - subst T_Q. i. red in OPEN |- *. eapply claim5 with (O1 := eqProp_cl (E.preimage proj O1))... change (O1 == O2) in EXT_EQ. rewrite -> EXT_EQ...
+Qed.
+
+Lemma isOpen_in_Quot_iff (U : ensemble (Quot X))
+  : U \in T_Q <-> E.preimage proj U \in T_X.
+Proof.
+  unfold T_Q. unfold "\in" at 1.
+  eapply Tq_compatWith_eqProp. reflexivity.
 Qed.
 
 End Topology_onQuotientSet.
