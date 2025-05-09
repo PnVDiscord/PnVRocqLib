@@ -374,7 +374,7 @@ Lemma relation_on_image_liftsWellFounded {A : Type} {B : Type} (R : B -> B -> Pr
 Proof.
   intros x. remember (f x) as y eqn: y_eq_f_x.
   revert x y_eq_f_x. induction (WF y) as [y' _ IH].
-  intros x' hyp_eq. econstructor. intros x f_x_R_f_x'.
+  intros x' hyp_eq. econs. intros x f_x_R_f_x'.
   subst y'. eapply IH; [exact f_x_R_f_x' | reflexivity].
 Defined.
 
@@ -1400,8 +1400,8 @@ Lemma no_dup_mk_edge_seq {V : Type} (v : V) (vs : list V)
   : NoDup (mk_edge_seq v vs).
 Proof.
   revert v. induction NO_DUP as [ | v vs NOT_IN NO_DUP IH].
-  - econstructor 1.
-  - simpl. econstructor 2.
+  - econs 1.
+  - simpl. econs 2.
     + intros CONTRA. apply in_mk_edge_seq_inv in CONTRA. contradiction.
     + eapply IH.
 Qed.
@@ -1582,14 +1582,53 @@ Proof.
   ii. red in H |- *. transitivity x; done!.
 Qed.
 
-Definition POWER (A : Type) {SETOID : isSetoid A} : Type :=
-  { X : ensemble A | isCompatibleWith_eqProp X }.
-
 Definition Quot (A : Type) {SETOID : isSetoid A} : Type :=
-  { U : POWER A | exists x : A, cls x == proj1_sig U }.
+  { U : ensemble A | exists x : A, cls x == U }.
 
-Section Topology_onQuotientSet.
+Section QuotientTopology.
 
-End Topology_onQuotientSet.
+Context {X : Type} {SETOID : isSetoid X}.
+
+Let q : X -> Quot X :=
+  fun x => @exist (ensemble X) (fun U => exists x, cls x == U) (cls x) (@ex_intro X (fun y => cls y == cls x) x (Equivalence_Reflexive (cls x))).
+
+Context {TOPOLOGY : topology X}.
+
+Definition OpenSets_in_Quot : ensemble (ensemble (Quot X)) :=
+  fun U => isOpen (E.preimage q U).
+
+#[local] Opaque isOpen.
+#[local] Hint Resolve full_isOpen unions_isOpen intersection_isOpen : core.
+#[local] Hint Unfold E.In : core.
+
+#[global]
+Instance OpenSets_in_Quot_satisfiesAxiomsForOpenSets
+  : AxiomsForTopology (Quot X) OpenSets_in_Quot.
+Proof with reflexivity || eauto.
+  unfold OpenSets_in_Quot. destruct TOPOLOGY.(topologyLaws) as [H1 H2 H3 H4]. split.
+  - red. eapply isOpen_compatWith_ext_eq with (O1 := E.full)... intros x. split; intros IN... econs...
+  - intros. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage q O == U)).
+    + eapply H2. intros U H_U. red in H_U. destruct H_U as (O & O_in & U_in & EQ). eapply isOpen_compatWith_ext_eq with (O1 := E.preimage q O)...
+    + intros x. split; intros H_IN.
+      * destruct H_IN as [U H_IN U_IN]. red in U_IN. destruct U_IN as (O & O_IN & U_IN & H_EQ).
+        rewrite <- H_EQ in H_IN. econs... inv H_IN... econs...
+      * destruct H_IN as [O -> H_IN]. destruct H_IN as [O H_IN O_IN]. exists (E.preimage q O).
+        { econs... }
+        { exists O. split... split... }
+  - intros. red in OPEN1, OPEN2 |- *. eapply isOpen_compatWith_ext_eq with (O1 := E.intersection (E.preimage q O1) (E.preimage q O2)).
+    + eapply intersection_isOpen...
+    + intros x; split; intros H_IN.
+      * destruct H_IN as [[? -> H_IN1] [? -> H_IN2]]. econs... econs...
+      * destruct H_IN as [? -> H_IN]. destruct H_IN as [IN1 IN2]. split... econs... econs...
+  - i. red in OPEN |- *. change (O1 == O2) in EXT_EQ. eapply isOpen_compatWith_ext_eq with (O1 := E.preimage q O1)... intros x. rewrite EXT_EQ...
+Qed.
+
+#[global]
+Instance QuotientTopology : topology (Quot X) :=
+  { isOpen := OpenSets_in_Quot
+  ; topologyLaws := OpenSets_in_Quot_satisfiesAxiomsForOpenSets
+  }.
+
+End QuotientTopology.
 
 End Setoidism.
