@@ -1582,20 +1582,18 @@ Proof.
   ii. red in H |- *. transitivity x; done!.
 Qed.
 
-Definition Quot (A : Type) {SETOID : isSetoid A} : Type :=
-  { U : ensemble A | exists x : A, cls x == U }.
+Definition Quot (X : Type) {SETOID : isSetoid X} : Type :=
+  { U : ensemble X | exists x : X, cls x == U }.
+
+Definition prj {X : Type} {SETOID : isSetoid X} : X -> Quot X :=
+  fun x => @exist (ensemble X) (fun U => exists x, cls x == U) (cls x) (@ex_intro X (fun y => cls y == cls x) x (Equivalence_Reflexive (cls x))).
 
 Section QuotientTopology.
 
-Context {X : Type} {SETOID : isSetoid X}.
-
-Let q : X -> Quot X :=
-  fun x => @exist (ensemble X) (fun U => exists x, cls x == U) (cls x) (@ex_intro X (fun y => cls y == cls x) x (Equivalence_Reflexive (cls x))).
-
-Context {TOPOLOGY : topology X}.
+Context {X : Type} {SETOID : isSetoid X} {TOPOLOGY : topology X}.
 
 Definition OpenSets_in_Quot : ensemble (ensemble (Quot X)) :=
-  fun U => isOpen (E.preimage q U).
+  fun U => isOpen (E.preimage prj U).
 
 #[local] Opaque isOpen.
 #[local] Hint Resolve full_isOpen unions_isOpen intersection_isOpen : core.
@@ -1607,20 +1605,20 @@ Instance OpenSets_in_Quot_satisfiesAxiomsForOpenSets
 Proof with reflexivity || eauto.
   unfold OpenSets_in_Quot. destruct TOPOLOGY.(topologyLaws) as [H1 H2 H3 H4]. split.
   - red. eapply isOpen_compatWith_ext_eq with (O1 := E.full)... intros x. split; intros IN... econs...
-  - intros. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage q O == U)).
-    + eapply H2. intros U H_U. red in H_U. destruct H_U as (O & O_in & U_in & EQ). eapply isOpen_compatWith_ext_eq with (O1 := E.preimage q O)...
+  - intros. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage prj O == U)).
+    + eapply H2. intros U H_U. red in H_U. destruct H_U as (O & O_in & U_in & EQ). eapply isOpen_compatWith_ext_eq with (O1 := E.preimage prj O)...
     + intros x. split; intros H_IN.
       * destruct H_IN as [U H_IN U_IN]. red in U_IN. destruct U_IN as (O & O_IN & U_IN & H_EQ).
         rewrite <- H_EQ in H_IN. econs... inv H_IN... econs...
-      * destruct H_IN as [O -> H_IN]. destruct H_IN as [O H_IN O_IN]. exists (E.preimage q O).
+      * destruct H_IN as [O -> H_IN]. destruct H_IN as [O H_IN O_IN]. exists (E.preimage prj O).
         { econs... }
         { exists O. split... split... }
-  - intros. red in OPEN1, OPEN2 |- *. eapply isOpen_compatWith_ext_eq with (O1 := E.intersection (E.preimage q O1) (E.preimage q O2)).
+  - intros. red in OPEN1, OPEN2 |- *. eapply isOpen_compatWith_ext_eq with (O1 := E.intersection (E.preimage prj O1) (E.preimage prj O2)).
     + eapply intersection_isOpen...
     + intros x; split; intros H_IN.
       * destruct H_IN as [[? -> H_IN1] [? -> H_IN2]]. econs... econs...
       * destruct H_IN as [? -> H_IN]. destruct H_IN as [IN1 IN2]. split... econs... econs...
-  - i. red in OPEN |- *. change (O1 == O2) in EXT_EQ. eapply isOpen_compatWith_ext_eq with (O1 := E.preimage q O1)... intros x. rewrite EXT_EQ...
+  - i. red in OPEN |- *. change (O1 == O2) in EXT_EQ. eapply isOpen_compatWith_ext_eq with (O1 := E.preimage prj O1)... intros x. rewrite EXT_EQ...
 Qed.
 
 #[global]
