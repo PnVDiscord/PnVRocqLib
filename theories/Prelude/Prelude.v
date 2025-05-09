@@ -1648,7 +1648,7 @@ Proof with reflexivity || eauto.
 Qed.
 
 Lemma Topology_onQuotientSet_ver2 (T : ensemble (POWER X))
-  (T_X := E.image (@proj1_sig (ensemble X) isCompatibleWith_eqProp) T)
+  (T_X := E.image (@proj1_sig (ensemble X) (@isCompatibleWith_eqProp X SETOID)) T)
   (T_Q := fun U : ensemble (Quot X) => E.preimage proj U \in T_X)
   (TOPOLOGY_ON_SETOID : TopologyOnSetoid X (SETOID := SETOID) T_X)
   : AxiomsForTopology (Quot X) T_Q.
@@ -1664,14 +1664,12 @@ Proof with reflexivity || eauto.
     - rewrite -> EQ...
   }
   split.
-  - subst T_Q. red. eapply claim5 with (O1 := E.full)...
-    intros x. unfold eqProp_cl; split; intros IN... econs...
+  - subst T_Q. red. eapply claim5 with (O1 := E.full)... intros x. unfold eqProp_cl; split; intros IN... econs...
   - ii. i. red in OPENs |- *. eapply claim5 with (O1 := E.unions (fun U => exists O, O \in Os /\ U \in T_X /\ E.preimage proj O == U)).
     + intros x. split; intros H_IN; s!.
       * destruct H_IN as (U & x_in & O & O_IN & U_in & EQ).
         assert (this : x \in U) by exact x_in.
-        rewrite <- EQ in this. s!. destruct this as (? & -> & IN).
-        exists (proj x). split... econs...
+        rewrite <- EQ in this. s!. destruct this as (? & -> & IN). exists (proj x). split... econs...
       * destruct H_IN as (? & -> & IN). destruct IN as [O H_IN O_in]. exists (E.preimage proj O). split.
         { econs... }
         { exists O. split... split... eapply OPENs... }
@@ -1684,8 +1682,7 @@ Proof with reflexivity || eauto.
       intros x. split; [intros [H_IN1 H_IN2] | intros (z & z_eq & [H_IN1 H_IN2])].
       * exists x. split... ss!.
       * rewrite <- EQ1, <- EQ2. econs; exists z; split...
-  - subst T_Q. i. red in OPEN |- *. eapply claim5 with (O1 := E.preimage proj O1)...
-    change (O1 == O2) in EXT_EQ. rewrite -> EXT_EQ...
+  - subst T_Q. i. red in OPEN |- *. eapply claim5 with (O1 := E.preimage proj O1)... change (O1 == O2) in EXT_EQ. rewrite -> EXT_EQ...
 Qed.
 
 End Topology_onQuotientSet.
