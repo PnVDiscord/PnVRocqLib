@@ -1571,7 +1571,7 @@ Qed.
 Instance cls_isCompatibleWith_eqProp {A : Type} {SETOID : isSetoid A} (z : A)
   : isCompatibleWith_eqProp (SETOID := SETOID) (cls z).
 Proof.
-  ii. do 1 red in H |- *. transitivity x; done!.
+  ii. red in H |- *. transitivity x; done!.
 Qed.
 
 Definition POWER (A : Type) {SETOID : isSetoid A} : Type :=
@@ -1579,6 +1579,8 @@ Definition POWER (A : Type) {SETOID : isSetoid A} : Type :=
 
 Definition Quot (A : Type) {SETOID : isSetoid A} : Type :=
   { U : POWER A | exists x : A, cls x == proj1_sig U }.
+
+Section Topology_onQuotientSet.
 
 Class TopologyOnSetoid (X : Type) {SETOID : isSetoid X} (T : ensemble (ensemble X)) : Prop :=
   { full_in_Tq
@@ -1595,8 +1597,6 @@ Class TopologyOnSetoid (X : Type) {SETOID : isSetoid X} (T : ensemble (ensemble 
     : O1 \in T <-> O2 \in T
   }.
 
-Section POWERSET_OF_SETOID.
-
 Context {X : Type} {SETOID : isSetoid X}.
 
 Definition proj (x : X) : Quot X :=
@@ -1610,17 +1610,54 @@ Proof.
   reflexivity.
 Defined.
 
-Lemma Topology_onQuotientSet (T : ensemble (POWER X))
+Lemma Topology_onQuotientSet_ver1 (T_X : ensemble (ensemble X))
+  (TOPOLOGY_ON_SETOID : TopologyOnSetoid X (SETOID := SETOID) T_X)
+  (T_Q := fun U : ensemble (Quot X) => eqProp_cl (E.preimage proj U) \in T_X)
+  : AxiomsForTopology (Quot X) T_Q.
+Proof with reflexivity || eauto.
+  destruct TOPOLOGY_ON_SETOID as [claim1 claim2 claim3 claim4].
+  assert (claim5 : forall O1, forall O2, O1 == O2 -> O1 \in T_X -> O2 \in T_X).
+  { intros O1 O2 EQ OPEN. rewrite <- claim4 with (O1 := eqProp_cl O1)...
+    - rewrite -> claim4 with (O2 := O1)...
+    - rewrite -> EQ...
+  }
+  split.
+  - subst T_Q. red. eapply claim5 with (O1 := E.full)...
+    intros x. unfold eqProp_cl; split; intros IN... red. exists x; split... econs...
+  - subst T_Q. ii. i. red in OPENs |- *. eapply claim5 with (O1 := E.unions (fun U => exists O, O \in Os /\ U \in T_X /\ eqProp_cl (E.preimage proj O) == U)).
+    + intros x. split; intros H_IN; s!.
+      * destruct H_IN as (U & x_in & O & O_IN & U_in & EQ).
+        assert (this : x \in U) by exact x_in. rewrite <- EQ in this.
+        clear x_in. revert x this. change (eqProp_cl (E.preimage proj O) =< eqProp_cl (E.preimage proj (E.unions Os))).
+        eapply cl_op_monotonic. intros x x_in. inv x_in. econs... econs...
+        * destruct H_IN as (z & z_eq & IN). inv IN. destruct H_IN as [O H_IN O_in].
+          exists (eqProp_cl (E.preimage proj O)). split.
+          { exists z. split... s!. exists (proj z)... }
+          { exists O. split... }
+    + eapply claim2. intros x H_x. red in H_x. destruct H_x as (O & O_in & x_in & EQ). eapply claim5 with (O1 := eqProp_cl (E.preimage proj O))...
+  - subst T_Q. i. red in OPEN1, OPEN2 |- *. rewrite -> claim4 with (O2 := E.intersection (E.preimage proj O1) (E.preimage proj O2)).
+      + eapply claim3.
+        * rewrite <- claim4; [exact OPEN1 | reflexivity].
+        * rewrite <- claim4; [exact OPEN2 | reflexivity].
+      + intros x. split; intros H_IN; s!.
+        * destruct H_IN as (z & z_eq & H_z). s!. destruct H_z as (? & -> & H_z).
+          exists z. split... econs; ss!.
+        * destruct H_IN as (z & z_eq & H_z). exists z. split... 
+          s!. destruct H_z as [(? & -> & H1_in) (? & -> & H2_in)]. exists (proj z). split... econs...
+    - subst T_Q. i. red in OPEN |- *. eapply claim5 with (O1 := eqProp_cl (E.preimage proj O1))... change (O1 == O2) in EXT_EQ. rewrite EXT_EQ...
+Qed.
+
+Lemma Topology_onQuotientSet_ver2 (T : ensemble (POWER X))
   (T_X := E.image (@proj1_sig (ensemble X) isCompatibleWith_eqProp) T)
   (T_Q := fun U : ensemble (Quot X) => E.preimage proj U \in T_X)
-  (TOP' : TopologyOnSetoid X (SETOID := SETOID) T_X)
+  (TOPOLOGY_ON_SETOID : TopologyOnSetoid X (SETOID := SETOID) T_X)
   : AxiomsForTopology (Quot X) T_Q.
 Proof with reflexivity || eauto.
   assert (claim0 : forall U, U \in T_X -> eqProp_cl U == U).
   { intros U U_IN; ii. subst T_X. s!. destruct U_IN as (V & -> & V_IN). destruct V as [U H_U]; simpl.
     split; intros H_IN; [destruct H_IN as (z & z_eq & z_in); symmetry in z_eq; eapply H_U with (x := z) | exists x; split]...
   }
-  destruct TOP' as [claim1 claim2 claim3 claim4].
+  destruct TOPOLOGY_ON_SETOID as [claim1 claim2 claim3 claim4].
   assert (claim5 : forall O1, forall O2, O1 == O2 -> O1 \in T_X -> O2 \in T_X).
   { intros O1 O2 EQ OPEN. rewrite <- claim4 with (O1 := eqProp_cl O1)...
     - rewrite -> claim4 with (O2 := O1)...
@@ -1651,6 +1688,6 @@ Proof with reflexivity || eauto.
     change (O1 == O2) in EXT_EQ. rewrite -> EXT_EQ...
 Qed.
 
-End POWERSET_OF_SETOID.
+End Topology_onQuotientSet.
 
 End Setoidism.
