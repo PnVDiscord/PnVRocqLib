@@ -678,7 +678,7 @@ Qed.
 
 #[global] Hint Rewrite in_preimage_iff : simplication_hints.
 
-Inductive full {A : Type} (x : A) :=
+Inductive full {A : Type} (x : A) : Prop :=
   | in_full
     : x \in full.
 
