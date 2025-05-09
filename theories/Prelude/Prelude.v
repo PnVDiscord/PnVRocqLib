@@ -1583,10 +1583,10 @@ Proof.
 Qed.
 
 Definition Quot (X : Type) {SETOID : isSetoid X} : Type :=
-  { U : ensemble X & { x : X | cls x == U } }.
+  { U : ensemble X | exists x, cls x == U }.
 
 Definition prj {X : Type} {SETOID : isSetoid X} : X -> Quot X :=
-  fun x => @existT (ensemble X) (fun U => { x : X | cls x == U }) (cls x) (@exist X (fun y => cls y == cls x) x (Equivalence_Reflexive (cls x))).
+  fun x => @exist (ensemble X) (fun U => exists x, cls x == U) (cls x) (@ex_intro X (fun y => cls y == cls x) x (Equivalence_Reflexive (cls x))).
 
 Section QuotientTopology.
 
@@ -1626,37 +1626,6 @@ Instance QuotientTopology : topology (Quot X) :=
   { isOpen := OpenSets_in_Quot
   ; topologyLaws := OpenSets_in_Quot_satisfiesAxiomsForOpenSets
   }.
-
-Let inv_prj (q : Quot X) :=
-  proj1_sig (projT2 q).
-
-Lemma inv_proj_conti
-  : isContinuous inv_prj.
-Proof.
-  intros U OPEN. change (E.preimage inv_prj U \in OpenSets_in_Quot). unfold OpenSets_in_Quot. red.
-  eapply isOpen_compatWith_ext_eq with (O1 := U); trivial. intros x; split; intros H_IN.
-  - s!. exists (prj x). split; trivial. s!. exists x. unfold inv_prj, prj. simpl. split; trivial.
-  - s!. destruct H_IN as (? & -> & H_IN). s!. destruct H_IN as (? & -> & H_IN). unfold inv_prj, prj in H_IN. simpl in *; trivial.
-Qed.
-
-Theorem UniversalProperty_of_QuotientTopology {Z : Type} {TOPOLOGY' : topology Z} (g : X -> Z)
-  (g_compat : forall x1 : X, forall x2 : X, x1 == x2 -> g x1 = g x2)
-  : { f : Quot X -> Z | (forall x, f (prj x) = g x) /\ (isContinuous f <-> isContinuous g) }.
-Proof.
-  exists (fun x => g (inv_prj x)). split.
-  - intros x. eapply g_compat. simpl. reflexivity.
-  - split; intros CONTI; red in CONTI |- *; intros U OPEN.
-    + pose proof (CONTI U OPEN) as claim1. eapply isOpen_compatWith_ext_eq.
-      { exact claim1. }
-      intros x. s!. split; intros ?; ss!; subst.
-      { exists (g x). split; trivial. }
-      { exists (prj x). split; trivial. s!. exists (g x). split; trivial. }
-    + eapply isOpen_compatWith_ext_eq with (O1 := E.preimage inv_prj (E.preimage g U)).
-      * eapply inv_proj_conti. eapply CONTI; trivial.
-      * intros x; split; intros H_IN.
-        { s!. destruct H_IN as (? & -> & H_IN). exists (g (inv_prj x)). split; trivial. s!. destruct H_IN as (? & -> & H_IN); trivial. }
-        { s!. destruct H_IN as (? & -> & H_IN). exists (inv_prj x). split; trivial. s!. exists (g (inv_prj x)); split; trivial. }
-Qed.
 
 End QuotientTopology.
 
