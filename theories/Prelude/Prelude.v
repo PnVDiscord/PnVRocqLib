@@ -1487,17 +1487,15 @@ Defined.
 
 #[global] Hint Resolve empty_in_T unions_in_T full_in_T intersection_in_T isOpen_compatWith_eqProp : simplication_hints.
 
-Definition Kuratowski_cl_op {A : Type} (cl : ensemble A -> ensemble A) : ensemble (ensemble A) :=
-  fun O => E.complement O == cl (E.complement O).
-
-Theorem Kuratowski_cl_op_good {A : Type} (cl : ensemble A -> ensemble A)
+Theorem Kuratowski_cl {X : Type} (cl : ensemble X -> ensemble X)
   (cl_isClosureOperator : isClosureOperator cl)
   (cl_preserves_empty : cl E.empty == E.empty)
-  (cl_subadditive : forall X, forall Y, cl (E.union X Y) \subseteq E.union (cl X) (cl Y))
-  (cl_classic : forall X, cl (E.complement (E.complement X)) == E.complement (E.complement (cl X)))
-  : AxiomsForTopology A (Kuratowski_cl_op cl).
+  (cl_subadditive : forall U, forall V, cl (E.union U V) \subseteq E.union (cl U) (cl V))
+  (cl_classic : forall U, cl (E.complement (E.complement U)) == E.complement (E.complement (cl U)))
+  (T := fun O : ensemble X => let C := E.complement O in C == cl C)
+  : AxiomsForTopology X T.
 Proof.
-  unfold Kuratowski_cl_op; ii; split; i.
+  cbn zeta in T; subst T; ii; split; i.
   - red. eapply leProp_antisymmetry.
     + done!.
     + transitivity (cl E.empty).
@@ -1505,8 +1503,8 @@ Proof.
       rewrite cl_preserves_empty. done!.
   - red. eapply leProp_antisymmetry.
     + eapply cl_op_extensive.
-    + do 2 red in OPENs. intros x IN H_in. rewrite E.in_unions_iff in H_in. destruct H_in as [X [H_in H_IN]].
-      pose proof (OPENs X H_IN) as H_EQ. revert x IN H_in. change (cl (E.complement (E.unions Os)) =< E.complement X).
+    + do 2 red in OPENs. intros x IN H_in. rewrite E.in_unions_iff in H_in. destruct H_in as [U [H_in H_IN]].
+      pose proof (OPENs U H_IN) as H_EQ. revert x IN H_in. change (cl (E.complement (E.unions Os)) =< E.complement U).
       rewrite H_EQ. eapply cl_op_monotonic. intros x H_in CONTRA. done!.
   - red in OPEN1, OPEN2. red. eapply leProp_antisymmetry.
     + eapply cl_op_extensive.
@@ -1603,19 +1601,18 @@ Context {X : Type} {SETOID : isSetoid X}.
 
 Definition proj (x : X) : Quot X :=
   let RET := @exist (ensemble X) isCompatibleWith_eqProp (cls x) (cls_isCompatibleWith_eqProp x) in
-  let H_RET := @ex_intro X (fun x => cls x == proj1_sig RET) x (eqProp_refl (cls x)) in
-  @exist (POWER X) (fun U => exists x : X, cls x == proj1_sig U) RET H_RET.
+  let H_RET := @ex_intro X (fun y => cls y == proj1_sig RET) x (eqProp_refl (cls x)) in
+  @exist (POWER X) (fun U => exists y : X, cls y == proj1_sig U) RET H_RET.
 
-Lemma eq_cls_eq_proj (x : X)
+Lemma cls_eq_proj (x : X)
   : cls x = proj1_sig (proj1_sig (proj x)).
 Proof.
   reflexivity.
 Defined.
 
-#[global]
-Instance AxiomsForTopology_onQuot (T : ensemble (POWER X))
+Lemma Topology_onQuotientSet (T : ensemble (POWER X))
   (T_X := E.image (@proj1_sig (ensemble X) isCompatibleWith_eqProp) T)
-  (T_Q := fun O : ensemble (Quot X) => E.preimage proj O \in T_X)
+  (T_Q := fun U : ensemble (Quot X) => E.preimage proj U \in T_X)
   (TOP' : TopologyOnSetoid X (SETOID := SETOID) T_X)
   : AxiomsForTopology (Quot X) T_Q.
 Proof with reflexivity || eauto.
@@ -1638,21 +1635,20 @@ Proof with reflexivity || eauto.
         assert (this : x \in U) by exact x_in.
         rewrite <- EQ in this. s!. destruct this as (? & -> & IN).
         exists (proj x). split... econs...
-      * destruct H_IN as (? & -> & IN). destruct IN as [O H_IN O_in].
-        exists (E.preimage proj O). split.
+      * destruct H_IN as (? & -> & IN). destruct IN as [O H_IN O_in]. exists (E.preimage proj O). split.
         { econs... }
         { exists O. split... split... eapply OPENs... }
     + eapply claim2... intros x H_x. red in H_x. destruct H_x as (O & O_in & x_in & EQ). eapply claim5 with (O1 := E.preimage proj O)...
   - subst T_Q. i. red in OPEN1, OPEN2 |- *. rewrite -> claim4 with (O2 := E.intersection (E.preimage proj O1) (E.preimage proj O2)).
     + eapply claim3...
-    + pose proof (EQ1 := claim0 _ OPEN1). pose proof (EQ2 := claim0 _ OPEN2).
-      transitivity (E.intersection (E.preimage proj O1) (E.preimage proj O2)).
-      { clear EQ1 EQ2. intros x. s!. split; [intros (? & -> & [H_IN1 H_IN2]) | intros [(? & -> & H_IN1) (? & -> & H_IN2)]]; ss!. }
+    + transitivity (E.intersection (E.preimage proj O1) (E.preimage proj O2)).
+      { intros x. s!. split; [intros (? & -> & [H_IN1 H_IN2]) | intros [(? & -> & H_IN1) (? & -> & H_IN2)]]; ss!. }
+      pose proof (EQ1 := claim0 _ OPEN1). pose proof (EQ2 := claim0 _ OPEN2).
       intros x. split; [intros [H_IN1 H_IN2] | intros (z & z_eq & [H_IN1 H_IN2])].
       * exists x. split... ss!.
       * rewrite <- EQ1, <- EQ2. econs; exists z; split...
   - subst T_Q. i. red in OPEN |- *. eapply claim5 with (O1 := E.preimage proj O1)...
-    change (O1 == O2) in EXT_EQ. rewrite EXT_EQ...
+    change (O1 == O2) in EXT_EQ. rewrite -> EXT_EQ...
 Qed.
 
 End POWERSET_OF_SETOID.
