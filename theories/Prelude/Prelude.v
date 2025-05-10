@@ -1571,11 +1571,11 @@ Module Quot.
 
 Section QuotientTopology.
 
-Context {X : Type} {TOPOLOGY : topology X} {Q : Type}.
+Context {X : Type} {TOPOLOGY : topology X}.
 
 Section BUILD.
 
-Context {prj : X -> Q}.
+Context {Q : Type} {prj : X -> Q}.
 
 Definition OpenSets_in_Q : ensemble (ensemble Q) :=
   fun U => isOpen (E.preimage prj U).
@@ -1606,13 +1606,15 @@ Proof with reflexivity || eauto.
   - i. red in OPEN |- *. change (O1 == O2) in EXT_EQ. eapply isOpen_compatWith_ext_eq with (O1 := E.preimage prj O1)... intros x. rewrite EXT_EQ...
 Qed.
 
+End BUILD.
+
+Context {SETOID : isSetoid X} {Q : Type} {QUOTIENT : isQuotientOf Q X}.
+
 #[global]
 Instance QuotientTopology : topology Q :=
-  { isOpen := OpenSets_in_Q
-  ; topologyLaws := OpenSets_in_Q_satisfiesAxiomsForOpenSets
+  { isOpen := OpenSets_in_Q (Q := Q) (prj := prj)
+  ; topologyLaws := OpenSets_in_Q_satisfiesAxiomsForOpenSets (Q := Q) (prj := prj)
   }.
-
-End BUILD.
 
 End QuotientTopology.
 
