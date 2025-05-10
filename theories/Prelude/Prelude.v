@@ -1575,7 +1575,7 @@ Context {X : Type} {TOPOLOGY : topology X}.
 
 Section BUILD.
 
-Context {Q : Type} {prj : X -> Q}.
+Context {Q : Type} (prj : X -> Q).
 
 Definition OpenSets_in_Q : ensemble (ensemble Q) :=
   fun U => isOpen (E.preimage prj U).
@@ -1612,8 +1612,8 @@ Context {SETOID : isSetoid X} {Q : Type} {QUOTIENT : isQuotientOf Q X}.
 
 #[global]
 Instance QuotientTopology : topology Q :=
-  { isOpen := OpenSets_in_Q (Q := Q) (prj := prj)
-  ; topologyLaws := OpenSets_in_Q_satisfiesAxiomsForOpenSets (Q := Q) (prj := prj)
+  { isOpen := OpenSets_in_Q prj
+  ; topologyLaws := OpenSets_in_Q_satisfiesAxiomsForOpenSets prj
   }.
 
 End QuotientTopology.
