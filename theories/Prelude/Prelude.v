@@ -1556,7 +1556,7 @@ Qed.
 
 End SUBSPACE_TOPOLOGY.
 
-Class isQuotientOf (X : Type@{U_discourse}) {SETOID : isSetoid X} (Q : Type@{U_discourse}) : Type@{U_cosmos} :=
+Class isQuotientOf (Q : Type@{U_discourse}) (X : Type@{U_discourse}) {SETOID : isSetoid X} : Type@{U_cosmos} :=
   { prj : X -> Q
   ; prj_eq (x1 : X) (x2 : X) (EQUIV : x1 == x2) : prj x1 = prj x2
   ; rec {Y : Type@{U_discourse}} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2) : Q -> Y
@@ -1570,7 +1570,7 @@ Module Quot.
 
 Section QuotientTopology.
 
-Context {X : Type} {TOPOLOGY : topology X} {SETOID : isSetoid X} {Q : Type} {QUOT : isQuotientOf X Q}.
+Context {X : Type} {TOPOLOGY : topology X} {SETOID : isSetoid X} {Q : Type} {QUOT : isQuotientOf Q X}.
 
 Definition OpenSets_in_Q : ensemble (ensemble Q) :=
   fun U => isOpen (E.preimage prj U).
