@@ -1556,43 +1556,23 @@ Qed.
 
 End SUBSPACE_TOPOLOGY.
 
-Module Setoidism.
+Class isQuotientOf (X : Type@{U_discourse}) {SETOID : isSetoid X} (Q : Type@{U_discourse}) : Type@{U_cosmos} :=
+  { prj : X -> Q
+  ; prj_eq (x1 : X) (x2 : X) (EQUIV : x1 == x2) : prj x1 = prj x2
+  ; rec {Y : Type@{U_discourse}} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2) : Q -> Y
+  ; rec_compute {Y : Type@{U_discourse}} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
+    : forall x, rec f f_cong (prj x) = f x
+  ; rec_unique {Y : Type@{U_discourse}} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
+    : forall rec', (forall x, rec' (prj x) = f x) -> (forall q, rec' q = rec f f_cong q)
+  }.
 
-Definition cls {A : Type} {SETOID : isSetoid A} (x : A) : ensemble A :=
-  fun z => z == x.
-
-Lemma in_cls {A : Type} {SETOID : isSetoid A} (x : A)
-  : x \in cls x.
-Proof.
-  do 2 red; reflexivity.
-Qed.
-
-Lemma cls_eq_cls_iff {A : Type} {SETOID : isSetoid A} (x1 : A) (x2 : A)
-  : cls x1 == cls x2 <-> x1 == x2.
-Proof.
-  split; intros EQ.
-  - pose proof (in_cls x1) as claim1. rewrite EQ in claim1. exact claim1.
-  - intros x. unfold "\in", cls. rewrite <- EQ. reflexivity.
-Qed.
-
-#[global]
-Instance cls_isCompatibleWith_eqProp {A : Type} {SETOID : isSetoid A} (z : A)
-  : isCompatibleWith_eqProp (SETOID := SETOID) (cls z).
-Proof.
-  ii. red in H |- *. transitivity x; done!.
-Qed.
-
-Definition Quot (X : Type) {SETOID : isSetoid X} : Type :=
-  { U : ensemble X | exists x, cls x == U }.
-
-Definition prj {X : Type} {SETOID : isSetoid X} : X -> Quot X :=
-  fun x => @exist (ensemble X) (fun U => exists x, cls x == U) (cls x) (@ex_intro X (fun y => cls y == cls x) x (Equivalence_Reflexive (cls x))).
+Module Quot.
 
 Section QuotientTopology.
 
-Context {X : Type} {SETOID : isSetoid X} {TOPOLOGY : topology X}.
+Context {X : Type} {TOPOLOGY : topology X} {SETOID : isSetoid X} {Q : Type} {QUOT : isQuotientOf X Q}.
 
-Definition OpenSets_in_Quot : ensemble (ensemble (Quot X)) :=
+Definition OpenSets_in_Q : ensemble (ensemble Q) :=
   fun U => isOpen (E.preimage prj U).
 
 #[local] Opaque isOpen.
@@ -1600,10 +1580,10 @@ Definition OpenSets_in_Quot : ensemble (ensemble (Quot X)) :=
 #[local] Hint Unfold E.In : core.
 
 #[global]
-Instance OpenSets_in_Quot_satisfiesAxiomsForOpenSets
-  : AxiomsForTopology (Quot X) OpenSets_in_Quot.
+Instance OpenSets_in_Q_satisfiesAxiomsForOpenSets
+  : AxiomsForTopology Q OpenSets_in_Q.
 Proof with reflexivity || eauto.
-  unfold OpenSets_in_Quot. destruct TOPOLOGY.(topologyLaws) as [H1 H2 H3 H4]. split.
+  unfold OpenSets_in_Q. destruct TOPOLOGY.(topologyLaws) as [H1 H2 H3 H4]. split.
   - red. eapply isOpen_compatWith_ext_eq with (O1 := E.full)... intros x. split; intros IN... econs...
   - intros. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage prj O == U)).
     + eapply H2. intros U H_U. red in H_U. destruct H_U as (O & O_in & U_in & EQ). eapply isOpen_compatWith_ext_eq with (O1 := E.preimage prj O)...
@@ -1622,11 +1602,11 @@ Proof with reflexivity || eauto.
 Qed.
 
 #[global]
-Instance QuotientTopology : topology (Quot X) :=
-  { isOpen := OpenSets_in_Quot
-  ; topologyLaws := OpenSets_in_Quot_satisfiesAxiomsForOpenSets
+Instance QuotientTopology : topology Q :=
+  { isOpen := OpenSets_in_Q
+  ; topologyLaws := OpenSets_in_Q_satisfiesAxiomsForOpenSets
   }.
 
 End QuotientTopology.
 
-End Setoidism.
+End Quot.
