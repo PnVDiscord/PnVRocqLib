@@ -59,7 +59,7 @@ Notation L' := (augmented_language L Henkin_constants).
 
 #[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
 
-Theorem HilbertCalculus_complete (X : ensemble (frm L)) (b : frm L)
+Theorem HilbertCalculus_countable_complete (X : ensemble (frm L)) (b : frm L)
   (CONSEQUENCE : X ⊨ b)
   : X ⊢ b.
 Proof with eauto with *.

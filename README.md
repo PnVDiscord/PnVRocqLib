@@ -10,14 +10,14 @@ Currently, this library is standalone.
 git clone https://github.com/PnVDiscord/PnVRocqLib.git
 cd PnVRocqLib
 eval `opam env`
-coq_makefile -f _CoqProject -o Makefile
+rocq makefile -f _CoqProject -o Makefile
 make -j4 -k
 ```
 
-### coqc -v
+### rocq -v
 
 ```
-The Coq Proof Assistant, version 8.20.0
+The Rocq Prover, version 9.0.0
 ```
 
 ## 2. Contents
@@ -30,7 +30,7 @@ Our main results are:
 
 - [x] The soundness, completeness, and compactness theorems of propositional logic. (`Theorem the_propositional_soundness_theorem`, `Theorem the_propositional_completeness_theorem`, and `Corollary the_propositional_compactness_theorem` in [`ClassicalPropositionalLogic.v`](theories/Logic/ClassicalPropositionalLogic.v))
 
-- [x] The soundness and completeness theorems of first-order logic. (`Theorem HilbertCalculus_sound` and `Theorem HilbertCalculus_complete` in [`ClassicalFol.v`](theories/Logic/ClassicalFol.v))
+- [x] The soundness and countable completeness theorems of first-order logic. (`Theorem HilbertCalculus_sound` and `Theorem HilbertCalculus_countable_complete` in [`ClassicalFol.v`](theories/Logic/ClassicalFol.v))
 
 ### Control
 
@@ -46,7 +46,7 @@ Our main results are:
 
 - `ITree.v` : Basic Definitions on interaction tree.
 
-- `Vector.v` : Replaces `Coq.Vectors.VectorDef.t`.
+- `Vector.v` : Replaces `Stdlib.Vectors.VectorDef.t`.
 
 ### Index
 

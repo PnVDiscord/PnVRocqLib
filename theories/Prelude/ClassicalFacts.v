@@ -1,6 +1,6 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.ConstructiveFacts.
-Require Export Coq.Logic.Classical_Prop.
+Require Export Stdlib.Logic.Classical_Prop.
 
 Include EqdepTheory.
 
