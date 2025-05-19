@@ -540,11 +540,11 @@ Qed.
 
 (** Section SET_CONSTRUCTIONS. *)
 
-Inductive unions {A : Type} (Xs : E.t (E.t A)) (x : A) : Prop :=
-  | In_unions X
+Inductive unions@{u} {A : Type@{u}} (Xs : E.t@{u} (E.t@{u} A)) (x : A) : Prop :=
+  | In_unions (X : E.t@{u} A)
     (H_in : x \in X)
     (H_IN : X \in Xs)
-    : x \in unions Xs.
+    : E.In@{u} x (unions Xs).
 
 #[local] Hint Constructors unions : core.
 
@@ -563,13 +563,13 @@ Proof.
   ii. do 2 rewrite in_unions_iff. now firstorder.
 Qed.
 
-Inductive union {A : Type} (X1 : E.t A) (X2 : E.t A) (x : A) : Prop :=
+Inductive union@{u} {A : Type@{u}} (X1 : E.t@{u} A) (X2 : E.t@{u} A) (x : A) : Prop :=
   | In_union_l
     (H_inl : x \in X1)
-    : x \in union X1 X2
+    : E.In@{u} x (union X1 X2)
   | In_union_r
     (H_inr : x \in X2)
-    : x \in union X1 X2.
+    : E.In@{u} x (union X1 X2).
 
 #[local] Hint Constructors union : core.
 
@@ -588,7 +588,7 @@ Proof.
   ii. do 2 rewrite in_union_iff. now firstorder.
 Qed.
 
-Inductive empty {A : Type} : E.t A :=.
+Inductive empty@{u} {A : Type@{u}} : E.t@{u} A :=.
 
 #[local] Hint Constructors empty : core.
 
@@ -600,11 +600,11 @@ Qed.
 
 #[global] Hint Rewrite in_empty_iff : simplication_hints.
 
-Inductive intersection {A : Type} (X1 : E.t A) (X2 : E.t A) (x : A) : Prop :=
+Inductive intersection@{u} {A : Type@{u}} (X1 : E.t@{u} A) (X2 : E.t@{u} A) (x : A) : Prop :=
   | In_intersection
     (H_IN1 : x \in X1)
     (H_IN2 : x \in X2)
-    : x \in intersection X1 X2.
+    : E.In@{u} x (intersection X1 X2).
 
 #[local] Hint Constructors intersection : core.
 
@@ -623,9 +623,9 @@ Proof.
   ii. do 2 rewrite in_intersection_iff. now firstorder.
 Qed.
 
-Inductive singleton {A : Type} (x : A) : E.t A :=
+Inductive singleton@{u} {A : Type@{u}} (x : A) : E.t@{u} A :=
   | In_singleton
-    : x \in singleton x.
+    : E.In@{u} x (singleton x).
 
 #[local] Hint Constructors singleton : core.
 
@@ -637,11 +637,11 @@ Qed.
 
 #[global] Hint Rewrite in_singleton_iff : simplication_hints.
 
-Inductive image {A : Type} {B : Type} (f : A -> B) (X : E.t A) (y : B) : Prop :=
+Inductive image@{u v} {A : Type@{u}} {B : Type@{v}} (f : A -> B) (X : E.t@{u} A) (y : B) : Prop :=
   | In_image x
     (IMAGE : y = f x)
     (H_IN : x \in X)
-    : y \in image f X.
+    : E.In@{v} y (image f X).
 
 #[local] Hint Constructors image : core.
 
@@ -662,11 +662,11 @@ Proof.
   do 2 rewrite in_image_iff in *. now split; i; des; exists x; rewrite f_EQ, X_EQ in *.
 Qed.
 
-Inductive preimage {A : Type} {B : Type} (f : A -> B) (Y : E.t B) (x : A) : Prop :=
+Inductive preimage@{u v} {A : Type@{u}} {B : Type@{v}} (f : A -> B) (Y : E.t@{v} B) (x : A) : Prop :=
   | In_preimage y
     (IMAGE : y = f x)
     (H_IN : y \in Y)
-    : x \in preimage f Y.
+    : E.In@{u} x (preimage f Y).
 
 #[local] Hint Constructors preimage : core.
 
@@ -678,9 +678,18 @@ Qed.
 
 #[global] Hint Rewrite in_preimage_iff : simplication_hints.
 
-Inductive full {A : Type} (x : A) : Prop :=
+#[global]
+Add Parametric Morphism {A : Type} {B : Type}
+  : (@preimage A B) with signature (eqProp (isSetoid := pi_isSetoid (fun _ => mkSetoid_from_eq)) ==> eqProp ==> eqProp)
+  as preimage_compatWith_eqProp.
+Proof.
+  intros f1 f2 f_EQ Y1 Y2 Y_EQ. intros z. do 4 red in f_EQ. do 6 red in Y_EQ.
+  do 2 rewrite in_preimage_iff in *. now split; i; des; exists y; rewrite f_EQ, Y_EQ in *.
+Qed.
+
+Inductive full@{u} {A : Type@{u}} (x : A) : Prop :=
   | in_full
-    : x \in full.
+    : E.In@{u} x (full).
 
 #[local] Hint Constructors full : core.
 
@@ -691,15 +700,6 @@ Proof.
 Qed.
 
 #[global] Hint Rewrite in_full_iff : simplication_hints.
-
-#[global]
-Add Parametric Morphism {A : Type} {B : Type}
-  : (@preimage A B) with signature (eqProp (isSetoid := pi_isSetoid (fun _ => mkSetoid_from_eq)) ==> eqProp ==> eqProp)
-  as preimage_compatWith_eqProp.
-Proof.
-  intros f1 f2 f_EQ Y1 Y2 Y_EQ. intros z. do 4 red in f_EQ. do 6 red in Y_EQ.
-  do 2 rewrite in_preimage_iff in *. now split; i; des; exists y; rewrite f_EQ, Y_EQ in *.
-Qed.
 
 #[universes(polymorphic=yes)]
 Definition fromList@{u} {A : Type@{u}} (xs : list A) : E.t@{u} A :=
@@ -1163,8 +1163,8 @@ Instance nat_hasEqDec : hasEqDec nat :=
 
 #[global]
 Instance pair_hasEqdec {A : Type} {B : Type}
-  `(A_hasEqDec : hasEqDec A)
-  `(B_hasEqDec : hasEqDec B)
+  (A_hasEqDec : hasEqDec A)
+  (B_hasEqDec : hasEqDec B)
   : hasEqDec (A * B).
 Proof.
   red in A_hasEqDec, B_hasEqDec. red. decide equality.
@@ -1179,8 +1179,8 @@ Defined.
 
 #[global]
 Instance sum_hasEqDec {A : Type} {B : Type}
-  `(A_hasEqDec : hasEqDec A)
-  `(B_hasEqDec : hasEqDec B)
+  (A_hasEqDec : hasEqDec A)
+  (B_hasEqDec : hasEqDec B)
   : hasEqDec (A + B).
 Proof.
   red in A_hasEqDec, B_hasEqDec. red. decide equality.
@@ -1429,20 +1429,20 @@ Defined.
 
 End L.
 
-Class AxiomsForTopology (X : Type) (T : ensemble (ensemble X)) : Prop :=
+Class AxiomsForTopology@{u} (X : Type@{u}) (T : ensemble@{u} (ensemble@{u} X)) : Prop :=
   { full_isOpen
-    : E.full \in T
+    : E.In@{u} E.full T
   ; unions_isOpen Os
-    (OPENs : Os \subseteq T)
-    : E.unions Os \in T
+    (OPENs : E.isSubsetOf@{u} Os T)
+    : E.In@{u} (E.unions Os) T
   ; intersection_isOpen O1 O2
-    (OPEN1 : O1 \in T)
-    (OPEN2 : O2 \in T)
-    : E.intersection O1 O2 \in T
+    (OPEN1 : E.In@{u} O1 T)
+    (OPEN2 : E.In@{u} O2 T)
+    : E.In@{u} (E.intersection O1 O2) T
   ; isOpen_compatWith_ext_eq O1 O2
-    (OPEN : O1 \in T)
-    (EXT_EQ : forall x : X, x \in O1 <-> x \in O2)
-    : O2 \in T
+    (OPEN : E.In@{u} O1 T)
+    (EXT_EQ : forall x : X, E.In@{u} x O1 <-> E.In@{u} x O2)
+    : E.In@{u} O2 T
   }.
 
 Lemma empty_isOpen {X : Type} {T : ensemble (ensemble X)} `{TOPOLOGY : AxiomsForTopology X T}
@@ -1452,6 +1452,8 @@ Proof.
   - eapply unions_isOpen. ii. done!.
   - i. done!.
 Qed.
+
+(** Section BASIC_TOPOLOGY. *)
 
 Class topology (A : Type) : Type :=
   { isOpen (O : ensemble A) : Prop
@@ -1590,19 +1592,14 @@ Instance OpenSets_in_Q_satisfiesAxiomsForOpenSets
 Proof with reflexivity || eauto.
   unfold OpenSets_in_Q. destruct TOPOLOGY.(topologyLaws) as [H1 H2 H3 H4]. split.
   - red. eapply isOpen_compatWith_ext_eq with (O1 := E.full)... intros x. split; intros IN... econs...
-  - intros. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage prj O == U)).
+  - i. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage prj O == U)).
     + eapply H2. intros U H_U. red in H_U. destruct H_U as (O & O_in & U_in & EQ). eapply isOpen_compatWith_ext_eq with (O1 := E.preimage prj O)...
     + intros x. split; intros H_IN.
-      * destruct H_IN as [U H_IN U_IN]. red in U_IN. destruct U_IN as (O & O_IN & U_IN & H_EQ).
-        rewrite <- H_EQ in H_IN. econs... inv H_IN... econs...
-      * destruct H_IN as [O -> H_IN]. destruct H_IN as [O H_IN O_IN]. exists (E.preimage prj O).
-        { econs... }
-        { exists O. split... split... }
-  - intros. red in OPEN1, OPEN2 |- *. eapply isOpen_compatWith_ext_eq with (O1 := E.intersection (E.preimage prj O1) (E.preimage prj O2)).
+      * destruct H_IN as [U H_IN U_IN]. red in U_IN. destruct U_IN as (O & O_IN & U_IN & H_EQ). rewrite <- H_EQ in H_IN. econs... done!.
+      * destruct H_IN as [O -> H_IN]. destruct H_IN as [O H_IN O_IN]. exists (E.preimage prj O); done!.
+  - i. red in OPEN1, OPEN2 |- *. eapply isOpen_compatWith_ext_eq with (O1 := E.intersection (E.preimage prj O1) (E.preimage prj O2)).
     + eapply intersection_isOpen...
-    + intros x; split; intros H_IN.
-      * destruct H_IN as [[? -> H_IN1] [? -> H_IN2]]. econs... econs...
-      * destruct H_IN as [? -> H_IN]. destruct H_IN as [IN1 IN2]. split... econs... econs...
+    + intros x; split; intros H_IN; ss!.
   - i. red in OPEN |- *. change (O1 == O2) in EXT_EQ. eapply isOpen_compatWith_ext_eq with (O1 := E.preimage prj O1)... intros x. rewrite EXT_EQ...
 Qed.
 
@@ -1619,3 +1616,5 @@ Instance QuotientTopology : topology Q :=
 End QuotientTopology.
 
 End Quot.
+
+(** End BASIC_TOPOLOGY. *)
