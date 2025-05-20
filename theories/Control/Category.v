@@ -8,7 +8,7 @@ Module CAT.
 
 #[local] Obligation Tactic := i.
 
-#[universes(polymorphic=yes)]
+#[universes(polymorphic=yes), projections(primitive)]
 Class isCategory@{u v} : Type@{max(u + 1, v + 1)} :=
   { ob : Type@{u}
   ; hom (D : ob) (C : ob) : Type@{v}
@@ -33,7 +33,7 @@ Definition fin (n : nat) : isCategory@{Set Set} :=
     id i := le_reflexivity;
   |}.
 
-#[universes(polymorphic=yes)]
+#[universes(polymorphic=yes), projections(primitive)]
 Class hasCoproduct@{u v} (C : isCategory@{u v}) : Type@{max(u, v)} :=
   { sum (X : C.(ob)) (Y : C.(ob)) : C.(ob)
   ; inl {X : C.(ob)} {Y : C.(ob)} : C.(hom) X (sum X Y)
@@ -41,13 +41,13 @@ Class hasCoproduct@{u v} (C : isCategory@{u v}) : Type@{max(u, v)} :=
   ; case {X : C.(ob)} {Y : C.(ob)} {Z : C.(ob)} (f : C.(hom) X Z) (g : C.(hom) Y Z) : C.(hom) (sum X Y) Z
   }.
 
-#[universes(polymorphic=yes)]
+#[universes(polymorphic=yes), projections(primitive)]
 Class hasInitial@{u v} (C : isCategory@{u v}) : Type@{max(u, v)} :=
   { void : C.(ob)
   ; exfalso {X : C.(ob)} : C.(hom) void X
   }.
 
-#[universes(polymorphic=yes)]
+#[universes(polymorphic=yes), projections(primitive)]
 Class isCovariantFunctor@{u1 v1 u2 v2} (Dom : isCategory@{u1 v1}) (Cod : isCategory@{u2 v2}) : Type@{max(u1, v1, u2, v2)} :=
   { map_ob : Dom.(ob) -> Cod.(ob)
   ; map_hom {A} {B} (f : Dom.(hom) A B) : Cod.(hom) (map_ob A) (map_ob B)
