@@ -9,6 +9,7 @@ Require Import PnV.Logic.BasicFol2.
 Require Import PnV.Logic.ClassicalFol.
 Require Import PnV.Logic.ClassicalPropositionalLogic.
 Require Import PnV.Logic.ExtraFol.
+Require Import PnV.Logic.FolFramework.
 Require Import PnV.Logic.HilbertFol.
 Require Import PnV.Logic.HilbertFol2.
 Require Import PnV.Logic.MuRec.

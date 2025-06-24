@@ -31,8 +31,8 @@ Definition sEqn {xs : list ivar} (t1 : scoped_trm xs) (t2 : scoped_trm xs) : sco
   @exist _ _ (Eqn_frm t1 t2) (fun z : ivar => fun H => _).
 Next Obligation.
   rewrite orb_true_iff in H. destruct H as [H | H].
-  - eapply (proj2_sig t1 z H).
-  - eapply (proj2_sig t2 z H).
+  - exact (proj2_sig t1 z H).
+  - exact (proj2_sig t2 z H).
 Qed.
 
 #[program]
@@ -47,8 +47,8 @@ Definition sImp {xs : list ivar} (s1 : scoped_frm xs) (s2 : scoped_frm xs) : sco
   @exist _ _ (Imp_frm (proj1_sig s1) (proj1_sig s2)) (fun z : ivar => fun H => _).
 Next Obligation.
   rewrite orb_true_iff in H. destruct H as [H | H].
-  - eapply (proj2_sig s1 z H).
-  - eapply (proj2_sig s2 z H).
+  - exact (proj2_sig s1 z H).
+  - exact (proj2_sig s2 z H).
 Qed.
 
 #[program]
