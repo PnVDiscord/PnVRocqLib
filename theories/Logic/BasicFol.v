@@ -2123,6 +2123,10 @@ Qed.
 
 #[local] Hint Resolve fvs_frm_similarity : core.
 
+#[global]
+Instance Similarity_subst : Similarity (subst L) (subst L') :=
+  fun s => fun s' => forall z, s z =~= s' z.
+
 Lemma chi_frm_similarity (s : subst L) (s' : subst L') (p : frm L) (p' : frm L')
   (s_SIM : s =~= s')
   (p_SIM : p =~= p')

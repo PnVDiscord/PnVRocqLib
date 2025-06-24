@@ -680,9 +680,13 @@ Qed.
 
 End STRONG_COLLECTION.
 
+(** Section RANK_COMPARISON. *)
+
 Inductive rLt (lhs : Tree) (rhs : Tree) : Prop :=
-  | rLt_intro c
-    (H_rLe : lhs ≦ᵣ childnodes rhs c)
+  | rLt_intro
+    (H_rLe : exists c, lhs ≦ᵣ childnodes rhs c)
+  | rLt_intro
+    (H_rLe : exists c, lhs ≦ᵣ childnodes rhs c)
     : lhs <ᵣ rhs
   where "lhs <ᵣ rhs" := (rLt lhs rhs) : type_scope
 with rLe (lhs : Tree) (rhs : Tree) : Prop :=
@@ -698,9 +702,9 @@ Fixpoint rLt_inv (x : Tree) (y : Tree) (H_rLt : y <ᵣ x) {struct H_rLt}
 with rLe_inv (x : Tree) (y : Tree) (H_rLe : x ≦ᵣ y) {struct H_rLe}
   : forall c1 : children x, exists c2 : children y, childnodes x c1 ≦ᵣ childnodes y c2.
 Proof.
-  - destruct H_rLt as [c2 H_rLe]. exists c2. intros c1.
+  - destruct H_rLt as [[c2 H_rLe]]. exists c2. intros c1.
     pose proof (rLe_inv y (childnodes x c2) H_rLe c1) as [c H_rLe'].
-    exists c. exact H_rLe'.
+    econs. exists c. exact H_rLe'.
   - destruct H_rLe as [H_rLt]. intros c1.
     pose proof (rLt_inv y (childnodes x c1) (H_rLt c1)) as [c2 H_rLt'].
     exists c2. econs. exact H_rLt'.
@@ -761,7 +765,7 @@ Lemma rLe_eqTree_rLe x y z
 Proof.
   revert y z H_rLe EQ. induction x as [csx tsx IH].
   intros [csy tsy] [csz tsz] [H_rLt] [y_subseteq_z z_subseteq_y]. econs; intros cx. simpl in *.
-  pose proof (H_rLt cx) as [cy ?]. pose proof (y_subseteq_z cy) as [cz ?]. eauto with *.
+  pose proof (H_rLt cx) as [[cy ?]]. pose proof (y_subseteq_z cy) as [cz ?]. eauto with *.
 Qed.
 
 Lemma eqTree_rLe_rLe x y z
@@ -771,7 +775,7 @@ Lemma eqTree_rLe_rLe x y z
 Proof.
   revert y z H_rLe EQ. induction x as [csx tsx IH].
   intros [csy tsy] [csz tsz] [H_rLt] [x2y y2x]. econs; intros cx. simpl in *.
-  pose proof (x2y cx) as [cy ?]. pose proof (H_rLt cy) as [cz ?]. eauto with *.
+  pose proof (x2y cx) as [cy ?]. pose proof (H_rLt cy) as [[cz ?]]. eauto with *.
 Qed.
 
 #[global] Hint Resolve rLe_eqTree_rLe eqTree_rLe_rLe : aczel_hints.
@@ -801,13 +805,13 @@ Add Parametric Morphism
   : rLt with signature (eqProp ==> eqProp ==> iff)
   as rLt_compatWith_eqProp.
 Proof.
-  intros x1 x2 x_EQ y1 y2 y_EQ. split; intros [c H_rLe].
+  intros x1 x2 x_EQ y1 y2 y_EQ. split; intros [[c H_rLe]].
   - pose proof (member_intro (children y1) (childnodes y1) c) as IN.
     rewrite Tree_eta in IN. rewrite -> y_EQ in IN at 2. destruct IN as [c' EQ'].
-    exists c'. rewrite <- EQ'. rewrite <- x_EQ. exact H_rLe.
+    econs. exists c'. rewrite <- EQ'. rewrite <- x_EQ. exact H_rLe.
   - pose proof (member_intro (children y2) (childnodes y2) c) as IN.
     rewrite Tree_eta in IN. rewrite <- y_EQ in IN at 2. destruct IN as [c' EQ'].
-    exists c'. rewrite <- EQ'. rewrite -> x_EQ. exact H_rLe.
+    econs. exists c'. rewrite <- EQ'. rewrite -> x_EQ. exact H_rLe.
 Qed.
 
 Lemma rLt_implies_rLe lhs rhs
@@ -815,7 +819,7 @@ Lemma rLt_implies_rLe lhs rhs
   : lhs ≦ᵣ rhs.
 Proof.
   rename lhs into x, rhs into y.
-  destruct H_rLt as [cy H_rLe].
+  destruct H_rLt as [[cy H_rLe]].
   rewrite -> H_rLe. clear x H_rLe.
   induction y as [csy tsy IH]. simpl in *.
   specialize IH with (c := cy).
@@ -828,7 +832,7 @@ Lemma member_implies_rLt x y
   (IN : x \in y)
   : x <ᵣ y.
 Proof.
-  destruct IN as [c EQ]. exists c. eauto with *.
+  destruct IN as [c EQ]. econs. exists c. eauto with *.
 Qed.
 
 Lemma subseteq_implies_rLe x y
@@ -846,7 +850,7 @@ Lemma rLe_rLt_rLt x y z
   (y_rLt_z : y <ᵣ z)
   : x <ᵣ z.
 Proof.
-  destruct y_rLt_z as [c rLe]. exists c. transitivity y; eauto with *.
+  destruct y_rLt_z as [[c rLe]]. econs. exists c. transitivity y; eauto with *.
 Qed.
 
 Lemma rLt_rLe_rLt x y z
@@ -854,8 +858,8 @@ Lemma rLt_rLe_rLt x y z
   (y_rLe_z : y ≦ᵣ z)
   : x <ᵣ z.
 Proof.
-  destruct y as [csy tsy]. destruct x_rLt_y as [cy x_rLe_cy]. destruct z as [csz tsz]. destruct y_rLe_z as [H_rLt].
-  simpl in *. pose proof (H_rLt cy) as [cz cy_rLe_cz]. exists cz. transitivity (tsy cy); eauto with *.
+  destruct y as [csy tsy]. destruct x_rLt_y as [[cy x_rLe_cy]]. destruct z as [csz tsz]. destruct y_rLe_z as [H_rLt].
+  simpl in *. pose proof (H_rLt cy) as [[cz cy_rLe_cz]]. econs. exists cz. transitivity (tsy cy); eauto with *.
 Qed.
 
 #[local] Hint Resolve rLe_rLt_rLt rLt_rLe_rLt : core.
@@ -864,12 +868,12 @@ Qed.
 Add Parametric Morphism
   : rLt with signature (eqProp ==> eqProp ==> iff) as rLt_compatWith_eq.
 Proof.
-  intros x1 y1 EQ1 x2 y2 EQ2. split; intros [w H_rLe].
+  intros x1 y1 EQ1 x2 y2 EQ2. split; intros [[w H_rLe]].
   - eapply rLt_rLe_rLt with (y := x2).
-    + eexists. rewrite <- EQ1. exact H_rLe.
+    + econs. eexists. rewrite <- EQ1. exact H_rLe.
     + now rewrite -> EQ2.
   - eapply rLt_rLe_rLt with (y := y2).
-    + eexists. rewrite -> EQ1. exact H_rLe.
+    + econs. eexists. rewrite -> EQ1. exact H_rLe.
     + now rewrite <- EQ2.
 Qed.
 
@@ -881,8 +885,8 @@ Proof.
   clear lhs_EQ_rhs. rename lhs into x, rhs into y, lhs_rLe_rhs into x_rLe_y.
   revert y x x_rLe_y. induction y as [csy tsy IH].
   intros [csx tsx] [x_rLe_y]. simpl in x_rLe_y.
-  econstructor. intros z [c [z_rLe_cx]]. simpl in *.
-  pose proof (x_rLe_y c) as [c' H_rLe]. eapply IH; transitivity (tsx c); eauto with *.
+  econstructor. intros z [[c [z_rLe_cx]]]. simpl in *.
+  pose proof (x_rLe_y c) as [[c' H_rLe]]. eapply IH; transitivity (tsx c); eauto with *.
 Qed.
 
 #[global]
@@ -907,6 +911,8 @@ Lemma rEq_ext x y
 Proof.
   rewrite rEq_iff. split; eapply rLe_ext; now firstorder.
 Qed.
+
+(** End RANK_COMPARISON. *)
 
 Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x) {struct ACC} : Tree :=
   match ACC with
@@ -975,7 +981,29 @@ Proof.
   rewrite <- alpha_eq_beta in *; eauto with *.
 Qed.
 
-Section ToSet.
+Section ORDINAL_basic1.
+
+#[local] Transparent eqProp.
+
+Variant isOrdinal (alpha : Tree) : Prop :=
+  | transitive_set_of_transitive_sets_isOrdinal
+    (TRANS : isTransitiveSet alpha)
+    (TRANS' : forall beta, beta \in alpha -> isTransitiveSet beta)
+    : isOrdinal alpha.
+
+#[local] Hint Constructors isOrdinal : core.
+
+Lemma isOrdinal_member_isOrdinal alpha beta
+(ORDINAL : isOrdinal alpha)
+  (MEMBER : beta \in alpha)
+  : isOrdinal beta.
+Proof.
+  inversion ORDINAL; eauto with *.
+Defined.
+
+End ORDINAL_basic1.
+
+Section ToWoSet.
 
 Inductive le_insert_top {A : Type@{U_discourse}} (le : A -> A -> Prop) (x : option A) : option A -> Prop :=
   | le_insert_top_rhs_None
@@ -985,28 +1013,28 @@ Inductive le_insert_top {A : Type@{U_discourse}} (le : A -> A -> Prop) (x : opti
     (LE : le x' y')
     : le_insert_top le x (Some y').
 
-Definition toSet_lt {Idx : Type@{Set_u}} {A : Idx -> Type@{U_discourse}} (lt : forall i : Idx, A i -> A i -> Prop) (lhs : { i : Idx & option (A i) }) (rhs : { i : Idx & option (A i) }) : Prop :=
+Definition toWoSet_lt {Idx : Type@{Set_u}} {A : Idx -> Type@{U_discourse}} (lt : forall i : Idx, A i -> A i -> Prop) (lhs : { i : Idx & option (A i) }) (rhs : { i : Idx & option (A i) }) : Prop :=
   exists x : option (A (projT1 rhs)), le_insert_top (fun a : A (projT1 rhs) => fun a' : A (projT1 rhs) => lt (projT1 rhs) a a' \/ a = a') x (projT2 rhs) /\ lhs = @existT _ _ (projT1 rhs) x /\ rhs <> @existT _ _ (projT1 rhs) x.
 
-Lemma toSet_lt_well_founded {Idx : Type@{Set_u}} {A : Idx -> Type@{U_discourse}} (lt : forall i : Idx, A i -> A i -> Prop)
+Lemma toWoSet_lt_well_founded {Idx : Type@{Set_u}} {A : Idx -> Type@{U_discourse}} (lt : forall i : Idx, A i -> A i -> Prop)
   (lt_wf : forall i : Idx, well_founded (lt i))
-  : well_founded (toSet_lt lt).
+  : well_founded (toWoSet_lt lt).
 Proof.
-  enough (WTS : forall i : Idx, forall x' : A i, Acc (toSet_lt lt) (@existT _ _ i (Some x'))).
-  { intros [i1 [x1' | ]]; eauto. econs. intros [i2 x2]. unfold toSet_lt at 1. intros (x3 & H_le_insert_top & EQ & NE); simpl in *. rewrite EQ. destruct x3 as [x3' | ]; eauto. congruence. }
+  enough (WTS : forall i : Idx, forall x' : A i, Acc (toWoSet_lt lt) (@existT _ _ i (Some x'))).
+  { intros [i1 [x1' | ]]; eauto. econs. intros [i2 x2]. unfold toWoSet_lt at 1. intros (x3 & H_le_insert_top & EQ & NE); simpl in *. rewrite EQ. destruct x3 as [x3' | ]; eauto. congruence. }
   intros i x. induction (lt_wf i x) as [x _ IH]. i. econs. i. inv H. des; subst. inv H0. destruct LE; eauto. subst x'. simpl in *; congruence.
 Qed.
 
-Fixpoint toSet (t : Tree) : { D : Type@{Set_u} & D -> D -> Prop } :=
+Fixpoint toWoSet (t : Tree) : { D : Type@{Set_u} & D -> D -> Prop } :=
   match t with
-  | mkNode cs ts => @existT Type@{Set_u} (fun D : Type@{Set_u} => D -> D -> Prop) { c : cs & option (projT1 (toSet (ts c))) } (toSet_lt (fun c : cs => projT2 (toSet (ts c))))
+  | mkNode cs ts => @existT Type@{Set_u} (fun D : Type@{Set_u} => D -> D -> Prop) { c : cs & option (projT1 (toWoSet (ts c))) } (toWoSet_lt (fun c : cs => projT2 (toWoSet (ts c))))
   end.
 
-Lemma toSet_well_founded (t : Tree)
-  : @well_founded (projT1 (toSet t)) (projT2 (toSet t)).
+Lemma toWoSet_well_founded (t : Tree)
+  : @well_founded (projT1 (toWoSet t)) (projT2 (toWoSet t)).
 Proof.
   induction t as [cs ts IH]; simpl in *.
-  eapply toSet_lt_well_founded. exact IH.
+  eapply toWoSet_lt_well_founded. exact IH.
 Defined.
 
-End ToSet.
+End ToWoSet.

@@ -1,5 +1,11 @@
+# vscode
 .vscode/*
-# Coq
+
+# emacs
+*.aux
+*.*~
+
+# Rocq
 .*.aux
 .*.d
 *.a

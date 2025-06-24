@@ -2,7 +2,11 @@ Require Import PnV.Prelude.Prelude.
 
 Module Re.
 
-Inductive t {A : Type} : Type :=
+Section REGEX.
+
+Context {A : Type}.
+
+Inductive t : Type :=
   | Null : t
   | Empty : t
   | Char (c : A) : t
@@ -10,9 +14,7 @@ Inductive t {A : Type} : Type :=
   | Append (e1 : t) (e2 : t) : t
   | Star (e1 : t).
 
-#[global] Arguments t : clear implicits.
-
-Inductive in_regex {A : Type} : Re.t A -> list A -> Prop :=
+Inductive in_regex : t -> list A -> Prop :=
   | in_Empty
     : [] ∈ Empty
   | in_Char c
@@ -34,6 +36,12 @@ Inductive in_regex {A : Type} : Re.t A -> list A -> Prop :=
     (H_in2 : s2 ∈ Star e1)
     : s1 ++ s2 ∈ Star e1
   where "s ∈ e" := (in_regex e s) : type_scope.
+
+End REGEX.
+
+#[global] Arguments t : clear implicits.
+
+Notation "s ∈ e" := (in_regex e s) : type_scope.
 
 #[global] Hint Constructors in_regex : simplication_hints.
 

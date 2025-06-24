@@ -1207,8 +1207,8 @@ Class Similarity (A : Type) (B : Type) : Type :=
   is_similar_to (x : A) (y : B) : Prop.
 
 #[global]
-Instance forall_liftsSimilarity {I : Type} {A : I -> Type} {B : I -> Type} (SIMILARITY : forall i, Similarity (A i) (B i)) : Similarity (forall i, A i) (forall i, B i) :=
-  fun f : forall i, A i => fun g : forall i, B i => forall i, is_similar_to (f i) (g i).
+Instance Similarity_forall {D : Type} {D' : Type} {C : D -> Type} {C' : D' -> Type} (DOM_SIM : Similarity D D') (COD_SIM : forall x : D, forall x' : D', is_similar_to (Similarity := DOM_SIM) x x' -> Similarity (C x) (C' x')) : Similarity (forall x : D, C x) (forall x' : D', C' x') :=
+  fun f => fun f' => forall x : D, forall x' : D', forall x_corres : is_similar_to (Similarity := DOM_SIM) x x', @is_similar_to (C x) (C' x') (COD_SIM x x' x_corres) (f x) (f' x').
 
 Class isEnumerable (A : Type) : Type :=
   { enum : nat -> A
