@@ -1,22 +1,24 @@
 Require Export PnV.Prelude.SfLib.
 Require Export PnV.Prelude.Notations.
-Require Export Stdlib.Arith.Compare_dec.
-Require Export Stdlib.Arith.PeanoNat.
-Require Export Stdlib.Bool.Bool.
-Require Export Stdlib.Classes.RelationClasses.
-Require Export Stdlib.Lists.List.
-Require Export Stdlib.micromega.Lia.
-Require Export Stdlib.Program.Basics.
-Require Export Stdlib.Program.Utils.
-Require Export Stdlib.Relations.Relation_Definitions.
-Require Export Stdlib.Relations.Relation_Operators.
-Require Export Stdlib.Setoids.Setoid.
+Require Export Coq.Arith.Compare_dec.
+Require Export Coq.Arith.PeanoNat.
+Require Export Coq.Bool.Bool.
+Require Export Coq.Classes.RelationClasses.
+Require Export Coq.Lists.List.
+Require Export Coq.micromega.Lia.
+Require Export Coq.Program.Basics.
+Require Export Coq.Program.Utils.
+Require Export Coq.Relations.Relation_Definitions.
+Require Export Coq.Relations.Relation_Operators.
+Require Export Coq.Setoids.Setoid.
 
 #[local] Obligation Tactic := idtac.
 
 #[global] Create HintDb simplication_hints.
 
 #[global] Hint Rewrite forallb_app orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq not_true_iff_false not_false_iff_true : simplication_hints.
+
+#[global] Unset Automatic Proposition Inductives.
 
 Tactic Notation "rewrite!" :=
   autorewrite with simplication_hints in *.
@@ -1260,7 +1262,7 @@ Instance Empty_set_isCountable : isCountable Empty_set :=
 
 Module L.
 
-Include Stdlib.Lists.List.
+Include Coq.Lists.List.
 
 Definition null {A : Type} (l : list A) : bool :=
   match l with

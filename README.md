@@ -1,6 +1,6 @@
 # PnVRocqLib
 
-A Rocq library written by members of PnV Discord Server.
+A Coq library written by members of PnV Discord Server.
 
 Currently, this library is standalone.
 
@@ -14,10 +14,11 @@ rocq makefile -f _CoqProject -o Makefile
 make -j4 -k
 ```
 
-### rocq -v
+### `coqc -v`
 
 ```
-The Rocq Prover, version 9.0.0
+The Coq Proof Assistant, version 8.20.0
+compiled with OCaml 5.2.0
 ```
 
 ## 2. Contents

@@ -685,8 +685,6 @@ End STRONG_COLLECTION.
 Inductive rLt (lhs : Tree) (rhs : Tree) : Prop :=
   | rLt_intro
     (H_rLe : exists c, lhs ≦ᵣ childnodes rhs c)
-  | rLt_intro
-    (H_rLe : exists c, lhs ≦ᵣ childnodes rhs c)
     : lhs <ᵣ rhs
   where "lhs <ᵣ rhs" := (rLt lhs rhs) : type_scope
 with rLe (lhs : Tree) (rhs : Tree) : Prop :=
@@ -724,8 +722,9 @@ Proof.
   revert x y z LE1 LE2.
   induction x as [csx tsnx IH], y as [csy tsy], z as [csz tsz]; simpl.
   intros [H_rLt1] [H_rLt2]. econs. intros c. simpl in *.
-  pose proof (H_rLt1 c) as [c' H_rLe1]. simpl in *.
-  pose proof (H_rLt2 c') as [c'' H_rLe2]. simpl in *. eauto with *.
+  pose proof (H_rLt1 c) as [[c' H_rLe1]]. simpl in *.
+  pose proof (H_rLt2 c') as [[c'' H_rLe2]]. simpl in *.
+  eauto with *.
 Qed.
 
 #[global]

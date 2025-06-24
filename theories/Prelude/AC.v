@@ -1,3 +1,3 @@
 Require Import PnV.Prelude.Prelude.
-Require Export Stdlib.Logic.ChoiceFacts.
-Require Export Stdlib.Logic.ClassicalChoice.
+Require Export Coq.Logic.ChoiceFacts.
+Require Export Coq.Logic.ClassicalChoice.

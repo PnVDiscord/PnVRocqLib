@@ -1,5 +1,5 @@
 Require Import PnV.Prelude.Prelude.
-Require Import Stdlib.Logic.EqdepFacts.
+Require Import Coq.Logic.EqdepFacts.
 
 Parameter Quot : forall X : Type@{U_discourse}, isSetoid X -> Type.
 

@@ -11,7 +11,7 @@
 
 (** Symbols starting with [sflib__] are internal. *)
 
-From Stdlib Require Import Bool List Arith ZArith String Program.
+From Coq Require Import Bool List Arith ZArith String Program.
 (* Require Export paconotation newtac. *)
 
 Set Implicit Arguments.
