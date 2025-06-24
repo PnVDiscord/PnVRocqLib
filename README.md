@@ -125,3 +125,5 @@ Our main results are:
 7. [formalmetatheory-stoughton](https://github.com/ernius/formalmetatheory-stoughton)
 
 8. [Constructive Analysis of First-Order Completeness](https://github.com/uds-psl/fol-completeness-theorems/tree/master)
+
+9. [snu-sf/Ordinal](https://github.com/snu-sf/Ordinal)
