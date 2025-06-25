@@ -31,7 +31,7 @@ Notation "'(' t ')'" := t (t custom trm_view at level 5, no associativity, in cu
 #[global] Bind Scope trms_scope with trms.
 Notation "'`[' s ']' ts" := (subst_trms s ts) (s custom subst_view at level 10, ts custom trms_view at level 5, in custom trms_view at level 5, format "`[ s ] ts").
 Notation "'[' ']'" := (O_trms) (in custom trms_view at level 0) : trms_scope.
-Notation "t ;::' ts" := (S_trms _ t ts) (t custom trm_view, ts custom trms_view, in custom trms_view at level 0) : trms_scope.
+Notation "t '::' ts" := (S_trms _ t ts) (t custom trm_view, ts custom trms_view, in custom trms_view at level 0) : trms_scope.
 Notation "ts" := ts (ts ident, in custom trms_view at level 0).
 Notation "'(' ts ')'" := ts (ts custom trms_view at level 5, no associativity, in custom trms_view at level 0).
 
