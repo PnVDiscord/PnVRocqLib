@@ -90,7 +90,7 @@ Example fol_viewer_example2
   (v0 := 0)
   (v1 := 1)
   (v2 := 2)
-  : $`(∀ v0, V v0 ∈ V v1)[ v1 := V v0 ]$ = $∀ v2, V v2 ∈ V v0$.
+  : $`(∀ v0, V v0 = V v1)[ v1 := V v0 ]$ = $∀ v2, V v2 = V v0$.
 Proof.
   rewrite subst1_unfold. simpl.
   replace (is_free_in_trm v0 (Var_trm v0)) with true by reflexivity.
