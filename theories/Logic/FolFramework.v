@@ -10,7 +10,7 @@ Declare Custom Entry frm_view.
 Declare Custom Entry subst_view.
 Reserved Notation "'$' EXPR '$'" (EXPR custom frm_view at level 10, no associativity, format "'$' EXPR '$'", at level 0).
 
-Module VIEWER.
+Module FolViewer.
 
 Infix "≡" := alpha_equiv : type_scope.
 
@@ -55,11 +55,11 @@ Bind Scope subst_scope with subst.
 Notation "s2 ∘ s1" := (subst_compose s1 s2) (right associativity, in custom subst_view at level 4) : subst_scope.
 Notation "t / x" := (one_subst x t) (no associativity, x constr at level 0, t custom trm_view at level 5, in custom subst_view at level 10).
 
-End VIEWER.
+End FolViewer.
 
 Module Example1.
 
-Import VIEWER.
+Import FolViewer.
 
 Variant L_in_relation_symbols : Set :=
   | symbol_IN : L_in_relation_symbols.
