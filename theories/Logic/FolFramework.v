@@ -78,19 +78,19 @@ Definition L_in : language :=
 
 Notation "t1 '∈' t2" := (@Rel_frm L_in symbol_IN (S_trms 1 t1 (S_trms 0 t2 O_trms))) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
 
-Example frm_view_example1
+Example fol_viewer_example1
   (v0 := 0)
   (v1 := 1)
-  : $`[V v0 / v1](∀ v0, (V v0) ∈ (V v1))$ = $∀ v1, V v1 ∈ V v0$.
+  : $`[V v0 / v1](∀ v0, V v0 ∈ V v1)$ = $∀ v1, V v1 ∈ V v0$.
 Proof.
   reflexivity.
 Qed.
 
-Example frm_view_example2
+Example fol_viewer_example2
   (v0 := 0)
   (v1 := 1)
   (v2 := 2)
-  : $(∀ v0, (V v0) ∈ (V v1))[ v1 := V v0 ]$ = $∀ v2, V v2 ∈ V v0$.
+  : $(∀ v0, V v0 ∈ V v1)[ v1 := V v0 ]$ = $∀ v2, V v2 ∈ V v0$.
 Proof.
   rewrite subst1_unfold. simpl.
   replace (is_free_in_trm v0 (Var_trm v0)) with true by reflexivity.
