@@ -25,7 +25,7 @@ Notation "'$' EXPR '$'" := (EXPR : frm _).
 Bind Scope trm_scope with trm.
 Notation "`[ s ] t" := (subst_trm s t) (s custom subst_view at level 10, t custom trm_view at level 5, in custom trm_view at level 5, format "`[ s ] t") : trm_scope.
 Notation "'V' x" := (Var_trm x) (x constr at level 0, in custom trm_view at level 0).
-Notation "'F' f ts" := (Fun_trm f ts) (f constr, ts custom trm_view at level 0, in custom trm_view at level 5).
+Notation "'F' f ts" := (Fun_trm f ts) (f constr, ts custom trms_view at level 0, in custom trm_view at level 5).
 Notation "'C' c" := (Con_trm c) (c constr, in custom trm_view at level 0).
 Notation "t" := t (t ident, in custom trm_view at level 0).
 Notation "( t )" := t (t custom trm_view at level 5, no associativity, in custom trm_view at level 0).
