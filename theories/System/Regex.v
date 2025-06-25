@@ -2,19 +2,18 @@ Require Import PnV.Prelude.Prelude.
 
 Module Re.
 
-Section REGEX.
-
-Context {A : Type}.
-
-Inductive t : Type :=
+#[universes(template)]
+Inductive t {A : Type} : Type :=
   | Null : t
   | Empty : t
   | Char (c : A) : t
-  | Union (e1 : t) (e2 : t) : t
-  | Append (e1 : t) (e2 : t) : t
-  | Star (e1 : t).
+  | Union (e1 : @t A) (e2 : @t A) : t
+  | Append (e1 : @t A) (e2 : @t A) : t
+  | Star (e1 : @t A).
 
-Inductive in_regex : t -> list A -> Prop :=
+#[global] Arguments t : clear implicits.
+
+Inductive in_regex {A : Type} : Re.t A -> list A -> Prop :=
   | in_Empty
     : [] ∈ Empty
   | in_Char c
@@ -36,10 +35,6 @@ Inductive in_regex : t -> list A -> Prop :=
     (H_in2 : s2 ∈ Star e1)
     : s1 ++ s2 ∈ Star e1
   where "s ∈ e" := (in_regex e s) : type_scope.
-
-End REGEX.
-
-#[global] Arguments t : clear implicits.
 
 Notation "s ∈ e" := (in_regex e s) : type_scope.
 
