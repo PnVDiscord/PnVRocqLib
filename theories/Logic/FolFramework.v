@@ -4,7 +4,6 @@ Require Import PnV.Logic.BasicFol2.
 Require Import PnV.Logic.HilbertFol.
 Require Import PnV.Logic.HilbertFol2.
 
-Declare Custom Entry var_view.
 Declare Custom Entry trm_view.
 Declare Custom Entry trms_view.
 Declare Custom Entry frm_view.
@@ -23,30 +22,28 @@ Declare Scope subst_scope.
 Notation "'$' EXPR '$'" := EXPR : frm_scope.
 Notation "'$' EXPR '$'" := (EXPR : frm _).
 
-Notation "x" := x (x ident, in custom var_view at level 0).
-
 Bind Scope trm_scope with trm.
-Notation "[ s ] t" := (subst_trm s t) (s custom subst_view at level 10, t custom trm_view at level 5, in custom trm_view at level 5) : trm_scope.
-Notation "'V' x" := (Var_trm x) (x custom var_view at level 0, in custom trm_view at level 0).
+Notation "`[ s ] t" := (subst_trm s t) (s custom subst_view at level 10, t custom trm_view at level 5, in custom trm_view at level 5, format "`[ s ] t") : trm_scope.
+Notation "'V' x" := (Var_trm x) (x constr at level 0, in custom trm_view at level 0).
 Notation "'F' f ts" := (Fun_trm f ts) (f constr, ts custom trm_view at level 0, in custom trm_view at level 5).
 Notation "'C' c" := (Con_trm c) (c constr, in custom trm_view at level 0).
 Notation "t" := t (t ident, in custom trm_view at level 0).
 Notation "( t )" := t (t custom trm_view at level 5, no associativity, in custom trm_view at level 0).
 
 Bind Scope trms_scope with trms.
-Notation "[ s ] ts" := (subst_trms s ts) (s custom subst_view at level 10, ts custom trms_view at level 5, in custom trms_view at level 5) : trms_scope.
+Notation "`[ s ] ts" := (subst_trms s ts) (s custom subst_view at level 10, ts custom trms_view at level 5, in custom trms_view at level 5, format "`[ s ] ts") : trms_scope.
 Notation "[ ]" := (O_trms) (in custom trms_view at level 0) : trms_scope.
 Notation "t :: ts" := (S_trms _ t ts) (t custom trm_view, ts custom trms_view, in custom trms_view at level 0) : trms_scope.
 Notation "ts" := ts (ts ident, in custom trms_view at level 0).
 Notation "( ts )" := ts (ts custom trms_view at level 5, no associativity, in custom trms_view at level 0).
 
 Bind Scope frm_scope with frm.
-Notation "[ s ] p" := (subst_frm s p) (s custom subst_view at level 10, p custom frm_view at level 5, in custom frm_view at level 5).
+Notation "`[ s ] p" := (subst_frm s p) (s custom subst_view at level 10, p custom frm_view at level 5, in custom frm_view at level 5, format "`[ s ] p").
 Notation "'⊥'" := (Bot_frm) (in custom frm_view at level 0).
 Notation "t1 '=' t2" := (Eqn_frm t1 t2) (in custom frm_view at level 6).
 Notation "'¬' p" := (Neg_frm p) (in custom frm_view at level 7).
-Notation "'(∀' x ')' p" := (All_frm x p) (x custom var_view at level 0, in custom frm_view at level 7).
-Notation "'(∃' x ')' p" := (Exs_frm x p) (x custom var_view at level 0, in custom frm_view at level 7).
+Notation "'(∀' x ')' p" := (All_frm x p) (x constr at level 0, in custom frm_view at level 7).
+Notation "'(∃' x ')' p" := (Exs_frm x p) (x constr at level 0, in custom frm_view at level 7).
 Notation "p '∧' q" := (Con_frm p q) (no associativity, in custom frm_view at level 8).
 Notation "p '∨' q" := (Dis_frm p q) (no associativity, in custom frm_view at level 9).
 Notation "p '→' q" := (Imp_frm p q) (no associativity, in custom frm_view at level 10).
@@ -56,9 +53,7 @@ Notation "( p )" := p (p custom frm_view at level 10, no associativity, in custo
 
 Bind Scope subst_scope with subst.
 Notation "s2 ∘ s1" := (subst_compose s1 s2) (right associativity, in custom subst_view at level 4) : subst_scope.
-Notation "t / x ; s" := (cons_subst x t s) (no associativity, x custom var_view at level 0, t custom trm_view at level 5, s custom subst_view at level 0, in custom subst_view at level 5) : subst_scope.
-Notation "t / x" := (one_subst x t) (no associativity, x custom var_view at level 0, t custom trm_view at level 5, in custom subst_view at level 10).
-Notation "'ι'" := (nil_subst) (no associativity, in custom subst_view at level 0) : subst_scope.
+Notation "t / x" := (one_subst x t) (no associativity, x constr at level 0, t custom trm_view at level 5, in custom subst_view at level 10).
 
 End VIEWER.
 
@@ -79,5 +74,10 @@ Definition L_in : language :=
     function_arity_gt_0 := Empty_set_ind _;
     relation_arity_gt_0 := fun _ => (@le_S 1 1 (@le_n 1));
   |}.
+
+Example foo (x : ivar) (t : trm L_in) (p : frm L_in)
+  (x_eq_t : Var_trm x = t)
+  : $`[t / x] p$ = p.
+Admitted.
 
 End Example1.
