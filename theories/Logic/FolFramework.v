@@ -37,7 +37,7 @@ Notation "( ts )" := ts (ts custom trms_view at level 5, no associativity, in cu
 
 Bind Scope frm_scope with frm.
 Notation "`[ s ] p" := (subst_frm s p) (s custom subst_view at level 10, p custom frm_view at level 0, in custom frm_view at level 10, format "`[ s ] p").
-Notation "( p ) [ x := t ]" := (subst1 x t p) (x constr, t custom trm_view at level 10, p custom frm_view at level 7, in custom frm_view at level 10, format "( p ) [ x  :=  t ]").
+Notation "( p ) [ x := t ]" := (subst1 x t p) (x constr, t custom trm_view at level 10, p custom frm_view at level 7, in custom frm_view at level 10, format "( p ) [  x  :=  t  ]").
 Notation "'⊥'" := (Bot_frm) (in custom frm_view at level 0).
 Notation "t1 '=' t2" := (Eqn_frm t1 t2) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
 Notation "'¬' p" := (Neg_frm p) (p custom frm_view at level 7, in custom frm_view at level 7).
@@ -81,7 +81,7 @@ Notation "t1 '∈' t2" := (@Rel_frm L_in symbol_IN (S_trms 1 t1 (S_trms 0 t2 O_t
 Example frm_view_example1
   (v0 := 0)
   (v1 := 1)
-  : $`[V v0 / v1] (∀ v0, (V v0) ∈ (V v1))$ = $∀ v1, V v1 ∈ V v0$.
+  : $`[V v0 / v1](∀ v0, (V v0) ∈ (V v1))$ = $∀ v1, V v1 ∈ V v0$.
 Proof.
   reflexivity.
 Qed.
@@ -90,11 +90,11 @@ Example frm_view_example2
   (v0 := 0)
   (v1 := 1)
   (v2 := 2)
-  : $(∀ v0, (V v0) ∈ (V v1)) [ v1 := V v0 ]$ = $∀ v2, V v2 ∈ V v0$.
+  : $(∀ v0, (V v0) ∈ (V v1))[ v1 := V v0 ]$ = $∀ v2, V v2 ∈ V v0$.
 Proof.
   rewrite subst1_unfold. simpl.
   replace (is_free_in_trm v0 (Var_trm v0)) with true by reflexivity.
-  replace (fresh_var v1 (Var_trm v0) $V v0 ∈ V v1$) with (v2) by reflexivity.
+  replace (fresh_var v1 (Var_trm v0) $V v0 ∈ V v1$) with v2 by reflexivity.
   rewrite subst1_unfold. f_equal.
   rewrite subst1_unfold. reflexivity.
 Qed.
