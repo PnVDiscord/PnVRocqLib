@@ -53,7 +53,7 @@ Notation "( ts )" := ts (ts custom trms_view at level 5, no associativity, in cu
 
 Bind Scope subst_scope with subst.
 Notation "s2 ∘ s1" := (subst_compose s1 s2) (right associativity, in custom subst_view at level 4) : subst_scope.
-Notation "t / x" := (one_subst x t) (no associativity, x constr at level 0, t custom trm_view at level 5, in custom subst_view at level 10).
+Notation "t / x" := (one_subst x t) (no associativity, x constr at level 0, t custom trm_view at level 5, in custom subst_view at level 10) : subst_scope.
 
 End VIEWER.
 
