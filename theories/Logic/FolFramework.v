@@ -12,32 +12,32 @@ Reserved Notation "'$' EXPR '$'" (EXPR custom frm_view at level 10, no associati
 
 Module FolViewer.
 
-Declare Scope trm_scope.
-Declare Scope trms_scope.
-Declare Scope frm_scope.
-Declare Scope subst_scope.
+#[global] Declare Scope trm_scope.
+#[global] Declare Scope trms_scope.
+#[global] Declare Scope frm_scope.
+#[global] Declare Scope subst_scope.
 
 Notation "'$' EXPR '$'" := EXPR : frm_scope.
 Notation "'$' EXPR '$'" := (EXPR : frm _).
 
-Bind Scope trm_scope with trm.
-Notation "`[ s ] t" := (subst_trm s t) (s custom subst_view at level 10, t custom trm_view at level 5, in custom trm_view at level 5, format "`[ s ] t") : trm_scope.
+#[global] Bind Scope trm_scope with trm.
+Notation "`[ s ] t" := (subst_trm s t) (s custom subst_view at level 10, t custom trm_view at level 5, in custom trm_view at level 5, format "`[ s ] t").
 Notation "'V' x" := (Var_trm x) (x constr at level 0, in custom trm_view at level 5).
 Notation "'F' f ts" := (Fun_trm f ts) (f constr, ts custom trms_view at level 0, in custom trm_view at level 5).
 Notation "'C' c" := (Con_trm c) (c constr, in custom trm_view at level 5).
 Notation "t" := t (t ident, in custom trm_view at level 0).
 Notation "( t )" := t (t custom trm_view at level 5, no associativity, in custom trm_view at level 0).
 
-Bind Scope trms_scope with trms.
-Notation "`[ s ] ts" := (subst_trms s ts) (s custom subst_view at level 10, ts custom trms_view at level 5, in custom trms_view at level 5, format "`[ s ] ts") : trms_scope.
+#[global] Bind Scope trms_scope with trms.
+Notation "`[ s ] ts" := (subst_trms s ts) (s custom subst_view at level 10, ts custom trms_view at level 5, in custom trms_view at level 5, format "`[ s ] ts").
 Notation "[ ]" := (O_trms) (in custom trms_view at level 0) : trms_scope.
 Notation "t :: ts" := (S_trms _ t ts) (t custom trm_view, ts custom trms_view, in custom trms_view at level 0) : trms_scope.
 Notation "ts" := ts (ts ident, in custom trms_view at level 0).
 Notation "( ts )" := ts (ts custom trms_view at level 5, no associativity, in custom trms_view at level 0).
 
-Bind Scope frm_scope with frm.
+#[global] Bind Scope frm_scope with frm.
 Notation "`[ s ] p" := (subst_frm s p) (s custom subst_view at level 10, p custom frm_view at level 0, in custom frm_view at level 10, format "`[ s ] p").
-Notation "( p ) [ x := t ]" := (subst1 x t p) (x constr, t custom trm_view at level 10, p custom frm_view at level 7, in custom frm_view at level 10, format "( p ) [  x  :=  t  ]").
+Notation "`( p ) [ x := t ]" := (subst1 x t p) (x constr, t custom trm_view at level 10, p custom frm_view at level 7, in custom frm_view at level 10, format "`( p ) [  x  :=  t  ]").
 Notation "'⊥'" := (Bot_frm) (in custom frm_view at level 0).
 Notation "t1 '=' t2" := (Eqn_frm t1 t2) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
 Notation "'¬' p" := (Neg_frm p) (p custom frm_view at level 7, in custom frm_view at level 7).
@@ -90,7 +90,7 @@ Example fol_viewer_example2
   (v0 := 0)
   (v1 := 1)
   (v2 := 2)
-  : $(∀ v0, V v0 ∈ V v1)[ v1 := V v0 ]$ = $∀ v2, V v2 ∈ V v0$.
+  : $`(∀ v0, V v0 ∈ V v1)[ v1 := V v0 ]$ = $∀ v2, V v2 ∈ V v0$.
 Proof.
   rewrite subst1_unfold. simpl.
   replace (is_free_in_trm v0 (Var_trm v0)) with true by reflexivity.
