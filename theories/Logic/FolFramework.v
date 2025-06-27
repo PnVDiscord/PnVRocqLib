@@ -23,9 +23,9 @@ Inductive trm : Set :=
   | Var_trm (x : name) : trm
   | Fun_trm (f : L.(function_symbols)) (ts : trms (L.(function_arity_table) f)) : trm
   | Con_trm (c : L.(constant_symbols)) : trm
-with trms : nat -> Set :=
+with trms : arity -> Set :=
   | O_trms : trms O
-  | S_trms (n : nat) (t : trm) (ts : trms n) : trms (S n).
+  | S_trms (n : arity) (t : trm) (ts : trms n) : trms (S n).
 
 Inductive frm : Set :=
   | Rel_frm (R : L.(relation_symbols)) (ts : trms (L.(relation_arity_table) R)) : frm
@@ -112,6 +112,10 @@ Reserved Notation "'$' EXPR '$'" (EXPR custom frm_view at level 10, no associati
 
 Module FolViewer.
 
+#[global]
+Coercion named_var (nm : name) : ivar :=
+  un_name nm.
+
 #[global] Declare Scope trm_scope.
 #[global] Declare Scope trms_scope.
 #[global] Declare Scope frm_scope.
@@ -122,7 +126,6 @@ Notation "'$' EXPR '$'" := (EXPR : frm _).
 
 #[global] Bind Scope trm_scope with trm.
 Notation "'`[' s ']' t" := (subst_trm s t) (s custom subst_view at level 10, t custom trm_view at level 5, in custom trm_view at level 5, format "`[ s ] t").
-#[global] Coercion named_var (nm : name) : ivar := un_name nm.
 Notation "'V' x" := (Var_trm (named_var x)) (x constr at level 0, in custom trm_view at level 5).
 Notation "'F' f ts" := (Fun_trm f ts) (f constr, ts custom trms_view at level 0, in custom trm_view at level 5).
 Notation "'C' c" := (Con_trm c) (c constr, in custom trm_view at level 5).
@@ -182,7 +185,7 @@ Definition L_in : language :=
 Notation "t1 '∈' t2" := (@Rel_frm L_in symbol_IN (@S_trms L_in 1 t1 (@S_trms L_in 0 t2 (@O_trms L_in)))) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
 
 Example fol_viewer_example1
-  : $`[V "x" / "y"](∀ "y", V "y" ∈ V "x")$ ≡α $∀ "z", V "z" ∈ V "x"$.
+  : $`[V "z" / "x"; V "x" / "y"](∀ "x", V "x" ∈ V "y")$ ≡α $∀ "z", V "z" ∈ V "x"$.
 Proof.
   eapply alpha_All_frm with (z := un_name "z"); reflexivity.
 Qed.
