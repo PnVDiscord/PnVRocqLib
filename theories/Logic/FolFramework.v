@@ -98,10 +98,15 @@ with trms : arity -> Set :=
   | S_trms (n : arity) (t : trm) (ts : trms n) : trms (S n).
 
 #[projections(primitive)]
-Record scheme {n : arity} (xs : Vector.t name n) : Set :=
+Record scheme {n : arity} (xs' : Vector.t name n) : Set :=
   mk_scheme
-  { NO_DUP_args : NoDup (V.to_list xs)
-  ; scheme_body : InternalSyntax.frm L
+  { scheme_body : InternalSyntax.frm L
+  ; NO_DUP_args
+    : NoDup (V.to_list xs')
+  ; FV_included (x : ivar) (x' : name)
+    (x_corres : x =~= x')
+    (x_free : is_free_in_frm x scheme_body = true)
+    : L.In x' (V.to_list xs') 
   }.
 
 Inductive frm : Set :=
