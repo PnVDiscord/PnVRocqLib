@@ -8,102 +8,6 @@ Require Import PnV.Data.Vector.
 
 Module InternalSyntax := PnV.Logic.BasicFol.
 
-Module ExternalSyntax.
-
-Section FOL_SYNTAX.
-
-#[local] Infix "=~=" := is_similar_to.
-
-Context {L : language}.
-
-Let arity : Set :=
-  nat.
-
-Inductive trm : Set :=
-  | Var_trm (x : name) : trm
-  | Fun_trm (f : L.(function_symbols)) (ts : trms (L.(function_arity_table) f)) : trm
-  | Con_trm (c : L.(constant_symbols)) : trm
-with trms : arity -> Set :=
-  | O_trms : trms O
-  | S_trms (n : arity) (t : trm) (ts : trms n) : trms (S n).
-
-Inductive frm : Set :=
-  | Rel_frm (R : L.(relation_symbols)) (ts : trms (L.(relation_arity_table) R)) : frm
-  | Eqn_frm (t1 : trm) (t2 : trm) : frm
-  | Bot_frm : frm
-  | Neg_frm (p1 : frm) : frm
-  | Con_frm (p1 : frm) (p2 : frm) : frm
-  | Dis_frm (p1 : frm) (p2 : frm) : frm
-  | Imp_frm (p1 : frm) (p2 : frm) : frm
-  | Iff_frm (p1 : frm) (p2 : frm) : frm
-  | All_frm (y : name) (p1 : frm) : frm
-  | Exs_frm (y : name) (p1 : frm) : frm.
-
-Inductive Similarity_trm : Similarity (InternalSyntax.trm L) trm :=
-  | Var_trm_corres x x'
-    (x_corres : x =~= x')
-    : @InternalSyntax.Var_trm L x =~= Var_trm x'
-  | Fun_trm_corres f ts ts'
-    (ts_corres : ts =~= ts')
-    : @InternalSyntax.Fun_trm L f ts =~= Fun_trm f ts'
-  | Con_trm_corres c
-    : @InternalSyntax.Con_trm L c =~= Con_trm c
-with Similarity_trms : forall n : arity, Similarity (InternalSyntax.trms L n) (trms n) :=
-  | O_trms_corres
-    : @InternalSyntax.O_trms L =~= O_trms
-  | S_trms_corres n t t' ts ts'
-    (t_corres : t =~= t')
-    (ts_corres : ts =~= ts')
-    : @InternalSyntax.S_trms L n t ts =~= S_trms n t' ts'.
-
-#[global] Existing Instance Similarity_trm.
-
-#[global] Existing Instance Similarity_trms.
-
-Inductive Similarity_frm : Similarity (InternalSyntax.frm L) frm :=
-  | Rel_frm_corres R ts ts'
-    (ts_corres : ts =~= ts')
-    : @InternalSyntax.Rel_frm L R ts =~= Rel_frm R ts'
-  | Eqn_frm_corres t1 t1' t2 t2'
-    (t1_corres : t1 =~= t1')
-    (t2_corres : t2 =~= t2')
-    : @InternalSyntax.Eqn_frm L t1 t2 =~= Eqn_frm t1' t2'
-  | Bot_frm_corres
-    : @InternalSyntax.Bot_frm L =~= Bot_frm
-  | Neg_frm_corres p1 p1'
-    (p1_corres : p1 =~= p1')
-    : @InternalSyntax.Neg_frm L p1 =~= Neg_frm p1'
-  | Con_frm_corres p1 p1' p2 p2'
-    (p1_corres : p1 =~= p1')
-    (p2_corres : p2 =~= p2')
-    : @InternalSyntax.Con_frm L p1 p2 =~= Con_frm p1' p2'
-  | Dis_frm_corres p1 p1' p2 p2'
-    (p1_corres : p1 =~= p1')
-    (p2_corres : p2 =~= p2')
-    : @InternalSyntax.Dis_frm L p1 p2 =~= Dis_frm p1' p2'
-  | Imp_frm_corres p1 p1' p2 p2'
-    (p1_corres : p1 =~= p1')
-    (p2_corres : p2 =~= p2')
-    : @InternalSyntax.Imp_frm L p1 p2 =~= Imp_frm p1' p2'
-  | Iff_frm_corres p1 p1' p2 p2'
-    (p1_corres : p1 =~= p1')
-    (p2_corres : p2 =~= p2')
-    : @InternalSyntax.Iff_frm L p1 p2 =~= Iff_frm p1' p2'
-  | All_frm_corres x x' p1 p1'
-    (x_corres : x =~= x')
-    (p1_corres : p1 =~= p1')
-    : @InternalSyntax.All_frm L x p1 =~= All_frm x' p1'
-  | Exs_frm_corres x x' p1 p1'
-    (x_corres : x =~= x')
-    (p1_corres : p1 =~= p1')
-    : @InternalSyntax.Exs_frm L x p1 =~= Exs_frm x' p1'.
-
-#[global] Existing Instance Similarity_frm.
-
-End FOL_SYNTAX.
-
-End ExternalSyntax.
-
 Declare Custom Entry trm_view.
 Declare Custom Entry trms_view.
 Declare Custom Entry frm_view.
@@ -164,6 +68,125 @@ Notation "p '≡α' q" := (alpha_equiv p q) (no associativity, at level 70) : ty
 
 End FolViewer.
 
+Module ExternalSyntax.
+
+Section FOL_SYNTAX.
+
+#[local] Infix "=~=" := is_similar_to.
+
+Context {L : language}.
+
+Let arity : Set :=
+  nat.
+
+Inductive trm : Set :=
+  | Var_trm (x : name) : trm
+  | Fun_trm (f : L.(function_symbols)) (ts : trms (L.(function_arity_table) f)) : trm
+  | Con_trm (c : L.(constant_symbols)) : trm
+with trms : arity -> Set :=
+  | O_trms : trms O
+  | S_trms (n : arity) (t : trm) (ts : trms n) : trms (S n).
+
+Inductive scheme {frm : Set} {n : arity} (xs : Vector.t name n) : Set :=
+  | mk_scheme (NO_DUP : NoDup (V.to_list xs)) (p : frm) : scheme xs.
+
+Inductive frm : Set :=
+  | Rel_frm (R : L.(relation_symbols)) (ts : trms (L.(relation_arity_table) R)) : frm
+  | Eqn_frm (t1 : trm) (t2 : trm) : frm
+  | Bot_frm : frm
+  | Neg_frm (p1 : frm) : frm
+  | Con_frm (p1 : frm) (p2 : frm) : frm
+  | Dis_frm (p1 : frm) (p2 : frm) : frm
+  | Imp_frm (p1 : frm) (p2 : frm) : frm
+  | Iff_frm (p1 : frm) (p2 : frm) : frm
+  | All_frm (y : name) (p1 : frm) : frm
+  | Exs_frm (y : name) (p1 : frm) : frm
+  | scheme_app {n : arity} {xs : Vector.t name n} (phi : @scheme frm n xs) (ts : Vector.t trm n) : frm.
+
+Inductive Similarity_trm : Similarity (InternalSyntax.trm L) trm :=
+  | Var_trm_corres x x'
+    (x_corres : x =~= x')
+    : @InternalSyntax.Var_trm L x =~= Var_trm x'
+  | Fun_trm_corres f ts ts'
+    (ts_corres : ts =~= ts')
+    : @InternalSyntax.Fun_trm L f ts =~= Fun_trm f ts'
+  | Con_trm_corres c
+    : @InternalSyntax.Con_trm L c =~= Con_trm c
+with Similarity_trms : forall n : arity, Similarity (InternalSyntax.trms L n) (trms n) :=
+  | O_trms_corres
+    : @InternalSyntax.O_trms L =~= O_trms
+  | S_trms_corres n t t' ts ts'
+    (t_corres : t =~= t')
+    (ts_corres : ts =~= ts')
+    : @InternalSyntax.S_trms L n t ts =~= S_trms n t' ts'.
+
+#[global] Existing Instance Similarity_trm.
+
+#[global] Existing Instance Similarity_trms.
+
+Fixpoint mk_subst {n : arity} (xs : Vector.t ivar n) : Vector.t (InternalSyntax.trm L) n -> InternalSyntax.subst L :=
+  match xs with
+  | VNil => V.case0 _ nil_subst
+  | VCons _ x xs => V.caseS _ (fun t => fun ts => cons_subst x t (mk_subst xs ts))
+  end.
+
+Inductive Similarity_frm : Similarity (InternalSyntax.frm L) frm :=
+  | Rel_frm_corres R ts ts'
+    (ts_corres : ts =~= ts')
+    : @InternalSyntax.Rel_frm L R ts =~= Rel_frm R ts'
+  | Eqn_frm_corres t1 t1' t2 t2'
+    (t1_corres : t1 =~= t1')
+    (t2_corres : t2 =~= t2')
+    : @InternalSyntax.Eqn_frm L t1 t2 =~= Eqn_frm t1' t2'
+  | Bot_frm_corres
+    : @InternalSyntax.Bot_frm L =~= Bot_frm
+  | Neg_frm_corres p1 p1'
+    (p1_corres : p1 =~= p1')
+    : @InternalSyntax.Neg_frm L p1 =~= Neg_frm p1'
+  | Con_frm_corres p1 p1' p2 p2'
+    (p1_corres : p1 =~= p1')
+    (p2_corres : p2 =~= p2')
+    : @InternalSyntax.Con_frm L p1 p2 =~= Con_frm p1' p2'
+  | Dis_frm_corres p1 p1' p2 p2'
+    (p1_corres : p1 =~= p1')
+    (p2_corres : p2 =~= p2')
+    : @InternalSyntax.Dis_frm L p1 p2 =~= Dis_frm p1' p2'
+  | Imp_frm_corres p1 p1' p2 p2'
+    (p1_corres : p1 =~= p1')
+    (p2_corres : p2 =~= p2')
+    : @InternalSyntax.Imp_frm L p1 p2 =~= Imp_frm p1' p2'
+  | Iff_frm_corres p1 p1' p2 p2'
+    (p1_corres : p1 =~= p1')
+    (p2_corres : p2 =~= p2')
+    : @InternalSyntax.Iff_frm L p1 p2 =~= Iff_frm p1' p2'
+  | All_frm_corres x x' p1 p1'
+    (x_corres : x =~= x')
+    (p1_corres : p1 =~= p1')
+    : @InternalSyntax.All_frm L x p1 =~= All_frm x' p1'
+  | Exs_frm_corres x x' p1 p1'
+    (x_corres : x =~= x')
+    (p1_corres : p1 =~= p1')
+    : @InternalSyntax.Exs_frm L x p1 =~= Exs_frm x' p1'
+  | scheme_app_corres (n : arity) (xs' : Vector.t name n) (ts : Vector.t (InternalSyntax.trm L) n) (ts' : Vector.t trm n) (phi : Vector.t (InternalSyntax.trm L) n -> InternalSyntax.frm L) (phi' : @scheme frm n xs')
+    (ts_corres : ts =~= ts')
+    (phi_corres : phi =~= phi')
+    : phi ts =~= scheme_app phi' ts'
+with Similarity_scheme : forall n : arity, forall xs : Vector.t name n, Similarity (Vector.t (InternalSyntax.trm L) n -> InternalSyntax.frm L) (@scheme frm n xs) :=
+  | mk_scheme_corres (n : arity) (xs : Vector.t ivar n) (xs' : Vector.t name n) (p : InternalSyntax.frm L) (p' : frm) phi
+    (NO_DUP : NoDup (V.to_list xs'))
+    (xs_corres : xs =~= xs')
+    (p_corres : p =~= p')
+    (phi_corres : forall ts : Vector.t (InternalSyntax.trm L) n, alpha_equiv (phi ts) (subst_frm (mk_subst xs ts) p))
+    : phi =~= @mk_scheme frm n xs' NO_DUP p'.
+
+#[global] Existing Instance Similarity_frm.
+
+#[global] Existing Instance Similarity_scheme.
+
+End FOL_SYNTAX.
+
+End ExternalSyntax.
+
 Module Example1.
 
 Import FolViewer.
@@ -185,7 +208,7 @@ Definition L_in : language :=
 Notation "t1 '∈' t2" := (@Rel_frm L_in symbol_IN (@S_trms L_in 1 t1 (@S_trms L_in 0 t2 (@O_trms L_in)))) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
 
 Example fol_viewer_example1
-  : $`[V "z" / "x"; V "x" / "y"](∀ "x", V "x" ∈ V "y")$ ≡α $∀ "z", V "z" ∈ V "x"$.
+  : $`[V "x" / "y"](∀ "x", V "x" ∈ V "y")$ ≡α $∀ "z", V "z" ∈ V "x"$.
 Proof.
   eapply alpha_All_frm with (z := un_name "z"); reflexivity.
 Qed.

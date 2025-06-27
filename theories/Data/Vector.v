@@ -657,3 +657,13 @@ Ltac introVCons x' xs' :=
   apply V.caseS; intros x' xs'.
 
 Infix "!!" := V.nth.
+
+Inductive Similarity_vec {A : Type} {A' : Type} {SIM : Similarity A A'} : forall n : nat, Similarity (Vector.t A n) (Vector.t A' n) :=
+  | VNil_corres
+    : is_similar_to VNil VNil
+  | VCons_corres (n : nat) x x' xs xs'
+    (x_corres : is_similar_to x x')
+    (xs_corres : is_similar_to xs xs')
+    : is_similar_to (VCons n x xs) (VCons n x' xs').
+
+#[global] Existing Instance Similarity_vec.
