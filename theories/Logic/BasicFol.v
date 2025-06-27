@@ -8,6 +8,8 @@ Require Import Coq.Arith.Wf_nat.
 #[local] Infix "\subseteq" := E.isSubsetOf.
 #[local] Notation In := List.In.
 
+Module InternalSyntax.
+
 #[projections(primitive)]
 Record language : Type :=
   { function_symbols : Set
@@ -2838,6 +2840,10 @@ Qed.
 End SIMILARITY.
 
 End EXTEND_LANGUAGE_BY_ADDING_CONSTANTS.
+
+End InternalSyntax.
+
+Export InternalSyntax.
 
 #[global] Arguments embed_trm {_} {_} {_} {_} {_} {_} {_} {_}.
 #[global] Arguments embed_trms {_} {_} {_} {_} {_} {_} {_} {_} {_}.

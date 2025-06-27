@@ -6,27 +6,30 @@ Require Import PnV.Logic.HilbertFol2.
 Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 
-Module InternalSyntax := PnV.Logic.BasicFol.
+#[global]
+Coercion named_var (nm : name) : ivar :=
+  un_name nm.
 
 Declare Custom Entry trm_view.
 Declare Custom Entry trms_view.
 Declare Custom Entry frm_view.
 Declare Custom Entry subst_view.
-Reserved Notation "'$' EXPR '$'" (EXPR custom frm_view at level 10, no associativity, format "'$' EXPR '$'", at level 0).
+Reserved Notation "'\(' EXPR '\)'" (EXPR custom frm_view at level 10, no associativity, format "'\(' EXPR '\)'", at level 0).
+
+Declare Custom Entry trm_view2.
+Declare Custom Entry trms_view2.
+Declare Custom Entry frm_view2.
+Reserved Notation "'$' EXPR '$'" (EXPR custom frm_view2 at level 10, no associativity, format "'$' EXPR '$'", at level 0).
+
+Declare Scope trm_scope.
+Declare Scope trms_scope.
+Declare Scope frm_scope.
+Declare Scope subst_scope.
 
 Module FolViewer.
 
-#[global]
-Coercion named_var (nm : name) : ivar :=
-  un_name nm.
-
-#[global] Declare Scope trm_scope.
-#[global] Declare Scope trms_scope.
-#[global] Declare Scope frm_scope.
-#[global] Declare Scope subst_scope.
-
-Notation "'$' EXPR '$'" := EXPR : frm_scope.
-Notation "'$' EXPR '$'" := (EXPR : frm _).
+Notation "'\(' EXPR '\)'" := EXPR : frm_scope.
+Notation "'\(' EXPR '\)'" := (EXPR : frm _).
 
 #[global] Bind Scope trm_scope with trm.
 Notation "'`[' s ']' t" := (subst_trm s t) (s custom subst_view at level 10, t custom trm_view at level 5, in custom trm_view at level 5, format "`[ s ] t").
@@ -47,7 +50,8 @@ Notation "'(' ts ')'" := ts (ts custom trms_view at level 5, no associativity, i
 Notation "'`[' s ']' p" := (subst_frm s p) (s custom subst_view at level 10, p custom frm_view at level 0, in custom frm_view at level 10, format "`[ s ] p").
 Notation "'`(' p ')' '[' x := t ']'" := (subst1 (named_var x) t p) (x constr, t custom trm_view at level 10, p custom frm_view at level 7, in custom frm_view at level 10, format "`( p ) [  x  :=  t  ]").
 Notation "'⊥'" := (Bot_frm) (in custom frm_view at level 0).
-Notation "t1 '=' t2" := (Eqn_frm t1 t2) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
+Notation "'R' R ts" := (Rel_frm R ts) (R constr, ts custom trms_view at level 5, in custom frm_view at level 5).
+Notation "t1 '=' t2" := (Eqn_frm t1 t2) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 5).
 Notation "'¬' p" := (Neg_frm p) (p custom frm_view at level 7, in custom frm_view at level 7).
 Notation "'∀' x ',' p" := (All_frm (named_var x) p) (x constr at level 0, p custom frm_view at level 7, in custom frm_view at level 7).
 Notation "'∃' x ',' p" := (Exs_frm (named_var x) p) (x constr at level 0, p custom frm_view at level 7, in custom frm_view at level 7).
@@ -190,9 +194,44 @@ End FOL_SYNTAX.
 
 End ExternalSyntax.
 
-Module Example1.
+Module FolViewer2.
 
-Import FolViewer.
+Import ExternalSyntax.
+
+Notation "'$' EXPR '$'" := EXPR : frm_scope.
+Notation "'$' EXPR '$'" := (EXPR : ExternalSyntax.frm).
+
+#[global] Bind Scope trm_scope with trm.
+Notation "'V' x" := (Var_trm x) (x constr at level 0, in custom trm_view2 at level 5).
+Notation "'F' f ts" := (Fun_trm f ts) (f constr, ts custom trms_view2 at level 0, in custom trm_view2 at level 5).
+Notation "'C' c" := (Con_trm c) (c constr, in custom trm_view2 at level 5).
+Notation "t" := t (t ident, in custom trm_view2 at level 0).
+Notation "'(' t ')'" := t (t custom trm_view2 at level 5, no associativity, in custom trm_view2 at level 0).
+
+#[global] Bind Scope trms_scope with trms.
+Notation "'[' ']'" := (O_trms) (no associativity, in custom trms_view2 at level 0).
+Notation "t '::' ts" := (S_trms _ t ts) (right associativity, t custom trm_view2, ts custom trms_view2, in custom trms_view2 at level 5).
+Notation "ts" := ts (ts ident, in custom trms_view2 at level 0).
+Notation "'(' ts ')'" := ts (ts custom trms_view2 at level 5, no associativity, in custom trms_view2 at level 0).
+
+#[global] Bind Scope frm_scope with frm.
+Notation "'False'" := (Bot_frm) (in custom frm_view2 at level 0).
+Notation "'R' R ts" := (Rel_frm R ts) (R constr, ts custom trms_view2 at level 5, in custom frm_view2 at level 6).
+Notation "t1 '=' t2" := (Eqn_frm t1 t2) (t1 custom trm_view2 at level 5, t2 custom trm_view2 at level 5, in custom frm_view2 at level 6).
+Notation "'~' p" := (Neg_frm p) (p custom frm_view2 at level 8, in custom frm_view2 at level 7).
+Notation "'forall' x ',' p" := (All_frm x p) (x constr at level 0, p custom frm_view2 at level 8, in custom frm_view2 at level 7).
+Notation "'exists' x ',' p" := (Exs_frm x p) (x constr at level 0, p custom frm_view2 at level 8, in custom frm_view2 at level 7).
+Notation "p '/\' q" := (Con_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
+Notation "p '\/' q" := (Dis_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
+Notation "p '->' q" := (Imp_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
+Notation "p '<->' q" := (Iff_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
+Notation "'P' phi ts" := (scheme_app phi ts) (phi constr at level 0, ts constr at level 0, in custom frm_view2 at level 6).
+Notation "p" := p (p ident, in custom frm_view2 at level 0).
+Notation "'{' p '}'" := p (p custom frm_view2 at level 7, no associativity, in custom frm_view2 at level 0).
+
+End FolViewer2.
+
+Module ZFC.
 
 Variant L_in_relation_symbols : Set :=
   | symbol_IN : L_in_relation_symbols.
@@ -208,12 +247,31 @@ Definition L_in : language :=
     relation_arity_gt_0 := fun _ => (@le_S 1 1 (@le_n 1));
   |}.
 
-Notation "t1 '∈' t2" := (@Rel_frm L_in symbol_IN (@S_trms L_in 1 t1 (@S_trms L_in 0 t2 (@O_trms L_in)))) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
+Section EXAMPLE.
+
+Import FolViewer.
+
+#[local] Notation "t1 '∈' t2" := (@Rel_frm L_in symbol_IN (@S_trms L_in 1 t1 (@S_trms L_in 0 t2 (@O_trms L_in)))) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
 
 Example fol_viewer_example1
-  : $`[V "x" / "y"](∀ "x", V "x" ∈ V "y")$ ≡α $∀ "z", V "z" ∈ V "x"$.
+  : \(`[V "x" / "y"](∀ "x", V "x" ∈ V "y")\) ≡α \(∀ "z", V "z" ∈ V "x"\).
 Proof.
   eapply alpha_All_frm with (z := un_name "z"); reflexivity.
 Qed.
 
-End Example1.
+End EXAMPLE.
+
+Section AXIOMS.
+
+#[local] Infix "\in" := E.In.
+#[local] Infix "=~=" := is_similar_to.
+
+Import ExternalSyntax FolViewer2.
+
+#[local] Notation "t1 '∈' t2" := (@Rel_frm L_in symbol_IN (@S_trms L_in 1 t1 (@S_trms L_in 0 t2 (@O_trms L_in)))) (t1 custom trm_view2 at level 5, t2 custom trm_view2 at level 5, in custom frm_view2 at level 6).
+
+#[local] Open Scope vec_scope.
+
+End AXIOMS.
+
+End ZFC.
