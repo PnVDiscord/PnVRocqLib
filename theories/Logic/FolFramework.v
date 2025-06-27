@@ -122,7 +122,8 @@ Notation "'$' EXPR '$'" := (EXPR : frm _).
 
 #[global] Bind Scope trm_scope with trm.
 Notation "'`[' s ']' t" := (subst_trm s t) (s custom subst_view at level 10, t custom trm_view at level 5, in custom trm_view at level 5, format "`[ s ] t").
-Notation "'V' x" := (Var_trm (un_name x)) (x constr at level 0, in custom trm_view at level 5).
+#[global] Coercion named_var (nm : name) : ivar := un_name nm.
+Notation "'V' x" := (Var_trm (named_var x)) (x constr at level 0, in custom trm_view at level 5).
 Notation "'F' f ts" := (Fun_trm f ts) (f constr, ts custom trms_view at level 0, in custom trm_view at level 5).
 Notation "'C' c" := (Con_trm c) (c constr, in custom trm_view at level 5).
 Notation "t" := t (t ident, in custom trm_view at level 0).
@@ -137,12 +138,12 @@ Notation "'(' ts ')'" := ts (ts custom trms_view at level 5, no associativity, i
 
 #[global] Bind Scope frm_scope with frm.
 Notation "'`[' s ']' p" := (subst_frm s p) (s custom subst_view at level 10, p custom frm_view at level 0, in custom frm_view at level 10, format "`[ s ] p").
-Notation "'`(' p ')' '[' 'V' x := t ']'" := (subst1 x t p) (x constr, t custom trm_view at level 10, p custom frm_view at level 7, in custom frm_view at level 10, format "`( p ) [  V  x  :=  t  ]").
+Notation "'`(' p ')' '[' x := t ']'" := (subst1 (named_var x) t p) (x constr, t custom trm_view at level 10, p custom frm_view at level 7, in custom frm_view at level 10, format "`( p ) [  x  :=  t  ]").
 Notation "'⊥'" := (Bot_frm) (in custom frm_view at level 0).
 Notation "t1 '=' t2" := (Eqn_frm t1 t2) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
 Notation "'¬' p" := (Neg_frm p) (p custom frm_view at level 7, in custom frm_view at level 7).
-Notation "'∀' 'V' x ',' p" := (All_frm (un_name x) p) (x constr at level 0, p custom frm_view at level 7, in custom frm_view at level 7).
-Notation "'∃' 'V' x ',' p" := (Exs_frm (un_name x) p) (x constr at level 0, p custom frm_view at level 7, in custom frm_view at level 7).
+Notation "'∀' x ',' p" := (All_frm (named_var x) p) (x constr at level 0, p custom frm_view at level 7, in custom frm_view at level 7).
+Notation "'∃' x ',' p" := (Exs_frm (named_var x) p) (x constr at level 0, p custom frm_view at level 7, in custom frm_view at level 7).
 Notation "p '∧' q" := (Con_frm p q) (p custom frm_view, q custom frm_view, no associativity, in custom frm_view at level 8).
 Notation "p '∨' q" := (Dis_frm p q) (p custom frm_view, q custom frm_view, no associativity, in custom frm_view at level 9).
 Notation "p '→' q" := (Imp_frm p q) (p custom frm_view, q custom frm_view, no associativity, in custom frm_view at level 10).
@@ -152,8 +153,8 @@ Notation "'(' p ')'" := p (p custom frm_view at level 10, no associativity, in c
 
 Bind Scope subst_scope with subst.
 Notation "s2 '∘' s1" := (subst_compose s1 s2) (right associativity, in custom subst_view at level 4) : subst_scope.
-Notation "s ';' t '/' 'V' x" := (cons_subst (un_name x) t s) (left associativity, x constr at level 0, t custom trm_view at level 5, in custom subst_view at level 10).
-Notation "t '/' 'V' x" := (one_subst (un_name x) t) (no associativity, x constr at level 0, t custom trm_view at level 5, in custom subst_view at level 10).
+Notation "s ';' t '/' x" := (cons_subst (named_var x) t s) (left associativity, x constr at level 0, t custom trm_view at level 5, in custom subst_view at level 10).
+Notation "t '/' x" := (one_subst (named_var x) t) (no associativity, x constr at level 0, t custom trm_view at level 5, in custom subst_view at level 10).
 Notation "'ι'" := (nil_subst) (no associativity, in custom subst_view at level 0).
 
 Notation "p '≡α' q" := (alpha_equiv p q) (no associativity, at level 70) : type_scope.
@@ -181,7 +182,7 @@ Definition L_in : language :=
 Notation "t1 '∈' t2" := (@Rel_frm L_in symbol_IN (@S_trms L_in 1 t1 (@S_trms L_in 0 t2 (@O_trms L_in)))) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
 
 Example fol_viewer_example1
-  : $`[V "x" / V "y"](∀ V "y", V "y" ∈ V "x")$ ≡α $∀ V "z", V "z" ∈ V "x"$.
+  : $`[V "x" / "y"](∀ "y", V "y" ∈ V "x")$ ≡α $∀ "z", V "z" ∈ V "x"$.
 Proof.
   eapply alpha_All_frm with (z := un_name "z"); reflexivity.
 Qed.
