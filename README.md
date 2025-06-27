@@ -10,7 +10,7 @@ Currently, this library is standalone.
 git clone https://github.com/PnVDiscord/PnVRocqLib.git
 cd PnVRocqLib
 eval `opam env`
-rocq makefile -f _CoqProject -o Makefile
+coq_makefile -f _CoqProject -o Makefile
 make -j4 -k
 ```
 

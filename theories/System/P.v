@@ -143,6 +143,10 @@ End PP.
 
 String Notation name parse_name print_name : name_scope.
 
+#[global]
+Instance Similarity_name : Similarity nat name :=
+  fun n : nat => fun nm : name => mk_name n = nm.
+
 Section EXAMPLE1.
 
 Let x1 : name :=
