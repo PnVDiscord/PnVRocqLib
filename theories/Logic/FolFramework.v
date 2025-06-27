@@ -93,6 +93,13 @@ with trms : arity -> Set :=
   | O_trms : trms O
   | S_trms (n : arity) (t : trm) (ts : trms n) : trms (S n).
 
+#[projections(primitive)]
+Record scheme {n : arity} (xs : Vector.t name n) : Set :=
+  mk_scheme
+  { NO_DUP_args : NoDup (V.to_list xs)
+  ; scheme_body : InternalSyntax.frm L
+  }.
+
 Inductive frm : Set :=
   | Rel_frm (R : L.(relation_symbols)) (ts : trms (L.(relation_arity_table) R)) : frm
   | Eqn_frm (t1 : trm) (t2 : trm) : frm
@@ -104,9 +111,7 @@ Inductive frm : Set :=
   | Iff_frm (p1 : frm) (p2 : frm) : frm
   | All_frm (y : name) (p1 : frm) : frm
   | Exs_frm (y : name) (p1 : frm) : frm
-  | scheme_app {n : arity} {xs : Vector.t name n} (phi : scheme n xs) (ts : Vector.t trm n) : frm
-with scheme : forall n : arity, Vector.t name n -> Set :=
-  | mk_scheme {n : arity} {xs : Vector.t name n} (NO_DUP : NoDup (V.to_list xs)) (p : frm) : scheme n xs.
+  | scheme_app {n : arity} {xs : Vector.t name n} (phi : scheme xs) (ts : Vector.t trm n) : frm.
 
 Inductive Similarity_trm : Similarity (InternalSyntax.trm L) trm :=
   | Var_trm_corres x x'
@@ -128,6 +133,14 @@ with Similarity_trms : forall n : arity, Similarity (InternalSyntax.trms L n) (t
 #[global] Existing Instance Similarity_trm.
 
 #[global] Existing Instance Similarity_trms.
+
+Inductive Similarity_scheme {n : arity} (xs' : Vector.t name n) : Similarity (Vector.t (InternalSyntax.trm L) n -> InternalSyntax.frm L) (scheme xs') :=
+  | mk_scheme_corres (xs : Vector.t ivar n) phi phi'
+    (xs_corres : xs =~= xs')
+    (phi_corres : forall ts : Vector.t (InternalSyntax.trm L) n, alpha_equiv (phi ts) (subst_frm (mk_subst xs ts) phi'.(scheme_body xs')))
+    : phi =~= phi'.
+
+#[global] Existing Instance Similarity_scheme.
 
 Inductive Similarity_frm : Similarity (InternalSyntax.frm L) frm :=
   | Rel_frm_corres R ts ts'
@@ -166,21 +179,12 @@ Inductive Similarity_frm : Similarity (InternalSyntax.frm L) frm :=
     (x_corres : x =~= x')
     (p1_corres : p1 =~= p1')
     : @InternalSyntax.Exs_frm L x p1 =~= Exs_frm x' p1'
-  | scheme_app_corres (n : arity) (xs' : Vector.t name n) (ts : Vector.t (InternalSyntax.trm L) n) (ts' : Vector.t trm n) (phi : Vector.t (InternalSyntax.trm L) n -> InternalSyntax.frm L) (phi' : scheme n xs')
+  | scheme_app_corres (n : arity) (xs' : Vector.t name n) (ts : Vector.t (InternalSyntax.trm L) n) (ts' : Vector.t trm n) (phi : Vector.t (InternalSyntax.trm L) n -> InternalSyntax.frm L) (phi' : scheme xs')
     (ts_corres : ts =~= ts')
     (phi_corres : phi =~= phi')
-    : phi ts =~= scheme_app phi' ts'
-with Similarity_scheme : forall n : arity, forall xs : Vector.t name n, Similarity (Vector.t (InternalSyntax.trm L) n -> InternalSyntax.frm L) (scheme n xs) :=
-  | mk_scheme_corres (n : arity) (xs : Vector.t ivar n) (xs' : Vector.t name n) (p : InternalSyntax.frm L) (p' : frm) phi
-    (NO_DUP : NoDup (V.to_list xs'))
-    (xs_corres : xs =~= xs')
-    (p_corres : p =~= p')
-    (phi_corres : forall ts : Vector.t (InternalSyntax.trm L) n, alpha_equiv (phi ts) (subst_frm (mk_subst xs ts) p))
-    : phi =~= @mk_scheme n xs' NO_DUP p'.
+    : phi ts =~= scheme_app phi' ts'.
 
 #[global] Existing Instance Similarity_frm.
-
-#[global] Existing Instance Similarity_scheme.
 
 End FOL_SYNTAX.
 
