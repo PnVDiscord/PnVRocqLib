@@ -70,10 +70,10 @@ End FolViewer.
 Module ExternalSyntax.
 
 Inductive typ : Set :=
+  | arr (D : typ) (C : typ) : typ
   | trm : typ
   | frm : typ
-  | vec (E : typ) (n : nat) : typ
-  | arr (D : typ) (C : typ) : typ.
+  | vec (E : typ) (n : nat) : typ.
 
 Declare Scope typ_scope.
 Bind Scope typ_scope with typ.
@@ -86,6 +86,9 @@ Section STLC_STYLE_DEFINITION.
 Context {L : language}.
 
 Inductive raw_syntax : Set :=
+  | Var_syn (x : name) : raw_syntax
+  | App_syn (item1 : raw_syntax) (item2 : raw_syntax) : raw_syntax
+  | Lam_syn (x : name) (item : raw_syntax) : raw_syntax
   | Fun_trm (f : L.(function_symbols)) (ts : raw_syntax) : raw_syntax
   | Con_trm (c : L.(constant_symbols)) : raw_syntax
   | Rel_frm (R : L.(relation_symbols)) (ts : raw_syntax) : raw_syntax
@@ -98,12 +101,8 @@ Inductive raw_syntax : Set :=
   | Iff_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
   | All_frm (p1 : raw_syntax) : raw_syntax
   | Exs_frm (p2 : raw_syntax) : raw_syntax
-  | Prop_app (phi : raw_syntax) (ts : raw_syntax) : raw_syntax
   | Nil_syn : raw_syntax
-  | Cons_syn (item : raw_syntax) (items : raw_syntax) : raw_syntax
-  | Var_syn (x : name) : raw_syntax
-  | Lam_syn (x : name) (item : raw_syntax) : raw_syntax
-  | App_syn (item1 : raw_syntax) (item2 : raw_syntax) : raw_syntax.
+  | Cons_syn (item : raw_syntax) (items : raw_syntax) : raw_syntax.
 
 Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
   (* TO DO *).
@@ -112,7 +111,7 @@ End STLC_STYLE_DEFINITION.
 
 End ExternalSyntax.
 
-Module FolViewer2.
+Module ExternalViewer.
 
 Import ExternalSyntax.
 (**
@@ -152,7 +151,7 @@ Notation "'P' phi ts" := (Prop_app phi ts) (phi constr at level 0, ts constr at 
 Notation "p" := p (p ident, in custom frm_view2 at level 0).
 Notation "'{' p '}'" := p (p custom frm_view2 at level 7, no associativity, in custom frm_view2 at level 0).
 *)
-End FolViewer2.
+End ExternalViewer.
 
 Module ZFC.
 
