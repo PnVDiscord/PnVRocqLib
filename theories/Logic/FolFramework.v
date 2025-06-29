@@ -67,6 +67,93 @@ Notation "p '≡α' q" := (alpha_equiv p q) (no associativity, at level 70) : ty
 
 End FolViewer.
 
+Module ExternalSyntax.
+
+Inductive typ : Set :=
+  | trm : typ
+  | frm : typ
+  | vec (E : typ) (n : nat) : typ
+  | arr (D : typ) (C : typ) : typ.
+
+Declare Scope typ_scope.
+Bind Scope typ_scope with typ.
+Delimit Scope typ_scope with typ.
+
+Notation "D -> C" := (ExternalSyntax.arr D C) : typ_scope.
+
+Section STLC_STYLE_DEFINITION.
+
+Context {L : language}.
+
+Inductive raw_syntax : Set :=
+  | Fun_trm (f : L.(function_symbols)) (ts : raw_syntax) : raw_syntax
+  | Con_trm (c : L.(constant_symbols)) : raw_syntax
+  | Rel_frm (R : L.(relation_symbols)) (ts : raw_syntax) : raw_syntax
+  | Eqn_frm (t1 : raw_syntax) (t2 : raw_syntax) : raw_syntax
+  | Bot_frm : raw_syntax
+  | Neg_frm (p1 : raw_syntax) : raw_syntax
+  | Con_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
+  | Dis_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
+  | Imp_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
+  | Iff_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
+  | All_frm (p1 : raw_syntax) : raw_syntax
+  | Exs_frm (p2 : raw_syntax) : raw_syntax
+  | Prop_app (phi : raw_syntax) (ts : raw_syntax) : raw_syntax
+  | Nil_syn : raw_syntax
+  | Cons_syn (item : raw_syntax) (items : raw_syntax) : raw_syntax
+  | Var_syn (x : name) : raw_syntax
+  | Lam_syn (x : name) (item : raw_syntax) : raw_syntax
+  | App_syn (item1 : raw_syntax) (item2 : raw_syntax) : raw_syntax.
+
+Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
+  (* TO DO *).
+
+End STLC_STYLE_DEFINITION.
+
+End ExternalSyntax.
+
+Module FolViewer2.
+
+Import ExternalSyntax.
+(**
+Declare Custom Entry trm_view2.
+Declare Custom Entry trms_view2.
+Declare Custom Entry frm_view2.
+Reserved Notation "'$' EXPR '$'" (EXPR custom frm_view2 at level 10, no associativity, format "'$' EXPR '$'", at level 0).
+
+Notation "'$' EXPR '$'" := EXPR : frm_scope.
+Notation "'$' EXPR '$'" := (EXPR : ExternalSyntax.frm).
+
+#[global] Bind Scope trm_scope with trm.
+Notation "'V' x" := (Var_trm x) (x constr at level 0, in custom trm_view2 at level 5).
+Notation "'F' f ts" := (Fun_trm f ts) (f constr, ts custom trms_view2 at level 0, in custom trm_view2 at level 5).
+Notation "'C' c" := (Con_trm c) (c constr, in custom trm_view2 at level 5).
+Notation "t" := t (t ident, in custom trm_view2 at level 0).
+Notation "'(' t ')'" := t (t custom trm_view2 at level 5, no associativity, in custom trm_view2 at level 0).
+
+#[global] Bind Scope trms_scope with trms.
+Notation "'[' ']'" := (O_trms) (no associativity, in custom trms_view2 at level 0).
+Notation "t '::' ts" := (S_trms _ t ts) (right associativity, t custom trm_view2, ts custom trms_view2, in custom trms_view2 at level 5).
+Notation "ts" := ts (ts ident, in custom trms_view2 at level 0).
+Notation "'(' ts ')'" := ts (ts custom trms_view2 at level 5, no associativity, in custom trms_view2 at level 0).
+
+#[global] Bind Scope frm_scope with frm.
+Notation "'False'" := (Bot_frm) (in custom frm_view2 at level 0).
+Notation "'R' R ts" := (Rel_frm R ts) (R constr, ts custom trms_view2 at level 5, in custom frm_view2 at level 6).
+Notation "t1 '=' t2" := (Eqn_frm t1 t2) (t1 custom trm_view2 at level 5, t2 custom trm_view2 at level 5, in custom frm_view2 at level 6).
+Notation "'~' p" := (Neg_frm p) (p custom frm_view2 at level 8, in custom frm_view2 at level 7).
+Notation "'forall' x ',' p" := (All_frm (Lam x p)) (x constr at level 0, p custom frm_view2 at level 8, in custom frm_view2 at level 7).
+Notation "'exists' x ',' p" := (Exs_frm (Lam x p)) (x constr at level 0, p custom frm_view2 at level 8, in custom frm_view2 at level 7).
+Notation "p '/\' q" := (Con_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
+Notation "p '\/' q" := (Dis_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
+Notation "p '->' q" := (Imp_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
+Notation "p '<->' q" := (Iff_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
+Notation "'P' phi ts" := (Prop_app phi ts) (phi constr at level 0, ts constr at level 0, in custom frm_view2 at level 6).
+Notation "p" := p (p ident, in custom frm_view2 at level 0).
+Notation "'{' p '}'" := p (p custom frm_view2 at level 7, no associativity, in custom frm_view2 at level 0).
+*)
+End FolViewer2.
+
 Module ZFC.
 
 Variant L_in_relation_symbols : Set :=
