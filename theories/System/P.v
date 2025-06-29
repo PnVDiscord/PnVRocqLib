@@ -12,6 +12,13 @@ Declare Scope name_scope.
 Bind Scope name_scope with name.
 Delimit Scope name_scope with name.
 
+#[global]
+Instance name_hasEqDec
+  : hasEqDec name.
+Proof.
+  red. decide equality. eapply Nat.eq_dec.
+Defined.
+
 Definition un_name (nm : name) : nat :=
   match nm with
   | mk_name seed => seed
