@@ -83,7 +83,17 @@ Notation "D -> C" := (ExternalSyntax.arr D C) : typ_scope.
 
 Section STLC_STYLE_DEFINITION.
 
+#[local] Open Scope typ_scope.
+
 Context {L : language}.
+
+Fixpoint typ_semantics (Ty : typ) : Set :=
+  match Ty with
+  | D -> C => typ_semantics D -> typ_semantics C
+  | trm => InternalSyntax.trm L
+  | frm => InternalSyntax.frm L
+  | vec E n => Vector.t (typ_semantics E) n
+  end.
 
 Inductive raw_syntax : Set :=
   | Var_syn (x : name) : raw_syntax
@@ -102,7 +112,7 @@ Inductive raw_syntax : Set :=
   | All_frm (p1 : raw_syntax) : raw_syntax
   | Exs_frm (p1 : raw_syntax) : raw_syntax
   | Nil_syn : raw_syntax
-  | Cons_syn (tree1 : raw_syntax) (tree2 : raw_syntax) : raw_syntax.
+  | Cons_syn (it : raw_syntax) (its : raw_syntax) : raw_syntax.
 
 Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
   (* TO DO *).
@@ -111,6 +121,8 @@ Class has_external_syntax (A : Set) : Type :=
   corresponds_to (val : A) (tree : raw_syntax) : Prop.
 
 End STLC_STYLE_DEFINITION.
+
+#[global] Arguments raw_syntax : clear implicits.
 
 End ExternalSyntax.
 
