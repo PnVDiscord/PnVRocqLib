@@ -1,4 +1,5 @@
 Require Import PnV.Prelude.Prelude.
+Require Import PnV.Math.ThN.
 Require Import Coq.Strings.String.
 Require Import Coq.Arith.Wf_nat.
 Require Import Coq.Arith.PeanoNat.
@@ -73,7 +74,7 @@ Fixpoint print_name1 (n : nat) (H_Acc : Acc lt n) : list Byte.byte :=
   | Acc_intro _ H_Acc_inv =>
     match Nat.eq_dec n 0 with
     | left _ => []
-    | right NE => mkAlphaNum (n mod 36) :: print_name1 (n / 36) (H_Acc_inv (n / 36) (print_name1_aux_lemma n NE))
+    | right NE => print_name1 (n / 36) (H_Acc_inv (n / 36) (print_name1_aux_lemma n NE)) ++ [mkAlphaNum (n mod 36)]
     end
   end.
 
@@ -127,13 +128,26 @@ Definition unAlphaNum (b : Byte.byte) : option nat :=
   | _ => None
   end.
 
-Fixpoint parse_name1 (bs : list Byte.byte) : option nat :=
-  match bs with
-  | [] => Some 0
-  | b :: bs => unAlphaNum b >>= fun n : nat => parse_name1 bs >>= fun ACCUM : nat => pure (ACCUM * 36 + n)
-  end.
+Lemma unAlphaNum_mkAlphaNum n n'
+  : unAlphaNum (mkAlphaNum n) = Some n' <-> (n = n' /\ n < 36).
+Proof.
+  unfold unAlphaNum, mkAlphaNum in *. split; intros H_OBS.
+  - (do 36 try destruct n as [ | n]); (do 36 try destruct n' as [ | n']); try congruence; lia.
+  - destruct H_OBS as [<- H_OBS]. (do 36 try destruct n as [ | n]); try congruence; lia.
+Qed.
 
-End PP_name.
+Lemma rewrite_unAlphaNum_mkAlphaNum n
+  (BOUND : n < 36)
+  : unAlphaNum (mkAlphaNum n) = Some n.
+Proof.
+  rewrite -> unAlphaNum_mkAlphaNum. lia.
+Qed.
+
+Definition parse_name1 (bs : list Byte.byte) : option nat :=
+  fold_left (fun ACC : option nat => fun b : Byte.byte => liftM2 (fun n : nat => fun m : nat => m + 36 * n) ACC (unAlphaNum b)) bs (Some 0).
+
+Definition next_name (nm : name) : name :=
+  mk_name (1 + 36 * un_name nm).
 
 Definition print_name (nm : name) : option (list Byte.byte) :=
   let seed : nat := un_name nm in
@@ -148,6 +162,43 @@ Definition parse_name (bs : list Byte.byte) : option name :=
   | [] => None
   | b :: _ => unAlphaNum b >>= fun d : nat => if Nat.ltb d 10 then None else parse_name1 bs >>= fun seed : nat => pure (mk_name seed)
   end.
+
+#[local] Opaque "+" "*" Nat.ltb.
+
+Lemma print_next_name (bs : list Byte.byte) nm
+  (NAME : print_name nm = Some bs)
+  : print_name (next_name nm) = Some (bs ++ [x31]).
+Proof.
+  unfold next_name. unfold print_name. simpl.
+  destruct (Nat.eq_dec (1 + 36 * un_name nm) 0) as [EQ1 | NE1]; simpl in *; try lia.
+  replace ((1 + 36 * un_name nm) mod 36) with 1 in *; cycle 1.
+  { pose proof (div_mod_inv (1 + 36 * un_name nm) 36 (un_name nm) 1). lia. }
+  replace (print_name1 ((1 + 36 * un_name nm) / 36) _) with (print_name1 (un_name nm) (lt_wf (un_name nm))); cycle 1.
+  { transitivity (print_name1 ((1 + 36 * un_name nm) / 36) (lt_wf ((1 + 36 * un_name nm) / 36))).
+    - replace ((1 + 36 * un_name nm) / 36) with (un_name nm); trivial.
+      pose proof (div_mod_uniqueness (1 + 36 * un_name nm) 36 (un_name nm) 1). lia.
+    - eapply print_name1_pirrel.
+  }
+  unfold print_name in NAME. destruct (print_name1 (un_name nm) (lt_wf (un_name nm))) as [ | b bs'] eqn: H_OBS; try congruence.
+  simpl in NAME |- *. destruct (unAlphaNum b) as [n | ] eqn: H_OBS'; simpl in NAME |- *; try congruence.
+  destruct (n <? 10)%nat as [ | ] eqn: H_OBS''; try congruence.
+  change (b :: bs' ++ ["1"%byte]) with ((b :: bs') ++ ["1"%byte]). congruence.
+Qed.
+
+Lemma parse_next_name (bs : list Byte.byte) nm
+  (NAME : parse_name bs = Some nm)
+  : parse_name (bs ++ [x31]) = Some (next_name nm).
+Proof.
+  unfold parse_name in *. destruct bs as [ | b bs]; simpl in *; try congruence.
+  destruct (unAlphaNum b) as [n0 | ] eqn: H_n0; simpl in *; try congruence.
+  destruct (n0 <? 10)%nat as [ | ] eqn: H_OBS; simpl in *; try congruence.
+  unfold parse_name1 in *. change (b :: bs ++ ["1"%byte]) with ((b :: bs) ++ ["1"%byte]).
+  rewrite fold_left_app. revert NAME. set (fold_left _) as loop. i.
+  destruct (loop (b :: bs) (Some 0)) as [r | ] eqn: H_r; simpl in *; try congruence.
+  replace nm with (mk_name r) by congruence. reflexivity.
+Qed.
+
+End PP_name.
 
 String Notation name parse_name print_name : name_scope.
 

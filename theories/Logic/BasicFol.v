@@ -824,7 +824,7 @@ Proof.
 Qed.
 
 Definition chi_frm (s : subst L) (p : frm L) : ivar :=
-  1 + maxs (List.map (last_ivar_trm ∘ s) (fvs_frm p)).
+  1 + 36 * maxs (List.map (last_ivar_trm ∘ s) (fvs_frm p)).
 
 Lemma chi_frm_not_free (s : subst L) (p : frm L) (x : ivar)
   (FREE : is_free_in_frm x p = true)
@@ -973,7 +973,7 @@ Lemma chi_frm_compat_equiv_subst (s1 : subst L) (s2 : subst L) (p : frm L)
   (EQUIV : equiv_subst_in_frm s1 s2 p)
   : chi_frm s1 p = chi_frm s2 p.
 Proof.
-  unfold chi_frm. f_equal. eapply maxs_ext. i; ss!; exists x; ss!.
+  unfold chi_frm. f_equal. f_equal. eapply maxs_ext. i; ss!; exists x; ss!.
 Qed.
 
 Lemma equiv_subst_in_trm_implies_subst_trm_same (s1 : subst L) (s2 : subst L) (t : trm L)
@@ -1622,7 +1622,7 @@ Proof.
 Qed.
 
 Definition fresh_var (x : ivar) (t : trm L) (p : frm L) : ivar :=
-  1 + maxs ([x] ++ fvs_trm t ++ fvs_frm p).
+  1 + 36 * maxs ([x] ++ fvs_trm t ++ fvs_frm p).
 
 Lemma fresh_var_ne_x (x : ivar) (t : trm L) (p : frm L)
   : fresh_var x t p = x <-> False.
@@ -2136,7 +2136,7 @@ Lemma chi_frm_similarity (s : subst L) (s' : subst L') (p : frm L) (p' : frm L')
 Proof with eauto.
   assert (ENOUGH : forall xs : list ivar, forall f : ivar -> list ivar, maxs (L.map (maxs ∘ f)%prg xs) = maxs (L.flat_map f xs)).
   { induction xs; simpl; i; eauto. unfold "∘"%prg. rewrite maxs_app. f_equal. eauto. }
-  unfold chi_frm. f_equal. unfold last_ivar_trm.
+  unfold chi_frm. f_equal. unfold last_ivar_trm. f_equal.
   change (maxs (L.map (maxs ∘ (fvs_trm ∘ s))%prg (fvs_frm p)) = maxs (L.map (maxs ∘ (fvs_trm ∘ s'))%prg (fvs_frm p'))).
   do 2 rewrite ENOUGH. eapply maxs_ext. intros z. do 2 rewrite in_flat_map. unfold "∘"%prg. clear ENOUGH.
   split; intros [x [FREE FREE']]; exists x; split.
@@ -2529,7 +2529,7 @@ Qed.
 Lemma embed_chi_frm (s : subst L) (p : frm L)
   : chi_frm s p = chi_frm (embed_trm ∘ s)%prg (embed_frm p).
 Proof.
-  unfold chi_frm. f_equal. eapply maxs_ext. i; s!.
+  unfold chi_frm. f_equal. f_equal. eapply maxs_ext. i; s!.
   split; intros [x [<- IN]]; exists x; split; ss!; unfold last_ivar_trm; eapply maxs_ext; i; ss!.
 Qed.
 

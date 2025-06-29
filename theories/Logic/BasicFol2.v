@@ -289,7 +289,7 @@ Qed.
 #[local] Hint Rewrite in_accum_hatom_in_frm_iff_HC_occurs_in_frm : simplication_hints.
 
 Definition hchi_frm (sigma : hsubst) (p : frm L') : ivar :=
-  1 + maxs (L.map (last_ivar_trm ∘ sigma)%prg (accum_hatom_in_frm p)).
+  1 + 36 * maxs (L.map (last_ivar_trm ∘ sigma)%prg (accum_hatom_in_frm p)).
 
 Definition nil_hsubst : hsubst :=
   fun z : hatom =>
@@ -582,7 +582,7 @@ Theorem hchi_frm_compat_equiv_hsubst (sigma1 : hsubst) (sigma2 : hsubst) (p : fr
   (EQUIV : equiv_hsubst_in_frm sigma1 sigma2 p)
   : hchi_frm sigma1 p = hchi_frm sigma2 p.
 Proof.
-  unfold hchi_frm. f_equal. eapply maxs_ext. intros n. unfold "∘"%prg.
+  unfold hchi_frm. f_equal. f_equal. eapply maxs_ext. intros n. unfold "∘"%prg.
   split; intros H_in; eapply in_map_iff; apply in_map_iff in H_in; destruct H_in as [x [<- H_in]].
   - exists x. rewrite -> EQUIV. try done!.
     rewrite occurs_free_in_frm_iff. done!.
@@ -738,7 +738,7 @@ Lemma hchi_frm_ext (sigma1 : hsubst) (sigma2 : hsubst) (p1 : frm L') (p2 : frm L
 Proof.
   assert (ENOUGH : forall xs : list hatom, forall f : hatom -> list ivar, maxs (L.map (maxs ∘ f)%prg xs) = maxs (L.flat_map f xs)).
   { induction xs; simpl; i; eauto. unfold "∘"%prg. rewrite maxs_app. f_equal. eauto. }
-  unfold hchi_frm. f_equal. unfold last_ivar_trm.
+  unfold hchi_frm. f_equal. unfold last_ivar_trm. f_equal.
   change (maxs (L.map (maxs ∘ (fvs_trm ∘ sigma1))%prg (accum_hatom_in_frm p1)) = maxs (L.map (maxs ∘ (fvs_trm ∘ sigma2))%prg (accum_hatom_in_frm p2))).
   do 2 rewrite ENOUGH. eapply maxs_ext. intros z. do 2 rewrite in_flat_map.
   unfold "∘"%prg. split; intros (y&IN&IN').
@@ -789,7 +789,7 @@ Proof.
       set (x := hchi_frm sigma (All_frm y p1)).
       set (z := hchi_frm (hsubst_compose sigma sigma') (All_frm y p1)).
       set (w := hchi_frm sigma' (All_frm x (hsubst_frm (cons_hsubst (inl y) (Var_trm x) sigma) p1))).
-      i. rewrite <- IH1. assert (EQ: z = w) by done. subst z. f_equal; trivial.
+      i. rewrite <- IH1. assert (EQ : z = w) by done. subst z. f_equal; trivial.
       eapply equiv_hsubst_in_frm_implies_hsubst_frm_same.
       unfold equiv_hsubst_in_frm. ii.
       rewrite <- distr_hcompose_one with (p := p1).
@@ -893,7 +893,7 @@ Proof.
   - f_equal. done.
   - f_equal; done.
   - assert (claim : chi_frm s (All_frm y p1) = hchi_frm sigma (All_frm y p1)).
-    { unfold hchi_frm, chi_frm. f_equal.
+    { unfold hchi_frm, chi_frm. f_equal. f_equal.
       change (maxs (L.map (maxs ∘ (fvs_trm ∘ s))%prg (fvs_frm (All_frm y p1))) = maxs (L.map (maxs ∘ (fvs_trm ∘ sigma))%prg (accum_hatom_in_frm (All_frm y p1)))).
       do 2 rewrite LEMMA. eapply maxs_ext. intros z. do 2 rewrite in_flat_map. unfold "∘"%prg.
       split; intros (x&IN&IN').
@@ -1105,7 +1105,7 @@ Qed.
 Lemma twilight_chi_frm sigma (p : frm L')
   : hchi_frm sigma p = chi_frm (twilight sigma) (twilight_frm p).
 Proof.
-  unfold hchi_frm, chi_frm, twilight. f_equal. eapply maxs_ext. intros n. split.
+  unfold hchi_frm, chi_frm, twilight. f_equal. f_equal. eapply maxs_ext. intros n. split.
   - s!. intros [[x | hc] [EQ IN]].
     + exists (x * 2). exploit (@div_mod_uniqueness (x * 2) 2 x 0). rewrite Nat.mul_comm. lia. lia.
       intros [-> ->]. simpl. unfold id. rewrite EQ. split; trivial. s!. rewrite <- twilight_frm_fvs. now rewrite in_accum_hatom_in_frm_iff_is_free_in_frm in IN.
@@ -1311,7 +1311,7 @@ Proof.
   - simpl in *. set (x := fst (cp n)). set (phi := enum (snd (cp n))).
     exploit (@dec_finds_minimum_if_exists (fun c : Henkin_constants => andb (negb (HC_occurs_in_frm c phi)) (V.forallb (fun theta_k => negb (HC_occurs_in_frm c theta_k)) thetas) = true)).
     { intros m. destruct (negb (HC_occurs_in_frm m phi) && V.forallb (fun theta_k : frm L' => negb (HC_occurs_in_frm m theta_k)) thetas) as [ | ]; [left | right]; done!. }
-    { exists (1 + max (maxs (accum_HCs_frm phi)) (maxs (map (maxs ∘ accum_HCs_frm)%prg (V.to_list thetas)))). s!. split.
+    { exists (1 + 36 * max (maxs (accum_HCs_frm phi)) (maxs (map (maxs ∘ accum_HCs_frm)%prg (V.to_list thetas)))). s!. split.
       - eapply last_HC_gt_frm. lia.
       - rewrite V.forallb_forall. intros i. s!. eapply last_HC_for_finite_formulae with (ps := V.to_list thetas).
         + eapply V.to_list_In.
