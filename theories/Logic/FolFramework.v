@@ -112,7 +112,7 @@ Inductive raw_syntax : Set :=
   | All_frm (p1 : raw_syntax) : raw_syntax
   | Exs_frm (p1 : raw_syntax) : raw_syntax
   | Nil_syn : raw_syntax
-  | Cons_syn (it : raw_syntax) (its : raw_syntax) : raw_syntax.
+  | Cons_syn (elem : raw_syntax) (elems : raw_syntax) : raw_syntax.
 
 Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
   (* TO DO *).

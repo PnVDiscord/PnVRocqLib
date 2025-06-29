@@ -2,6 +2,7 @@ Require Export PnV.Prelude.SfLib.
 Require Export PnV.Prelude.Notations.
 Require Export Coq.Arith.Compare_dec.
 Require Export Coq.Arith.PeanoNat.
+Require Export Coq.Arith.Wf_nat.
 Require Export Coq.Bool.Bool.
 Require Export Coq.Classes.RelationClasses.
 Require Export Coq.Lists.List.
@@ -1350,7 +1351,7 @@ Qed.
 
 #[local] Infix "!!" := nth_error : list_scope.
 
-Lemma In_lookup {A : Type} (xs : list A) (x : A)
+Lemma In_nth_error_Some {A : Type} (xs : list A) (x : A)
   (IN : In x xs)
   : exists n, xs !! n = Some x /\ n < length xs.
 Proof with try (lia || done).
@@ -1426,6 +1427,171 @@ Proof.
     pose proof (IH (fun x => fun IN => IMAGE x (or_intror IN))) as [ys ys_EQ].
     exists (y :: ys). simpl. f_equal. exact y_EQ. exact ys_EQ.
 Defined.
+
+Lemma lookup_map {A : Type} {B : Type} (f : A -> B) (xs : list A) (i : nat)
+  : map f xs !! i = match xs !! i with Some x => Some (f x) | None => None end.
+Proof.
+  revert i. induction xs as [ | x xs IH], i as [ | i]; simpl in *; try congruence; eauto.
+Qed.
+
+Section SUBSEQUENCE.
+
+Context {A : Type}.
+
+Lemma snoc_inv_iff (xs1 : list A) (xs2 : list A) (y1 : A) (y2 : A)
+  : xs1 ++ [y1] = xs2 ++ [y2] <-> (xs1 = xs2 /\ y1 = y2).
+Proof.
+  split.
+  - intros EQ.
+    assert (length xs1 = length xs2) as LENGTH.
+    { enough (length xs1 + 1 = length xs2 + 1)%nat by lia. apply f_equal with (f := @length A) in EQ. do 2 rewrite length_app in EQ; trivial. }
+    assert (y1 = y2) as H_y.
+    { enough (Some y1 = Some y2) by congruence.
+      pose proof (f_equal (fun xs => xs !! length xs1) EQ) as YES. simpl in YES. rewrite LENGTH in YES at 2.
+      rewrite nth_error_app2 in YES; try lia. rewrite nth_error_app2 in YES; try lia.
+      replace (Datatypes.length xs1 - Datatypes.length xs1) with 0 in YES by lia.
+      replace (Datatypes.length xs2 - Datatypes.length xs2) with 0 in YES by lia.
+      exact YES.
+    }
+    split; trivial. eapply app_cancel_r with (suffix := [y1]). congruence.
+  - intros [? ?]; congruence.
+Qed.
+
+Inductive subseq : list A -> list A -> Prop :=
+  | subseq_nil
+    : subseq [] []
+  | subseq_skip xs ys z
+    (SUBSEQ : subseq xs ys)
+    : subseq xs (ys ++ [z])
+  | subseq_snoc xs ys z
+    (SUBSEQ : subseq xs ys)
+    : subseq (xs ++ [z]) (ys ++ [z]).
+
+#[local] Hint Constructors subseq : core.
+
+Lemma subseq_Forall_Forall (P : A -> Prop) xs ys
+  (SUBSEQ : subseq xs ys)
+  (FORALL : Forall P ys)
+  : Forall P xs.
+Proof.
+  induction SUBSEQ; eauto.
+  - rewrite Forall_app in FORALL. tauto.
+  - rewrite -> Forall_app in FORALL |- *. tauto.
+Qed.
+
+Lemma subseq_refl l
+  : subseq l l.
+Proof.
+  induction l as [ | x xs IH] using list_rev_rect; eauto.
+Qed.
+
+#[local] Hint Resolve subseq_refl : core.
+
+Lemma subseq_middle xs y zs
+  : subseq (xs ++ zs) (xs ++ [y] ++ zs).
+Proof.
+  revert xs y. induction zs as [ | z zs IH] using list_rev_rect; intros.
+  - rewrite app_nil_r. simpl. econstructor 2; eauto.
+  - rewrite -> app_assoc with (l := xs). replace (xs ++ [y] ++ zs ++ [z]) with ((xs ++ [y]) ++ zs ++ [z]) by now repeat rewrite <- app_assoc.
+    rewrite -> app_assoc with (l := xs ++ [y]). econstructor 3; rewrite <- app_assoc; eauto.
+Qed.
+
+Lemma nil_subseq l
+  : subseq [] l.
+Proof.
+  induction l as [ | x xs IH] using list_rev_rect; eauto.
+Qed.
+
+#[local] Hint Resolve nil_subseq : core.
+
+Lemma proper_subseq_length xs ys
+  (SUBSEQ : subseq xs ys)
+  : xs = ys \/ (length xs < length ys)%nat.
+Proof.
+  induction SUBSEQ.
+  - left; trivial.
+  - destruct IHSUBSEQ as [IH | IH].
+    + subst xs. right. rewrite length_app. simpl. lia.
+    + right. rewrite length_app. simpl. lia.
+  - destruct IHSUBSEQ as [IH | IH].
+    + left; congruence.
+    + right. do 2 rewrite length_app; simpl. lia.
+Qed.
+
+Lemma subseq_antisym xs ys
+  (SUBSEQ1 : subseq xs ys)
+  (SUBSEQ2 : subseq ys xs)
+  : xs = ys.
+Proof.
+  apply proper_subseq_length in SUBSEQ1, SUBSEQ2.
+  destruct SUBSEQ1; trivial. symmetry.
+  destruct SUBSEQ2; trivial. lia.
+Qed.
+
+Lemma length_lt_wf (f := @length A)
+  : well_founded (fun x => fun y => f x < f y)%nat.
+Proof.
+  intros x. remember (f x) as y eqn: y_eq_f_x.
+  revert x y_eq_f_x. induction (lt_wf y) as [y' _ IH].
+  intros x' hyp_eq. econstructor. intros x f_x_R_f_x'.
+  subst y'. eapply IH; [exact f_x_R_f_x' | reflexivity].
+Defined.
+
+Lemma subseq_trans xs ys zs
+  (SUBSEQ1 : subseq xs ys)
+  (SUBSEQ2 : subseq ys zs)
+  : subseq xs zs.
+Proof.
+  pose proof (COPY := SUBSEQ1). apply proper_subseq_length in COPY. destruct COPY as [-> | LENGTH1]; trivial.
+  revert xs ys LENGTH1 SUBSEQ1 SUBSEQ2. induction (length_lt_wf zs) as [zs _ IH]; intros.
+  pose proof (COPY := SUBSEQ2). apply proper_subseq_length in COPY. destruct COPY as [-> | LENGTH2]; trivial.
+  destruct SUBSEQ2; eauto; rename xs0 into zs.
+  - econstructor 2. eapply IH with (ys := zs); eauto.
+    rewrite length_app; simpl; lia.
+  - inversion SUBSEQ1; subst; eauto; rename z0 into w, ys0 into ws.
+    + rewrite snoc_inv_iff in H1. destruct H1 as [-> ->]. econstructor 2.
+      pose proof (COPY := SUBSEQ). apply proper_subseq_length in COPY. destruct COPY as [-> | LENGTH]; trivial.
+      eapply IH with (ys := zs); eauto. rewrite length_app. simpl. lia.
+    + rewrite snoc_inv_iff in H1. destruct H1 as [-> ->]. econstructor 3. rename xs0 into xs.
+      pose proof (COPY := SUBSEQ). apply proper_subseq_length in COPY. destruct COPY as [-> | LENGTH]; trivial.
+      eapply IH with (ys := zs); eauto. rewrite length_app. simpl. lia.
+Qed.
+
+#[global]
+Instance subseq_PreOrder
+  : PreOrder subseq.
+Proof.
+  split; [exact subseq_refl | exact subseq_trans].
+Qed.
+
+#[global]
+Instance subseq_PartialOrder
+  : PartialOrder eq subseq.
+Proof.
+  intros xs1 xs2. split; cbv.
+  - intros ->; split; eapply subseq_refl.
+  - intros [? ?]; eapply subseq_antisym; trivial.
+Qed.
+
+Definition strict_subseq (xs : list A) (ys : list A) : Prop :=
+  xs <> ys /\ subseq xs ys.
+
+Lemma strict_subseq_length_lt xs ys
+  (SUBSEQ : strict_subseq xs ys)
+  : (length xs < length ys)%nat.
+Proof.
+  destruct SUBSEQ as [NE SUBSEQ]. apply proper_subseq_length in SUBSEQ.
+  destruct SUBSEQ as [EQ | SUBSEQ]; [contradiction | eauto].
+Qed.
+
+Lemma strict_subseq_well_founded
+  : well_founded strict_subseq.
+Proof.
+  intros xs. induction (length_lt_wf xs) as [xs _ IH].
+  econstructor. intros ys H_ys. eapply IH. now eapply strict_subseq_length_lt.
+Qed.
+
+End SUBSEQUENCE.
 
 End L.
 
