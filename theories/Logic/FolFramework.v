@@ -87,8 +87,8 @@ Context {L : language}.
 
 Inductive raw_syntax : Set :=
   | Var_syn (x : name) : raw_syntax
-  | App_syn (item1 : raw_syntax) (item2 : raw_syntax) : raw_syntax
-  | Lam_syn (x : name) (item : raw_syntax) : raw_syntax
+  | App_syn (tree1 : raw_syntax) (tree2 : raw_syntax) : raw_syntax
+  | Lam_syn (x : name) (tree1 : raw_syntax) : raw_syntax
   | Fun_trm (f : L.(function_symbols)) (ts : raw_syntax) : raw_syntax
   | Con_trm (c : L.(constant_symbols)) : raw_syntax
   | Rel_frm (R : L.(relation_symbols)) (ts : raw_syntax) : raw_syntax
@@ -100,12 +100,15 @@ Inductive raw_syntax : Set :=
   | Imp_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
   | Iff_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
   | All_frm (p1 : raw_syntax) : raw_syntax
-  | Exs_frm (p2 : raw_syntax) : raw_syntax
+  | Exs_frm (p1 : raw_syntax) : raw_syntax
   | Nil_syn : raw_syntax
-  | Cons_syn (item : raw_syntax) (items : raw_syntax) : raw_syntax.
+  | Cons_syn (tree1 : raw_syntax) (tree2 : raw_syntax) : raw_syntax.
 
 Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
   (* TO DO *).
+
+Class has_external_syntax (A : Set) : Type :=
+  corresponds_to (val : A) (tree : raw_syntax) : Prop.
 
 End STLC_STYLE_DEFINITION.
 
