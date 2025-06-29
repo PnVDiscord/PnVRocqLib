@@ -1,6 +1,7 @@
 Require Import PnV.Prelude.Prelude.
 Require Import Coq.Strings.String.
 Require Import Coq.Arith.Wf_nat.
+Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Init.Byte.
 
 Inductive name : Set :=
@@ -15,7 +16,7 @@ Definition un_name (nm : name) : nat :=
   | mk_name seed => seed
   end.
 
-Section PP.
+Section PP_name.
 
 Lemma print_name1_aux_lemma (n : nat)
   (NE : n <> 0)
@@ -85,10 +86,6 @@ Proof.
   - f_equal. eapply print_name1_pirrel.
 Qed.
 
-Definition print_name (nm : name) : list Byte.byte :=
-  let seed : nat := un_name nm in
-  if Nat.eqb seed 0 then [x30] else print_name1 seed (lt_wf seed).
-
 Definition unAlphaNum (b : Byte.byte) : option nat :=
   match b with
   | x30 => Some 0
@@ -136,10 +133,21 @@ Fixpoint parse_name1 (bs : list Byte.byte) : option nat :=
   | b :: bs => unAlphaNum b >>= fun n : nat => parse_name1 bs >>= fun ACCUM : nat => pure (ACCUM * 36 + n)
   end.
 
-Definition parse_name (bs : list Byte.byte) : option name :=
-  parse_name1 bs >>= fun seed : nat => pure (mk_name seed).
+End PP_name.
 
-End PP.
+Definition print_name (nm : name) : option (list Byte.byte) :=
+  let seed : nat := un_name nm in
+  let bs : list Byte.byte := print_name1 seed (lt_wf seed) in
+  match bs with
+  | [] => None
+  | b :: _ => unAlphaNum b >>= fun d : nat => if Nat.ltb d 10 then None else Some bs
+  end.
+
+Definition parse_name (bs : list Byte.byte) : option name :=
+  match bs with
+  | [] => None
+  | b :: _ => unAlphaNum b >>= fun d : nat => if Nat.ltb d 10 then None else parse_name1 bs >>= fun seed : nat => pure (mk_name seed)
+  end.
 
 String Notation name parse_name print_name : name_scope.
 
@@ -147,9 +155,9 @@ String Notation name parse_name print_name : name_scope.
 Instance Similarity_name : Similarity nat name :=
   fun n : nat => fun nm : name => mk_name n = nm.
 
-Section EXAMPLE1.
+Section PP_name_EXAMPLE1.
 
 Let x1 : name :=
   "x1".
 
-End EXAMPLE1.
+End PP_name_EXAMPLE1.
