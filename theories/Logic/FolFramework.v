@@ -78,7 +78,7 @@ Inductive typ : Set :=
   | arr (D : typ) (C : typ) : typ
   | trm : typ
   | frm : typ
-  | vec (E : typ) (n : nat) : typ.
+  | vec (n : nat) : typ.
 
 Declare Scope typ_scope.
 Bind Scope typ_scope with typ.
@@ -97,7 +97,7 @@ Fixpoint typ_semantics (Ty : typ) : Set :=
   | D -> C => typ_semantics D -> typ_semantics C
   | trm => InternalSyntax.trm L
   | frm => InternalSyntax.frm L
-  | vec E n => Vector.t (typ_semantics E) n
+  | vec n => InternalSyntax.trms L n
   end.
 
 Inductive raw_syntax : Set :=
@@ -131,12 +131,12 @@ Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
     (TYP1 : typing ((x, ty1) :: Gamma) ast1 ty2)
     : typing Gamma (Lam_syn x ty1 ast1) (ty1 -> ty2)
   | Fun_trm_typing f ts
-    (TYP1 : typing Gamma ts (vec trm (function_arity_table L f)))
+    (TYP1 : typing Gamma ts (vec (function_arity_table L f)))
     : typing Gamma (Fun_trm f ts) trm
   | Con_trm_typing c
     : typing Gamma (Con_trm c) trm
   | Rel_frm_typing R ts
-    (TYP1 : typing Gamma ts (vec trm (relation_arity_table L R)))
+    (TYP1 : typing Gamma ts (vec (relation_arity_table L R)))
     : typing Gamma (Rel_frm R ts) frm
   | Eqn_frm_typing t1 t2
     (TYP1 : typing Gamma t1 trm)
@@ -169,23 +169,21 @@ Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
   | Exs_frm_typing x p1
     (TYP1 : typing ((x, trm) :: Gamma) p1 frm)
     : typing Gamma (Exs_frm x p1) frm
-  | Nil_vec_typing E
-    : typing Gamma (Nil_vec) (vec E O)
-  | Cons_vec_typing E n elem elems
-    (TYP1 : typing Gamma elem E)
-    (TYP2 : typing Gamma elems (vec E n))
-    : typing Gamma (Cons_vec elem elems) (vec E (S n)).
+  | Nil_vec_typing
+    : typing Gamma (Nil_vec) (vec O)
+  | Cons_vec_typing n elem elems
+    (TYP1 : typing Gamma elem trm)
+    (TYP2 : typing Gamma elems (vec n))
+    : typing Gamma (Cons_vec elem elems) (vec (S n)).
 
 Class has_external_syntax (Syntax : Set) : Type :=
   corresponds_to (expr : Syntax) (ast : raw_syntax) : Prop.
 
 End STLC_STYLE_DEFINITION.
 
-#[global] Arguments raw_syntax : clear implicits.
-
-#[global] Coercion App_syn : raw_syntax >-> Funclass.
-
-#[global] Bind Scope raw_syntax_scope with raw_syntax.
+Arguments raw_syntax : clear implicits.
+Coercion App_syn : raw_syntax >-> Funclass.
+Bind Scope raw_syntax_scope with raw_syntax.
 
 Notation "'$' EXPR '$'" := EXPR : raw_syntax_scope.
 Notation "'$' EXPR '$'" := (EXPR : raw_syntax _).
