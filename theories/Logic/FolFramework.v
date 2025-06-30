@@ -67,6 +67,11 @@ Notation "p '≡α' q" := (alpha_equiv p q) (no associativity, at level 70) : ty
 
 End FolViewer.
 
+Declare Custom Entry syntax_view.
+Declare Scope raw_syntax_scope.
+
+Reserved Notation "'$' EXPR '$'" (EXPR custom syntax_view at level 10, no associativity, format "'$' EXPR '$'", at level 0).
+
 Module ExternalSyntax.
 
 Inductive typ : Set :=
@@ -98,7 +103,7 @@ Fixpoint typ_semantics (Ty : typ) : Set :=
 Inductive raw_syntax : Set :=
   | Var_syn (x : name) : raw_syntax
   | App_syn (ast1 : raw_syntax) (ast2 : raw_syntax) : raw_syntax
-  | Lam_syn (x : name) (ast1 : raw_syntax) : raw_syntax
+  | Lam_syn (x : name) (x_ty : typ) (ast1 : raw_syntax) : raw_syntax
   | Fun_trm (f : L.(function_symbols)) (ts : raw_syntax) : raw_syntax
   | Con_trm (c : L.(constant_symbols)) : raw_syntax
   | Rel_frm (R : L.(relation_symbols)) (ts : raw_syntax) : raw_syntax
@@ -109,13 +114,67 @@ Inductive raw_syntax : Set :=
   | Dis_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
   | Imp_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
   | Iff_frm (p1 : raw_syntax) (p2 : raw_syntax) : raw_syntax
-  | All_frm (p1 : raw_syntax) : raw_syntax
-  | Exs_frm (p1 : raw_syntax) : raw_syntax
+  | All_frm (x : name) (p1 : raw_syntax) : raw_syntax
+  | Exs_frm (x : name) (p1 : raw_syntax) : raw_syntax
   | Nil_vec : raw_syntax
   | Cons_vec (elem : raw_syntax) (elems : raw_syntax) : raw_syntax.
 
 Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
-  (* TO DO *).
+  | Var_syn_typing x ty
+    (LOOKUP : L.lookup x Gamma = Some ty)
+    : typing Gamma (Var_syn x) ty
+  | App_syn_typing ast1 ast2 ty1 ty2
+    (TYP1 : typing Gamma ast1 (ty1 -> ty2))
+    (TYP2 : typing Gamma ast2 ty1)
+    : typing Gamma (App_syn ast1 ast2) ty2
+  | Lam_syn_typing x ty1 ast1 ty2
+    (TYP1 : typing ((x, ty1) :: Gamma) ast1 ty2)
+    : typing Gamma (Lam_syn x ty1 ast1) (ty1 -> ty2)
+  | Fun_trm_typing f ts
+    (TYP1 : typing Gamma ts (vec trm (function_arity_table L f)))
+    : typing Gamma (Fun_trm f ts) trm
+  | Con_trm_typing c
+    : typing Gamma (Con_trm c) trm
+  | Rel_frm_typing R ts
+    (TYP1 : typing Gamma ts (vec trm (relation_arity_table L R)))
+    : typing Gamma (Rel_frm R ts) frm
+  | Eqn_frm_typing t1 t2
+    (TYP1 : typing Gamma t1 trm)
+    (TYP2 : typing Gamma t2 trm)
+    : typing Gamma (Eqn_frm t1 t2) frm
+  | Bot_frm_typing
+    : typing Gamma (Bot_frm) frm
+  | Neg_frm_typing p1
+    (TYP1 : typing Gamma p1 frm)
+    : typing Gamma (Neg_frm p1) frm
+  | Con_frm_typing p1 p2
+    (TYP1 : typing Gamma p1 frm)
+    (TYP2 : typing Gamma p2 frm)
+    : typing Gamma (Con_frm p1 p2) frm
+  | Dis_frm_typing p1 p2
+    (TYP1 : typing Gamma p1 frm)
+    (TYP2 : typing Gamma p2 frm)
+    : typing Gamma (Dis_frm p1 p2) frm
+  | Imp_frm_typing p1 p2
+    (TYP1 : typing Gamma p1 frm)
+    (TYP2 : typing Gamma p2 frm)
+    : typing Gamma (Imp_frm p1 p2) frm
+  | Iff_frm_typing p1 p2
+    (TYP1 : typing Gamma p1 frm)
+    (TYP2 : typing Gamma p2 frm)
+    : typing Gamma (Iff_frm p1 p2) frm
+  | All_frm_typing x p1
+    (TYP1 : typing ((x, trm) :: Gamma) p1 frm)
+    : typing Gamma (All_frm x p1) frm
+  | Exs_frm_typing x p1
+    (TYP1 : typing ((x, trm) :: Gamma) p1 frm)
+    : typing Gamma (Exs_frm x p1) frm
+  | Nil_vec_typing E
+    : typing Gamma (Nil_vec) (vec E O)
+  | Cons_vec_typing E n elem elems
+    (TYP1 : typing Gamma elem E)
+    (TYP2 : typing Gamma elems (vec E n))
+    : typing Gamma (Cons_vec elem elems) (vec E (S n)).
 
 Class has_external_syntax (Syntax : Set) : Type :=
   corresponds_to (expr : Syntax) (ast : raw_syntax) : Prop.
@@ -124,49 +183,39 @@ End STLC_STYLE_DEFINITION.
 
 #[global] Arguments raw_syntax : clear implicits.
 
+#[global] Coercion App_syn : raw_syntax >-> Funclass.
+
+#[global] Bind Scope raw_syntax_scope with raw_syntax.
+
+Notation "'$' EXPR '$'" := EXPR : raw_syntax_scope.
+Notation "'$' EXPR '$'" := (EXPR : raw_syntax _).
+
+Notation "x" := (Var_syn x) (x constr at level 0, in custom syntax_view at level 0).
+Notation "[ ]" := (Nil_vec) (in custom syntax_view at level 0).
+Notation "[ t ]" := (Cons_vec t Nil_vec) (t custom syntax_view at level 10, in custom syntax_view at level 0).
+Notation "[ t1 , t2 , .. , tn ]" := (Cons_vec t1 (Cons_vec t2 .. (Cons_vec tn Nil_vec) ..)) (t1 custom syntax_view at level 10, in custom syntax_view at level 0).
+Notation "'False'" := (Bot_frm) (in custom syntax_view at level 0).
+
+Notation "'F' f ts" := (Fun_trm f ts) (f constr at level 0, ts custom syntax_view at level 0, in custom syntax_view at level 1).
+Notation "'C' c" := (Con_trm c) (c constr at level 0, in custom syntax_view at level 1).
+Notation "'R' R ts" := (Rel_frm R ts) (R constr at level 0, ts custom syntax_view at level 0, in custom syntax_view at level 1).
+Notation "t1 = t2" := (Eqn_frm t1 t2) (no associativity, t1 custom syntax_view, t2 custom syntax_view, in custom syntax_view at level 1).
+
+Notation "t :: ts" := (Cons_vec t ts) (right associativity, t custom syntax_view, ts custom syntax_view, in custom syntax_view at level 2).
+
+Notation "~ p1" := (Neg_frm p1) (right associativity, p1 custom syntax_view, in custom syntax_view at level 3).
+Notation "'forall' x ',' p1" := (All_frm x p1) (right associativity, p1 custom syntax_view, in custom syntax_view at level 3).
+Notation "'exists' x ',' p1" := (Exs_frm x p1) (right associativity, p1 custom syntax_view, in custom syntax_view at level 3).
+
+Notation "p1 /\ p2" := (Con_frm p1 p2) (no associativity, p1 custom syntax_view, p2 custom syntax_view, in custom syntax_view at level 4).
+Notation "p1 \/ p2" := (Dis_frm p1 p2) (no associativity, p1 custom syntax_view, p2 custom syntax_view, in custom syntax_view at level 4).
+Notation "p1 -> p2" := (Imp_frm p1 p2) (no associativity, p1 custom syntax_view, p2 custom syntax_view, in custom syntax_view at level 4).
+Notation "p1 <-> p2" := (Iff_frm p1 p2) (no associativity, p1 custom syntax_view, p2 custom syntax_view, in custom syntax_view at level 4).
+
+Notation "'fun' x ':' ty '=>' e" := (Lam_syn x ty e) (x constr at level 0, in custom syntax_view at level 10).
+Notation "( e )" := e (e custom syntax_view at level 10, in custom syntax_view at level 0).
+
 End ExternalSyntax.
-
-Module ExternalViewer.
-
-Import ExternalSyntax.
-(**
-Declare Custom Entry trm_view2.
-Declare Custom Entry trms_view2.
-Declare Custom Entry frm_view2.
-Reserved Notation "'$' EXPR '$'" (EXPR custom frm_view2 at level 10, no associativity, format "'$' EXPR '$'", at level 0).
-
-Notation "'$' EXPR '$'" := EXPR : frm_scope.
-Notation "'$' EXPR '$'" := (EXPR : ExternalSyntax.frm).
-
-#[global] Bind Scope trm_scope with trm.
-Notation "'V' x" := (Var_trm x) (x constr at level 0, in custom trm_view2 at level 5).
-Notation "'F' f ts" := (Fun_trm f ts) (f constr, ts custom trms_view2 at level 0, in custom trm_view2 at level 5).
-Notation "'C' c" := (Con_trm c) (c constr, in custom trm_view2 at level 5).
-Notation "t" := t (t ident, in custom trm_view2 at level 0).
-Notation "'(' t ')'" := t (t custom trm_view2 at level 5, no associativity, in custom trm_view2 at level 0).
-
-#[global] Bind Scope trms_scope with trms.
-Notation "'[' ']'" := (O_trms) (no associativity, in custom trms_view2 at level 0).
-Notation "t '::' ts" := (S_trms _ t ts) (right associativity, t custom trm_view2, ts custom trms_view2, in custom trms_view2 at level 5).
-Notation "ts" := ts (ts ident, in custom trms_view2 at level 0).
-Notation "'(' ts ')'" := ts (ts custom trms_view2 at level 5, no associativity, in custom trms_view2 at level 0).
-
-#[global] Bind Scope frm_scope with frm.
-Notation "'False'" := (Bot_frm) (in custom frm_view2 at level 0).
-Notation "'R' R ts" := (Rel_frm R ts) (R constr, ts custom trms_view2 at level 5, in custom frm_view2 at level 6).
-Notation "t1 '=' t2" := (Eqn_frm t1 t2) (t1 custom trm_view2 at level 5, t2 custom trm_view2 at level 5, in custom frm_view2 at level 6).
-Notation "'~' p" := (Neg_frm p) (p custom frm_view2 at level 8, in custom frm_view2 at level 7).
-Notation "'forall' x ',' p" := (All_frm (Lam x p)) (x constr at level 0, p custom frm_view2 at level 8, in custom frm_view2 at level 7).
-Notation "'exists' x ',' p" := (Exs_frm (Lam x p)) (x constr at level 0, p custom frm_view2 at level 8, in custom frm_view2 at level 7).
-Notation "p '/\' q" := (Con_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
-Notation "p '\/' q" := (Dis_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
-Notation "p '->' q" := (Imp_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
-Notation "p '<->' q" := (Iff_frm p q) (p custom frm_view2, q custom frm_view2, no associativity, in custom frm_view2 at level 8).
-Notation "'P' phi ts" := (Prop_app phi ts) (phi constr at level 0, ts constr at level 0, in custom frm_view2 at level 6).
-Notation "p" := p (p ident, in custom frm_view2 at level 0).
-Notation "'{' p '}'" := p (p custom frm_view2 at level 7, no associativity, in custom frm_view2 at level 0).
-*)
-End ExternalViewer.
 
 Module ZFC.
 
