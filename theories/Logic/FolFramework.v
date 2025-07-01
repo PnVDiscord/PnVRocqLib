@@ -127,6 +127,9 @@ Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
     (TYP1 : typing Gamma ast1 (ty1 -> ty2))
     (TYP2 : typing Gamma ast2 ty1)
     : typing Gamma (App_syn ast1 ast2) ty2
+  | Lam_syn_typing x ast1 ty1 ty2
+    (TYP1 : typing ((x, ty1) :: Gamma) ast1 ty2)
+    : typing Gamma (Lam_syn x ty1 ast1) (ty1 -> ty2)
   | Fun_trm_typing f ts
     (TYP1 : typing Gamma ts (vec (function_arity_table L f)))
     : typing Gamma (Fun_trm f ts) trm
@@ -192,9 +195,23 @@ Fixpoint is_pred_typ (ty : typ) : bool :=
   | _ => false
   end.
 
-Inductive scheme : Set :=
-  | mono_scheme (p : raw_syntax) : scheme
-  | poly_scheme (phi : name) (ty : typ) (phi_is_pred : is_pred_typ ty = true) (s : scheme) : scheme.
+Inductive scheme : nat -> Set :=
+  | mono_scheme (p : raw_syntax) : scheme O
+  | poly_scheme {n : nat} (phi : name) (ty : typ) (phi_is_pred : is_pred_typ ty = true) (s : scheme n) : scheme (S n).
+
+#[local] Open Scope vec_scope.
+
+Fixpoint scheme_body {n : nat} (s : scheme n) : raw_syntax :=
+  match s with
+  | mono_scheme p => p
+  | poly_scheme _ _ _ s => scheme_body s
+  end.
+
+Fixpoint scheme_params {n : nat} (s : scheme n) : Vector.t (name * typ) n :=
+  match s with
+  | mono_scheme _ => []
+  | poly_scheme phi ty _ s => (phi, ty) :: scheme_params s
+  end.
 
 End STLC_STYLE_DEFINITION.
 
@@ -228,7 +245,7 @@ Notation "p1 \/ p2" := (Dis_frm p1 p2) (no associativity, p1 custom syntax_view,
 Notation "p1 -> p2" := (Imp_frm p1 p2) (no associativity, p1 custom syntax_view, p2 custom syntax_view, in custom syntax_view at level 4).
 Notation "p1 <-> p2" := (Iff_frm p1 p2) (no associativity, p1 custom syntax_view, p2 custom syntax_view, in custom syntax_view at level 4).
 
-Notation "'fun' x ':' ty '=>' e" := (Lam_syn x ty e) (x constr at level 0, in custom syntax_view at level 10).
+Notation "'fun' x ':' ty '=>' e" := (Lam_syn x ty e) (x constr at level 0, ty constr at level 100, e custom syntax_view at level 10, in custom syntax_view at level 10).
 Notation "( e )" := e (e custom syntax_view at level 10, in custom syntax_view at level 0).
 
 End ExternalSyntax.
