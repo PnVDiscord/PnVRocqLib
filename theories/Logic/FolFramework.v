@@ -193,12 +193,13 @@ Fixpoint is_pred_typ (ty : typ) : bool :=
   end.
 
 Inductive scheme : Set :=
-  | mono_scheme (p : frm) : scheme
+  | mono_scheme (p : raw_syntax) : scheme
   | poly_scheme (phi : name) (ty : typ) (phi_is_pred : is_pred_typ ty = true) (s : scheme) : scheme.
 
 End STLC_STYLE_DEFINITION.
 
 Arguments raw_syntax : clear implicits.
+Arguments scheme : clear implicits.
 Coercion App_syn : raw_syntax >-> Funclass.
 Bind Scope raw_syntax_scope with raw_syntax.
 
