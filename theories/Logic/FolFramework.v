@@ -127,9 +127,6 @@ Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
     (TYP1 : typing Gamma ast1 (ty1 -> ty2))
     (TYP2 : typing Gamma ast2 ty1)
     : typing Gamma (App_syn ast1 ast2) ty2
-  | Lam_syn_typing x ty1 ast1 ty2
-    (TYP1 : typing ((x, ty1) :: Gamma) ast1 ty2)
-    : typing Gamma (Lam_syn x ty1 ast1) (ty1 -> ty2)
   | Fun_trm_typing f ts
     (TYP1 : typing Gamma ts (vec (function_arity_table L f)))
     : typing Gamma (Fun_trm f ts) trm
@@ -176,68 +173,28 @@ Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
     (TYP2 : typing Gamma elems (vec n))
     : typing Gamma (Cons_vec elem elems) (vec (S n)).
 
-Class hasExternalSyntax (Syntax : Set) : Type :=
-  corresponds_to (expr : Syntax) (ast : raw_syntax) : Prop.
+Definition is_trm_typ (ty : typ) : bool :=
+  match ty with
+  | trm => true
+  | _ => false
+  end.
 
-Inductive trm_hasExternalSyntax : hasExternalSyntax (InternalSyntax.trm L) :=
-  | Var_trm_corres x x'
-    (x_corres : mk_name x = x')
-    : corresponds_to (@InternalSyntax.Var_trm L x) (Var_syn x')
-  | Fun_trm_corres f ts ts'
-    (ts_corres : corresponds_to ts ts')
-    : corresponds_to (@InternalSyntax.Fun_trm L f ts) (Fun_trm f ts')
-  | Con_trm_corres c
-    : corresponds_to (@InternalSyntax.Con_trm L c) (Con_trm c)
-with trms_hasExternalSyntax : forall n : nat, hasExternalSyntax (InternalSyntax.trms L n) :=
-  | O_trms_corres
-    : corresponds_to (@InternalSyntax.O_trms L) (Nil_vec)
-  | S_trms_corres n t t' ts ts'
-    (t_corres : corresponds_to t t')
-    (ts_corres : corresponds_to ts ts')
-    : corresponds_to (@InternalSyntax.S_trms L n t ts) (Cons_vec t' ts').
+Definition is_frm_typ (ty : typ) : bool :=
+  match ty with
+  | frm => true
+  | _ => false
+  end.
 
-#[global] Existing Instance trm_hasExternalSyntax.
-#[global] Existing Instance trms_hasExternalSyntax.
+Fixpoint is_pred_typ (ty : typ) : bool :=
+  match ty with
+  | D -> C => is_trm_typ D && is_pred_typ C
+  | frm => true
+  | _ => false
+  end.
 
-Inductive frm_hasExternalSyntax : hasExternalSyntax (InternalSyntax.frm L) :=
-  | Rel_frm_corres R ts ts'
-    (ts_corres : corresponds_to ts ts')
-    : corresponds_to (@InternalSyntax.Rel_frm L R ts) (Rel_frm R ts')
-  | Eqn_frm_corres t1 t1' t2 t2'
-    (t1_corres : corresponds_to t1 t1')
-    (t2_corres : corresponds_to t2 t2')
-    : corresponds_to (@InternalSyntax.Eqn_frm L t1 t2) (Eqn_frm t1' t2')
-  | Bot_frm_corres
-    : corresponds_to (@InternalSyntax.Bot_frm L) (Bot_frm)
-  | Neg_frm_corres p1 p1'
-    (p1_corres : corresponds_to p1 p1')
-    : corresponds_to (@InternalSyntax.Neg_frm L p1) (Neg_frm p1')
-  | Con_frm_corres p1 p1' p2 p2'
-    (p1_corres : corresponds_to p1 p1')
-    (p2_corres : corresponds_to p2 p2')
-    : corresponds_to (@InternalSyntax.Con_frm L p1 p2) (Con_frm p1' p2')
-  | Dis_frm_corres p1 p1' p2 p2'
-    (p1_corres : corresponds_to p1 p1')
-    (p2_corres : corresponds_to p2 p2')
-    : corresponds_to (@InternalSyntax.Dis_frm L p1 p2) (Dis_frm p1' p2')
-  | Imp_frm_corres p1 p1' p2 p2'
-    (p1_corres : corresponds_to p1 p1')
-    (p2_corres : corresponds_to p2 p2')
-    : corresponds_to (@InternalSyntax.Imp_frm L p1 p2) (Imp_frm p1' p2')
-  | Iff_frm_corres p1 p1' p2 p2'
-    (p1_corres : corresponds_to p1 p1')
-    (p2_corres : corresponds_to p2 p2')
-    : corresponds_to (@InternalSyntax.Iff_frm L p1 p2) (Iff_frm p1' p2')
-  | All_frm_corres x x' p1 p1'
-    (x_corres : mk_name x = x')
-    (p1_corres : corresponds_to p1 p1')
-    : corresponds_to (@InternalSyntax.All_frm L x p1) (All_frm x' p1')
-  | Exs_frm_corres x x' p1 p1'
-    (x_corres : mk_name x = x')
-    (p1_corres : corresponds_to p1 p1')
-    : corresponds_to (@InternalSyntax.Exs_frm L x p1) (Exs_frm x' p1').
-
-#[global] Existing Instance frm_hasExternalSyntax.
+Inductive scheme : Set :=
+  | mono_scheme (p : frm) : scheme
+  | poly_scheme (phi : name) (ty : typ) (phi_is_pred : is_pred_typ ty = true) (s : scheme) : scheme.
 
 End STLC_STYLE_DEFINITION.
 
@@ -262,8 +219,8 @@ Notation "t1 = t2" := (Eqn_frm t1 t2) (no associativity, t1 custom syntax_view, 
 Notation "t :: ts" := (Cons_vec t ts) (right associativity, t custom syntax_view, ts custom syntax_view, in custom syntax_view at level 2).
 
 Notation "~ p1" := (Neg_frm p1) (right associativity, p1 custom syntax_view, in custom syntax_view at level 3).
-Notation "'forall' x ',' p1" := (All_frm x p1) (right associativity, p1 custom syntax_view, in custom syntax_view at level 3).
-Notation "'exists' x ',' p1" := (Exs_frm x p1) (right associativity, p1 custom syntax_view, in custom syntax_view at level 3).
+Notation "'forall' x ',' p1" := (All_frm x p1) (p1 custom syntax_view at level 4, in custom syntax_view at level 3).
+Notation "'exists' x ',' p1" := (Exs_frm x p1) (p1 custom syntax_view at level 4, in custom syntax_view at level 3).
 
 Notation "p1 /\ p2" := (Con_frm p1 p2) (no associativity, p1 custom syntax_view, p2 custom syntax_view, in custom syntax_view at level 4).
 Notation "p1 \/ p2" := (Dis_frm p1 p2) (no associativity, p1 custom syntax_view, p2 custom syntax_view, in custom syntax_view at level 4).
