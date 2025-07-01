@@ -10,6 +10,10 @@ Require Import PnV.Data.Vector.
 Coercion named_var (nm : name) : ivar :=
   un_name nm.
 
+#[global]
+Instance Similarity_name_ivar : Similarity name ivar :=
+  fun nm : name => fun x : ivar => nm = mk_name x.
+
 Declare Custom Entry trm_view.
 Declare Custom Entry trms_view.
 Declare Custom Entry frm_view.
@@ -103,7 +107,7 @@ Fixpoint typ_semantics (Ty : typ) : Set :=
 Inductive raw_syntax : Set :=
   | Var_syn (x : name) : raw_syntax
   | App_syn (ast1 : raw_syntax) (ast2 : raw_syntax) : raw_syntax
-  | Lam_syn (x : name) (x_ty : typ) (ast1 : raw_syntax) : raw_syntax
+  | Lam_syn (x : name) (ast1 : raw_syntax) : raw_syntax
   | Fun_trm (f : L.(function_symbols)) (ts : raw_syntax) : raw_syntax
   | Con_trm (c : L.(constant_symbols)) : raw_syntax
   | Rel_frm (R : L.(relation_symbols)) (ts : raw_syntax) : raw_syntax
@@ -127,9 +131,9 @@ Inductive typing (Gamma : list (name * typ)) : raw_syntax -> typ -> Prop :=
     (TYP1 : typing Gamma ast1 (ty1 -> ty2))
     (TYP2 : typing Gamma ast2 ty1)
     : typing Gamma (App_syn ast1 ast2) ty2
-  | Lam_syn_typing x ast1 ty1 ty2
-    (TYP1 : typing ((x, ty1) :: Gamma) ast1 ty2)
-    : typing Gamma (Lam_syn x ty1 ast1) (ty1 -> ty2)
+  | Lam_syn_typing x ast1 ty1
+    (TYP1 : typing ((x, trm) :: Gamma) ast1 ty1)
+    : typing Gamma (Lam_syn x ast1) (trm -> ty1)
   | Fun_trm_typing f ts
     (TYP1 : typing Gamma ts (vec (function_arity_table L f)))
     : typing Gamma (Fun_trm f ts) trm

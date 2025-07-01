@@ -13,30 +13,29 @@ Inductive t {A : Type} : Type :=
 
 #[global] Arguments t : clear implicits.
 
-Inductive in_regex {A : Type} : Re.t A -> list A -> Prop :=
-  | in_Empty
-    : [] ∈ Empty
-  | in_Char c
-    : [c] ∈ Char c
-  | in_Union_l s e1 e2
-    (H_inl : s ∈ e1)
-    : s ∈ Union e1 e2
-  | in_Union_r s e1 e2
-    (H_inr : s ∈ e2)
-    : s ∈ Union e1 e2
-  | in_Append s1 s2 e1 e2
-    (H_in1 : s1 ∈ e1)
-    (H_in2 : s2 ∈ e2)
-    : s1 ++ s2 ∈ Append e1 e2
-  | in_Star_nil e1
-    : [] ∈ Star e1
-  | in_Star_app e1 s1 s2
-    (H_in1 : s1 ∈ e1)
-    (H_in2 : s2 ∈ Star e1)
-    : s1 ++ s2 ∈ Star e1
-  where "s ∈ e" := (in_regex e s) : type_scope.
+#[local] Infix "=~=" := is_similar_to.
 
-Notation "s ∈ e" := (in_regex e s) : type_scope.
+Inductive in_regex {A : Type} : Similarity (list A) (Re.t A) :=
+  | in_Empty
+    : [] =~= Empty
+  | in_Char c
+    : [c] =~= Char c
+  | in_Union_l s e1 e2
+    (H_inl : s =~= e1)
+    : s =~= Union e1 e2
+  | in_Union_r s e1 e2
+    (H_inr : s =~= e2)
+    : s =~= Union e1 e2
+  | in_Append s1 s2 e1 e2
+    (H_in1 : s1 =~= e1)
+    (H_in2 : s2 =~= e2)
+    : s1 ++ s2 =~= Append e1 e2
+  | in_Star_nil e1
+    : [] =~= Star e1
+  | in_Star_app e1 s1 s2
+    (H_in1 : s1 =~= e1)
+    (H_in2 : s2 =~= Star e1)
+    : s1 ++ s2 =~= Star e1.
 
 #[global] Hint Constructors in_regex : simplication_hints.
 
@@ -52,6 +51,8 @@ Section REGULAR_LANGUAGE.
 
 #[local] Hint Rewrite @E.liftM2_spec : simplication_hints.
 #[local] Opaque liftM2.
+
+#[local] Infix "∈" := (is_similar_to (Similarity := Re.in_regex)) : type_scope.
 
 Import Re.
 
