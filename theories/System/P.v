@@ -176,33 +176,32 @@ Lemma print_next_name (bs : list Byte.byte) nm
   (NAME : print_name nm = Some bs)
   : print_name (next_name nm) = Some (bs ++ [x31]).
 Proof.
-  unfold next_name. unfold print_name. simpl.
+  unfold next_name; unfold print_name; simpl.
   destruct (Nat.eq_dec (1 + 36 * un_name nm) 0) as [EQ1 | NE1]; simpl in *; try lia.
   replace ((1 + 36 * un_name nm) mod 36) with 1 in *; cycle 1.
-  { pose proof (div_mod_inv (1 + 36 * un_name nm) 36 (un_name nm) 1). lia. }
+  { pose proof (div_mod_inv (1 + 36 * un_name nm) 36 (un_name nm) 1); lia. }
   replace (print_name1 ((1 + 36 * un_name nm) / 36) _) with (print_name1 (un_name nm) (lt_wf (un_name nm))); cycle 1.
-  { transitivity (print_name1 ((1 + 36 * un_name nm) / 36) (lt_wf ((1 + 36 * un_name nm) / 36))).
-    - replace ((1 + 36 * un_name nm) / 36) with (un_name nm); trivial.
-      pose proof (div_mod_uniqueness (1 + 36 * un_name nm) 36 (un_name nm) 1). lia.
-    - eapply print_name1_pirrel.
+  { rewrite print_name1_pirrel with (H_Acc' := lt_wf ((1 + 36 * un_name nm) / 36)).
+    replace ((1 + 36 * un_name nm) / 36) with (un_name nm); trivial.
+    pose proof (div_mod_uniqueness (1 + 36 * un_name nm) 36 (un_name nm) 1); lia.
   }
-  unfold print_name in NAME. destruct (print_name1 (un_name nm) (lt_wf (un_name nm))) as [ | b bs'] eqn: H_OBS; try congruence.
-  simpl in NAME |- *. destruct (unAlphaNum b) as [n | ] eqn: H_OBS'; simpl in NAME |- *; try congruence.
+  unfold print_name in NAME; destruct (print_name1 (un_name nm) (lt_wf (un_name nm))) as [ | b bs'] eqn: H_OBS; try congruence.
+  simpl in NAME |- *; destruct (unAlphaNum b) as [n | ] eqn: H_OBS'; simpl in NAME |- *; try congruence.
   destruct (n <? 10)%nat as [ | ] eqn: H_OBS''; try congruence.
-  change (b :: bs' ++ ["1"%byte]) with ((b :: bs') ++ ["1"%byte]). congruence.
+  change (b :: bs' ++ ["1"%byte]) with ((b :: bs') ++ ["1"%byte]); congruence.
 Qed.
 
 Lemma parse_next_name (bs : list Byte.byte) nm
   (NAME : parse_name bs = Some nm)
   : parse_name (bs ++ [x31]) = Some (next_name nm).
 Proof.
-  unfold parse_name in *. destruct bs as [ | b bs]; simpl in *; try congruence.
+  unfold parse_name in *; destruct bs as [ | b bs]; simpl in *; try congruence.
   destruct (unAlphaNum b) as [n0 | ] eqn: H_n0; simpl in *; try congruence.
   destruct (n0 <? 10)%nat as [ | ] eqn: H_OBS; simpl in *; try congruence.
-  unfold parse_name1 in *. change (b :: bs ++ ["1"%byte]) with ((b :: bs) ++ ["1"%byte]).
-  rewrite fold_left_app. revert NAME. set (fold_left _) as loop. i.
+  unfold parse_name1 in *; change (b :: bs ++ ["1"%byte]) with ((b :: bs) ++ ["1"%byte]).
+  rewrite fold_left_app; revert NAME; set (fold_left _) as loop; i.
   destruct (loop (b :: bs) (Some 0)) as [r | ] eqn: H_r; simpl in *; try congruence.
-  replace nm with (mk_name r) by congruence. reflexivity.
+  now replace nm with (mk_name r) by congruence.
 Qed.
 
 End PP_name.
@@ -221,7 +220,7 @@ End PP_name_EXAMPLE1.
 Notation t := name.
 
 Definition is_valid (nm : Name.t) : bool :=
-  B.isSome (print_name nm).
+  B.isSome (print_name nm >>= parse_name).
 
 Definition max (nm1 : Name.t) (nm2 : Name.t) : Name.t :=
   mk_name (Nat.max (un_name nm1) (un_name nm2)).
