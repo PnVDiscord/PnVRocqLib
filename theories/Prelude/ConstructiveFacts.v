@@ -205,4 +205,6 @@ Proof.
   exists (first_nat p n). pose proof (first_nat_spec p n) as SPEC.
   rewrite <- claim in SPEC. specialize (SPEC P_n). simpl in SPEC.
   destruct SPEC as [SPEC SPEC']. split; ii; rewrite claim in *; ss!.
-Qed.
+Defined.
+
+#[global] Opaque dec_finds_minimum_if_exists.

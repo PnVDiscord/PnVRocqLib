@@ -5,6 +5,7 @@ Require Import PnV.Logic.HilbertFol.
 Require Import PnV.Logic.HilbertFol2.
 Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
+Require Import PnV.System.Lambda1.
 
 #[global]
 Coercion named_var (nm : name) : ivar :=
@@ -76,7 +77,37 @@ Declare Scope raw_syntax_scope.
 
 Reserved Notation "'$' EXPR '$'" (EXPR custom syntax_view at level 10, no associativity, format "'$' EXPR '$'", at level 0).
 
-Module ZFC.
+Module ExternalSyntax.
+
+  Export ChurchStyleStlc.
+
+  Variant fol_basic_types : Set :=
+    | trm_bty : fol_basic_types
+    | trms_bty (arity : nat) : fol_basic_types
+    | frm_bty : fol_basic_types.
+
+  Variant fol_symbols (L : InternalSyntax.language) : Set :=
+    | Function_symbol (f : L.(function_symbols))
+    | Constant_symbol (c : L.(constant_symbols))
+    | Relation_symbol (R : L.(relation_symbols))
+    | Nil_symbol
+    | Cons_symbol
+    | Equality_symbol
+    | Contradiction_symbol
+    | Negation_symbol
+    | Conjunction_symbol
+    | Disjunction_symbol
+    | Implication_symbol
+    | Biconditional_symbol
+    | UniversalQuantifier_symbol
+    | ExistentialQuantifier_symbol.
+
+  Definition mk_fol (L : InternalSyntax.language) : language :=
+    {| basic_types := fol_basic_types; constants := fol_symbols L |}.
+
+End ExternalSyntax.
+
+Module ObjectiveZFC.
 
 Variant L_in_relation_symbols : Set :=
   | symbol_IN : L_in_relation_symbols.
@@ -106,4 +137,4 @@ Qed.
 
 End EXAMPLE.
 
-End ZFC.
+End ObjectiveZFC.
