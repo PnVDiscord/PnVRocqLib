@@ -136,38 +136,6 @@ Instance fol_signature : signature mk_fol :=
 #[local] Notation typ := (typ mk_fol).
 #[local] Notation ctx := (ctx mk_fol).
 
-Lemma typ_eq_pirrel (ty1 : typ) (ty2 : typ)
-  : forall EQ1 : ty1 = ty2, forall EQ2 : ty1 = ty2, EQ1 = EQ2.
-Proof.
-  eapply @eq_pirrel_fromEqDec.
-  red; do 3 decide equality.
-Qed.
-
-Definition interpret_bty (bty : fol_basic_types) : Set :=
-  match bty with
-  | trm_bty => InternalSyntax.trm L
-  | trms_bty arity => InternalSyntax.trms L arity
-  | frm_bty => InternalSyntax.frm L
-  end.
-
-Fixpoint interpret_typ (ty : typ) : Set :=
-  match ty with
-  | bty _ bty_fol => interpret_bty bty_fol
-  | arr _ D C => interpret_typ D -> interpret_typ C
-  end.
-
-Fixpoint interpret_ctx (Gamma : ctx) : Set :=
-  match Gamma with
-  | [] => unit
-  | (x', ty') :: Gamma' => interpret_typ ty' * interpret_ctx Gamma'
-  end.
-
-Fixpoint interpret_Lookup {x} {ty} {Gamma} (LOOKUP : Lookup x ty Gamma) : interpret_ctx Gamma -> interpret_typ ty :=
-  match LOOKUP in Lookup _ _ Gamma return interpret_ctx Gamma -> interpret_typ ty with
-  | Lookup_Z _ _ Gamma' x' ty' x_eq ty_eq => fun rho : interpret_typ ty' * interpret_ctx Gamma' => match ty_eq in eq _ ty' return interpret_typ ty' * interpret_ctx Gamma' -> interpret_typ ty with eq_refl => fst end rho
-  | Lookup_S _ _ Gamma' x' ty' x_ne LOOKUP => fun rho : interpret_typ ty' * interpret_ctx Gamma' => interpret_Lookup LOOKUP (snd rho)
-  end.
-
 End HOAS.
 
 #[global] Arguments fol_symbols : clear implicits.

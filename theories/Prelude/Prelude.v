@@ -1082,6 +1082,12 @@ Definition ne_None_elim {A : Type} (x : option A) (ne_None : x <> None) : { x' :
   end.
 
 #[global]
+Instance list_isMonad : isMonad list :=
+  { pure {A : Type} (x : A) := [x]
+  ; bind {A : Type} {B : Type} (xs : list A) (k : A -> list B) := concat (map k xs)
+  }.
+
+#[global]
 Instance option_isSetoid1 : isSetoid1 option :=
   @option_isSetoid.
 
