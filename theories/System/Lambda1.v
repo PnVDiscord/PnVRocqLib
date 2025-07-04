@@ -6,6 +6,66 @@ Delimit Scope typ_scope with typ.
 
 Reserved Notation "Gamma '⊢' M '⦂' A" (at level 70, no associativity).
 
+Module VerySimpleStlc.
+
+Inductive typ : Set :=
+  | base : typ
+  | arr (D : typ) (C : typ) : typ.
+
+#[local] Bind Scope typ_scope with typ.
+#[local] Notation "D -> C" := (arr D C) : typ_scope.
+
+Inductive trm : Set :=
+  | Var_trm (x : name)
+  | App_trm (e1 : trm) (e2 : trm)
+  | Lam_trm (y : name) (ty : typ) (e1 : trm).
+
+Definition ctx : Set :=
+  list (name * typ).
+
+Inductive Lookup (x : name) (ty : typ) : ctx -> Set :=
+  | Lookup_Z Gamma x' ty'
+    (x_eq : x = x')
+    (ty_eq : ty = ty')
+    : Lookup x ty ((x', ty') :: Gamma)
+  | Lookup_S Gamma x' ty'
+    (x_ne : x <> x')
+    (LOOKUP : Lookup x ty Gamma)
+    : Lookup x ty ((x', ty') :: Gamma).
+
+Lemma Lookup_lookup x ty Gamma
+  (LOOKUP : Lookup x ty Gamma)
+  : L.lookup x Gamma = Some ty.
+Proof.
+  induction LOOKUP; simpl in *; destruct (eq_dec x x'); contradiction || congruence.
+Qed.
+
+Definition lookup_Lookup (x : name) (ty : typ) : forall Gamma : ctx, Some ty = L.lookup x Gamma -> Lookup x ty Gamma :=
+  fix IH (Gamma : list (name * typ)) {struct Gamma} : Some ty = L.lookup x Gamma -> Lookup x ty Gamma :=
+  match Gamma as Gamma return Some ty = L.lookup x Gamma -> Lookup x ty Gamma with
+  | [] => fun LOOKUP : Some ty = None => False_rec _ (B.Some_ne_None ty LOOKUP)
+  | (x', ty') :: Gamma' =>
+    match eq_dec x x' as b return Some ty = (if b then Some ty' else L.lookup x Gamma') -> Lookup x ty ((x', ty') :: Gamma') with
+    | left EQ => fun LOOKUP : Some ty = Some ty' => Lookup_Z x ty Gamma' x' ty' EQ (f_equal (B.fromMaybe ty') LOOKUP)
+    | right NE => fun LOOKUP : Some ty = L.lookup x Gamma' => Lookup_S x ty Gamma' x' ty' NE (IH Gamma' LOOKUP)
+    end
+  end.
+
+Inductive treeOfTyping (Gamma : ctx) : trm -> typ -> Set :=
+  | Var_typ (x : name) (ty : typ)
+    (LOOKUP : Lookup x ty Gamma)
+    : Gamma ⊢ Var_trm x ⦂ ty
+  | App_typ (e1 : trm) (e2 : trm) (ty1 : typ) (ty2 : typ)
+    (TYPING1 : Gamma ⊢ e1 ⦂ (ty1 -> ty2)%typ)
+    (TYPING2 : Gamma ⊢ e2 ⦂ ty1)
+    : Gamma ⊢ (App_trm e1 e2) ⦂ ty2
+  | Lam_typ (y : name) (e1 : trm) (ty1 : typ) (ty2 : typ)
+    (TYPING1 : (y, ty1) :: Gamma ⊢ e1 ⦂ ty2)
+    : Gamma ⊢ Lam_trm y ty1 e1 ⦂ (ty1 -> ty2)%typ
+  where "Gamma '⊢' M '⦂' A" := (treeOfTyping Gamma M A) : type_scope.
+
+End VerySimpleStlc.
+
 Module ChurchStyleStlc.
 
 #[projections(primitive)]
