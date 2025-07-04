@@ -16,7 +16,7 @@ Delimit Scope name_scope with name.
 Instance name_hasEqDec
   : hasEqDec name.
 Proof.
-  red. decide equality. eapply Nat.eq_dec.
+  red; decide equality; eapply Nat.eq_dec.
 Defined.
 
 Definition un_name (nm : name) : nat :=

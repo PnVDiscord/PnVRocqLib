@@ -22,7 +22,7 @@ Inductive typ (L : language) : Set :=
 #[global] Notation "D -> C" := (@arr _ D C) : typ_scope.
 
 Class signature (L : language) : Set :=
-  type_of_constant (c : L.(constants)) : typ L.
+  typ_of_constant (c : L.(constants)) : typ L.
 
 Section STLC.
 
@@ -61,7 +61,7 @@ Definition ctx : Set :=
 
 Context {Sigma : signature L}.
 
-Inductive syntactic_typing_rule (Gamma : ctx) : trm -> typ -> Prop :=
+Inductive syntacticTypingRule (Gamma : ctx) : trm -> typ -> Prop :=
   | Var_typ (x : name) (ty : typ)
     (LOOKUP : L.lookup x Gamma = Some ty)
     : Gamma ⊢ Var_trm x ⦂ ty
@@ -73,8 +73,8 @@ Inductive syntactic_typing_rule (Gamma : ctx) : trm -> typ -> Prop :=
     (TYP1 : (y, ty1) :: Gamma ⊢ e1 ⦂ ty2)
     : Gamma ⊢ Lam_trm y ty1 e1 ⦂ (ty1 -> ty2)%typ
   | Con_typ (c : L.(constants))
-    : Gamma ⊢ Con_trm c ⦂ type_of_constant (signature := Sigma) c
-  where "Gamma '⊢' M '⦂' A" := (syntactic_typing_rule Gamma M A) : type_scope.
+    : Gamma ⊢ Con_trm c ⦂ typ_of_constant (signature := Sigma) c
+  where "Gamma '⊢' M '⦂' A" := (syntacticTypingRule Gamma M A) : type_scope.
 
 (* TODO *)
 
@@ -84,7 +84,6 @@ End STLC.
 
 #[global] Arguments trm : clear implicits.
 #[global] Arguments ctx : clear implicits.
+#[global] Coercion bty : basic_types >-> typ.
 
 End ChurchStyleStlc.
-
-#[global] Coercion ChurchStyleStlc.bty : ChurchStyleStlc.basic_types >-> ChurchStyleStlc.typ.
