@@ -36,11 +36,11 @@ Inductive trm : Set :=
   | Lam_trm (y : name) (ty : typ) (e1 : trm)
   | Con_trm (c : L.(constants)).
 
-Section FreeVars.
+Section FreeVariables.
 
 (* TODO *)
 
-End FreeVars.
+End FreeVariables.
 
 Section Substitution.
 
@@ -76,13 +76,9 @@ Inductive syntactic_typing_rule (Gamma : ctx) : trm -> typ -> Prop :=
     : Gamma ⊢ Con_trm c ⦂ type_of_constant (signature := Sigma) c
   where "Gamma '⊢' M '⦂' A" := (syntactic_typing_rule Gamma M A) : type_scope.
 
-End TypingRule.
-
-Section MetaTheory.
-
 (* TODO *)
 
-End MetaTheory.
+End TypingRule.
 
 End STLC.
 

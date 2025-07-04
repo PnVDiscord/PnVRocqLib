@@ -209,9 +209,27 @@ End PP_name.
 
 String Notation name parse_name print_name : name_scope.
 
+Module Name.
+
 Section PP_name_EXAMPLE1.
 
 Let x1 : name :=
   "x1".
 
 End PP_name_EXAMPLE1.
+
+Notation t := name.
+
+Definition is_valid (nm : Name.t) : bool :=
+  B.isSome (print_name nm).
+
+Definition max (nm1 : Name.t) (nm2 : Name.t) : Name.t :=
+  mk_name (Nat.max (un_name nm1) (un_name nm2)).
+
+Fixpoint maxs (nms : list Name.t) : Name.t :=
+  match nms with
+  | [] => mk_name 0
+  | nm :: nms' => max nm (maxs nms')
+  end.
+
+End Name.

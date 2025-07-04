@@ -989,6 +989,13 @@ Module B.
 #[local] Open Scope program_scope.
 
 #[universes(polymorphic=yes)]
+Definition isSome@{u} {A : Type@{u}} (m : option A) : bool :=
+  match m with
+  | Some _ => true
+  | None => false
+  end.
+
+#[universes(polymorphic=yes)]
 Definition dollar@{u v} {A : Type@{u}} {B : A -> Type@{v}} (f : forall x : A, B x) (x : A) : B x :=
   f x.
 

@@ -12,7 +12,7 @@ Coercion named_var (nm : name) : ivar :=
 
 #[global]
 Instance Similarity_name_ivar : Similarity name ivar :=
-  fun nm : name => fun x : ivar => nm = mk_name x.
+  fun nm : name => fun x : ivar => named_var nm = x.
 
 Declare Custom Entry trm_view.
 Declare Custom Entry trms_view.
