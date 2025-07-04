@@ -79,31 +79,53 @@ Reserved Notation "'$' EXPR '$'" (EXPR custom syntax_view at level 10, no associ
 
 Module ExternalSyntax.
 
-  Export ChurchStyleStlc.
+Export ChurchStyleStlc.
 
-  Variant fol_basic_types : Set :=
-    | trm_bty : fol_basic_types
-    | trms_bty (arity : nat) : fol_basic_types
-    | frm_bty : fol_basic_types.
+Variant fol_basic_types : Set :=
+  | trm_bty : fol_basic_types
+  | trms_bty (arity : nat) : fol_basic_types
+  | frm_bty : fol_basic_types.
 
-  Variant fol_symbols (L : InternalSyntax.language) : Set :=
-    | Function_symbol (f : L.(function_symbols))
-    | Constant_symbol (c : L.(constant_symbols))
-    | Relation_symbol (R : L.(relation_symbols))
-    | Nil_symbol
-    | Cons_symbol
-    | Equality_symbol
-    | Contradiction_symbol
-    | Negation_symbol
-    | Conjunction_symbol
-    | Disjunction_symbol
-    | Implication_symbol
-    | Biconditional_symbol
-    | UniversalQuantifier_symbol
-    | ExistentialQuantifier_symbol.
+Variant fol_symbols {L : InternalSyntax.language} : Set :=
+  | Function_symbol (f : L.(function_symbols))
+  | Constant_symbol (c : L.(constant_symbols))
+  | Relation_symbol (R : L.(relation_symbols))
+  | Nil_symbol
+  | Cons_symbol (arity : nat)
+  | Equality_symbol
+  | Contradiction_symbol
+  | Negation_symbol
+  | Conjunction_symbol
+  | Disjunction_symbol
+  | Implication_symbol
+  | Biconditional_symbol
+  | UniversalQuantifier_symbol
+  | ExistentialQuantifier_symbol.
 
-  Definition mk_fol (L : InternalSyntax.language) : language :=
-    {| basic_types := fol_basic_types; constants := fol_symbols L |}.
+#[global] Arguments fol_symbols : clear implicits.
+
+Definition mk_fol (L : InternalSyntax.language) : language :=
+  {| basic_types := fol_basic_types; constants := fol_symbols L |}.
+
+#[global]
+Instance fol_signature (L : InternalSyntax.language) : signature (mk_fol L) :=
+  fun symbol : fol_symbols L =>
+  match symbol return typ (mk_fol L) with
+  | Function_symbol f => (arr (mk_fol L) (bty (mk_fol L) (trms_bty (function_arity_table L f))) (bty (mk_fol L) (trm_bty)))
+  | Constant_symbol c => (bty (mk_fol L) (trm_bty))
+  | Relation_symbol R => (arr (mk_fol L) (bty (mk_fol L) (trms_bty (relation_arity_table L R))) (bty (mk_fol L) (frm_bty)))
+  | Nil_symbol => (bty (mk_fol L) (trms_bty 0))
+  | Cons_symbol n => (arr (mk_fol L) (bty (mk_fol L) (trm_bty)) (arr (mk_fol L) (bty (mk_fol L) (trms_bty n)) (bty (mk_fol L) (trms_bty (S n)))))
+  | Equality_symbol => (arr (mk_fol L) (bty (mk_fol L) (trm_bty)) (arr (mk_fol L) (bty (mk_fol L) (trm_bty)) (bty (mk_fol L) (frm_bty))))
+  | Contradiction_symbol => (bty (mk_fol L) (frm_bty))
+  | Negation_symbol => (arr (mk_fol L) (bty (mk_fol L) (frm_bty)) (bty (mk_fol L) (frm_bty)))
+  | Conjunction_symbol => (arr (mk_fol L) (bty (mk_fol L) (frm_bty)) (arr (mk_fol L) (bty (mk_fol L) (frm_bty)) (bty (mk_fol L) (frm_bty))))
+  | Disjunction_symbol => (arr (mk_fol L) (bty (mk_fol L) (frm_bty)) (arr (mk_fol L) (bty (mk_fol L) (frm_bty)) (bty (mk_fol L) (frm_bty))))
+  | Implication_symbol => (arr (mk_fol L) (bty (mk_fol L) (frm_bty)) (arr (mk_fol L) (bty (mk_fol L) (frm_bty)) (bty (mk_fol L) (frm_bty))))
+  | Biconditional_symbol => (arr (mk_fol L) (bty (mk_fol L) (frm_bty)) (arr (mk_fol L) (bty (mk_fol L) (frm_bty)) (bty (mk_fol L) (frm_bty))))
+  | UniversalQuantifier_symbol => (arr (mk_fol L) (arr (mk_fol L) (bty (mk_fol L) (trm_bty)) (bty (mk_fol L) (frm_bty))) (bty (mk_fol L) (frm_bty)))
+  | ExistentialQuantifier_symbol => (arr (mk_fol L) (arr (mk_fol L) (bty (mk_fol L) (trm_bty)) (bty (mk_fol L) (frm_bty))) (bty (mk_fol L) (frm_bty)))
+  end.
 
 End ExternalSyntax.
 
