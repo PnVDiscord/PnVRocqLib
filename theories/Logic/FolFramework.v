@@ -129,7 +129,7 @@ Instance fol_signature (L : InternalSyntax.language) : signature (mk_fol L) :=
 
 End ExternalSyntax.
 
-Module ObjectiveZFC.
+Module ObjectZFC.
 
 Variant L_in_relation_symbols : Set :=
   | symbol_IN : L_in_relation_symbols.
@@ -159,4 +159,4 @@ Qed.
 
 End EXAMPLE.
 
-End ObjectiveZFC.
+End ObjectZFC.
