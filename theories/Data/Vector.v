@@ -647,9 +647,10 @@ Qed.
 Inductive Similarity_vec_list (A : Type) : forall n : nat, Similarity (Vector.t A n) (list A) :=
   | Similarity_vec_list_nil
     : is_similar_to (VNil) (@L.nil A)
-  | Similarity_vec_list_cons n x xs xs'
+  | Similarity_vec_list_cons n x x' xs xs'
+    (x_corres : x = x')
     (xs_corres : is_similar_to xs xs')
-    : is_similar_to (VCons n x xs) (@L.cons A x xs').
+    : is_similar_to (VCons n x xs) (@L.cons A x' xs').
 
 Lemma Similarity_vec_list_iff {A : Type} {n : nat} (xs : Vector.t A n) (xs' : list A)
   : is_similar_to (Similarity := Similarity_vec_list A n) xs xs' <-> V.to_list xs = xs'.

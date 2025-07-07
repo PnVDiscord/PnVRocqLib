@@ -150,7 +150,7 @@ Lemma Lookup_lookup x ty Gamma
   : Some ty = L.lookup x Gamma.
 Proof.
   induction LOOKUP; simpl in *; destruct (eq_dec x x'); contradiction || congruence.
-Qed.
+Defined.
 
 Definition lookup_Lookup (x : name) (ty : typ) : forall Gamma : ctx, Some ty = L.lookup x Gamma -> Lookup x ty Gamma :=
   fix IH (Gamma : list (name * typ)) {struct Gamma} : Some ty = L.lookup x Gamma -> Lookup x ty Gamma :=
