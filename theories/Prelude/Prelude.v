@@ -1140,8 +1140,8 @@ Inductive sum1 (X : Type -> Type) (Y : Type -> Type) (A : Type) : Type :=
 Inductive void1 (A : Type) : Type :=.
 
 #[projections(primitive)]
-Record sig {X : Set} {P : X -> Prop} : Set :=
-  { proj1_sig : X
+Record sig {A : Set} {P : A -> Prop} : Set :=
+  { proj1_sig : A
   ; proj2_sig : P proj1_sig
   }.
 
