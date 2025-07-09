@@ -1153,8 +1153,6 @@ Class retracts (X : Type) (P : Prop) : Type :=
   ; retraction : P -> X
   ; retraction_section (x : X)
     : retraction (section x) = x
-  ; section_retraction (H : P)
-    : section (retraction H) = H
   }.
 
 End B.

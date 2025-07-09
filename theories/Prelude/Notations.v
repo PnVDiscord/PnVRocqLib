@@ -3,6 +3,8 @@ Require Import PnV.Prelude.SfLib.
 Reserved Infix "==" (no associativity, at level 70).
 Reserved Infix "≡" (no associativity, at level 70).
 
+Reserved Infix "≠" (no associativity, at level 70).
+
 Reserved Infix "=<" (no associativity, at level 70).
 Reserved Infix "⪳" (no associativity, at level 70).
 Reserved Infix "⪵" (no associativity, at level 70).

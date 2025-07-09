@@ -673,6 +673,25 @@ Qed.
 
 #[global] Hint Rewrite in_downto_iff : simplication_hints.
 
+Definition ne (x : nat) (y : nat) : Prop :=
+  x < y \/ y < x.
+
+Infix "≠" := ne : nat_scope.
+
+Lemma ne_pirrel (x : nat) (y : nat)
+  (NE1 : x ≠ y)
+  (NE2 : x ≠ y)
+  : NE1 = NE2.
+Proof.
+  destruct NE1 as [LT1 | GT1], NE2 as [LT2 | GT2]; try lia; f_equal; eapply le_pirrel.
+Qed.
+
+Lemma ne_iff (x : nat) (y : nat)
+  : x ≠ y <-> x <> y.
+Proof.
+  unfold ne. lia.
+Qed.
+
 Section SET_LEVEL_LE.
 
 Inductive lessthanequalto (n : nat) : nat -> Set :=
@@ -754,9 +773,6 @@ Instance lessthanequalto_retracts_le (n : nat) (m : nat) : B.retracts (lessthane
   }.
 Next Obligation.
   eapply lessthanequalto_pirrel.
-Defined.
-Next Obligation.
-  eapply le_pirrel.
 Defined.
 
 End SET_LEVEL_LE.

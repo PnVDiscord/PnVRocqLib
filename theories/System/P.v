@@ -231,4 +231,23 @@ Fixpoint maxs (nms : list Name.t) : Name.t :=
   | nm :: nms' => max nm (maxs nms')
   end.
 
+Definition ne (nm1 : Name.t) (nm2 : Name.t) : Prop :=
+  un_name nm1 ≠ un_name nm2.
+
+Lemma ne_pirrel nm1 nm2
+  (NE1 : ne nm1 nm2)
+  (NE2 : ne nm1 nm2)
+  : NE1 = NE2.
+Proof.
+  destruct nm1, nm2. red in NE1, NE2. simpl in *. eapply ne_pirrel.
+Qed.
+
+Lemma ne_iff nm1 nm2
+  : ne nm1 nm2 <-> nm1 <> nm2.
+Proof.
+  destruct nm1, nm2. unfold ne. simpl. rewrite ne_iff. split; congruence.
+Qed.
+
 End Name.
+
+Infix "≠" := Name.ne.

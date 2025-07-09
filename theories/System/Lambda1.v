@@ -1,4 +1,6 @@
 Require Import PnV.Prelude.Prelude.
+Require Import PnV.Prelude.ConstructiveFacts.
+Require Import PnV.Math.ThN.
 Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 
@@ -8,6 +10,8 @@ Delimit Scope typ_scope with typ.
 Reserved Notation "Gamma '⊢' M '⦂' A" (at level 70, no associativity).
 
 Module ChurchStyleStlc.
+
+#[local] Open Scope name_scope.
 
 #[projections(primitive)]
 Record language : Type :=
@@ -21,6 +25,14 @@ Inductive typ (L : language) : Set :=
 
 #[global] Bind Scope typ_scope with typ.
 #[global] Notation "D -> C" := (@arr _ D C) : typ_scope.
+
+#[global]
+Instance typ_hasEqDec (L : language)
+  (bty_hasEqDec : hasEqDec L.(basic_types))
+  : hasEqDec (typ L).
+Proof.
+  red in bty_hasEqDec |- *. decide equality.
+Defined.
 
 Class signature (L : language) : Set :=
   typ_of_constant (c : L.(constants)) : typ L.
@@ -111,9 +123,80 @@ Inductive Lookup (x : name) (ty : typ) : ctx -> Set :=
     (ty_eq : ty = ty')
     : Lookup x ty ((x', ty') :: Gamma)
   | Lookup_S Gamma x' ty'
-    (x_ne : x <> x')
+    (x_ne : x ≠ x')
     (LOOKUP : Lookup x ty Gamma)
     : Lookup x ty ((x', ty') :: Gamma).
+
+Lemma Lookup_nil x ty (Phi : Lookup x ty [] -> Type)
+  : forall LOOKUP, Phi LOOKUP.
+Proof.
+  intros LOOKUP.
+  refine (
+    match LOOKUP as LOOKUP in Lookup _ _ Gamma return (match Gamma as Gamma return Lookup x ty Gamma -> Type with [] => Phi | (x', ty') :: Gamma' => fun _ => unit end) LOOKUP with
+    | Lookup_Z _ _ _ x' ty' x_eq ty_eq => _
+    | Lookup_S _ _ _ x' ty' x_ne LOOKUP => _
+    end
+  ).
+  - econs.
+  - econs.
+Defined.
+
+Lemma Lookup_cons x ty Gamma x' ty' (Phi : Lookup x ty ((x', ty') :: Gamma) -> Type)
+  (Phi_Z : forall x_eq : x = x', forall ty_eq : ty = ty', Phi (Lookup_Z x ty Gamma x' ty' x_eq ty_eq))
+  (Phi_S : forall x_ne : x ≠ x', forall LOOKUP : Lookup x ty Gamma, Phi (Lookup_S x ty Gamma x' ty' x_ne LOOKUP))
+  : forall LOOKUP, Phi LOOKUP.
+Proof.
+  intros LOOKUP. revert Phi Phi_Z Phi_S.
+  refine (
+    match LOOKUP as LOOKUP in Lookup _ _ Gamma return (match Gamma as Gamma return Lookup x ty Gamma -> Type with [] => fun _ => unit | (x', ty') :: Gamma' => fun LOOKUP => forall Phi, forall Phi_Z, forall Phi_S, Phi LOOKUP end) LOOKUP with
+    | Lookup_Z _ _ _ x' ty' x_eq ty_eq => _
+    | Lookup_S _ _ _ x' ty' x_ne LOOKUP => _
+    end
+  ).
+  - intros. eapply Phi_Z.
+  - intros. eapply Phi_S.
+Defined.
+
+Fixpoint LookupProp (x : name) (ty : typ) (Gamma : ctx) {struct Gamma} : Prop :=
+  match Gamma with
+  | [] => False
+  | (x', ty') :: Gamma' => if eq_dec x x' then ty = ty' else LookupProp x ty Gamma'
+  end.
+
+Lemma Lookup_to_LookupProp x ty Gamma
+  (LOOKUP : Lookup x ty Gamma)
+  : LookupProp x ty Gamma.
+Proof.
+  induction LOOKUP; simpl; destruct (eq_dec _ _) as [EQ | NE]; eauto.
+  - contradiction.
+  - rewrite Name.ne_iff in x_ne. contradiction.
+Defined.
+
+Lemma LookupProp_to_Lookup x ty Gamma
+  (LOOKUP : LookupProp x ty Gamma)
+  : Lookup x ty Gamma.
+Proof.
+  induction Gamma as [ | [x' ty'] Gamma IH]; simpl in *.
+  - exact (False_rec _ LOOKUP).
+  - destruct (eq_dec x x') as [EQ | NE].
+    + econs 1; eassumption.
+    + econs 2; [rewrite <- Name.ne_iff in NE; eassumption | exact (IH LOOKUP)].
+Defined.
+
+#[global, program]
+Instance Lookup_retracts x ty Gamma : B.retracts (Lookup x ty Gamma) (LookupProp x ty Gamma) :=
+  { section := Lookup_to_LookupProp x ty Gamma
+  ; retraction := LookupProp_to_Lookup x ty Gamma
+  }.
+Next Obligation.
+  rename x0 into X. induction X; simpl.
+  - destruct (eq_dec x x') as [EQ | NE].
+    + f_equal. eapply eq_pirrel_fromEqDec.
+    + contradiction.
+  - destruct (eq_dec x x') as [EQ | NE].
+    + pose proof (COPY := x_ne). rewrite -> Name.ne_iff in COPY. contradiction.
+    + f_equal; try eapply Name.ne_pirrel. congruence.
+Qed.
 
 End LOOKUP.
 
@@ -133,6 +216,25 @@ Inductive Typing (Gamma : ctx) : trm -> typ -> Set :=
   | Con_typ (c : L.(constants))
     : Gamma ⊢ Con_trm c ⦂ typ_of_constant (signature := Sigma) c
   where "Gamma '⊢' M '⦂' A" := (Typing Gamma M A) : type_scope.
+
+Fixpoint TypingProp (Gamma : ctx) (e : trm) (ty : typ) {struct e} : Prop :=
+  match e with
+  | Var_trm x => LookupProp x ty Gamma
+  | App_trm e1 e2 => exists ty1, TypingProp Gamma e1 (ty1 -> ty)%typ /\ TypingProp Gamma e2 ty1
+  | Lam_trm y ty1 e1 => exists ty2, TypingProp ((y, ty1) :: Gamma) e1 ty2 /\ ty = (ty1 -> ty2)%typ
+  | Con_trm c => ty = typ_of_constant c
+  end.
+
+Lemma Typing_to_TypingProp Gamma e ty
+  (TYPING : Typing Gamma e ty)
+  : TypingProp Gamma e ty.
+Proof.
+  induction TYPING; simpl.
+  - eapply Lookup_to_LookupProp. exact LOOKUP.
+  - exists ty1. split; [exact IHTYPING1 | exact IHTYPING2].
+  - exists ty2. split; [exact IHTYPING | reflexivity].
+  - reflexivity.
+Defined.
 
 (* TODO *)
 
