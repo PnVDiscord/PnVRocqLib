@@ -39,6 +39,8 @@ Class signature (L : language) : Set :=
 
 Section STLC.
 
+#[local] Hint Resolve Name.ne_pirrel : core.
+
 Context {L : language}.
 
 #[local] Notation typ := (typ L).
@@ -198,6 +200,30 @@ Next Obligation.
     + f_equal; try eapply Name.ne_pirrel. congruence.
 Qed.
 
+Lemma Lookup_unique x ty ty' Gamma
+  (LOOKUP : Lookup x ty Gamma)
+  (LOOKUP' : Lookup x ty' Gamma)
+  : ty = ty'.
+Proof.
+  revert LOOKUP'; induction LOOKUP; eapply Lookup_cons; intros.
+  - congruence.
+  - pose proof (COPY := x_ne). rewrite -> Name.ne_iff in COPY. contradiction.
+  - pose proof (COPY := x_ne). rewrite -> Name.ne_iff in COPY. contradiction.
+  - eauto.
+Qed.
+
+Lemma Lookup_proof_unique {bty_hasEqDec : hasEqDec L.(basic_types)} x ty Gamma
+  (LOOKUP : Lookup x ty Gamma)
+  (LOOKUP' : Lookup x ty Gamma)
+  : LOOKUP = LOOKUP'.
+Proof.
+  revert LOOKUP'; induction LOOKUP; eapply Lookup_cons; intros.
+  - f_equal; eapply eq_pirrel_fromEqDec.
+  - pose proof (COPY := x_ne). rewrite -> Name.ne_iff in COPY. contradiction.
+  - pose proof (COPY := x_ne). rewrite -> Name.ne_iff in COPY. contradiction.
+  - f_equal; eauto.
+Qed.
+
 End LOOKUP.
 
 Context {Sigma : signature L}.
@@ -216,6 +242,105 @@ Inductive Typing (Gamma : ctx) : trm -> typ -> Set :=
   | Con_typ (c : L.(constants))
     : Gamma ⊢ Con_trm c ⦂ typ_of_constant (signature := Sigma) c
   where "Gamma '⊢' M '⦂' A" := (Typing Gamma M A) : type_scope.
+
+Definition Typing_code (Gamma : ctx) (e : trm) (ty : typ) : Set :=
+  match e with
+  | Var_trm x => Lookup x ty Gamma
+  | App_trm e1 e2 => { ty1 : typ & (Typing Gamma e1 (ty1 -> ty)%typ * Typing Gamma e2 ty1)%type }
+  | Lam_trm y ty1 e1 => { ty2 : typ & (Typing ((y, ty1) :: Gamma) e1 ty2 * (ty = (ty1 -> ty2)%typ))%type }
+  | Con_trm c => ty = typ_of_constant c
+  end.
+
+Definition Typing_encode {Gamma} {e} {ty} (TYPING : Typing Gamma e ty) : Typing_code Gamma e ty :=
+  match TYPING with
+  | Var_typ _ x ty LOOKUP => LOOKUP
+  | App_typ _ e1 e2 ty1 ty2 TYPING1 TYPING2 => @existT _ _ ty1 (TYPING1, TYPING2)
+  | Lam_typ _ y e1 ty1 ty2 TYPING1 => @existT _ _ ty2 (TYPING1, eq_refl)
+  | Con_typ _ c => eq_refl
+  end.
+
+Lemma Typing_decode {Gamma} {e} {ty}
+  (TYPING : Typing_code Gamma e ty)
+  : Typing Gamma e ty.
+Proof.
+  destruct e; simpl in *.
+  - econs 1; eassumption.
+  - destruct TYPING as [ty1 [TYPING1 TYPING2]]. econs 2; eassumption.
+  - destruct TYPING as [ty2 [TYPING1 EQ]]. subst ty. econs 3; eassumption.
+  - subst ty. econs 4.
+Defined.
+
+Lemma Typing_encode_decode Gamma e ty
+  (TYPING : Typing_code Gamma e ty)
+  : (Typing_encode (Typing_decode TYPING)) = TYPING.
+Proof.
+  destruct e; simpl in *.
+  - reflexivity.
+  - destruct TYPING as [ty1 [TYPING1 TYPING2]]. reflexivity.
+  - destruct TYPING as [ty1 [TYPING EQ]]. subst ty. reflexivity.
+  - subst ty. reflexivity.
+Qed.
+
+Lemma Typing_decode_encode Gamma e ty
+  (TYPING : Typing Gamma e ty)
+  : (Typing_decode (Typing_encode TYPING)) = TYPING.
+Proof.
+  destruct TYPING; simpl.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+Qed.
+
+Lemma Typing_unique Gamma e ty ty'
+  (TYPING : Typing Gamma e ty)
+  (TYPING' : Typing Gamma e ty')
+  : ty = ty'.
+Proof.
+  revert ty' TYPING'. induction TYPING; simpl; intros ty'.
+  - intros TYPING'. inversion TYPING'. subst. eapply Lookup_unique; eauto.
+  - intros TYPING'. inversion TYPING'. subst.
+    specialize (IHTYPING1 _ TYPING0). congruence.
+  - intros TYPING'. inversion TYPING'. subst.
+    f_equal. eapply IHTYPING; eauto.
+  - intros TYPING'. inversion TYPING'. congruence.
+Qed.
+
+Lemma Typing_proof_unique {bty_hasEqDec : hasEqDec L.(basic_types)} Gamma e ty
+  (TYPING : Typing Gamma e ty)
+  (TYPING' : Typing Gamma e ty)
+  : TYPING = TYPING'.
+Proof.
+  revert TYPING'. induction TYPING; simpl.
+  - intros TYPING'. rewrite <- Typing_decode_encode.
+    remember (Typing_encode TYPING') as code eqn: E.
+    apply f_equal with (f := Typing_decode) in E.
+    rewrite Typing_decode_encode in E. simpl in *.
+    f_equal. eapply Lookup_proof_unique.
+  - intros TYPING'. rewrite <- Typing_decode_encode.
+    remember (Typing_encode TYPING') as code eqn: E.
+    apply f_equal with (f := Typing_decode) in E.
+    rewrite Typing_decode_encode in E. simpl in *.
+    f_equal. destruct code as [ty1' [TYPING1' TYPING2']].
+    assert (ty1 = ty1') as EQ.
+    { eapply Typing_unique; eauto. }
+    subst ty1'. f_equal; eauto.
+  - intros TYPING'. rewrite <- Typing_decode_encode.
+    remember (Typing_encode TYPING') as code eqn: E.
+    apply f_equal with (f := Typing_decode) in E.
+    rewrite Typing_decode_encode in E. simpl in *.
+    f_equal. destruct code as [ty1' [TYPING1' EQ']].
+    assert (ty1' = ty2) as EQ'' by congruence.
+    subst ty2.
+    rewrite eq_pirrel_fromEqDec with (EQ1 := EQ') (EQ2 := eq_refl).
+    cbv. f_equal; eauto.
+  - intros TYPING'. rewrite <- Typing_decode_encode.
+    remember (Typing_encode TYPING') as code eqn: E.
+    apply f_equal with (f := Typing_decode) in E.
+    rewrite Typing_decode_encode in E. simpl in *.
+    rewrite eq_pirrel_fromEqDec with (EQ1 := code) (EQ2 := eq_refl).
+    reflexivity.
+Qed.
 
 Fixpoint TypingProp (Gamma : ctx) (e : trm) (ty : typ) {struct e} : Prop :=
   match e with

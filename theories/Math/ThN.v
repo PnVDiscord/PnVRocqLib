@@ -726,7 +726,7 @@ Proof.
       * econs 2. eassumption.
 Defined.
 
-Theorem lessthanequalto_pirrel {n1 : nat} {n2 : nat}
+Theorem lessthanequalto_proof_unique {n1 : nat} {n2 : nat}
   (hyp1 : n1 ≦ n2)
   (hyp2 : n1 ≦ n2)
   : hyp1 = hyp2.
@@ -772,7 +772,7 @@ Instance lessthanequalto_retracts_le (n : nat) (m : nat) : B.retracts (lessthane
   ; retraction := le_to_lessthanequalto m n
   }.
 Next Obligation.
-  eapply lessthanequalto_pirrel.
+  eapply lessthanequalto_proof_unique.
 Defined.
 
 End SET_LEVEL_LE.
