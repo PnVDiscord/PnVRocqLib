@@ -1139,6 +1139,14 @@ Inductive sum1 (X : Type -> Type) (Y : Type -> Type) (A : Type) : Type :=
 
 Inductive void1 (A : Type) : Type :=.
 
+#[projections(primitive)]
+Record sig {X : Set} {P : X -> Prop} : Set :=
+  { lift : X
+  ; property : P lift
+  }.
+
+#[global] Arguments B.sig : clear implicits.
+
 End B.
 
 Infix "+'" := B.sum1 (at level 50, left associativity) : type_scope.
@@ -1608,7 +1616,7 @@ End SUBSEQUENCE.
 
 End L.
 
-Class AxiomsForTopology@{u} (X : Type@{u}) (T : ensemble@{u} (ensemble@{u} X)) : Prop :=
+Class AxiomsForOpenSets@{u} (X : Type@{u}) (T : ensemble@{u} (ensemble@{u} X)) : Prop :=
   { full_isOpen
     : E.In@{u} E.full T
   ; unions_isOpen Os
@@ -1624,7 +1632,7 @@ Class AxiomsForTopology@{u} (X : Type@{u}) (T : ensemble@{u} (ensemble@{u} X)) :
     : E.In@{u} O2 T
   }.
 
-Lemma empty_isOpen {X : Type} {T : ensemble (ensemble X)} `{TOPOLOGY : AxiomsForTopology X T}
+Lemma empty_isOpen {X : Type} {T : ensemble (ensemble X)} `{TOPOLOGY : AxiomsForOpenSets X T}
   : E.empty \in T.
 Proof.
   eapply isOpen_compatWith_ext_eq with (O1 := E.unions E.empty).
@@ -1636,7 +1644,7 @@ Qed.
 
 Class topology (A : Type) : Type :=
   { isOpen (O : ensemble A) : Prop
-  ; topologyLaws :: AxiomsForTopology A isOpen
+  ; AxiomsForTopology :: AxiomsForOpenSets A isOpen
   }.
 
 #[global]
@@ -1682,7 +1690,7 @@ Theorem Kuratowski_cl {X : Type} (cl : ensemble X -> ensemble X)
   (cl_subadditive : forall U, forall V, cl (E.union U V) \subseteq E.union (cl U) (cl V))
   (cl_classic : forall U, cl (E.complement (E.complement U)) == E.complement (E.complement (cl U)))
   (T := fun O : ensemble X => let C := E.complement O in C == cl C)
-  : AxiomsForTopology X T.
+  : AxiomsForOpenSets X T.
 Proof.
   cbn zeta in T; subst T; ii; split; i.
   - red. eapply leProp_antisymmetry.
@@ -1709,6 +1717,36 @@ Qed.
 
 Definition isContinuous {A : Type} {B : Type} {A_topology : topology A} {B_topology : topology B} (f : A -> B) : Prop :=
   forall Y : ensemble B, isOpen Y -> isOpen (E.preimage f Y).
+
+Section COD_TOP.
+
+Context {DOM : Type} {COD : Type} {TOPOLOGY : topology DOM} (f : DOM -> COD).
+
+Definition OpenSets_in_COD : ensemble (ensemble COD) :=
+  fun U => isOpen (E.preimage f U).
+
+#[local] Opaque isOpen.
+#[local] Hint Resolve full_isOpen unions_isOpen intersection_isOpen : core.
+#[local] Hint Unfold E.In : core.
+
+#[global]
+Instance OpenSets_in_COD_satisfiesAxiomsForOpenSets
+  : AxiomsForOpenSets COD OpenSets_in_COD.
+Proof with reflexivity || eauto.
+  unfold OpenSets_in_COD. destruct TOPOLOGY.(AxiomsForTopology) as [H1 H2 H3 H4]. split.
+  - red. eapply isOpen_compatWith_ext_eq with (O1 := E.full)... intros x. split; intros IN... econs...
+  - i. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage f O == U)).
+    + eapply H2. intros U H_U. red in H_U. destruct H_U as (O & O_in & U_in & EQ). eapply isOpen_compatWith_ext_eq with (O1 := E.preimage f O)...
+    + intros x. split; intros H_IN.
+      * destruct H_IN as [U H_IN U_IN]. red in U_IN. destruct U_IN as (O & O_IN & U_IN & H_EQ). rewrite <- H_EQ in H_IN. econs... done!.
+      * destruct H_IN as [O -> H_IN]. destruct H_IN as [O H_IN O_IN]. exists (E.preimage f O); done!.
+  - i. red in OPEN1, OPEN2 |- *. eapply isOpen_compatWith_ext_eq with (O1 := E.intersection (E.preimage f O1) (E.preimage f O2)).
+    + eapply intersection_isOpen...
+    + intros x; split; intros H_IN; ss!.
+  - i. red in OPEN |- *. change (O1 == O2) in EXT_EQ. eapply isOpen_compatWith_ext_eq with (O1 := E.preimage f O1)... intros x. rewrite EXT_EQ...
+Qed.
+
+End COD_TOP.
 
 Section SUBSPACE_TOPOLOGY.
 
@@ -1752,44 +1790,12 @@ Module Quot.
 
 Section QuotientTopology.
 
-Context {X : Type} {TOPOLOGY : topology X}.
-
-Section BUILD.
-
-Context {Q : Type} (prj : X -> Q).
-
-Definition OpenSets_in_Q : ensemble (ensemble Q) :=
-  fun U => isOpen (E.preimage prj U).
-
-#[local] Opaque isOpen.
-#[local] Hint Resolve full_isOpen unions_isOpen intersection_isOpen : core.
-#[local] Hint Unfold E.In : core.
-
-#[global]
-Instance OpenSets_in_Q_satisfiesAxiomsForOpenSets
-  : AxiomsForTopology Q OpenSets_in_Q.
-Proof with reflexivity || eauto.
-  unfold OpenSets_in_Q. destruct TOPOLOGY.(topologyLaws) as [H1 H2 H3 H4]. split.
-  - red. eapply isOpen_compatWith_ext_eq with (O1 := E.full)... intros x. split; intros IN... econs...
-  - i. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage prj O == U)).
-    + eapply H2. intros U H_U. red in H_U. destruct H_U as (O & O_in & U_in & EQ). eapply isOpen_compatWith_ext_eq with (O1 := E.preimage prj O)...
-    + intros x. split; intros H_IN.
-      * destruct H_IN as [U H_IN U_IN]. red in U_IN. destruct U_IN as (O & O_IN & U_IN & H_EQ). rewrite <- H_EQ in H_IN. econs... done!.
-      * destruct H_IN as [O -> H_IN]. destruct H_IN as [O H_IN O_IN]. exists (E.preimage prj O); done!.
-  - i. red in OPEN1, OPEN2 |- *. eapply isOpen_compatWith_ext_eq with (O1 := E.intersection (E.preimage prj O1) (E.preimage prj O2)).
-    + eapply intersection_isOpen...
-    + intros x; split; intros H_IN; ss!.
-  - i. red in OPEN |- *. change (O1 == O2) in EXT_EQ. eapply isOpen_compatWith_ext_eq with (O1 := E.preimage prj O1)... intros x. rewrite EXT_EQ...
-Qed.
-
-End BUILD.
-
-Context {SETOID : isSetoid X} {Q : Type} {QUOTIENT : isQuotientOf Q X}.
+Context {X : Type} {TOPOLOGY : topology X} {SETOID : isSetoid X} {Q : Type} {QUOTIENT : isQuotientOf Q X}.
 
 #[global]
 Instance QuotientTopology : topology Q :=
-  { isOpen := OpenSets_in_Q prj
-  ; topologyLaws := OpenSets_in_Q_satisfiesAxiomsForOpenSets prj
+  { isOpen := OpenSets_in_COD prj
+  ; AxiomsForTopology := OpenSets_in_COD_satisfiesAxiomsForOpenSets prj
   }.
 
 End QuotientTopology.

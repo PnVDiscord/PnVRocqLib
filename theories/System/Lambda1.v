@@ -5,12 +5,6 @@ Require Import PnV.Data.Vector.
 Declare Scope typ_scope.
 Delimit Scope typ_scope with typ.
 
-Fixpoint nth_list {A : Type} (xs : list A) {struct xs} : Fin.t (length xs) -> A :=
-  match xs with
-  | [] => Fin.case0
-  | x :: xs => Fin.caseS x (nth_list xs)
-  end.
-
 Reserved Notation "Gamma '⊢' M '⦂' A" (at level 70, no associativity).
 
 Module ChurchStyleStlc.

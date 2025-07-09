@@ -683,3 +683,9 @@ Inductive Similarity_vec {A : Type} {A' : Type} {SIM : Similarity A A'} : forall
     : is_similar_to (VCons n x xs) (VCons n x' xs').
 
 #[global] Existing Instance Similarity_vec.
+
+Fixpoint nth_list {A : Type} (xs : list A) {struct xs} : Fin.t (length xs) -> A :=
+  match xs with
+  | [] => Fin.case0
+  | x :: xs => Fin.caseS x (nth_list xs)
+  end.

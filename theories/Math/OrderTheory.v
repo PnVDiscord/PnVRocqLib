@@ -665,7 +665,7 @@ Variant isOpen_Scott (O : ensemble D) : Prop :=
 
 #[global]
 Instance isOpen_Scott_lawful
-  : AxiomsForTopology D isOpen_Scott.
+  : AxiomsForOpenSets D isOpen_Scott.
 Proof.
   split; ii.
   - split; try done!; ss!. exists x; ss!.
@@ -687,7 +687,7 @@ Qed.
 #[local]
 Instance Scott_topology : topology D :=
   { isOpen := isOpen_Scott
-  ; topologyLaws := isOpen_Scott_lawful
+  ; AxiomsForTopology := isOpen_Scott_lawful
   }.
 
 End SCOTT_TOPOLOGY.
