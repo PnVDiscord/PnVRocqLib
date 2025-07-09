@@ -1,8 +1,15 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.System.P.
+Require Import PnV.Data.Vector.
 
 Declare Scope typ_scope.
 Delimit Scope typ_scope with typ.
+
+Fixpoint nth_list {A : Type} (xs : list A) {struct xs} : Fin.t (length xs) -> A :=
+  match xs with
+  | [] => Fin.case0
+  | x :: xs => Fin.caseS x (nth_list xs)
+  end.
 
 Reserved Notation "Gamma '⊢' M '⦂' A" (at level 70, no associativity).
 
@@ -97,43 +104,12 @@ Inductive alphaEquiv : trm -> trm -> Prop :=
 
 End alphaEquivalence.
 
-Section betaReduction.
-
-Inductive betaStep : trm -> trm -> Prop :=
-  | betaStep_beta x ty M N
-    : betaStep (App_trm (Lam_trm x ty M) N) (subst_trm (one_subst x N) M)
-  | betaStep_appL M M' N
-    (BETA : betaStep M M')
-    : betaStep (App_trm M N) (App_trm M' N)
-  | betaStep_appR M N N'
-    (BETA : betaStep N N')
-    : betaStep (App_trm M N) (App_trm M N')
-  | betaStep_lam x ty M M'
-    (BETA : betaStep M M')
-    : betaStep (Lam_trm x ty M) (Lam_trm x ty M').
-
-Inductive betaMultiStep (M : trm) (N : trm) : Prop :=
-  | betaMultiStep_alpha
-    (ALPHA : alphaEquiv M N)
-    : betaMultiStep M N
-  | betaMultiStep_beta
-    (BETA : betaStep M N)
-    : betaMultiStep M N
-  | betaMultiStep_trans P
-    (STEP1 : betaMultiStep M P)
-    (STEP2 : betaMultiStep P N)
-    : betaMultiStep M N.
-
-End betaReduction.
-
-Section etaExpansion.
-
-End etaExpansion.
-
 Section TypingRule.
 
 Definition ctx : Set :=
   list (name * typ).
+
+Section LOOKUP.
 
 Inductive Lookup (x : name) (ty : typ) : ctx -> Set :=
   | Lookup_Z Gamma x' ty'
@@ -145,27 +121,11 @@ Inductive Lookup (x : name) (ty : typ) : ctx -> Set :=
     (LOOKUP : Lookup x ty Gamma)
     : Lookup x ty ((x', ty') :: Gamma).
 
-Lemma Lookup_lookup x ty Gamma
-  (LOOKUP : Lookup x ty Gamma)
-  : Some ty = L.lookup x Gamma.
-Proof.
-  induction LOOKUP; simpl in *; destruct (eq_dec x x'); contradiction || congruence.
-Defined.
-
-Definition lookup_Lookup (x : name) (ty : typ) : forall Gamma : ctx, Some ty = L.lookup x Gamma -> Lookup x ty Gamma :=
-  fix IH (Gamma : list (name * typ)) {struct Gamma} : Some ty = L.lookup x Gamma -> Lookup x ty Gamma :=
-  match Gamma as Gamma return Some ty = L.lookup x Gamma -> Lookup x ty Gamma with
-  | [] => fun LOOKUP : Some ty = None => False_rec _ (B.Some_ne_None ty LOOKUP)
-  | (x', ty') :: Gamma' =>
-    match eq_dec x x' as b return Some ty = (if b then Some ty' else L.lookup x Gamma') -> Lookup x ty ((x', ty') :: Gamma') with
-    | left EQ => fun LOOKUP : Some ty = Some ty' => Lookup_Z x ty Gamma' x' ty' EQ (f_equal (B.fromMaybe ty') LOOKUP)
-    | right NE => fun LOOKUP : Some ty = L.lookup x Gamma' => Lookup_S x ty Gamma' x' ty' NE (IH Gamma' LOOKUP)
-    end
-  end.
+End LOOKUP.
 
 Context {Sigma : signature L}.
 
-Inductive treeOfTyping (Gamma : ctx) : trm -> typ -> Set :=
+Inductive Typing (Gamma : ctx) : trm -> typ -> Set :=
   | Var_typ (x : name) (ty : typ)
     (LOOKUP : Lookup x ty Gamma)
     : Gamma ⊢ Var_trm x ⦂ ty
@@ -178,11 +138,59 @@ Inductive treeOfTyping (Gamma : ctx) : trm -> typ -> Set :=
     : Gamma ⊢ Lam_trm y ty1 e1 ⦂ (ty1 -> ty2)%typ
   | Con_typ (c : L.(constants))
     : Gamma ⊢ Con_trm c ⦂ typ_of_constant (signature := Sigma) c
-  where "Gamma '⊢' M '⦂' A" := (treeOfTyping Gamma M A) : type_scope.
+  where "Gamma '⊢' M '⦂' A" := (Typing Gamma M A) : type_scope.
 
 (* TODO *)
 
 End TypingRule.
+
+Section INTERPRET.
+
+Context {Sigma : signature L}.
+
+Variable eval_bty : L.(basic_types) -> Set.
+
+Fixpoint eval_typ (ty : typ) : Set :=
+  match ty with
+  | bty _ b => eval_bty b
+  | (ty1 -> ty2)%typ => eval_typ ty1 -> eval_typ ty2
+  end.
+
+Definition eval_ctx (Gamma : ctx) : Set :=
+  forall i : Fin.t (length Gamma), eval_typ (snd (nth_list Gamma i)).
+
+Fixpoint evalLookup {x : name} {ty : typ} {Gamma : ctx} (LOOKUP : Lookup x ty Gamma) {struct LOOKUP} : Fin.t (length Gamma) :=
+  match LOOKUP with
+  | Lookup_Z _ _ _ _ _ _ _ => Fin.FZ
+  | Lookup_S _ _ _ _ _ _ LOOKUP => Fin.FS (evalLookup LOOKUP)
+  end.
+
+Lemma nth_list_evalLookup_snd x ty Gamma (LOOKUP : Lookup x ty Gamma)
+  : ty = snd (nth_list Gamma (evalLookup LOOKUP)).
+Proof.
+  induction LOOKUP; simpl.
+  - exact ty_eq.
+  - exact IHLOOKUP.
+Defined.
+
+Definition evalLookup' {x : name} {ty : typ} {Gamma : ctx} (LOOKUP : Lookup x ty Gamma) (rho : eval_ctx Gamma) : eval_typ ty.
+Proof.
+  assert (eval_typ ty = eval_typ (snd (nth_list Gamma (evalLookup LOOKUP)))) as EQ by exact (f_equal eval_typ (nth_list_evalLookup_snd x ty Gamma LOOKUP)).
+  rewrite -> EQ. exact (rho (evalLookup LOOKUP)).
+Defined.
+
+Variable eval_con : forall c : L.(constants), eval_typ (typ_of_constant c).
+
+Fixpoint evalTyping Gamma e ty (TYPING : Typing Gamma e ty) {struct TYPING} : eval_ctx Gamma -> eval_typ ty.
+Proof.
+  destruct TYPING.
+  - exact (evalLookup' LOOKUP).
+  - exact (fun rho : eval_ctx Gamma => evalTyping _ _ _ TYPING1 rho (evalTyping _ _ _ TYPING2 rho)).
+  - exact (fun rho : eval_ctx Gamma => fun a : eval_typ ty1 => evalTyping _ _ _ TYPING (Fin.caseS a rho)).
+  - exact (fun _ : eval_ctx Gamma => eval_con c).
+Defined.
+
+End INTERPRET.
 
 End STLC.
 
