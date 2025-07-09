@@ -1155,6 +1155,16 @@ Class retracts (X : Type) (P : Prop) : Type :=
     : retraction (section x) = x
   }.
 
+Definition Prop_to_Set (P : Prop) : Set :=
+  P.
+
+#[local]
+Instance trivial_retraction (P : Prop) : retracts (Prop_to_Set P) P :=
+  { section (x : Prop_to_Set P) := x
+  ; retraction (H : P) := H
+  ; retraction_section := @eq_refl (Prop_to_Set P)
+  }.
+
 End B.
 
 Infix "+'" := B.sum1 (at level 50, left associativity) : type_scope.
