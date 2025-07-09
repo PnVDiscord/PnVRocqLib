@@ -1141,8 +1141,8 @@ Inductive void1 (A : Type) : Type :=.
 
 #[projections(primitive)]
 Record sig {X : Set} {P : X -> Prop} : Set :=
-  { lift : X
-  ; property : P lift
+  { proj1_sig : X
+  ; proj2_sig : P proj1_sig
   }.
 
 #[global] Arguments B.sig : clear implicits.
