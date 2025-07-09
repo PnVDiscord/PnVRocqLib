@@ -165,7 +165,8 @@ Fixpoint evalLookup {x : name} {ty : typ} {Gamma : ctx} (LOOKUP : Lookup x ty Ga
   | Lookup_S _ _ _ _ _ _ LOOKUP => Fin.FS (evalLookup LOOKUP)
   end.
 
-Lemma nth_list_evalLookup_snd x ty Gamma (LOOKUP : Lookup x ty Gamma)
+Lemma nth_list_evalLookup_snd x ty Gamma
+  (LOOKUP : Lookup x ty Gamma)
   : ty = snd (nth_list Gamma (evalLookup LOOKUP)).
 Proof.
   induction LOOKUP; simpl.
