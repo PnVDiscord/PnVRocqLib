@@ -672,3 +672,91 @@ Proof.
 Qed.
 
 #[global] Hint Rewrite in_downto_iff : simplication_hints.
+
+Section SET_LEVEL_LE.
+
+Inductive lessthanequalto (n : nat) : nat -> Set :=
+  | lessthanequalto_refl
+    : n ≦ n
+  | lessthanequalto_step m
+    (LE : n ≦ m)
+    : n ≦ S m
+  where "n ≦ m" := (lessthanequalto n m) : nat_scope.
+
+Lemma lessthanequalto_to_le n m
+  (LE : n ≦ m)
+  : n <= m.
+Proof.
+  induction LE; simpl.
+  - econs 1.
+  - econs 2. eassumption.
+Defined.
+
+Fixpoint le_to_lessthanequalto (m : nat) {struct m} : forall n, n <= m -> n ≦ m.
+Proof.
+  destruct m as [ | m].
+  - intros [ | n] H.
+    + econs 1.
+    + exfalso. lia.
+  - intros [ | n] H.
+    + econs 2. eapply le_to_lessthanequalto. lia.
+    + assert (n <= m) as IH by lia.
+      apply le_to_lessthanequalto in IH.
+      revert IH. clear. intros ?. induction IH.
+      * econs 1.
+      * econs 2. eassumption.
+Defined.
+
+Theorem lessthanequalto_pirrel {n1 : nat} {n2 : nat}
+  (hyp1 : n1 ≦ n2)
+  (hyp2 : n1 ≦ n2)
+  : hyp1 = hyp2.
+Proof.
+  revert n2 hyp1 hyp2.
+  refine (
+    fix le_pirrel_fix (n2 : nat) (hyp1 : n1 ≦ n2) {struct hyp1} : forall hyp2 : n1 ≦ n2, hyp1 = hyp2 :=
+    match hyp1 as hyp1' in lessthanequalto _ n2' return forall hyp2 : n1 ≦ n2', hyp1' = hyp2 with
+    | lessthanequalto_refl _ => fun hyp2 : n1 ≦ n1 => _
+    | lessthanequalto_step _ n1' hyp1' => fun hyp2 : n1 ≦ S n1' => _
+    end
+  ).
+  - refine ((fun claim1 => _)
+      match hyp2 as hyp2' in lessthanequalto _ n2' return forall h_eq : n1 = n2', eq_rec n1 (lessthanequalto n1) (lessthanequalto_refl n1) n2' h_eq = hyp2' with
+      | lessthanequalto_refl _ => _
+      | lessthanequalto_step _ n2' hyp2' => _
+      end
+    ).
+    + exact (claim1 eq_refl).
+    + intros h_eq.
+      rewrite eq_pirrel_fromEqDec with (EQ1 := h_eq) (EQ2 := eq_refl).
+      reflexivity.
+    + intros h_eq. exfalso. contradiction (not_n_lt_n n2').
+      unfold "<". rewrite <- h_eq. eapply lessthanequalto_to_le; eassumption.
+  - refine ((fun claim2 => _)
+      match hyp2 as hyp2' in lessthanequalto _ n2' return forall h_eq : n2' = S n1', lessthanequalto_step n1 n1' hyp1' = eq_rec n2' (lessthanequalto n1) hyp2' (S n1') h_eq with
+      | lessthanequalto_refl _ => _
+      | lessthanequalto_step _ n2' hyp2' => _
+      end
+    ).
+    + exact (claim2 eq_refl).
+    + intros h_eq. contradiction (not_n_lt_n n1').
+      unfold "<". rewrite <- h_eq. eapply lessthanequalto_to_le; eassumption.
+    + intros h_eq.
+      pose proof (suc_n_eq_suc_m_elim h_eq) as hyp_eq; subst n2'.
+      rewrite eq_pirrel_fromEqDec with (EQ1 := h_eq) (EQ2 := eq_refl).
+      exact (f_equal (lessthanequalto_step n1 n1') (le_pirrel_fix n1' hyp1' hyp2')).
+Qed.
+
+#[global, program]
+Instance lessthanequalto_retracts_le (n : nat) (m : nat) : B.retracts (lessthanequalto n m) (le n m) :=
+  { section := lessthanequalto_to_le n m
+  ; retraction := le_to_lessthanequalto m n
+  }.
+Next Obligation.
+  eapply lessthanequalto_pirrel.
+Defined.
+Next Obligation.
+  eapply le_pirrel.
+Defined.
+
+End SET_LEVEL_LE.

@@ -1147,6 +1147,16 @@ Record sig {A : Set} {P : A -> Prop} : Set :=
 
 #[global] Arguments B.sig : clear implicits.
 
+#[universes(template), projections(primitive)]
+Class retracts (X : Type) (P : Prop) : Type :=
+  { section : X -> P
+  ; retraction : P -> X
+  ; retraction_section (x : X)
+    : retraction (section x) = x
+  ; section_retraction (H : P)
+    : section (retraction H) = H
+  }.
+
 End B.
 
 Infix "+'" := B.sum1 (at level 50, left associativity) : type_scope.
