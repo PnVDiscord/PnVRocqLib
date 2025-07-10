@@ -187,8 +187,7 @@ Qed.
 Example L_in_example2
   : E.empty ⊢ \(∀ "z", V "z" ∈ V "x" → V "z" ∈ V "x"\).
 Proof.
-  eapply HilbertCalculus_countable_complete.
-  intros A rho H_Gamma; simpl. done!.
+  eapply HilbertCalculus_countable_complete; ss!.
 Qed.
 
 End EXAMPLE.

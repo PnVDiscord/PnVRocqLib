@@ -7,8 +7,6 @@ Require Import PnV.Data.Vector.
 Declare Scope typ_scope.
 Delimit Scope typ_scope with typ.
 
-Reserved Notation "Gamma '⊢' M '⦂' A" (at level 70, no associativity).
-
 Module ChurchStyleStlc.
 
 #[local] Open Scope name_scope.
@@ -446,7 +444,7 @@ Qed.
 
 End TypingRule.
 
-Section INTERPRET.
+Section EVALUATION.
 
 Context {Sigma : signature L}.
 
@@ -478,7 +476,7 @@ Defined.
 
 Definition evalLookup' {x : name} {ty : typ} {Gamma : ctx} (LOOKUP : Lookup x ty Gamma) (rho : eval_ctx Gamma) : eval_typ ty.
 Proof.
-  assert (eval_typ ty = eval_typ (snd (nth_list Gamma (evalLookup LOOKUP)))) as EQ by exact (f_equal eval_typ (nth_list_evalLookup_snd x ty Gamma LOOKUP)).
+  assert (ty = (snd (nth_list Gamma (evalLookup LOOKUP)))) as EQ by exact (nth_list_evalLookup_snd x ty Gamma LOOKUP).
   rewrite -> EQ. exact (rho (evalLookup LOOKUP)).
 Defined.
 
@@ -493,7 +491,7 @@ Proof.
   - exact (fun _ : eval_ctx Gamma => eval_con c).
 Defined.
 
-End INTERPRET.
+End EVALUATION.
 
 End STLC.
 
