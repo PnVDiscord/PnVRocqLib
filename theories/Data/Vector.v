@@ -644,20 +644,22 @@ Proof.
       * intros i. eapply H_p with (i := FS i).
 Qed.
 
-Inductive Similarity_vec_list (A : Type) : forall n : nat, Similarity (Vector.t A n) (list A) :=
-  | Similarity_vec_list_nil
-    : is_similar_to (VNil) (@L.nil A)
-  | Similarity_vec_list_cons n x x' xs xs'
-    (x_corres : x = x')
+Inductive Similarity_vec_list {A : Type} {A' : Type} (SIM : Similarity A A') : forall n : nat, Similarity (Vector.t A n) (list A') :=
+  | VNil_corres_nil
+    : is_similar_to VNil (@L.nil A')
+  | VCons_corres_cons (n : nat) (x : A) (x' : A') (xs : Vector.t A n) (xs' : list A')
+    (x_corres : is_similar_to x x')
     (xs_corres : is_similar_to xs xs')
-    : is_similar_to (VCons n x xs) (@L.cons A x' xs').
+    : is_similar_to (VCons n x xs) (@L.cons A' x' xs').
+
+#[global] Existing Instance Similarity_vec_list.
 
 Lemma Similarity_vec_list_iff {A : Type} {n : nat} (xs : Vector.t A n) (xs' : list A)
-  : is_similar_to (Similarity := Similarity_vec_list A n) xs xs' <-> V.to_list xs = xs'.
+  : is_similar_to (Similarity := Similarity_vec_list eq n) xs xs' <-> V.to_list xs = xs'.
 Proof.
   split.
   - intros H_sim. induction H_sim; simpl; f_equal; eauto.
-  - intros <-. induction xs as [ | n x xs IH]; simpl; econs; eauto.
+  - intros <-. induction xs as [ | n x xs IH]; simpl; econs; try red; eauto.
 Qed.
 
 End V.
@@ -673,16 +675,6 @@ Ltac introVCons x' xs' :=
   apply V.caseS; intros x' xs'.
 
 Infix "!!" := V.nth.
-
-Inductive Similarity_vec {A : Type} {A' : Type} {SIM : Similarity A A'} : forall n : nat, Similarity (Vector.t A n) (Vector.t A' n) :=
-  | VNil_corres
-    : is_similar_to VNil VNil
-  | VCons_corres (n : nat) x x' xs xs'
-    (x_corres : is_similar_to x x')
-    (xs_corres : is_similar_to xs xs')
-    : is_similar_to (VCons n x xs) (VCons n x' xs').
-
-#[global] Existing Instance Similarity_vec.
 
 Fixpoint nth_list {A : Type} (xs : list A) {struct xs} : Fin.t (length xs) -> A :=
   match xs with

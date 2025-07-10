@@ -15,11 +15,12 @@ Inductive t {A : Type} : Type :=
 
 #[local] Infix "=~=" := is_similar_to.
 
-Inductive in_regex {A : Type} : Similarity (list A) (Re.t A) :=
+Inductive in_regex {A : Type} {A' : Type} (SIM : Similarity A A') : Similarity (list A) (Re.t A') :=
   | in_Empty
     : [] =~= Empty
-  | in_Char c
-    : [c] =~= Char c
+  | in_Char c c'
+    (c_corres : c =~= c')
+    : [c] =~= Char c'
   | in_Union_l s e1 e2
     (H_inl : s =~= e1)
     : s =~= Union e1 e2
@@ -52,7 +53,7 @@ Section REGULAR_LANGUAGE.
 #[local] Hint Rewrite @E.liftM2_spec : simplication_hints.
 #[local] Opaque liftM2.
 
-#[local] Infix "∈" := (is_similar_to (Similarity := Re.in_regex)) : type_scope.
+#[local] Infix "∈" := (is_similar_to (Similarity := Re.in_regex eq)) : type_scope.
 
 Import Re.
 
@@ -90,6 +91,7 @@ Proof with eauto with *.
     + des; subst...
     + induction H_IN...
   - intros H_in; induction H_in; simpl; rewrite!...
+    red in c_corres; congruence.
 Qed.
 
 Fixpoint fromString (s : list A) : regex A :=
