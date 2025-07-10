@@ -248,6 +248,14 @@ Proof.
   destruct nm1, nm2. unfold ne. simpl. rewrite ne_iff. split; congruence.
 Qed.
 
+Lemma eq_ne_dec nm1 nm2
+  : {eq nm1 nm2} + {ne nm1 nm2}.
+Proof.
+  pose proof (eq_dec nm1 nm2) as [EQ | NE].
+  - left; exact (EQ).
+  - right; exact (proj2 (ne_iff nm1 nm2) NE).
+Defined.
+
 End Name.
 
 Infix "≠" := Name.ne.

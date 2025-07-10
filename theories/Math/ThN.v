@@ -774,5 +774,8 @@ Instance lessthanequalto_retracts_le (n : nat) (m : nat) : B.retracts (lessthane
 Next Obligation.
   eapply lessthanequalto_proof_unique.
 Defined.
+Next Obligation.
+  eapply le_pirrel.
+Defined.
 
 End SET_LEVEL_LE.

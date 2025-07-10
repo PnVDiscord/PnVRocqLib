@@ -159,6 +159,22 @@ Proof.
   - intros. eapply Phi_S.
 Defined.
 
+Fixpoint Lookup_from_lookup_eq (Gamma : ctx) {struct Gamma} : forall x, forall ty, Some ty = L.lookup x Gamma -> Lookup x ty Gamma.
+Proof.
+  destruct Gamma as [ | [x' ty'] Gamma]; simpl; intros ? ? E; [congruence | destruct (eq_dec x x') as [EQ | NE]].
+  - pose proof (f_equal (B.fromMaybe ty') E) as E'. simpl in E'. econs 1; eassumption.
+  - pose proof (Lookup_from_lookup_eq Gamma _ _ E) as LOOKUP. rewrite <- Name.ne_iff in NE. econs 2; eassumption.
+Defined.
+
+Theorem Lookup_iff x ty Gamma
+  : inhabited (Lookup x ty Gamma) <-> L.lookup x Gamma = Some ty.
+Proof.
+  split.
+  - intros [X]. induction X; simpl; destruct (eq_dec x x') as [EQ | NE]; try congruence.
+    rewrite Name.ne_iff in x_ne. contradiction.
+  - intros E. econs. now eapply Lookup_from_lookup_eq.
+Qed.
+
 Fixpoint LookupProp (x : name) (ty : typ) (Gamma : ctx) {struct Gamma} : Prop :=
   match Gamma with
   | [] => False
@@ -185,13 +201,11 @@ Proof.
     + econs 2; [rewrite <- Name.ne_iff in NE; eassumption | exact (IH LOOKUP)].
 Defined.
 
-#[global, program]
-Instance Lookup_retracts x ty Gamma : B.retracts (Lookup x ty Gamma) (LookupProp x ty Gamma) :=
-  { section := Lookup_to_LookupProp x ty Gamma
-  ; retraction := LookupProp_to_Lookup x ty Gamma
-  }.
-Next Obligation.
-  rename x0 into X. induction X; simpl.
+Lemma LookupProp_Lookup_LookupProp x ty Gamma
+  (X : Lookup x ty Gamma)
+  : LookupProp_to_Lookup x ty Gamma (Lookup_to_LookupProp x ty Gamma X) = X.
+Proof.
+  induction X; simpl.
   - destruct (eq_dec x x') as [EQ | NE].
     + f_equal. eapply eq_pirrel_fromEqDec.
     + contradiction.
@@ -212,7 +226,31 @@ Proof.
   - eauto.
 Qed.
 
-Lemma Lookup_proof_unique {bty_hasEqDec : hasEqDec L.(basic_types)} x ty Gamma
+Context {bty_hasEqDec : hasEqDec L.(basic_types)}.
+
+Lemma LookupProp_pirrel x ty Gamma
+  (LOOKUP : LookupProp x ty Gamma)
+  (LOOKUP' : LookupProp x ty Gamma)
+  : LOOKUP = LOOKUP'.
+Proof.
+  revert LOOKUP LOOKUP'; induction Gamma as [ | [x' ty'] Gamma IH]; simpl; intros.
+  - tauto.
+  - destruct (eq_dec x x') as [EQ | NE].
+    + eapply eq_pirrel_fromEqDec.
+    + eapply IH.
+Qed.
+
+#[global, program]
+Instance Lookup_retracts x ty Gamma : B.retracts (Lookup x ty Gamma) (LookupProp x ty Gamma) :=
+  { section := Lookup_to_LookupProp x ty Gamma
+  ; retraction := LookupProp_to_Lookup x ty Gamma
+  ; retraction_section X := LookupProp_Lookup_LookupProp x ty Gamma X
+  }.
+Next Obligation.
+  eapply LookupProp_pirrel.
+Qed.
+
+Lemma Lookup_proof_unique x ty Gamma
   (LOOKUP : Lookup x ty Gamma)
   (LOOKUP' : Lookup x ty Gamma)
   : LOOKUP = LOOKUP'.
@@ -247,8 +285,8 @@ Definition Typing_code (Gamma : ctx) (e : trm) (ty : typ) : Set :=
   match e with
   | Var_trm x => Lookup x ty Gamma
   | App_trm e1 e2 => { ty1 : typ & (Typing Gamma e1 (ty1 -> ty)%typ * Typing Gamma e2 ty1)%type }
-  | Lam_trm y ty1 e1 => { ty2 : typ & (Typing ((y, ty1) :: Gamma) e1 ty2 * (ty = (ty1 -> ty2)%typ))%type }
-  | Con_trm c => ty = typ_of_constant c
+  | Lam_trm y ty1 e1 => { ty2 : typ & (Typing ((y, ty1) :: Gamma) e1 ty2 * B.Prop_to_Set (ty = (ty1 -> ty2)%typ))%type }
+  | Con_trm c => B.Prop_to_Set (ty = typ_of_constant c)
   end.
 
 Definition Typing_encode {Gamma} {e} {ty} (TYPING : Typing Gamma e ty) : Typing_code Gamma e ty :=
@@ -266,8 +304,8 @@ Proof.
   destruct e; simpl in *.
   - econs 1; eassumption.
   - destruct TYPING as [ty1 [TYPING1 TYPING2]]. econs 2; eassumption.
-  - destruct TYPING as [ty2 [TYPING1 EQ]]. subst ty. econs 3; eassumption.
-  - subst ty. econs 4.
+  - destruct TYPING as [ty2 [TYPING1 EQ]]. red in EQ. subst ty. econs 3; eassumption.
+  - red in TYPING. subst ty. econs 4.
 Defined.
 
 Lemma Typing_encode_decode Gamma e ty
@@ -277,8 +315,8 @@ Proof.
   destruct e; simpl in *.
   - reflexivity.
   - destruct TYPING as [ty1 [TYPING1 TYPING2]]. reflexivity.
-  - destruct TYPING as [ty1 [TYPING EQ]]. subst ty. reflexivity.
-  - subst ty. reflexivity.
+  - destruct TYPING as [ty1 [TYPING EQ]]. red in EQ. subst ty. reflexivity.
+  - red in TYPING. subst ty. reflexivity.
 Qed.
 
 Lemma Typing_decode_encode Gamma e ty
@@ -342,24 +380,67 @@ Proof.
     reflexivity.
 Qed.
 
-Fixpoint TypingProp (Gamma : ctx) (e : trm) (ty : typ) {struct e} : Prop :=
+Fixpoint TypeInfer {bty_hasEqDec : hasEqDec L.(basic_types)} (Gamma : ctx) (e : trm) {struct e} : option typ :=
   match e with
-  | Var_trm x => LookupProp x ty Gamma
-  | App_trm e1 e2 => exists ty1, TypingProp Gamma e1 (ty1 -> ty)%typ /\ TypingProp Gamma e2 ty1
-  | Lam_trm y ty1 e1 => exists ty2, TypingProp ((y, ty1) :: Gamma) e1 ty2 /\ ty = (ty1 -> ty2)%typ
-  | Con_trm c => ty = typ_of_constant c
+  | Var_trm x => L.lookup x Gamma
+  | App_trm e1 e2 =>
+    match TypeInfer Gamma e1, TypeInfer Gamma e2 with
+    | Some (ty1 -> ty2)%typ, Some ty1' => if eqb ty1 ty1' then Some ty2 else None
+    | _, _ => None
+    end
+  | Lam_trm y ty1 e1 =>
+    match TypeInfer ((y, ty1) :: Gamma) e1 with
+    | Some ty2 => Some (ty1 -> ty2)%typ
+    | _ => None
+    end
+  | Con_trm c => Some (typ_of_constant c)
   end.
 
-Lemma Typing_to_TypingProp Gamma e ty
+Lemma TypeInfer_eq_Some_intro {bty_hasEqDec : hasEqDec L.(basic_types)} Gamma e ty
   (TYPING : Typing Gamma e ty)
-  : TypingProp Gamma e ty.
+  : TypeInfer Gamma e = Some ty.
 Proof.
   induction TYPING; simpl.
-  - eapply Lookup_to_LookupProp. exact LOOKUP.
-  - exists ty1. split; [exact IHTYPING1 | exact IHTYPING2].
-  - exists ty2. split; [exact IHTYPING | reflexivity].
+  - rewrite <- Lookup_iff. econs; eassumption.
+  - rewrite IHTYPING1. rewrite IHTYPING2. unfold eqb. destruct (eq_dec _ _) as [EQ | NE]; [reflexivity | contradiction].
+  - rewrite IHTYPING. reflexivity.
   - reflexivity.
 Defined.
+
+Lemma TypeInfer_eq_Some_elim {bty_hasEqDec : hasEqDec L.(basic_types)}
+  : forall e, forall Gamma, forall ty, Some ty = TypeInfer Gamma e -> Typing Gamma e ty.
+Proof.
+  fix IH 1. intros e. destruct e as [x | e1 e2 | y ty1 e1 | c]; simpl; intros Gamma ty E.
+  - eapply Var_typ; eapply Lookup_from_lookup_eq; eassumption.
+  - destruct (TypeInfer Gamma e1) as [[b | ty1' ty2'] | ] eqn: VIEW1; try congruence.
+    destruct (TypeInfer Gamma e2) as [ty' | ] eqn: VIEW2; try congruence.
+    unfold eqb in E. destruct (eq_dec ty1' ty') as [EQ | NE]; try congruence.
+    eapply App_typ with (ty1 := ty'); eapply IH; congruence.
+  - destruct (TypeInfer ((y, ty1) :: Gamma) e1) as [ty2 | ] eqn: VIEW1; try congruence.
+    apply f_equal with (f := B.fromMaybe ty) in E. simpl in E. subst ty.
+    eapply Lam_typ; eapply IH; congruence.
+  - apply f_equal with (f := B.fromMaybe ty) in E. simpl in E. subst ty.
+    eapply Con_typ.
+Defined.
+
+Lemma Typing_retraction {bty_hasEqDec : hasEqDec L.(basic_types)} Gamma e ty
+  (TYPING : inhabited (Typing Gamma e ty))
+  : Typing Gamma e ty.
+Proof.
+  eapply TypeInfer_eq_Some_elim. destruct TYPING as [TYPING]. symmetry. eapply TypeInfer_eq_Some_intro. exact TYPING.
+Defined.
+
+#[global, program]
+Instance Typing_retracts {bty_hasEqDec : hasEqDec L.(basic_types)} Gamma e ty : B.retracts (Typing Gamma e ty) (inhabited (Typing Gamma e ty)) :=
+  { section := @inhabits (Typing Gamma e ty)
+  ; retraction := Typing_retraction (bty_hasEqDec := bty_hasEqDec) Gamma e ty
+  }.
+Next Obligation.
+  eapply Typing_proof_unique.
+Qed.
+Next Obligation.
+  destruct H. f_equal. eapply Typing_proof_unique.
+Qed.
 
 (* TODO *)
 
