@@ -7,6 +7,7 @@ Require Import PnV.Logic.HilbertFol2.
 Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 Require Import PnV.System.Lambda1.
+Require Import PnV.Logic.ClassicalFol.
 
 #[global]
 Coercion named_var (nm : name) : ivar :=
@@ -149,6 +150,15 @@ Module ObjectZFC.
 Variant L_in_relation_symbols : Set :=
   | symbol_IN : L_in_relation_symbols.
 
+#[global, program]
+Instance L_in_relation_symbols_isCountable : isCountable L_in_relation_symbols :=
+  { encode _ := 0
+  ; decode _ := Some symbol_IN
+  }.
+Next Obligation.
+  destruct x; reflexivity.
+Qed.
+
 Definition L_in : language :=
   {|
     function_symbols := Empty_set;
@@ -162,14 +172,23 @@ Definition L_in : language :=
 
 Section EXAMPLE.
 
+Import FolNotations.
+Import FolHilbert.
 Import FolViewer.
 
 #[local] Notation "t1 '∈' t2" := (@Rel_frm L_in symbol_IN (@S_trms L_in 1 t1 (@S_trms L_in 0 t2 (@O_trms L_in)))) (t1 custom trm_view at level 5, t2 custom trm_view at level 5, in custom frm_view at level 6).
 
-Example fol_viewer_example1
+Example L_in_example1
   : \(`[V "x" / "y"](∀ "x", V "x" ∈ V "y")\) ≡α \(∀ "z", V "z" ∈ V "x"\).
 Proof.
   eapply alpha_All_frm with (z := un_name "z"); reflexivity.
+Qed.
+
+Example L_in_example2
+  : E.empty ⊢ \(∀ "z", V "z" ∈ V "x" → V "z" ∈ V "x"\).
+Proof.
+  eapply HilbertCalculus_countable_complete.
+  intros A rho H_Gamma; simpl. done!.
 Qed.
 
 End EXAMPLE.
