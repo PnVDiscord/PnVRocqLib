@@ -132,7 +132,7 @@ Defined.
 Fixpoint first_nat (p : nat -> bool) (n : nat) : nat :=
   match n with
   | O => 0
-  | S n' => if p (first_nat p n') then first_nat p n' else n
+  | S n' => let m := first_nat p n' in if p m then m else n
   end.
 
 Theorem first_nat_spec (p : nat -> bool) (n : nat)
@@ -178,7 +178,8 @@ Proof.
   pose proof (nat_search_lemma p EXISTENCE') as [n WITNESS].
   exists (first_nat p n). unnw. pose proof (first_nat_spec p n WITNESS) as claim.
   simpl in claim. unnw. destruct claim as [claim1 claim2]. split.
-  - intros i H_lt. specialize claim2 with (i := i). unfold p in claim2. rewrite Nat.eqb_eq in claim2. fold p in claim2. destruct (f i) as [ | y'].
+  - intros i H_lt. specialize claim2 with (i := i). unfold p in claim2.
+    rewrite Nat.eqb_eq in claim2. fold p in claim2. destruct (f i) as [ | y'].
     + lia.
     + exists (S y'). lia.
   - rewrite <- Nat.eqb_eq with (n := f (first_nat p n)) (m := 0). exact claim1.
