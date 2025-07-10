@@ -210,13 +210,6 @@ String Notation name parse_name print_name : name_scope.
 
 Module Name.
 
-Section PP_name_EXAMPLE1.
-
-Let x1 : name :=
-  "x1".
-
-End PP_name_EXAMPLE1.
-
 Notation t := name.
 
 Definition is_valid (nm : Name.t) : bool :=
@@ -255,6 +248,13 @@ Proof.
   - left; exact (EQ).
   - right; exact (proj2 (ne_iff nm1 nm2) NE).
 Defined.
+
+Section PP_name_EXAMPLE1.
+
+Let x1 : name :=
+  "x1".
+
+End PP_name_EXAMPLE1.
 
 End Name.
 

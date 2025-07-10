@@ -654,12 +654,12 @@ Inductive Similarity_vec_list {A : Type} {A' : Type} (SIM : Similarity A A') : f
 
 #[global] Existing Instance Similarity_vec_list.
 
-Lemma Similarity_vec_list_iff {A : Type} {n : nat} (xs : Vector.t A n) (xs' : list A)
+Lemma Similarity_vec_list_eq_iff {A : Type} {n : nat} (xs : Vector.t A n) (xs' : list A)
   : is_similar_to (Similarity := Similarity_vec_list eq n) xs xs' <-> V.to_list xs = xs'.
 Proof.
   split.
-  - intros H_sim. induction H_sim; simpl; f_equal; eauto.
-  - intros <-. induction xs as [ | n x xs IH]; simpl; econs; try red; eauto.
+  - intros H_sim; induction H_sim; simpl; f_equal; eauto.
+  - intros <-; induction xs as [ | n x xs IH]; simpl; econs; try red; eauto.
 Qed.
 
 End V.
