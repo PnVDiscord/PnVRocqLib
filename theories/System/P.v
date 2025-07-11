@@ -249,6 +249,22 @@ Proof.
   - right; exact (proj2 (ne_iff nm1 nm2) NE).
 Defined.
 
+Definition Fresh (nms : list name) : name :=
+  next_name (maxs nms).
+
+Lemma Fresh_ne nms nm
+  (IN : L.In nm nms)
+  : ne nm (Fresh nms).
+Proof.
+  unfold Fresh. left. unfold next_name. simpl.
+  enough (un_name nm <= un_name (maxs nms)) by lia.
+  revert nm IN. induction nms as [ | nm' nms' IH]; simpl; intros.
+  - contradiction.
+  - destruct IN as [EQ | IN].
+    + subst nm'. lia.
+    + pose proof (IH nm IN) as claim. lia.
+Qed.
+
 Section PP_name_EXAMPLE1.
 
 Let x1 : name :=
