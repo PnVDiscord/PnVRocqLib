@@ -25,6 +25,7 @@ Require Import PnV.Prelude.AC.
 Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Prelude.Notations.
+Require Import PnV.Prelude.Quot.
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.SfLib.
 Require Import PnV.System.BasicITreeTh.
