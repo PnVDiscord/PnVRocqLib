@@ -1117,6 +1117,38 @@ Proof.
     + econs.
 Qed.
 
+Lemma bind_isSome_iff {A : Type} {B : Type} (m : option A) (k : A -> option B)
+  : isSome (bind m k) = true <-> (exists x, m = Some x /\ isSome (k x) = true).
+Proof.
+  destruct m as [x | ]; simpl; now firstorder congruence.
+Qed.
+
+Lemma pure_isSome_iff {A : Type} (x : A)
+  : isSome (pure x) = true <-> True.
+Proof.
+  tauto.
+Qed.
+
+Lemma liftM2_isSome_iff {A : Type} {B : Type} {C : Type} (m1 : option A) (m2 : option B) (f : A -> B -> C)
+  : isSome (liftM2 f m1 m2) = true <-> (exists x, exists y, m1 = Some x /\ m2 = Some y).
+Proof.
+  unfold liftM2. simpl. destruct m1 as [x | ], m2 as [y | ]; simpl; split; i; des; try congruence.
+  exists x. exists y. split; trivial.
+Qed.
+
+Lemma observe_bind {A : Type} {B : Type} (m : option A) (k : A -> option B) (z : option B) :
+  @B.maybe A (fun _ : option A => option B) None k m = z <->
+  match z with
+  | Some y => exists x, m = Some x /\ k x = Some y
+  | None => m = None \/ (exists x, m = Some x /\ k x = None)
+  end. 
+Proof.
+  destruct m as [x | ]; cbn.
+  - destruct (k x) as [y | ] eqn: H_OBS; destruct z as [obs | ]; firstorder try congruence.
+    exists x. split; congruence.
+  - destruct z as [obs | ]; split; i; des; tauto || congruence.
+Qed.
+
 #[universes(polymorphic=yes)]
 Definition Rel_id@{u} {A : Type@{u}} : ensemble@{u} (A * A) :=
   fun '(x1, x2) => x1 = x2.
@@ -1330,6 +1362,33 @@ Proof.
 Qed.
 
 #[global] Hint Rewrite in_remove_iff : simplication_hints.
+
+Fixpoint replicate {A : Type} (n : nat) (x : A) : list A :=
+  match n with
+  | O => []
+  | S n => x :: replicate n x
+  end.
+
+Lemma replicate_unfold {A : Type} (n : nat) (x : A) :
+  replicate n x =
+  match n with
+  | O => []
+  | S n => x :: replicate n x
+  end.
+Proof.
+  destruct n; reflexivity.
+Defined.
+
+Lemma replicate_rev_unfold {A : Type} (n : nat) (x : A) :
+  replicate n x =
+  match n with
+  | O => []
+  | S n => replicate n x ++ [x]
+  end.
+Proof.
+  destruct n as [ | n]; simpl; trivial.
+  induction n as [ | n IH]; simpl; congruence.
+Qed.
 
 Lemma list_rev_dual {A : Type} (phi : list A -> Prop)
   (H_rev : forall n, phi (L.rev n))

@@ -1,4 +1,5 @@
 Require Import PnV.Prelude.Prelude.
+Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Math.ThN.
 Require Import Coq.Strings.String.
 Require Import Coq.Arith.Wf_nat.
@@ -249,6 +250,132 @@ Proof.
   - right; exact (proj2 (ne_iff nm1 nm2) NE).
 Defined.
 
+Section GOOD.
+
+#[local] Opaque "+" "*" Nat.ltb L.replicate "*" "/" "mod".
+
+Theorem print_parse nm nm'
+  (EQ : (print_name nm >>= parse_name) = Some nm')
+  : nm = nm'.
+Proof.
+  enough (WTS : Some nm = Some nm') by congruence.
+  simpl in EQ. destruct (print_name nm) as [bs | ] eqn: PRINT; simpl in *; try congruence.
+  unfold print_name in PRINT. unfold parse_name in EQ.
+  destruct bs as [ | b bs]; try congruence.
+  destruct (print_name1 _ _) as [ | b' bs'] eqn: H_OBS; try congruence. simpl bind in *.
+  destruct (unAlphaNum b') as [d' | ] eqn: H_b'; simpl B.maybe in *; try congruence.
+  destruct (unAlphaNum b) as [d | ] eqn: H_b; simpl B.maybe in *; try congruence.
+  destruct (d' <? 10)%nat as [ | ] eqn: H_d'; try congruence.
+  destruct (d <? 10)%nat as [ | ] eqn: H_d; try congruence.
+  assert (b = b' /\ bs = bs') as [EQ_b EQ_bs] by now split; congruence.
+  subst b' bs'. remember (b :: bs) as vecb eqn: E. clear b bs E H_b H_b' d d' H_d H_d' PRINT.
+  rename vecb into bs. revert nm nm' H_OBS EQ. induction bs as [ | b bs IH] using L.list_rev_rect; simpl; intros.
+  - destruct (Nat.eq_dec _ _) as [YES | NO].
+    + rewrite <- EQ. rewrite <- YES. simpl. destruct nm; simpl; reflexivity.
+    + erewrite print_name1_pirrel with (H_Acc' := lt_wf (un_name nm / 36)) in H_OBS.
+      destruct (print_name1 (un_name nm / 36) (lt_wf (un_name nm / 36))) as [ | ? ?]; simpl in *; try congruence.
+  - destruct (Nat.eq_dec _ _) as [YES | NO].
+    + destruct bs as [ | ? ?]; simpl in *; try congruence.
+    + erewrite print_name1_pirrel with (H_Acc' := lt_wf (un_name nm / 36)) in H_OBS.
+      rewrite L.snoc_inv_iff in H_OBS. destruct H_OBS as [EQ1 EQ2].
+      destruct nm as [n], nm' as [m]; simpl un_name in *.
+      rewrite B.observe_bind in EQ. destruct EQ as (N & EQ & H_N). subst.
+      rewrite <- H_N. pose proof (IH (mk_name (n / 36)) (mk_name (N / 36))) as IH_inst. simpl un_name in IH_inst.
+      specialize (IH_inst eq_refl).
+      assert (Some (mk_name (n / 36)) = Some (mk_name (N / 36))) as GO1.
+      { eapply IH_inst. rewrite B.observe_bind. exists (N / 36). split; trivial.
+        unfold parse_name1 in EQ |- *. rewrite fold_left_app in EQ. unfold fold_left in EQ at 1.
+        unfold liftM2 in EQ. change bind with (fun m => fun k => @B.maybe _ (fun _ : option nat => option nat) None k m) in EQ.
+        cbn beta in EQ. rewrite B.observe_bind in EQ. des. rewrite B.observe_bind in EQ0. des. replace (N / 36) with x; eauto. inv EQ1.
+        assert (x0 < 36) as LT.
+        { revert EQ0. clear. unfold unAlphaNum, mkAlphaNum.
+          pose proof (Nat.mod_bound_pos n 36) as LT.
+          assert (n mod 36 < 36) as H_lt by lia.
+          clear LT; revert H_lt. generalize (n mod 36) as m. clear.
+          do 36 (destruct m as [ | m]; try congruence || lia).
+        }
+        pose proof (div_mod_uniqueness (x0 + 36 * x) 36 x x0). lia.
+      }
+      assert (Some (mk_name (n mod 36)) = Some (mk_name (N mod 36))) as GO2.
+      { unfold parse_name1 in EQ |- *. rewrite fold_left_app in EQ. unfold fold_left in EQ at 1.
+        unfold liftM2 in EQ. change bind with (fun m => fun k => @B.maybe _ (fun _ : option nat => option nat) None k m) in EQ.
+        cbn beta in EQ. rewrite B.observe_bind in EQ. des. rewrite B.observe_bind in EQ0. des. inv EQ1. do 2 f_equal.
+        assert (x0 < 36) as LT.
+        { revert EQ0. clear. unfold unAlphaNum, mkAlphaNum.
+          pose proof (Nat.mod_bound_pos n 36) as LT.
+          assert (n mod 36 < 36) as H_lt by lia.
+          clear LT; revert H_lt. generalize (n mod 36) as m. clear.
+          do 36 (destruct m as [ | m]; try congruence || lia).
+        }
+        replace ((x0 + 36 * x) mod 36) with x0; cycle 1.
+        { pose proof (div_mod_uniqueness (x0 + 36 * x) 36 x x0). lia. }
+        revert EQ0. clear. unfold unAlphaNum, mkAlphaNum.
+        pose proof (Nat.mod_bound_pos n 36) as LT.
+        assert (n mod 36 < 36) as H_lt by lia.
+        clear LT; revert H_lt. generalize (n mod 36) as m. clear.
+        do 36 (destruct m as [ | m]; try congruence || lia).
+      }
+      assert (n / 36 = N / 36) as YES1 by congruence.
+      assert (n mod 36 = N mod 36) as YES2 by congruence.
+      do 2 f_equal. pose proof (Nat.div_mod n 36). pose proof (Nat.div_mod N 36). lia.
+Qed.
+
+End GOOD.
+
+Section PRINCE_NAME.
+
+Definition gen_prince_name (n : nat) : name :=
+  mk_name (10 * 36 ^ n).
+
+#[local] Opaque "+" "*" Nat.ltb L.replicate "*" "/" "mod".
+
+Lemma print_prince_name n
+  : print_name (gen_prince_name n) = Some (x61 :: L.replicate n x30).
+Proof.
+  unfold gen_prince_name. unfold print_name. induction n as [ | n IH]; simpl.
+  - destruct (Nat.eq_dec _ _) as [EQ | NE].
+    + lia.
+    + reflexivity.
+  - destruct (Nat.eq_dec _ _) as [EQ | NE].
+    + exfalso. clear IH. induction n as [ | n IH]; simpl in *; lia.
+    + erewrite print_name1_pirrel with (H_Acc' := lt_wf (10 * (36 * 36 ^ n) / 36)).
+      replace (10 * (36 * 36 ^ n) / 36) with (10 * 36 ^ n); cycle 1.
+      { pose proof (div_mod_uniqueness (10 * (36 * 36 ^ n)) 36 (10 * 36 ^ n) 0). lia. }
+      simpl un_name in IH. destruct (print_name1 (10 * 36 ^ n) (lt_wf (10 * 36 ^ n))) as [ | b bs]; simpl; try congruence.
+      replace ((10 * (36 * 36 ^ n)) mod 36) with 0; cycle 1.
+      { pose proof (div_mod_uniqueness (10 * (36 * 36 ^ n)) 36 (10 * 36 ^ n) 0). lia. }
+      rewrite L.replicate_rev_unfold. simpl in *. destruct (unAlphaNum b) as [d | ]; simpl in *.
+      * destruct (d <? 10)%nat as [ | ]; congruence.
+      * congruence.
+Qed.
+
+Lemma parse_prince_name n
+  : parse_name (x61 :: L.replicate n x30) = Some (gen_prince_name n).
+Proof.
+  unfold gen_prince_name. unfold parse_name. induction n as [ | n IH]; simpl in *.
+  - reflexivity.
+  - replace (10 <? 10)%nat with false in * by reflexivity.
+    rewrite B.observe_bind in IH |- *. destruct IH as [x [H_x EQ]].
+    exists (36 * x). split.
+    + rewrite L.replicate_rev_unfold. unfold parse_name1 in H_x |- *.
+      simpl. rewrite fold_left_app. simpl. rewrite B.observe_bind.
+      exists x. split.
+      * unfold liftM2 in H_x. simpl in H_x. congruence.
+      * f_equal; lia.
+    + assert (x = 10 * 36 ^ n) as -> by congruence.
+      do 2 f_equal. lia.
+Qed.
+
+Theorem prince_name_is_valid n
+  : is_valid (gen_prince_name n) = true.
+Proof.
+  unfold is_valid. eapply B.bind_isSome_iff.
+  exists (x61 :: L.replicate n x30).
+  rewrite print_prince_name. rewrite parse_prince_name. simpl. split; trivial.
+Qed.
+
+End PRINCE_NAME.
+
 Definition Fresh (nms : list name) : name :=
   next_name (maxs nms).
 
@@ -263,6 +390,54 @@ Proof.
   - destruct IN as [EQ | IN].
     + subst nm'. lia.
     + pose proof (IH nm IN) as claim. lia.
+Qed.
+
+Inductive calc_fresh_step (P_valid : nat -> Prop) : nat -> nat -> Prop :=
+  | calc_fresh_step_fail n
+    (FAIL : ~ P_valid n)
+    : calc_fresh_step P_valid (S n) n.
+
+Lemma initial_step (P_valid : nat -> Prop)
+  (EXISTENCE : exists n, P_valid n)
+  : Acc (calc_fresh_step P_valid) 0.
+Proof.
+  destruct EXISTENCE as [n TRUE].
+  enough (WTS : forall i, forall p, i <= n -> n = p + i -> Acc (calc_fresh_step P_valid) p).
+  { eapply WTS with (i := n).
+    - eapply @le_reflexivity.
+    - reflexivity.
+  }
+  induction i as [ | i IH]; simpl; intros ? LE EQ.
+  - rewrite Nat.add_0_r in EQ. subst p. econs.
+    intros j SEARCH. inv SEARCH. congruence.
+  - econs. intros j SEARCH. eapply IH.
+    + eapply @le_transitivity with (n2 := S i).
+      * eapply le_S. eapply le_n.
+      * exact LE.
+    + inv SEARCH. simpl. rewrite Nat.add_comm. simpl. f_equal. eapply Nat.add_comm. 
+Defined.
+
+Fixpoint calc_fresh_go (P_valid : nat -> Prop) (P_valid_dec : forall n, {P_valid n} + {~ P_valid n}) (n : nat) (H_Acc : Acc (calc_fresh_step P_valid) n) {struct H_Acc} : nat.
+Proof.
+  destruct (P_valid_dec n) as [YES | NO].
+  - exact n.
+  - exact (calc_fresh_go P_valid P_valid_dec (S n) (Acc_inv H_Acc (calc_fresh_step_fail P_valid n NO))).
+Defined.
+
+Lemma calc_fresh_go_pirrel (P_valid : nat -> Prop) (P_valid_dec : forall n, {P_valid n} + {~ P_valid n}) (n : nat) (H_Acc : Acc (calc_fresh_step P_valid) n) (H_Acc' : Acc (calc_fresh_step P_valid) n)
+  : calc_fresh_go P_valid P_valid_dec n H_Acc = calc_fresh_go P_valid P_valid_dec n H_Acc'.
+Proof.
+  pose proof (COPY := H_Acc). revert H_Acc H_Acc'. induction COPY as [n _ IH].
+  intros [H_Acc_inv] [H_Acc_inv']; simpl. destruct (P_valid_dec n) as [YES | NO].
+  - reflexivity.
+  - erewrite IH; eauto. econs. exact NO.
+Qed.
+
+Fixpoint calc_fresh_go_correct (P_valid : nat -> Prop) (P_valid_dec : forall x, {P_valid x} + {~ P_valid x}) (n : nat) (H_Acc : Acc (calc_fresh_step P_valid) n) {struct H_Acc} : P_valid (calc_fresh_go P_valid P_valid_dec n H_Acc).
+Proof.
+  destruct H_Acc; simpl. destruct (P_valid_dec n) as [YES | NO].
+  - exact YES.
+  - eapply calc_fresh_go_correct.
 Qed.
 
 Section PP_name_EXAMPLE1.

@@ -350,6 +350,46 @@ Proof with lia || eauto.
       eapply mod_add...
 Qed.
 
+Section LOGARITHM.
+
+Lemma log_aux1 b n
+  (b_gt_1 : b > 1)
+  (n_gt_0 : n > 0)
+  : n / b < n.
+Proof.
+  pose proof (Nat.div_mod n b) as H.
+  rewrite H at 2; try lia.
+  destruct b as [ | [ | b]]; lia.
+Qed.
+
+Fixpoint log1 (b : nat) (n : nat) (b_gt_1 : b > 1) (n_gt_0 : n > 0) (H_Acc : Acc lt n) {struct H_Acc} : nat :=
+  match le_lt_dec (n / b) 0 with
+  | left H_LE => 0
+  | right H_GT => 1 + log1 b (n / b) b_gt_1 H_GT (Acc_inv H_Acc (log_aux1 b n b_gt_1 n_gt_0))
+  end.
+
+Fixpoint log1_pirrel b n b_gt_1 n_gt_0 H_Acc H_Acc' {struct H_Acc} : log1 b n b_gt_1 n_gt_0 H_Acc = log1 b n b_gt_1 n_gt_0 H_Acc'.
+Proof.
+  destruct H_Acc, H_Acc'; simpl. destruct (le_lt_dec (n / b) 0); [reflexivity | f_equal; eapply log1_pirrel].
+Qed.
+
+Definition log (b : nat) (n : nat) (b_gt_1 : b > 1) (n_gt_0 : n > 0) : nat :=
+  log1 b n b_gt_1 n_gt_0 (lt_wf n).
+
+Lemma log_unfold (b : nat) (n : nat) (b_gt_1 : b > 1) (n_gt_0 : n > 0) :
+  log b n b_gt_1 n_gt_0 =
+  match le_lt_dec (n / b) 0 with
+  | left H_LE => 0
+  | right H_GT => 1 + log b (n / b) b_gt_1 H_GT
+  end.
+Proof.
+  unfold log at 1; simpl. destruct (le_lt_dec _ _) as [H_LE | H_GT]; simpl.
+  - reflexivity.
+  - f_equal. eapply log1_pirrel.
+Qed.
+
+End LOGARITHM.
+
 Section section_for_maxs.
 
 #[local] Notation In := List.In.
