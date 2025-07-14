@@ -414,8 +414,6 @@ Proof.
     { erewrite <- Nat.mul_le_mono_pos_l; try lia. }
 Qed.
 
-Proof.
-
 End LOGARITHM.
 
 Section section_for_maxs.
