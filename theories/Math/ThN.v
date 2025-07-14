@@ -409,9 +409,25 @@ Proof.
     rewrite Nat.div_mod with (x := x / b) (y := b) at 1; try lia. red in LE |- *.
     transitivity (b * (x / b / b) + b).
     { pose proof (Nat.mod_bound_pos (x / b) b); lia. }
-    transitivity (b * S (x / b / b)).
-    { lia. }
-    { erewrite <- Nat.mul_le_mono_pos_l; try lia. }
+    transitivity (b * S (x / b / b)); try lia.
+    erewrite <- Nat.mul_le_mono_pos_l; lia.
+Qed.
+
+Lemma exp_log_sandwitch (b : nat) (x : nat) (b_gt_1 : b > 1) (x_gt_0 : x > 0)
+  (y := log b x b_gt_1 x_gt_0)
+  : b ^ y <= x /\ b ^ (1 + y) > x.
+Proof.
+  subst y. simpl. split; [eapply exp_log_upper_bound | unfold ">"].
+  induction (lt_wf x) as [x _ IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
+  - replace (b ^ 0) with 1 by now induction b as [ | b H]; simpl in *; lia.
+    pose proof (Nat.div_mod x b) as claim1. replace (x / b) with 0 in claim1 by lia.
+    rewrite Nat.mul_comm in claim1. rewrite Nat.mul_comm. simpl in *. pose proof (Nat.mod_bound_pos x b); lia. 
+  - simpl. pose proof (IH (x / b) (log_aux1 b x b_gt_1 x_gt_0) NO) as LE.
+    rewrite Nat.div_mod with (x := x) (y := b) at 1; try lia. red in LE |- *.
+    transitivity (b * (x / b) + b).
+    { pose proof (Nat.mod_bound_pos x b); lia. }
+    transitivity (b * S (x / b)); try lia.
+    erewrite <- Nat.mul_le_mono_pos_l; lia.
 Qed.
 
 End LOGARITHM.
