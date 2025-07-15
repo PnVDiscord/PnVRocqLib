@@ -103,8 +103,12 @@ Inductive alphaEquiv : trm -> trm -> Prop :=
     (ALPHA2 : alphaEquiv N N')
     : alphaEquiv (App_trm M N) (App_trm M' N')
   | alphaEquiv_Lam x x' x'' ty M M'
+    (FRESH1 : ~ L.In x'' (FVs (Lam_trm x ty M)))
+    (FRESH2 : ~ L.In x'' (FVs (Lam_trm x' ty M')))
     (ALPHA1 : alphaEquiv (subst_trm (one_subst x (Var_trm x'')) M) (subst_trm (one_subst x' (Var_trm x'')) M'))
-    : alphaEquiv (Lam_trm x ty M) (Lam_trm x' ty M').
+    : alphaEquiv (Lam_trm x ty M) (Lam_trm x' ty M')
+  | alphaEquiv_con c
+    : alphaEquiv (Con_trm c) (Con_trm c).
 
 (* TODO *)
 
