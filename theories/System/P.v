@@ -411,68 +411,20 @@ Qed.
 
 End PRINCE_NAME.
 
-Definition Fresh (nms : list name) : name :=
+Definition fresh_nm_variant (nms : list name) : name :=
   next_name (maxs nms).
 
-Lemma Fresh_ne nms nm
+Lemma fresh_nm_variant_ne nms nm
   (IN : L.In nm nms)
-  : ne nm (Fresh nms).
+  : ne nm (fresh_nm_variant nms).
 Proof.
-  unfold Fresh. left. unfold next_name. simpl.
+  unfold fresh_nm_variant. left. unfold next_name. simpl.
   enough (un_name nm <= un_name (maxs nms)) by lia.
   revert nm IN. induction nms as [ | nm' nms' IH]; simpl; intros.
   - contradiction.
   - destruct IN as [EQ | IN].
     + subst nm'. lia.
     + pose proof (IH nm IN) as claim. lia.
-Qed.
-
-Inductive calc_fresh_step (P_valid : nat -> Prop) : nat -> nat -> Prop :=
-  | calc_fresh_step_fail n
-    (FAIL : ~ P_valid n)
-    : calc_fresh_step P_valid (S n) n.
-
-Lemma initial_step (P_valid : nat -> Prop)
-  (EXISTENCE : exists n, P_valid n)
-  : Acc (calc_fresh_step P_valid) 0.
-Proof.
-  destruct EXISTENCE as [n TRUE].
-  enough (WTS : forall i, forall p, i <= n -> n = p + i -> Acc (calc_fresh_step P_valid) p).
-  { eapply WTS with (i := n).
-    - eapply @le_reflexivity.
-    - reflexivity.
-  }
-  induction i as [ | i IH]; simpl; intros ? LE EQ.
-  - rewrite Nat.add_0_r in EQ. subst p. econs.
-    intros j SEARCH. inv SEARCH. congruence.
-  - econs. intros j SEARCH. eapply IH.
-    + eapply @le_transitivity with (n2 := S i).
-      * eapply le_S. eapply le_n.
-      * exact LE.
-    + inv SEARCH. simpl. rewrite Nat.add_comm. simpl. f_equal. eapply Nat.add_comm. 
-Defined.
-
-Fixpoint calc_fresh_go (P_valid : nat -> Prop) (P_valid_dec : forall n, {P_valid n} + {~ P_valid n}) (n : nat) (H_Acc : Acc (calc_fresh_step P_valid) n) {struct H_Acc} : nat.
-Proof.
-  destruct (P_valid_dec n) as [YES | NO].
-  - exact n.
-  - exact (calc_fresh_go P_valid P_valid_dec (S n) (Acc_inv H_Acc (calc_fresh_step_fail P_valid n NO))).
-Defined.
-
-Lemma calc_fresh_go_pirrel (P_valid : nat -> Prop) (P_valid_dec : forall n, {P_valid n} + {~ P_valid n}) (n : nat) (H_Acc : Acc (calc_fresh_step P_valid) n) (H_Acc' : Acc (calc_fresh_step P_valid) n)
-  : calc_fresh_go P_valid P_valid_dec n H_Acc = calc_fresh_go P_valid P_valid_dec n H_Acc'.
-Proof.
-  pose proof (COPY := H_Acc). revert H_Acc H_Acc'. induction COPY as [n _ IH].
-  intros [H_Acc_inv] [H_Acc_inv']; simpl. destruct (P_valid_dec n) as [YES | NO].
-  - reflexivity.
-  - erewrite IH; eauto. econs. exact NO.
-Qed.
-
-Fixpoint calc_fresh_go_correct (P_valid : nat -> Prop) (P_valid_dec : forall x, {P_valid x} + {~ P_valid x}) (n : nat) (H_Acc : Acc (calc_fresh_step P_valid) n) {struct H_Acc} : P_valid (calc_fresh_go P_valid P_valid_dec n H_Acc).
-Proof.
-  destruct H_Acc; simpl. destruct (P_valid_dec n) as [YES | NO].
-  - exact YES.
-  - eapply calc_fresh_go_correct.
 Qed.
 
 Section PP_name_EXAMPLE1.
