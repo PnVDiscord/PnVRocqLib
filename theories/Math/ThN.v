@@ -388,12 +388,30 @@ Proof.
   - f_equal. eapply log1_pirrel.
 Qed.
 
+Lemma exp_r_0 (b : nat)
+  : b ^ 0 = 1.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma exp_r_S (b : nat) (x : nat)
+  : b ^ (S x) = b * (b ^ x).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma exp_gt_0 (b : nat) (x : nat) (b_gt_1 : b > 1)
+  : b ^ x > 0.
+Proof.
+  induction x as [ | x IH]; simpl in *; lia.
+Qed.
+
 Lemma exp_log_upper_bound (b : nat) (x : nat) (b_gt_1 : b > 1) (x_gt_0 : x > 0)
   (y := log b x b_gt_1 x_gt_0)
   : b ^ y <= x.
 Proof.
   subst y. induction (lt_wf x) as [x _ IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
-  - replace (b ^ 0) with 1 by now induction b as [ | b H]; simpl in *; lia. lia.
+  - rewrite exp_r_0; lia.
   - simpl. pose proof (IH (x / b) (log_aux1 b x b_gt_1 x_gt_0) NO) as LE. transitivity (b * (x / b)).
     + erewrite <- Nat.mul_le_mono_pos_l; lia.
     + erewrite Nat.div_mod with (x := x) (y := b) at 2; lia. 
@@ -404,7 +422,7 @@ Lemma exp_log_lower_bound (b : nat) (x : nat) (b_gt_1 : b > 1) (x_gt_0 : x > 0)
   : x / b < b ^ y.
 Proof.
   subst y. induction (lt_wf x) as [x _ IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
-  - replace (b ^ 0) with 1 by now induction b as [ | b H]; simpl in *; lia. lia.
+  - rewrite exp_r_0; lia.
   - simpl. pose proof (IH (x / b) (log_aux1 b x b_gt_1 x_gt_0) NO) as LE.
     rewrite Nat.div_mod with (x := x / b) (y := b) at 1; try lia. red in LE |- *.
     transitivity (b * (x / b / b) + b).
@@ -413,14 +431,13 @@ Proof.
     erewrite <- Nat.mul_le_mono_pos_l; lia.
 Qed.
 
-Lemma exp_log_sandwitch (b : nat) (x : nat) (b_gt_1 : b > 1) (x_gt_0 : x > 0)
+Theorem exp_log_sandwitch (b : nat) (x : nat) (b_gt_1 : b > 1) (x_gt_0 : x > 0)
   (y := log b x b_gt_1 x_gt_0)
   : b ^ y <= x /\ b ^ (1 + y) > x.
 Proof.
   subst y. simpl. split; [eapply exp_log_upper_bound | unfold ">"].
   induction (lt_wf x) as [x _ IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
-  - replace (b ^ 0) with 1 by now induction b as [ | b H]; simpl in *; lia.
-    pose proof (Nat.div_mod x b) as claim1. replace (x / b) with 0 in claim1 by lia.
+  - rewrite exp_r_0. pose proof (Nat.div_mod x b) as claim1. replace (x / b) with 0 in claim1 by lia.
     rewrite Nat.mul_comm in claim1. rewrite Nat.mul_comm. simpl in *. pose proof (Nat.mod_bound_pos x b); lia. 
   - simpl. pose proof (IH (x / b) (log_aux1 b x b_gt_1 x_gt_0) NO) as LE.
     rewrite Nat.div_mod with (x := x) (y := b) at 1; try lia. red in LE |- *.
@@ -428,6 +445,26 @@ Proof.
     { pose proof (Nat.mod_bound_pos x b); lia. }
     transitivity (b * S (x / b)); try lia.
     erewrite <- Nat.mul_le_mono_pos_l; lia.
+Qed.
+
+Lemma log_pirrel (b : nat) (n : nat) (m : nat) (b_gt_1 : b > 1) (n_gt_0 : n > 0) (m_gt_0 : m > 0)
+  (EQ : n = m)
+  : log b n b_gt_1 n_gt_0 = log b m b_gt_1 m_gt_0.
+Proof.
+  subst m. rewrite le_pirrel with (LE1 := n_gt_0) (LE2 := m_gt_0); reflexivity.
+Qed.
+
+Lemma log_exp (b : nat) (x : nat) (b_gt_1 : b > 1)
+  : log b (b ^ x) b_gt_1 (exp_gt_0 b x b_gt_1) = x.
+Proof.
+  induction x as [ | x IH]; simpl.
+  - rewrite log_unfold. destruct (le_lt_dec _ _) as [H_LE | H_GT]; trivial.
+    pose proof (Nat.div_mod 1 b). lia.
+  - rewrite log_unfold. destruct (le_lt_dec _ _) as [H_LE | H_GT]; simpl.
+    + pose proof (div_mod_uniqueness (b * b ^ x) b (b ^ x) 0); pose proof (exp_gt_0 b x b_gt_1); lia.
+    + assert (EQ : b * (b ^ x) / b = b ^ x).
+      { pose proof (div_mod_uniqueness (b * b ^ x) b (b ^ x) 0). lia. }
+      f_equal. rewrite <- IH at 2. eapply log_pirrel; trivial.
 Qed.
 
 End LOGARITHM.
