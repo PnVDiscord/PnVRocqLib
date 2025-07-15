@@ -447,11 +447,15 @@ Proof.
     erewrite <- Nat.mul_le_mono_pos_l; lia.
 Qed.
 
-Lemma log_pirrel (b : nat) (n : nat) (m : nat) (b_gt_1 : b > 1) (n_gt_0 : n > 0) (m_gt_0 : m > 0)
-  (EQ : n = m)
-  : log b n b_gt_1 n_gt_0 = log b m b_gt_1 m_gt_0.
+Lemma log_pirrel (a : nat) (b : nat) (n : nat) (m : nat) (a_gt_1 : a > 1) (b_gt_1 : b > 1) (n_gt_0 : n > 0) (m_gt_0 : m > 0)
+  (EQ1 : a = b)
+  (EQ2 : n = m)
+  : log a n a_gt_1 n_gt_0 = log b m b_gt_1 m_gt_0.
 Proof.
-  subst m. rewrite le_pirrel with (LE1 := n_gt_0) (LE2 := m_gt_0); reflexivity.
+  subst m. subst a.
+  rewrite le_pirrel with (LE1 := a_gt_1) (LE2 := b_gt_1).
+  rewrite le_pirrel with (LE1 := m_gt_0) (LE2 := n_gt_0).
+  reflexivity.
 Qed.
 
 Lemma log_exp (b : nat) (x : nat) (b_gt_1 : b > 1)
