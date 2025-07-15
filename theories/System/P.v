@@ -225,6 +225,17 @@ Fixpoint maxs (nms : list Name.t) : Name.t :=
   | nm :: nms' => max nm (maxs nms')
   end.
 
+Lemma in_le_maxs (nms : list name) (nm : name)
+  (IN : L.In nm nms)
+  : un_name nm <= un_name (maxs nms).
+Proof.
+  revert nm IN. induction nms as [ | [n] nms IH]; simpl.
+  - tauto.
+  - intros nm [<- | IN]; simpl.
+    + lia.
+    + rewrite IH; trivial; lia.
+Qed.
+
 Definition ne (nm1 : Name.t) (nm2 : Name.t) : Prop :=
   un_name nm1 ≠ un_name nm2.
 
@@ -407,6 +418,12 @@ Proof.
   - intros nm [<- | H_IN]; simpl.
     + lia.
     + rewrite IH; trivial; lia.
+Qed.
+
+Lemma fresh_nm_notin (nms : list name)
+  : ~ L.In (fresh_nm nms) nms.
+Proof.
+  intros IN. apply fresh_nm_gt in IN. lia.
 Qed.
 
 End PRINCE_NAME.
