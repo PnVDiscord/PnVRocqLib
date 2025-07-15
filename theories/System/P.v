@@ -374,6 +374,41 @@ Proof.
   rewrite print_prince_name. rewrite parse_prince_name. simpl. split; trivial.
 Qed.
 
+Definition captain_name (nms : list name) : name :=
+  let LE1 : 2 <= 36 := ltac:(repeat econs) in
+  let LE2 : 1 <= 1 + un_name (maxs nms) := le_intro_plus_l _ _ in
+  gen_prince_name (1 + log 36 (1 + un_name (maxs nms)) LE1 LE2).
+
+Lemma captain_name_is_valid (nms : list name)
+  : is_valid (captain_name nms) = true.
+Proof.
+  unfold captain_name. simpl. eapply prince_name_is_valid.
+Qed.
+
+Lemma captain_name_gt_maxs (nms : list name)
+  : un_name (maxs nms) < un_name (captain_name nms).
+Proof.
+  unfold captain_name. set (maxs nms) as nm. set (1 + un_name nm) as n.
+  simpl un_name. unfold n. red. replace (S (un_name nm)) with (1 + un_name nm) by reflexivity.
+  fold n. set (m := log 36 n _ _).
+  pose proof (exp_gt_0 36 m ltac:(repeat econs)).
+  enough (n < 36 ^ (1 + m)) by lia.
+  pose proof (exp_log_sandwitch 36 n ltac:(repeat econs) (le_intro_plus_l _ _)) as claim1.
+  cbn zeta in claim1. destruct claim1 as [_ claim1]. simpl in claim1. fold m in claim1. trivial.
+Qed.
+
+Lemma captain_name_gt (nms : list name)
+  : forall nm, In nm nms -> un_name nm < un_name (captain_name nms).
+Proof.
+  intros nm H_IN. pose proof (captain_name_gt_maxs nms) as claim1.
+  red in claim1 |- *. rewrite <- claim1. eapply le_intro_S_n_le_S_m.
+  clear claim1. revert nm H_IN. induction nms as [ | [n] nms IH]; simpl.
+  - tauto.
+  - intros nm [<- | H_IN]; simpl.
+    + lia.
+    + rewrite IH; trivial; lia.
+Qed.
+
 End PRINCE_NAME.
 
 Definition Fresh (nms : list name) : name :=
