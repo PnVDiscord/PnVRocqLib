@@ -428,14 +428,14 @@ Qed.
 
 End PRINCE_NAME.
 
-Definition fresh_nm_variant (nms : list name) : name :=
+Definition fresh_nm_variant1 (nms : list name) : name :=
   next_name (maxs nms).
 
-Lemma fresh_nm_variant_ne nms nm
+Lemma fresh_nm_variant1_ne nms nm
   (IN : L.In nm nms)
-  : ne nm (fresh_nm_variant nms).
+  : ne nm (fresh_nm_variant1 nms).
 Proof.
-  unfold fresh_nm_variant. left. unfold next_name. simpl.
+  unfold fresh_nm_variant1. left. unfold next_name. simpl.
   enough (un_name nm <= un_name (maxs nms)) by lia.
   revert nm IN. induction nms as [ | nm' nms' IH]; simpl; intros.
   - contradiction.
