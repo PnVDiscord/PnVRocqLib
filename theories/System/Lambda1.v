@@ -497,6 +497,86 @@ Defined.
 
 End EVALUATION.
 
+Section SN.
+
+Inductive betaOnce : trm -> trm -> Prop :=
+  | betaOnce_beta x ty M N
+    : betaOnce (App_trm (Lam_trm x ty M) N) (subst_trm (one_subst x N) M)
+  | betaOnce_appl M M' N
+    (BETA' : betaOnce M M')
+    : betaOnce (App_trm M N) (App_trm M' N)
+  | betaOnce_appr M N N'
+    (BETA' : betaOnce N N')
+    : betaOnce (App_trm M N) (App_trm M N')
+  | betaOnce_lam x ty M M'
+    (BETA' : betaOnce M M')
+    : betaOnce (Lam_trm x ty M) (Lam_trm x ty M').
+
+Lemma betaOnce_dec (M : trm)
+  : B.sig trm (fun N => betaOnce M N) + B.Prop_to_Set (forall N : trm, ~ betaOnce M N).
+Proof.
+  induction M.
+  - right. red. intros N BETA. inv BETA.
+  - destruct M1 as [x | M N | x ty M | c].
+    + destruct IHM1 as [[N BETA1] | NOT_BETA1].
+      { left. exists (App_trm N M2). econs 2. exact BETA1. }
+      destruct IHM2 as [[N BETA2] | NOT_BETA2].
+      { left. exists (App_trm (Var_trm x) N). econs 3. exact BETA2. }
+      right. red in NOT_BETA1, NOT_BETA2 |- *. intros N BETA. inv BETA.
+      { eapply NOT_BETA1. exact BETA'. }
+      { eapply NOT_BETA2. exact BETA'. }
+    + destruct IHM1 as [[N' BETA1] | NOT_BETA1].
+      { left. exists (App_trm N' M2). econs 2. exact BETA1. }
+      destruct IHM2 as [[N' BETA2] | NOT_BETA2].
+      { left. exists (App_trm (App_trm M N) N'). econs 3. exact BETA2. }
+      right. red in NOT_BETA1, NOT_BETA2 |- *. intros N' BETA. inv BETA.
+      { eapply NOT_BETA1. exact BETA'. }
+      { eapply NOT_BETA2. exact BETA'. }
+    + left. exists (subst_trm (one_subst x M2) M). econs 1.
+    + destruct IHM1 as [[N BETA1] | NOT_BETA1].
+      { left. exists (App_trm N M2). econs 2. exact BETA1. }
+      destruct IHM2 as [[N BETA2] | NOT_BETA2].
+      { left. exists (App_trm (Con_trm c) N). econs 3. exact BETA2. }
+      right. red in NOT_BETA1, NOT_BETA2 |- *. intros N BETA. inv BETA.
+      { eapply NOT_BETA1. exact BETA'. }
+      { eapply NOT_BETA2. exact BETA'. }
+  - destruct IHM as [[N' BETA] | NOT_BETA1].
+    + left. exists (Lam_trm y ty N'). econs 4. exact BETA.
+    + right. red in NOT_BETA1 |- *. intros N BETA. inv BETA.
+      eapply NOT_BETA1. exact BETA'.
+  - right. red. intros N BETA. inv BETA.
+Defined.
+
+Inductive sn (M : trm) : Prop :=
+  | sn_intro (sn_inv : forall N, betaOnce M N -> sn N).
+
+Definition sn_inv {M : trm} (H_sn : sn M) : forall N, betaOnce M N -> sn N :=
+  match H_sn with
+  | @sn_intro _ sn_inv => sn_inv
+  end.
+
+Fixpoint normalize_with_sn (M : trm) (H_sn : sn M) {struct H_sn} : trm :=
+  match betaOnce_dec M with
+  | inl YES => let N : trm := B.proj1_sig YES in normalize_with_sn N (sn_inv H_sn N (B.proj2_sig YES))
+  | inr NO => M
+  end.
+
+Fixpoint normalize_with_sn_pirrel (M : trm) (H_sn : sn M) (H_sn' : sn M) {struct H_sn} : normalize_with_sn M H_sn = normalize_with_sn M H_sn'.
+Proof.
+  destruct H_sn, H_sn'; simpl. destruct (betaOnce_dec M) as [YES | NO]; simpl.
+  - eapply normalize_with_sn_pirrel.
+  - reflexivity.
+Qed.
+
+Fixpoint normalize_with_sn_normalized (M : trm) (N : trm) (H_sn : sn M) {struct H_sn} : ~ betaOnce (normalize_with_sn M H_sn) N.
+Proof.
+  destruct H_sn; simpl. intros BETA. destruct (betaOnce_dec M) as [YES | NO].
+  - eapply normalize_with_sn_normalized. exact BETA.
+  - red in NO. exact (NO N BETA).
+Qed.
+
+End SN.
+
 End STLC.
 
 #[global] Arguments trm : clear implicits.
