@@ -448,54 +448,99 @@ Qed.
 
 End TypingRule.
 
-Section EVALUATION.
+Section NORMALISATION_BY_EVALUATION.
+
+Definition le_ctx (Gamma : ctx) (Delta : ctx) : Set :=
+  forall x : name, forall ty : typ, Lookup x ty Gamma -> Lookup x ty Delta.
+
+Lemma le_ctx_cons Gamma ty'
+  (y := Name.fresh_nm (map fst Gamma))
+  : le_ctx Gamma ((y, ty') :: Gamma).
+Proof.
+  intros x ty LOOKUP. econs 2.
+  - assert (H_IN : L.In x (map fst Gamma)).
+    { apply Lookup_to_LookupProp in LOOKUP.
+      subst y. induction Gamma as [ | [x1 ty1] Gamma IH]; simpl in *.
+      - exact LOOKUP.
+      - destruct (eq_dec x x1) as [EQ | NE].
+        + left. symmetry. exact EQ.
+        + right. eapply IH. exact LOOKUP. 
+    }
+    pose proof (Name.fresh_nm_notin (map fst Gamma)) as claim1.
+    fold y in claim1. rewrite Name.ne_iff. intros EQ. congruence.
+  - exact LOOKUP.
+Defined.
 
 Context {Sigma : signature L}.
 
-Variable eval_bty : L.(basic_types) -> Set.
+Inductive typNe (Gamma : ctx) : trm -> typ -> Prop :=
+  | typNe_Var x ty
+    (LOOKUP : Lookup x ty Gamma)
+    : typNe Gamma (Var_trm x) ty
+  | typNe_App u v ty ty'
+    (u_typNe : typNe Gamma u (ty -> ty')%typ)
+    (v_typNf : typNf Gamma v ty)
+    : typNe Gamma (App_trm u v) ty'
+  | typNe_Con c ty
+    (ty_eq : ty = Sigma c)
+    : typNe Gamma (Con_trm c) ty
+with typNf (Gamma : ctx) : trm -> typ -> Prop :=
+  | typNf_of_typNe u ty
+    (u_typNe : typNe Gamma u ty)
+    : typNf Gamma u ty
+  | typNf_Lam x v ty ty'
+    (v_typNf : typNf ((x, ty) :: Gamma) v ty')
+    : typNf Gamma (Lam_trm x ty v) (ty -> ty')%typ.
 
-Fixpoint eval_typ (ty : typ) : Set :=
+Lemma le_ctx_preserves_typNe (Gamma : ctx) (u : trm) (ty : typ)
+  (u_typNe : typNe Gamma u ty)
+  : forall Delta, le_ctx Gamma Delta -> typNe Delta u ty
+with le_ctx_preserves_typNf (Gamma : ctx) (v : trm) (ty : typ)
+  (v_typNf : typNf Gamma v ty)
+  : forall Delta, le_ctx Gamma Delta -> typNf Delta v ty.
+Proof.
+  - destruct u_typNe; intros Delta LE.
+    + econs 1. eapply LE; eassumption.
+    + econs 2.
+      * eapply le_ctx_preserves_typNe; eassumption.
+      * eapply le_ctx_preserves_typNf; eassumption.
+    + econs 3; eassumption.
+  - destruct v_typNf; intros Delta LE.
+    + econs 1. eapply le_ctx_preserves_typNe; eassumption.
+    + econs 2. eapply le_ctx_preserves_typNf; try eassumption.
+      red in LE |- *. intros x1 ty1 LOOKUP1. pattern LOOKUP1. revert LOOKUP1.
+      eapply Lookup_cons.
+      * intros. econs 1; eassumption.
+      * intros. econs 2; try eassumption. eapply LE; eassumption.
+Defined.
+
+Fixpoint eval_typ (ty : typ) (Gamma : ctx) : Set :=
   match ty with
-  | bty _ b => eval_bty b
-  | (ty1 -> ty2)%typ => eval_typ ty1 -> eval_typ ty2
+  | bty _ b => B.sig trm (fun u => typNe Gamma u (@bty L b))
+  | (ty1 -> ty2)%typ => forall Gamma' : ctx, le_ctx Gamma Gamma' -> eval_typ ty1 Gamma' -> eval_typ ty2 Gamma'
   end.
 
-Definition eval_ctx (Gamma : ctx) : Set :=
-  forall i : Fin.t (length Gamma), eval_typ (snd (nth_list Gamma i)).
-
-Fixpoint evalLookup {x : name} {ty : typ} {Gamma : ctx} (LOOKUP : Lookup x ty Gamma) {struct LOOKUP} : Fin.t (length Gamma) :=
-  match LOOKUP with
-  | Lookup_Z _ _ _ _ _ _ _ => Fin.FZ
-  | Lookup_S _ _ _ _ _ _ LOOKUP => Fin.FS (evalLookup LOOKUP)
-  end.
-
-Lemma nth_list_evalLookup_snd x ty Gamma
-  (LOOKUP : Lookup x ty Gamma)
-  : ty = snd (nth_list Gamma (evalLookup LOOKUP)).
+Fixpoint reflect (Gamma : ctx) (ty : typ) {struct ty} : B.sig trm (fun u => typNe Gamma u ty) -> eval_typ ty Gamma
+with reify (Gamma : ctx) (ty : typ) {struct ty} : eval_typ ty Gamma -> B.sig trm (fun v => typNf Gamma v ty).
 Proof.
-  induction LOOKUP; simpl.
-  - exact ty_eq.
-  - exact IHLOOKUP.
+  - destruct ty as [b | ty1 ty2]; simpl; intros u_hat.
+    + eapply u_hat.
+    + intros Delta LE a. set (v_hat := reify Delta ty1 a).
+      eapply reflect. exists (App_trm (u_hat).(B.proj1_sig) (v_hat).(B.proj1_sig)). econs 2.
+      * eapply le_ctx_preserves_typNe; [exact (u_hat).(B.proj2_sig) | exact LE].
+      * exact (v_hat).(B.proj2_sig).
+  - destruct ty as [b | ty1 ty2]; simpl; intros d.
+    + exists d.(B.proj1_sig). econs 1. exact d.(B.proj2_sig).
+    + set (y := Name.fresh_nm (map fst Gamma)).
+      pose proof (le_ctx_cons Gamma ty1) as claim1. simpl in claim1. fold y in claim1.
+      assert (y_hat : B.sig trm (fun u : trm => typNe ((y, ty1) :: Gamma) u ty1)).
+      { exists (Var_trm y). econs 1. econs 1; reflexivity. }
+      set (a := reflect ((y, ty1) :: Gamma) ty1 y_hat).
+      set (body := reify _ _ (d ((y, ty1) :: Gamma) claim1 a)).
+      exists (Lam_trm y ty1 body.(B.proj1_sig)). econs 2. exact (body).(B.proj2_sig).
 Defined.
 
-Definition evalLookup' {x : name} {ty : typ} {Gamma : ctx} (LOOKUP : Lookup x ty Gamma) (rho : eval_ctx Gamma) : eval_typ ty.
-Proof.
-  assert (ty = (snd (nth_list Gamma (evalLookup LOOKUP)))) as EQ by exact (nth_list_evalLookup_snd x ty Gamma LOOKUP).
-  rewrite -> EQ. exact (rho (evalLookup LOOKUP)).
-Defined.
-
-Variable eval_con : forall c : L.(constants), eval_typ (typ_of_constant c).
-
-Fixpoint evalTyping Gamma e ty (TYPING : Typing Gamma e ty) {struct TYPING} : eval_ctx Gamma -> eval_typ ty.
-Proof.
-  destruct TYPING.
-  - exact (evalLookup' LOOKUP).
-  - exact (fun rho : eval_ctx Gamma => evalTyping _ _ _ TYPING1 rho (evalTyping _ _ _ TYPING2 rho)).
-  - exact (fun rho : eval_ctx Gamma => fun a : eval_typ ty1 => evalTyping _ _ _ TYPING (Fin.caseS a rho)).
-  - exact (fun _ : eval_ctx Gamma => eval_con c).
-Defined.
-
-End EVALUATION.
+End NORMALISATION_BY_EVALUATION.
 
 Section SN.
 
