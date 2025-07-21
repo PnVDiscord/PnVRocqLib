@@ -514,11 +514,40 @@ Proof.
       * intros. econs 2; try eassumption. eapply LE; eassumption.
 Defined.
 
-Fixpoint eval_typ (ty : typ) (Gamma : ctx) : Set :=
+Lemma le_ctx_preserves_Typing {Gamma} {e} {ty}
+  (TYPING : Typing Gamma e ty)
+  : forall Delta : ctx, le_ctx Gamma Delta -> Typing Delta e ty.
+Proof.
+  induction TYPING; simpl; intros Delta LE.
+  - econs 1. eapply LE. exact LOOKUP.
+  - econs 2.
+    + eapply IHTYPING1. exact LE.
+    + eapply IHTYPING2. exact LE.
+  - econs 3. eapply IHTYPING.
+    intros x ty LOOKUP. pattern LOOKUP. revert LOOKUP. eapply Lookup_cons.
+    + intros x_EQ ty_EQ. subst x ty. econs 1; reflexivity.
+    + intros x_NE LOOKUP. econs 2.
+      * exact x_NE.
+      * eapply LE; eassumption.
+  - econs 4.
+Defined.
+
+Fixpoint eval_typ (ty : typ) (Gamma : ctx) {struct ty} : Set :=
   match ty with
   | bty _ b => B.sig trm (fun u => typNe Gamma u (@bty L b))
   | (ty1 -> ty2)%typ => forall Gamma' : ctx, le_ctx Gamma Gamma' -> eval_typ ty1 Gamma' -> eval_typ ty2 Gamma'
   end.
+
+Lemma le_ctx_preserves_eval_typ {Gamma} {ty}
+  (d : eval_typ ty Gamma)
+  : forall Delta : ctx, le_ctx Gamma Delta -> eval_typ ty Delta.
+Proof.
+  induction ty; simpl in *; intros Delta LE.
+  - exists d.(B.proj1_sig). eapply le_ctx_preserves_typNe; [exact d.(B.proj2_sig) | exact LE].
+  - intros Gamma' LE' a; eapply d.
+    + intros x ty LOOKUP. eapply LE'. eapply LE. exact LOOKUP.
+    + exact a.
+Defined.
 
 Fixpoint reflect (Gamma : ctx) (ty : typ) {struct ty} : B.sig trm (fun u => typNe Gamma u ty) -> eval_typ ty Gamma
 with reify (Gamma : ctx) (ty : typ) {struct ty} : eval_typ ty Gamma -> B.sig trm (fun v => typNf Gamma v ty).
@@ -538,6 +567,36 @@ Proof.
       set (a := reflect ((y, ty1) :: Gamma) ty1 y_hat).
       set (body := reify _ _ (d ((y, ty1) :: Gamma) claim1 a)).
       exists (Lam_trm y ty1 body.(B.proj1_sig)). econs 2. exact (body).(B.proj2_sig).
+Defined.
+
+Definition eval_ctx (Gamma : ctx) (Delta : ctx) : Set :=
+  forall x, forall ty, Lookup x ty Gamma -> eval_typ ty Delta.
+
+Fixpoint evalTyping Gamma e ty (TYPING : Typing Gamma e ty) {struct TYPING} : forall Delta : ctx, eval_ctx Gamma Delta -> eval_typ ty Delta.
+Proof.
+  destruct TYPING; simpl; intros Delta rho.
+  - refine (rho x ty LOOKUP).
+  - refine (evalTyping Gamma e1 (ty1 -> ty2)%typ TYPING1 Delta rho _ _ (evalTyping Gamma e2 ty1 TYPING2 Delta rho)).
+    intros x ty LOOKUP. exact LOOKUP.
+  - intros Gamma' LE a.
+    eapply evalTyping with (Gamma := (y, ty1) :: Gamma) (e := e1).
+    + exact TYPING.
+    + intros x ty LOOKUP. pattern LOOKUP. revert LOOKUP. eapply Lookup_cons.
+      * intros x_EQ ty_EQ. subst ty1. exact a.
+      * intros NE LOOKUP.
+        pose proof (rho_x := rho x ty LOOKUP).
+        exact (le_ctx_preserves_eval_typ rho_x Gamma' LE).
+  - eapply reflect. exists (Con_trm c). econs 3. reflexivity.
+Defined.
+
+Definition NbE (Gamma : ctx) (e : trm) (ty : typ) (TYPING : Typing Gamma e ty)
+  : B.sig trm (fun v => typNf Gamma v ty).
+Proof.
+  eapply reify.
+  eapply evalTyping.
+  - exact TYPING.
+  - intros x1 ty1 LOOKUP. eapply reflect.
+    exists (Var_trm x1). econs 1. exact LOOKUP.
 Defined.
 
 End NORMALISATION_BY_EVALUATION.
