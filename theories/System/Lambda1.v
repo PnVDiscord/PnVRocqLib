@@ -439,9 +439,6 @@ Next Obligation.
   destruct H. f_equal. eapply Typing_proof_unique.
 Qed.
 
-Definition substTyping (Gamma : ctx) (s : subst) (Delta : ctx) : Set :=
-  forall x, forall ty, Lookup x ty Gamma -> Typing Delta (s x) ty.
-
 Inductive equality (Gamma : ctx) : trm -> trm -> typ -> Prop :=
   | equality_refl A M
     (TYPING : Gamma ⊢ M ⦂ A)
@@ -603,7 +600,7 @@ Proof.
 Defined.
 
 Definition eval_ctx (Gamma : ctx) (Delta : ctx) : Set :=
-  forall x, forall ty, Lookup x ty Gamma -> eval_typ ty Delta.
+  forall x : name, forall ty : typ, Lookup x ty Gamma -> eval_typ ty Delta.
 
 Fixpoint evalTyping Gamma e ty (TYPING : Typing Gamma e ty) {struct TYPING} : forall Delta : ctx, eval_ctx Gamma Delta -> eval_typ ty Delta.
 Proof.
@@ -685,7 +682,9 @@ Proof.
 Defined.
 
 Inductive sn (M : trm) : Prop :=
-  | sn_intro (sn_inv : forall N, betaOnce M N -> sn N).
+  | sn_intro
+    (sn_inv : forall N, betaOnce M N -> sn N)
+    : sn M.
 
 Definition sn_inv {M : trm} (H_sn : sn M) : forall N, betaOnce M N -> sn N :=
   match H_sn with
@@ -718,6 +717,7 @@ End STLC.
 
 #[global] Arguments trm : clear implicits.
 #[global] Arguments ctx : clear implicits.
+#[global] Arguments subst : clear implicits.
 #[global] Coercion bty : basic_types >-> typ.
 
 End ChurchStyleStlc.
