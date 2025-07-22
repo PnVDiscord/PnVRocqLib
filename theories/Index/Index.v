@@ -5,8 +5,6 @@ Require Import PnV.Prelude.AC.
 Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Prelude.Quot.
-Require Import PnV.Control.Category.
-Require Import PnV.Control.Monad.
 Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Math.ClassicalDomainTheory.
 Require Import PnV.Math.DomainTheory.
@@ -17,6 +15,8 @@ Require Import PnV.Data.Aczel.
 Require Import PnV.Data.Graph.
 Require Import PnV.Data.ITree.
 Require Import PnV.Data.Vector.
+Require Import PnV.Control.Category.
+Require Import PnV.Control.Monad.
 Require Import PnV.Logic.BasicFol.
 Require Import PnV.Logic.BasicFol2.
 Require Import PnV.Logic.ClassicalFol.
@@ -32,3 +32,4 @@ Require Import PnV.System.FolFramework.
 Require Import PnV.System.Lambda1.
 Require Import PnV.System.P.
 Require Import PnV.System.Regex.
+Require Import PnV.System.STLC.

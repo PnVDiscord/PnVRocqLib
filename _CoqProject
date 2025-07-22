@@ -1,5 +1,5 @@
 -Q theories PnV #
-# Please sort in lexicographical order
+# Sort in lexicographical order
 theories/Control/Category.v #
 theories/Control/Monad.v #
 theories/Data/Aczel.v #
@@ -35,3 +35,4 @@ theories/System/FolFramework.v #
 theories/System/Lambda1.v #
 theories/System/P.v #
 theories/System/Regex.v #
+theories/System/STLC.v #
