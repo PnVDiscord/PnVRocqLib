@@ -439,6 +439,44 @@ Next Obligation.
   destruct H. f_equal. eapply Typing_proof_unique.
 Qed.
 
+Definition substTyping (Gamma : ctx) (s : subst) (Delta : ctx) : Set :=
+  forall x, forall ty, Lookup x ty Gamma -> Typing Delta (s x) ty.
+
+Inductive equality (Gamma : ctx) : trm -> trm -> typ -> Prop :=
+  | equality_refl A M
+    (TYPING : Gamma ⊢ M ⦂ A)
+    : Gamma ⊢ M = M ⦂ A
+  | equality_sym A M M'
+    (TYPING : Gamma ⊢ M ⦂ A)
+    (TYPING' : Gamma ⊢ M' ⦂ A)
+    (EQUAL : Gamma ⊢ M = M' ⦂ A)
+    : Gamma ⊢ M' = M ⦂ A
+  | equality_trans A M M' M''
+    (TYPING : Gamma ⊢ M ⦂ A)
+    (TYPING' : Gamma ⊢ M' ⦂ A)
+    (TYPING'' : Gamma ⊢ M'' ⦂ A)
+    (EQUAL1 : Gamma ⊢ M = M' ⦂ A)
+    (EQUAL2 : Gamma ⊢ M' = M'' ⦂ A)
+    : Gamma ⊢ M = M'' ⦂ A
+  | equality_App A B M M' N N'
+    (EQUAL1 : Gamma ⊢ M = M' ⦂ (A -> B)%typ)
+    (EQUAL2 : Gamma ⊢ N = N' ⦂ A)
+    : Gamma ⊢ App_trm M N = App_trm M' N' ⦂ B
+  | equality_Lam A B x y y' M M'
+    (NOT_FV1 : ~ L.In x (FVs (Lam_trm y A M)))
+    (NOT_FV2 : ~ L.In x (FVs (Lam_trm y' A M')))
+    (EQUAL1 : (x, A) :: Gamma ⊢ subst_trm (one_subst y (Var_trm x)) M = subst_trm (one_subst y' (Var_trm x)) M' ⦂ B)
+    : Gamma ⊢ Lam_trm y A M = Lam_trm y' A M' ⦂ (A -> B)%typ
+  | equality_beta A B x M N
+    (TYPING : (x, A) :: Gamma ⊢ M ⦂ B)
+    (TYPING' : Gamma ⊢ N ⦂ A)
+    : Gamma ⊢ App_trm (Lam_trm x A M) N = subst_trm (one_subst x N) M ⦂ B
+  | equality_eta A B x M
+    (NOT_FV : ~ L.In x (FVs M))
+    (TYPING : Gamma ⊢ M ⦂ (A -> B)%typ)
+    : Gamma ⊢ Lam_trm x A (App_trm M (Var_trm x)) = M ⦂ (A -> B)%typ
+  where "Gamma '⊢' M '=' N '⦂' A" := (equality Gamma M N A).
+
 End TypingRule.
 
 Section NORMALISATION_BY_EVALUATION.
