@@ -123,7 +123,8 @@ Inductive Lookup (x : name) (ty : typ) : ctx -> Set :=
   | Lookup_S Gamma x' ty'
     (x_ne : x ≠ x')
     (LOOKUP : Lookup x ty Gamma)
-    : Lookup x ty ((x', ty') :: Gamma).
+    : Lookup x ty ((x', ty') :: Gamma)
+  where "Gamma '∋' x '⦂' A" := (Lookup x A Gamma).
 
 Lemma Lookup_nil x ty (Phi : Lookup x ty [] -> Type)
   : forall LOOKUP, Phi LOOKUP.
@@ -476,13 +477,15 @@ Inductive typNe (Gamma : ctx) : trm -> typ -> Prop :=
   | typNe_Con c ty
     (ty_eq : ty = Sigma c)
     : typNe Gamma (Con_trm c) ty
+  where "Gamma '⊢' M '⇉' A" := (typNe Gamma M A)
 with typNf (Gamma : ctx) : trm -> typ -> Prop :=
   | typNf_of_typNe u ty
     (u_typNe : typNe Gamma u ty)
     : typNf Gamma u ty
   | typNf_Lam x v ty ty'
     (v_typNf : typNf ((x, ty) :: Gamma) v ty')
-    : typNf Gamma (Lam_trm x ty v) (ty -> ty')%typ.
+    : typNf Gamma (Lam_trm x ty v) (ty -> ty')%typ
+  where "Gamma '⊢' M '⇇' A" := (typNf Gamma M A).
 
 Lemma le_ctx_preserves_typNe (Gamma : ctx) (u : trm) (ty : typ)
   (u_typNe : typNe Gamma u ty)
@@ -581,14 +584,15 @@ Proof.
   - eapply reflect. exists (Con_trm c). econs 3. reflexivity.
 Defined.
 
-Definition NbE (Gamma : ctx) (e : trm) (ty : typ) (TYPING : Typing Gamma e ty) : B.sig trm (fun v => typNf Gamma v ty).
+Lemma eval_ctx_Gamma_Gamma {Gamma : ctx}
+  : eval_ctx Gamma Gamma.
 Proof.
-  eapply reify.
-  eapply evalTyping.
-  - exact TYPING.
-  - intros x1 ty1 LOOKUP. eapply reflect.
-    exists (Var_trm x1). econs 1. exact LOOKUP.
+  intros x ty LOOKUP. eapply reflect.
+  exists (Var_trm x). econs 1. exact LOOKUP.
 Defined.
+
+Definition NbE (Gamma : ctx) (e : trm) (ty : typ) (TYPING : Typing Gamma e ty) : B.sig trm (fun v => typNf Gamma v ty) :=
+  reify Gamma ty (evalTyping Gamma e ty TYPING Gamma eval_ctx_Gamma_Gamma).
 
 End NORMALISATION_BY_EVALUATION.
 

@@ -48,6 +48,8 @@ Reserved Notation " src '~~~[' x ']~~>*' tgt " (at level 70, no associativity).
 Reserved Notation " src '---[' x ']-->*' tgt " (at level 70, no associativity).
 Reserved Notation " src '===[' x ']==>*' tgt " (at level 70, no associativity).
 
+Reserved Notation "Gamma '∋' x '⦂' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊢' M '⦂' A" (at level 70, no associativity).
+Reserved Notation "Gamma '⊢' M '=' N '⦂' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊢' M '⇉' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊢' M '⇇' A" (at level 70, no associativity).
