@@ -12,7 +12,6 @@ theories/Logic/BasicFol2.v #
 theories/Logic/ClassicalFol.v #
 theories/Logic/ClassicalPropositionalLogic.v #
 theories/Logic/ExtraFol.v #
-theories/Logic/FolFramework.v #
 theories/Logic/HilbertFol.v #
 theories/Logic/HilbertFol2.v #
 theories/Logic/MuRec.v #
@@ -32,6 +31,7 @@ theories/Prelude/Prelude.v #
 theories/Prelude/Quot.v #
 theories/Prelude/SfLib.v #
 theories/System/BasicITreeTh.v #
+theories/System/FolFramework.v #
 theories/System/Lambda1.v #
 theories/System/P.v #
 theories/System/Regex.v #
