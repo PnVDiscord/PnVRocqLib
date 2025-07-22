@@ -4,7 +4,7 @@ A Coq library written by members of PnV Discord Server.
 
 Currently, this library is standalone.
 
-## 1. Quick Start
+## 1. How to build
 
 ```
 git clone https://github.com/PnVDiscord/PnVRocqLib.git
@@ -103,11 +103,21 @@ Our main results are:
 
 - `Prelude.v` : The prelude code.
 
+- `Quot.v` : Basic definitions for quotient types.
+
 ### System
 
 - `BasicITreeTh.v` : A basic theory on interaction trees.
 
+- `FolFramework.v` : A First-Order Logic Framework.
+
+- `Lambda1.v` : Basic definitions for Church-style stlc.
+
+- `P.v` : Provides a function `nat -> option string` by base 36.
+
 - `Regex.v` : A theory on regular expression.
+
+- `STLC.v` : Basic theorems for Church-style stlc.
 
 ## 3. References
 
