@@ -59,8 +59,6 @@ Fixpoint FVs (e : trm) : list name :=
   | Con_trm c => []
   end.
 
-(* TODO *)
-
 End FreeVariables.
 
 Section Substitution.
@@ -89,8 +87,6 @@ Fixpoint subst_trm (s : subst) (e : trm) : trm :=
   | Con_trm c => Con_trm c
   end.
 
-(* TODO *)
-
 End Substitution.
 
 Section alphaEquivalence.
@@ -109,8 +105,6 @@ Inductive alphaEquiv : trm -> trm -> Prop :=
     : alphaEquiv (Lam_trm x ty M) (Lam_trm x' ty M')
   | alphaEquiv_con c
     : alphaEquiv (Con_trm c) (Con_trm c).
-
-(* TODO *)
 
 End alphaEquivalence.
 
@@ -444,8 +438,6 @@ Next Obligation.
   destruct H. f_equal. eapply Typing_proof_unique.
 Qed.
 
-(* TODO *)
-
 End TypingRule.
 
 Section NORMALISATION_BY_EVALUATION.
@@ -589,8 +581,7 @@ Proof.
   - eapply reflect. exists (Con_trm c). econs 3. reflexivity.
 Defined.
 
-Definition NbE (Gamma : ctx) (e : trm) (ty : typ) (TYPING : Typing Gamma e ty)
-  : B.sig trm (fun v => typNf Gamma v ty).
+Definition NbE (Gamma : ctx) (e : trm) (ty : typ) (TYPING : Typing Gamma e ty) : B.sig trm (fun v => typNf Gamma v ty).
 Proof.
   eapply reify.
   eapply evalTyping.
