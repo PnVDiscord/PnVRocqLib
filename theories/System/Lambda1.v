@@ -697,6 +697,16 @@ Fixpoint normalize_with_sn (M : trm) (H_sn : sn M) {struct H_sn} : trm :=
   | inr NO => M
   end.
 
+Lemma normalize_with_sn_unfold M H_sn :
+  normalize_with_sn M H_sn =
+  match betaOnce_dec M with
+  | inl YES => let N : trm := B.proj1_sig YES in normalize_with_sn N (sn_inv H_sn N (B.proj2_sig YES))
+  | inr NO => M
+  end.
+Proof.
+  destruct H_sn; reflexivity.
+Defined.
+
 Fixpoint normalize_with_sn_pirrel (M : trm) (H_sn : sn M) (H_sn' : sn M) {struct H_sn} : normalize_with_sn M H_sn = normalize_with_sn M H_sn'.
 Proof.
   destruct H_sn, H_sn'; simpl. destruct (betaOnce_dec M) as [YES | NO]; simpl.
