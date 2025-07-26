@@ -5,6 +5,13 @@ Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 Require Import PnV.System.Lambda1.
 
+Reserved Infix "->β" (at level 70, no associativity).
+Reserved Infix "->η" (at level 70, no associativity).
+Reserved Infix "~>β" (at level 70, no associativity).
+Reserved Infix "~>η" (at level 70, no associativity).
+Reserved Infix "~>β*" (at level 70, no associativity).
+Reserved Infix "~>η*" (at level 70, no associativity).
+
 Module ChurchStyleSTLC.
 
 Export ChurchStyleStlc.
@@ -53,46 +60,126 @@ Admitted.
 
 Section WEAK_NORMALISATION.
 
-Inductive typNe (Gamma : ctx L) : trm L -> typ L -> Prop :=
-  | typNe_Var x ty
-    (LOOKUP : Lookup x ty Gamma)
-    : typNe Gamma (Var_trm x) ty
-  | typNe_App u v ty ty'
-    (u_typNe : typNe Gamma u (ty -> ty')%typ)
-    (v_typNf : typNf Gamma v ty)
-    : typNe Gamma (App_trm u v) ty'
-  | typNe_Con c ty
-    (ty_eq : ty = Sigma c)
-    : typNe Gamma (Con_trm c) ty
-  where "Gamma '⊢' M '⇉' A" := (typNe Gamma M A)
-with typNf (Gamma : ctx L) : trm L -> typ L -> Prop :=
-  | typNf_of_typNe u v ty
-    (u_typNe : typNe Gamma u ty)
-    (ALPHA : alphaEquiv v u)
-    : typNf Gamma v ty
-  | typNf_Lam x v ty ty'
-    (v_typNf : typNf ((x, ty) :: Gamma) v ty')
-    : typNf Gamma (Lam_trm x ty v) (ty -> ty')%typ
-  | typNf_beta_typNf v v' ty
-    (BETA : betaOnce v v')
-    (v_typNf : typNf Gamma v' ty)
-    : typNf Gamma v ty
-  where "Gamma '⊢' M '⇇' A" := (typNf Gamma M A).
+Let wp (A : Set) : Type :=
+  A -> Prop.
+
+Definition In {A : Set} (x : A) (X : wp A) : Prop :=
+  X x.
+
+#[local] Infix "\in" := In.
+
+Definition subseteq {A : Set} (X : wp A) (X' : wp A) : Prop :=
+  forall x, x \in X -> x \in X'.
+
+#[local] Infix "\subseteq" := subseteq.
+
+Inductive whBeta : trm L -> trm L -> Prop :=
+  | whBeta_app_lam y ty M N
+    : App_trm (Lam_trm y ty M) N ->β subst_trm (one_subst y N) M
+  | whBeta_ksi M M' N
+    (WHBETA : M ->β M')
+    : App_trm M N ->β App_trm M' N
+  where "M ->β N" := (whBeta M N).
+
+Inductive whBetaStar (M : trm L) : trm L -> Prop :=
+  | whBetaStar_O
+    : M ~>β* M
+  | whBetaStar_S N N'
+    (WHBETA' : M ~>β* N)
+    (WHBETA : N ->β N')
+    : M ~>β* N'
+  where "M ~>β* N" := (whBetaStar M N).
+
+Lemma whBeta_FVs M N
+  (WHBETA : M ->β N)
+  : forall x, L.In x (FVs N) -> L.In x (FVs M).
+Proof.
+Admitted.
+
+Inductive whEta (M : trm L) : trm L -> Prop :=
+  | whEta_intro x ty
+    (FRESH : ~ L.In x (FVs M))
+    : Lam_trm x ty (App_trm M (Var_trm x)) ->η M
+  where "M ->η N" := (whEta N M).
+
+Inductive wnNe (Gamma : ctx L) : typ L -> wp (trm L) :=
+  | wnNe_Var x ty
+    (LOOKUP : Gamma ∋ x ⦂ ty)
+    : Var_trm x \in wnNe Gamma ty
+  | wnNe_App u v ty ty'
+    (u_wnNe : Gamma ⊢ u ⇉ (ty -> ty')%typ)
+    (v_wnNf : Gamma ⊢ v ⇇ ty)
+    : App_trm u v \in wnNe Gamma ty'
+  | wnNe_Con c ty
+    (ty_EQ : ty = Sigma c)
+    : Con_trm c \in wnNe Gamma ty
+  where "Gamma '⊢' M '⇉' A" := (wnNe Gamma A M)
+with wnNf (Gamma : ctx L) : typ L -> wp (trm L) :=
+  | wnNf_of_wnNe u ty
+    (u_wnNe : Gamma ⊢ u ⇉ ty)
+    : u \in wnNf Gamma ty
+  | wnNf_Lam x v ty ty'
+    (v_wnNf : (x, ty) :: Gamma ⊢ v ⇇ ty')
+    : Lam_trm x ty v \in wnNf Gamma (ty -> ty')%typ
+  | wnNf_beta_wnNf v v' ty
+    (WHBETA : v ->β v')
+    (v_wnNf : Gamma ⊢ v' ⇇ ty)
+    : v \in wnNf Gamma ty
+  where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
+
+Lemma le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L)
+  (u_wnNe : Gamma ⊢ u ⇉ ty)
+  : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ u ⇉ ty
+with le_ctx_wnNf (Gamma : ctx L) (ty : typ L) (v : trm L)
+  (u_wnNe : Gamma ⊢ v ⇇ ty)
+  : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ v ⇇ ty.
+Admitted.
 
 Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) : trm L -> Set :=
   match ty with
   | bty _ b => fun M =>
-    B.sig (trm L) (fun N => Gamma ⊢ N ⇉ bty _ b /\ betaStar M N)
+    B.sig (trm L) (fun N => Gamma ⊢ N ⇉ bty _ b /\ M ~>β* N)
   | (ty1 -> ty2)%typ => fun M =>
     forall N, forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
   end.
 
-(*
-Fixpoint reflect (Gamma : ctx L) (ty : typ L) {struct ty} : forall e, typNe Gamma e ty -> eval_typ Gamma ty e
-with reify (Gamma : ctx L) (ty : typ L) {struct ty} : forall e, eval_typ Gamma ty e -> typNf Gamma e ty.
+Lemma wnNf_whBetaStar_wnNf Gamma M N ty
+  (v_wnNf : Gamma ⊢ N ⇇ ty)
+  (WHBETA' : M ~>β* N)
+  : Gamma ⊢ M ⇇ ty.
+Proof.
+  induction WHBETA'; simpl in *.
+  - eassumption.
+  - eapply IHWHBETA'.
+    econs 3; eauto.
+Qed.
+
+Lemma eta_wnNf Gamma ty ty' v
+  (y := Name.fresh_nm (map fst Gamma))
+  (v_wnNf : Gamma ⊢ Lam_trm y ty (App_trm v (Var_trm y)) ⇇ (ty -> ty')%typ)
+  : Gamma ⊢ v ⇇ (ty -> ty')%typ.
 Proof.
 Admitted.
-*)
+
+Fixpoint reflect (Gamma : ctx L) (ty : typ L) {struct ty} : forall e, wnNe Gamma ty e -> eval_typ Gamma ty e
+with reify (Gamma : ctx L) (ty : typ L) {struct ty} : forall e, eval_typ Gamma ty e -> wnNf Gamma ty e.
+Proof.
+  - destruct ty as [b | ty1 ty2]; simpl; intros M H_M.
+    + exists M. split.
+      * eassumption.
+      * econs 1.
+    + intros N Gamma' LE H_N. eapply reflect. econs 2.
+      * eapply le_ctx_wnNe; [exact H_M | exact LE].
+      * eapply reify. exact H_N.
+  - destruct ty as [b | ty1 ty2]; simpl; intros M H_M.
+    + destruct H_M as [N [N_wnNe WHBETA']].
+      eapply wnNf_whBetaStar_wnNf with (N := N).
+      * econs 1; eassumption.
+      * eassumption.
+    + eapply eta_wnNf. econs 2. eapply reify. eapply H_M.
+      * eapply le_ctx_cons.
+      * eapply reflect. econs 1. econs 1; reflexivity.
+Defined.
 
 Definition eval_ctx (Gamma : ctx L) (Delta : ctx L) : subst L -> Set :=
   fun gamma => forall x, forall ty, Lookup x ty Delta -> eval_typ Gamma ty (gamma x).
@@ -100,13 +187,11 @@ Definition eval_ctx (Gamma : ctx L) (Delta : ctx L) : subst L -> Set :=
 Definition semanticTyping (Gamma : ctx L) (e : trm L) (ty : typ L) : Set :=
   forall Delta, forall gamma, eval_ctx Delta Gamma gamma -> eval_typ Delta ty (subst_trm gamma e).
 
-(*
 Theorem semanticTyping_sound Gamma e ty
   (TYPING : Typing Gamma e ty)
   : semanticTyping Gamma e ty.
 Proof.
 Admitted.
-*)
 
 End WEAK_NORMALISATION.
 
