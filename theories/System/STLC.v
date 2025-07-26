@@ -24,8 +24,10 @@ Section STLC_META.
 
 Context {L : language}.
 
-Lemma subst_one_lemma x N M (gamma : subst L) y
+Corollary subst_cons_lemma N M gamma y (ty : typ L)
+  (x := chi gamma (Lam_trm y ty M))
   : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
+Proof.
 Admitted.
 
 Context {Sigma : signature L}.
@@ -253,7 +255,8 @@ Proof.
   - intros N Gamma' LE a. eapply head_expand.
     { econs 1. }
     set (x := chi gamma (Lam_trm y ty1 e1)).
-    rewrite subst_one_lemma. eapply IHTYPING.
+    pose proof (subst_cons_lemma N e1 gamma y ty1) as claim1.
+    simpl in claim1. subst x. rewrite claim1. eapply IHTYPING.
     eapply eval_ctx_cons_subst; [exact a | eapply eval_ctx_le_ctx]; eassumption.
   - eapply reflect. econs 3. reflexivity.
 Defined.
