@@ -44,24 +44,6 @@ Proof.
   - econs 4.
 Defined.
 
-Definition substTyping (Gamma : ctx L) (s : subst L) (Delta : ctx L) : Set :=
-  forall x : name, forall ty : typ L, Lookup x ty Delta -> Typing Gamma (s x) ty.
-
-Lemma substTyping_Lookup {Gamma : ctx L} {x : Name.t} {ty : typ L} {s : subst L} {Delta : ctx L}
-  (LOOKUP : Gamma ∋ x ⦂ ty)
-  (SUBST_TYPING : substTyping Delta s Gamma)
-  : Delta ⊢ s x ⦂ ty.
-Proof.
-  eapply SUBST_TYPING; exact LOOKUP.
-Defined.
-
-Lemma substTyping_Typing {Gamma : ctx L} {e : trm L} {ty : typ L} {s : subst L} {Delta : ctx L}
-  (TYPING : Gamma ⊢ e ⦂ ty)
-  (SUBST_TYPING : substTyping Delta s Gamma)
-  : Delta ⊢ subst_trm s e ⦂ ty.
-Proof.
-Admitted.
-
 Section WEAK_NORMALISATION.
 
 Let wp (A : Set) : Type :=
@@ -94,12 +76,6 @@ Inductive whBetaStar (N : trm L) : trm L -> Prop :=
     : M ~>β* N
   where "M ~>β* N" := (whBetaStar N M).
 
-Lemma whBeta_FVs M N
-  (WHBETA : M ->β N)
-  : forall x, L.In x (FVs N) -> L.In x (FVs M).
-Proof.
-Admitted.
-
 Inductive whEta (M : trm L) : trm L -> Prop :=
   | whEta_intro x ty
     (FRESH : ~ L.In x (FVs M))
@@ -131,14 +107,31 @@ with wnNf (Gamma : ctx L) : typ L -> wp (trm L) :=
     : v \in wnNf Gamma ty
   where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
 
-Lemma le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L)
-  (u_wnNe : Gamma ⊢ u ⇉ ty)
+Fixpoint le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L) (u_wnNe : Gamma ⊢ u ⇉ ty) {struct u_wnNe}
   : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ u ⇉ ty
-with le_ctx_wnNf (Gamma : ctx L) (ty : typ L) (v : trm L)
-  (u_wnNe : Gamma ⊢ v ⇇ ty)
+with le_ctx_wnNf (Gamma : ctx L) (ty : typ L) (v : trm L) (v_wfNf : Gamma ⊢ v ⇇ ty) {struct v_wfNf}
   : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ v ⇇ ty.
 Proof.
-Admitted.
+  - destruct u_wnNe; simpl; intros Gamma' LE.
+    + econs 1. eapply LE; eassumption.
+    + econs 2.
+      * eapply le_ctx_wnNe; eassumption.
+      * eapply le_ctx_wnNf; eassumption.
+    + econs 3; eassumption.
+  - destruct v_wfNf; simpl; intros Gamma' LE.
+    + econs 1. eapply le_ctx_wnNe; eassumption.
+    + econs 2. eapply le_ctx_wnNf.
+      * eassumption.
+      * red in LE |- *. intros x1 ty1 LOOKUP1. pattern LOOKUP1. revert LOOKUP1. eapply Lookup_cons.
+        { intros. econs 1; eassumption. }
+        { intros. econs 2.
+          - eassumption.
+          - eapply LE; eassumption.
+        }
+    + econs 3.
+      * eassumption.
+      * eapply le_ctx_wnNf; eassumption.
+Defined.
 
 Lemma wnNf_whBetaStar_wnNf Gamma M N ty
   (v_wnNf : Gamma ⊢ N ⇇ ty)
@@ -154,6 +147,7 @@ Lemma App_Var_wnNf_inv Gamma ty ty' v
   (y := Name.fresh_nm (map fst Gamma))
   (v_wnNf : (y, ty) :: Gamma ⊢ (App_trm v (Var_trm y)) ⇇ ty')
   : Gamma ⊢ v ⇇ (ty -> ty')%typ.
+Proof.
 Admitted.
 
 Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) : trm L -> Set :=
