@@ -154,11 +154,10 @@ Proof.
     econs 3; eauto.
 Qed.
 
-Lemma eta_wnNf Gamma ty ty' v
+Lemma App_Var_wnNf_inv Gamma ty ty' v
   (y := Name.fresh_nm (map fst Gamma))
-  (v_wnNf : Gamma ⊢ Lam_trm y ty (App_trm v (Var_trm y)) ⇇ (ty -> ty')%typ)
+  (v_wnNf : (y, ty) :: Gamma ⊢ (App_trm v (Var_trm y)) ⇇ ty')
   : Gamma ⊢ v ⇇ (ty -> ty')%typ.
-Proof.
 Admitted.
 
 Fixpoint reflect (Gamma : ctx L) (ty : typ L) {struct ty} : forall e, wnNe Gamma ty e -> eval_typ Gamma ty e
@@ -176,7 +175,7 @@ Proof.
       eapply wnNf_whBetaStar_wnNf with (N := N).
       * econs 1; eassumption.
       * eassumption.
-    + eapply eta_wnNf. econs 2. eapply reify. eapply H_M.
+    + eapply App_Var_wnNf_inv. eapply reify. eapply H_M.
       * eapply le_ctx_cons.
       * eapply reflect. econs 1. econs 1; reflexivity.
 Defined.
