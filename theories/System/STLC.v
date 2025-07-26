@@ -19,9 +19,9 @@ Section STLC_META.
 
 Context {L : language}.
 
-Section Soundness_of_NbE.
-
 Context {Sigma : signature L}.
+
+Section Soundness_of_NbE.
 
 Lemma Typing_weakening {Gamma : ctx L} {Delta : ctx L} {e : trm L} {ty : typ L}
   (TYPING : Typing Gamma e ty)
