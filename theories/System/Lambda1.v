@@ -725,6 +725,13 @@ Qed.
 
 End SN.
 
+Inductive betaStar (M : trm) (N : trm) : Prop :=
+  | betaStar_refl
+    (ALPHA : alphaEquiv M N)
+  | betaStar_step N'
+    (BETA1 : betaOnce N' N)
+    (BETA : betaStar M N').
+
 End STLC.
 
 #[global] Arguments trm : clear implicits.
