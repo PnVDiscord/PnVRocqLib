@@ -24,6 +24,10 @@ Section STLC_META.
 
 Context {L : language}.
 
+Lemma subst_one_lemma x N M (gamma : subst L) y
+  : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
+Admitted.
+
 Context {Sigma : signature L}.
 
 Lemma Typing_weakening {Gamma : ctx L} {Delta : ctx L} {e : trm L} {ty : typ L}
@@ -81,14 +85,14 @@ Inductive whBeta : trm L -> trm L -> Prop :=
     : App_trm M N ->β App_trm M' N
   where "M ->β N" := (whBeta M N).
 
-Inductive whBetaStar (M : trm L) : trm L -> Prop :=
+Inductive whBetaStar (N : trm L) : trm L -> Prop :=
   | whBetaStar_O
-    : M ~>β* M
-  | whBetaStar_S N N'
-    (WHBETA' : M ~>β* N)
-    (WHBETA : N ->β N')
-    : M ~>β* N'
-  where "M ~>β* N" := (whBetaStar M N).
+    : N ~>β* N
+  | whBetaStar_S M M'
+    (WHBETA' : M' ~>β* N)
+    (WHBETA : M ->β M')
+    : M ~>β* N
+  where "M ~>β* N" := (whBetaStar N M).
 
 Lemma whBeta_FVs M N
   (WHBETA : M ->β N)
@@ -133,6 +137,23 @@ Lemma le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L)
 with le_ctx_wnNf (Gamma : ctx L) (ty : typ L) (v : trm L)
   (u_wnNe : Gamma ⊢ v ⇇ ty)
   : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ v ⇇ ty.
+Proof.
+Admitted.
+
+Lemma wnNf_whBetaStar_wnNf Gamma M N ty
+  (v_wnNf : Gamma ⊢ N ⇇ ty)
+  (WHBETA' : M ~>β* N)
+  : Gamma ⊢ M ⇇ ty.
+Proof.
+  induction WHBETA'; simpl in *.
+  - eassumption.
+  - econs 3; eassumption.
+Defined.
+
+Lemma App_Var_wnNf_inv Gamma ty ty' v
+  (y := Name.fresh_nm (map fst Gamma))
+  (v_wnNf : (y, ty) :: Gamma ⊢ (App_trm v (Var_trm y)) ⇇ ty')
+  : Gamma ⊢ v ⇇ (ty -> ty')%typ.
 Admitted.
 
 Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) : trm L -> Set :=
@@ -143,22 +164,18 @@ Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) : trm L -> Set :=
     forall N, forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
   end.
 
-Lemma wnNf_whBetaStar_wnNf Gamma M N ty
-  (v_wnNf : Gamma ⊢ N ⇇ ty)
-  (WHBETA' : M ~>β* N)
-  : Gamma ⊢ M ⇇ ty.
+Fixpoint eval_typ_le_ctx Gamma ty {struct ty} : forall M, eval_typ Gamma ty M -> forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty M.
 Proof.
-  induction WHBETA'; simpl in *.
-  - eassumption.
-  - eapply IHWHBETA'.
-    econs 3; eauto.
-Qed.
-
-Lemma App_Var_wnNf_inv Gamma ty ty' v
-  (y := Name.fresh_nm (map fst Gamma))
-  (v_wnNf : (y, ty) :: Gamma ⊢ (App_trm v (Var_trm y)) ⇇ ty')
-  : Gamma ⊢ v ⇇ (ty -> ty')%typ.
-Admitted.
+  destruct ty as [b | ty1 ty2]; simpl; intros M H_M Gamma' LE.
+  - exists H_M.(B.proj1_sig). split.
+    + eapply le_ctx_wnNe. exact (proj1 H_M.(B.proj2_sig)). exact LE.
+    + exact (proj2 H_M.(B.proj2_sig)).
+  - intros N Delta LE' H_N. eapply eval_typ_le_ctx.
+    + eapply H_M with (Gamma' := Delta).
+      * intros x ty LOOKUP. eapply LE'. eapply LE. exact LOOKUP.
+      * exact H_N.
+    + intros x ty LOOKUP. exact LOOKUP.
+Defined.
 
 Fixpoint reflect (Gamma : ctx L) (ty : typ L) {struct ty} : forall e, wnNe Gamma ty e -> eval_typ Gamma ty e
 with reify (Gamma : ctx L) (ty : typ L) {struct ty} : forall e, eval_typ Gamma ty e -> wnNf Gamma ty e.
@@ -171,17 +188,59 @@ Proof.
       * eapply le_ctx_wnNe; [exact H_M | exact LE].
       * eapply reify. exact H_N.
   - destruct ty as [b | ty1 ty2]; simpl; intros M H_M.
-    + destruct H_M as [N [N_wnNe WHBETA']].
-      eapply wnNf_whBetaStar_wnNf with (N := N).
-      * econs 1; eassumption.
-      * eassumption.
+    + eapply wnNf_whBetaStar_wnNf with (N := H_M.(B.proj1_sig)).
+      * econs 1. exact (proj1 (B.proj2_sig H_M)).
+      * exact (proj2 (B.proj2_sig H_M)).
     + eapply App_Var_wnNf_inv. eapply reify. eapply H_M.
       * eapply le_ctx_cons.
       * eapply reflect. econs 1. econs 1; reflexivity.
 Defined.
 
+Fixpoint head_expand (Gamma : ctx L) M M' (ty : typ L) (WHBETA : M ->β M') {struct ty} : eval_typ Gamma ty M' -> eval_typ Gamma ty M.
+Proof.
+  revert Gamma ty. destruct ty as [b | ty1 ty2]; simpl; intros H_M.
+  - exists H_M.(B.proj1_sig). split.
+    + exact (proj1 H_M.(B.proj2_sig)).
+    + econs 2.
+      * exact (proj2 H_M.(B.proj2_sig)).
+      * eassumption.
+  - intros N Gamma' LE H_N. eapply head_expand.
+    + econs 2. eassumption.
+    + eapply H_M; eassumption.
+Defined.
+
 Definition eval_ctx (Gamma : ctx L) (Delta : ctx L) : subst L -> Set :=
   fun gamma => forall x, forall ty, Lookup x ty Delta -> eval_typ Gamma ty (gamma x).
+
+Lemma eval_ctx_nil_subst {Gamma : ctx L}
+  : eval_ctx Gamma Gamma nil_subst.
+Proof.
+  intros x ty LOOKUP. eapply reflect. econs 1. exact LOOKUP.
+Defined.
+
+Definition eval_ctx_cons_subst {Gamma : ctx L} {Gamma' : ctx L} y ty N gamma
+  (H_N : eval_typ Gamma' ty N)
+  (H_gamma : eval_ctx Gamma' Gamma gamma)
+  : eval_ctx Gamma' ((y, ty) :: Gamma) (cons_subst y N gamma).
+Proof.
+  intros x1 ty1. unfold cons_subst. eapply Lookup_cons.
+  - intros x_EQ ty_EQ. destruct (eq_dec x1 y) as [EQ | NE].
+    + rewrite -> ty_EQ. eapply H_N.
+    + contradiction.
+  - intros x_NE. destruct (eq_dec x1 y) as [EQ | NE].
+    + rewrite Name.ne_iff in x_NE. contradiction.
+    + intros LOOKUP. eapply H_gamma. exact LOOKUP.
+Defined.
+
+Lemma eval_ctx_le_ctx {Delta} {Gamma} {Gamma'} {gamma}
+  (H_gamma : eval_ctx Delta Gamma gamma)
+  (LE : le_ctx Delta Gamma')
+  : eval_ctx Gamma' Gamma gamma.
+Proof.
+  intros x ty LOOKUP. eapply eval_typ_le_ctx.
+  - eapply H_gamma. exact LOOKUP.
+  - exact LE.
+Defined.
 
 Definition semanticTyping (Gamma : ctx L) (e : trm L) (ty : typ L) : Set :=
   forall Delta, forall gamma, eval_ctx Delta Gamma gamma -> eval_typ Delta ty (subst_trm gamma e).
@@ -190,7 +249,29 @@ Theorem semanticTyping_sound Gamma e ty
   (TYPING : Typing Gamma e ty)
   : semanticTyping Gamma e ty.
 Proof.
-Admitted.
+  red; induction TYPING; simpl in *; intros Delta gamma rho.
+  - eapply rho. exact LOOKUP.
+  - eapply IHTYPING1.
+    { eassumption. }
+    { intros x ty LOOKUP. exact LOOKUP. }
+    eapply IHTYPING2.
+    { eassumption. }
+  - intros N Gamma' LE a. eapply head_expand.
+    { econs 1. }
+    set (x := chi gamma (Lam_trm y ty1 e1)).
+    rewrite subst_one_lemma. eapply IHTYPING.
+    eapply eval_ctx_cons_subst; [exact a | eapply eval_ctx_le_ctx]; eassumption.
+  - eapply reflect. econs 3. reflexivity.
+Defined.
+
+Corollary NbE_aux1 {Gamma : ctx L} {M : trm L} {ty : typ L}
+  (TYPING : Gamma ⊢ M ⦂ ty)
+  : wnNf Gamma ty (subst_trm nil_subst M).
+Proof.
+  eapply reify. eapply semanticTyping_sound.
+  - exact TYPING.
+  - eapply eval_ctx_nil_subst.
+Defined.
 
 End WEAK_NORMALISATION.
 
