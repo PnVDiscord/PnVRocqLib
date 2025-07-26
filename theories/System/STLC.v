@@ -21,8 +21,6 @@ Context {L : language}.
 
 Context {Sigma : signature L}.
 
-Section Soundness_of_NbE.
-
 Lemma Typing_weakening {Gamma : ctx L} {Delta : ctx L} {e : trm L} {ty : typ L}
   (TYPING : Typing Gamma e ty)
   (LE : le_ctx Gamma Delta)
@@ -54,6 +52,8 @@ Lemma substTyping_Typing {Gamma : ctx L} {e : trm L} {ty : typ L} {s : subst L} 
   : Delta ⊢ subst_trm s e ⦂ ty.
 Proof.
 Admitted.
+
+Section Soundness_of_NbE.
 
 Fixpoint interpret_typ (Gamma : ctx L) (ty : typ L) {struct ty} : eval_typ Gamma ty -> trm L -> Prop :=
   match ty as ty return eval_typ Gamma ty -> trm L -> Prop with
