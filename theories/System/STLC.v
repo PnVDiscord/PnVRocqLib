@@ -5,8 +5,6 @@ Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 Require Import PnV.System.Lambda1.
 
-Reserved Infix "->β" (at level 70, no associativity).
-Reserved Infix "->η" (at level 70, no associativity).
 Reserved Infix "~>β" (at level 70, no associativity).
 Reserved Infix "~>η" (at level 70, no associativity).
 Reserved Infix "~>β*" (at level 70, no associativity).
@@ -17,15 +15,14 @@ Module ChurchStyleSTLC.
 Export ChurchStyleStlc.
 
 Notation "Gamma '∋' x '⦂' A" := (Lookup x A Gamma) : type_scope.
-Notation "Gamma '⊢' M '⦂' A" := (Typing Gamma M A) : type_scope.
 Notation "Gamma '⊢' M '=' N '⦂' A" := (equality Gamma M N A) : type_scope.
 
 Section STLC_META.
 
 Context {L : language}.
 
-Corollary subst_cons_lemma N M gamma y (ty : typ L)
-  (x := chi gamma (Lam_trm y ty M))
+Corollary subst_cons_lemma N M gamma x y (ty : typ L)
+  (x_EQ : x = chi gamma (Lam_trm y ty M))
   : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
 Proof.
 Admitted.
@@ -46,6 +43,35 @@ Proof.
   - econs 4.
 Defined.
 
+Inductive TypingProp (Gamma : ctx L) : trm L -> typ L -> Prop :=
+  | TypingProp_Var x ty
+    (LOOKUP : Gamma ∋ x ⦂ ty)
+    : Gamma ⊢ Var_trm x ⦂ ty
+  | TypingProp_App M N ty1 ty2
+    (TYPING1 : Gamma ⊢ M ⦂ (ty1 -> ty2))
+    (TYPING2 : Gamma ⊢ N ⦂ ty1)
+    : Gamma ⊢ App_trm M N ⦂ ty2
+  | TypingProp_Lam y M ty1 ty2
+    (TYPING : (y, ty1) :: Gamma ⊢ M ⦂ ty2)
+    : Gamma ⊢ Lam_trm y ty1 M ⦂ (ty1 -> ty2)
+  | TypingProp_Con c
+    : Gamma ⊢ Con_trm c ⦂ typ_of_constant c
+  where "Gamma '⊢' M '⦂' A" := (TypingProp Gamma M A).
+
+#[local] Hint Constructors TypingProp : core.
+
+Lemma TypingProp_iff Gamma e ty
+  : Gamma ⊢ e ⦂ ty <-> inhabited (Typing Gamma e ty).
+Proof.
+  split; intros TYPING.
+  - induction TYPING; simpl.
+    + econs. econs 1; eassumption.
+    + destruct IHTYPING1, IHTYPING2. econs. econs 2; eassumption.
+    + destruct IHTYPING. econs. econs 3; eassumption.
+    + econs. econs 4.
+  - destruct TYPING as [TYPING]. induction TYPING; simpl; eauto.
+Qed.
+
 Section WEAK_NORMALISATION.
 
 Let wp (A : Set) : Type :=
@@ -63,26 +89,32 @@ Definition subseteq {A : Set} (X : wp A) (X' : wp A) : Prop :=
 
 Inductive whBeta : trm L -> trm L -> Prop :=
   | whBeta_app_lam y ty M N
-    : App_trm (Lam_trm y ty M) N ->β subst_trm (one_subst y N) M
+    : App_trm (Lam_trm y ty M) N ~>β subst_trm (one_subst y N) M
   | whBeta_ksi M M' N
-    (WHBETA : M ->β M')
-    : App_trm M N ->β App_trm M' N
-  where "M ->β N" := (whBeta M N).
+    (WHBETA : M ~>β M')
+    : App_trm M N ~>β App_trm M' N
+  where "M ~>β N" := (whBeta M N).
+
+Lemma whBeta_preservesTyping Gamma ty M N
+  (WHBETA : M ~>β N)
+  : Gamma ⊢ M ⦂ ty <-> Gamma ⊢ N ⦂ ty.
+Proof.
+Admitted.
 
 Inductive whBetaStar (N : trm L) : trm L -> Prop :=
   | whBetaStar_O
     : N ~>β* N
   | whBetaStar_S M M'
     (WHBETA' : M' ~>β* N)
-    (WHBETA : M ->β M')
+    (WHBETA : M ~>β M')
     : M ~>β* N
   where "M ~>β* N" := (whBetaStar N M).
 
 Inductive whEta (M : trm L) : trm L -> Prop :=
   | whEta_intro x ty
     (FRESH : ~ L.In x (FVs M))
-    : Lam_trm x ty (App_trm M (Var_trm x)) ->η M
-  where "M ->η N" := (whEta N M).
+    : Lam_trm x ty (App_trm M (Var_trm x)) ~>η M
+  where "M ~>η N" := (whEta N M).
 
 Inductive wnNe (Gamma : ctx L) : typ L -> wp (trm L) :=
   | wnNe_Var x ty
@@ -104,14 +136,14 @@ with wnNf (Gamma : ctx L) : typ L -> wp (trm L) :=
     (v_wnNf : (x, ty) :: Gamma ⊢ v ⇇ ty')
     : Lam_trm x ty v \in wnNf Gamma (ty -> ty')%typ
   | wnNf_beta_wnNf v v' ty
-    (WHBETA : v ->β v')
+    (WHBETA : v ~>β v')
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : v \in wnNf Gamma ty
   where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
 
 Fixpoint le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L) (u_wnNe : Gamma ⊢ u ⇉ ty) {struct u_wnNe}
   : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ u ⇉ ty
-with le_ctx_wnNf (Gamma : ctx L) (ty : typ L) (v : trm L) (v_wfNf : Gamma ⊢ v ⇇ ty) {struct v_wfNf}
+with le_ctx_wnNf (Gamma : ctx L) (ty : typ L) (v : trm L) (v_wnNf : Gamma ⊢ v ⇇ ty) {struct v_wnNf}
   : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ v ⇇ ty.
 Proof.
   - destruct u_wnNe; simpl; intros Gamma' LE.
@@ -120,7 +152,7 @@ Proof.
       * eapply le_ctx_wnNe; eassumption.
       * eapply le_ctx_wnNf; eassumption.
     + econs 3; eassumption.
-  - destruct v_wfNf; simpl; intros Gamma' LE.
+  - destruct v_wnNf; simpl; intros Gamma' LE.
     + econs 1. eapply le_ctx_wnNe; eassumption.
     + econs 2. eapply le_ctx_wnNf.
       * eassumption.
@@ -145,9 +177,36 @@ Proof.
   - econs 3; eassumption.
 Defined.
 
+Lemma wnNe_Typing Gamma ty u
+  (u_wnNe : Gamma ⊢ u ⇉ ty)
+  : Gamma ⊢ u ⦂ ty
+with wnNf_Typing Gamma ty v
+  (v_wnNf : Gamma ⊢ v ⇇ ty)
+  : Gamma ⊢ v ⦂ ty.
+Proof.
+  - destruct u_wnNe.
+    + econs 1. eassumption.
+    + econs 2.
+      * eapply wnNe_Typing. eassumption.
+      * eapply wnNf_Typing. eassumption.
+    + subst ty. econs 4.
+  - destruct v_wnNf.
+    + eapply wnNe_Typing. eassumption.
+    + econs 3. eapply wnNf_Typing. eassumption.
+    + rewrite -> whBeta_preservesTyping.
+      * eapply wnNf_Typing. eassumption.
+      * eassumption.
+Qed.
+
+Lemma wnNe_weankening Gamma ty ty' u
+  (y := Name.fresh_nm (map fst Gamma))
+  (u_wnNe : (y, ty) :: Gamma ⊢ u ⇉ (ty -> ty'))
+  : Gamma ⊢ u ⇉ (ty -> ty').
+Admitted.
+
 Lemma App_Var_wnNf_inv Gamma ty ty' v
   (y := Name.fresh_nm (map fst Gamma))
-  (v_wnNf : (y, ty) :: Gamma ⊢ (App_trm v (Var_trm y)) ⇇ ty')
+  (v_wnNf : (y, ty) :: Gamma ⊢ App_trm v (Var_trm y) ⇇ ty')
   : Gamma ⊢ v ⇇ (ty -> ty')%typ.
 Proof.
 Admitted.
@@ -192,7 +251,7 @@ Proof.
       * eapply reflect. econs 1. econs 1; reflexivity.
 Defined.
 
-Fixpoint head_expand (Gamma : ctx L) M M' (ty : typ L) (WHBETA : M ->β M') {struct ty} : eval_typ Gamma ty M' -> eval_typ Gamma ty M.
+Fixpoint head_expand (Gamma : ctx L) M M' (ty : typ L) (WHBETA : M ~>β M') {struct ty} : eval_typ Gamma ty M' -> eval_typ Gamma ty M.
 Proof.
   revert Gamma ty. destruct ty as [b | ty1 ty2]; simpl; intros H_M.
   - exists H_M.(B.proj1_sig). split.
@@ -255,14 +314,13 @@ Proof.
   - intros N Gamma' LE a. eapply head_expand.
     { econs 1. }
     set (x := chi gamma (Lam_trm y ty1 e1)).
-    pose proof (subst_cons_lemma N e1 gamma y ty1) as claim1.
-    simpl in claim1. subst x. rewrite claim1. eapply IHTYPING.
+    rewrite subst_cons_lemma with (ty := ty1); [eapply IHTYPING | reflexivity].
     eapply eval_ctx_cons_subst; [exact a | eapply eval_ctx_le_ctx]; eassumption.
   - eapply reflect. econs 3. reflexivity.
 Defined.
 
 Corollary NbE_aux1 {Gamma : ctx L} {M : trm L} {ty : typ L}
-  (TYPING : Gamma ⊢ M ⦂ ty)
+  (TYPING : Typing Gamma M ty)
   : wnNf Gamma ty (subst_trm nil_subst M).
 Proof.
   eapply reify. eapply semanticTyping_sound.
