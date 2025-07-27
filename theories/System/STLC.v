@@ -216,7 +216,7 @@ Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) : trm L -> Set :=
   | bty _ b => fun M =>
     B.sig (trm L) (fun N => Gamma ⊢ N ⇉ bty _ b /\ M ~>β* N)
   | (ty1 -> ty2)%typ => fun M =>
-    forall N, forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
+    forall Gamma', le_ctx Gamma Gamma' -> forall N, eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
   end.
 
 Fixpoint eval_typ_le_ctx Gamma ty {struct ty} : forall M, eval_typ Gamma ty M -> forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty M.
@@ -225,7 +225,7 @@ Proof.
   - exists H_M.(B.proj1_sig). split.
     + eapply le_ctx_wnNe. exact (proj1 H_M.(B.proj2_sig)). exact LE.
     + exact (proj2 H_M.(B.proj2_sig)).
-  - intros N Delta LE' H_N. eapply eval_typ_le_ctx.
+  - intros Delta LE' N H_N. eapply eval_typ_le_ctx.
     + eapply H_M with (Gamma' := Delta).
       * intros x ty LOOKUP. eapply LE'. eapply LE. exact LOOKUP.
       * exact H_N.
@@ -239,7 +239,7 @@ Proof.
     + exists M. split.
       * eassumption.
       * econs 1.
-    + intros N Gamma' LE H_N. eapply reflect. econs 2.
+    + intros Gamma' LE N H_N. eapply reflect. econs 2.
       * eapply le_ctx_wnNe; [exact H_M | exact LE].
       * eapply reify. exact H_N.
   - destruct ty as [b | ty1 ty2]; simpl; intros M H_M.
