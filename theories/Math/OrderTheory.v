@@ -79,6 +79,7 @@ Class isWellPoset (A : Type@{U_discourse}) : Type@{U_discourse} :=
   { wltProp :: has_ltProp A
   ; wltProp_Transitive :: Transitive wltProp
   ; wltProp_well_founded : well_founded wltProp
+  ; wltProp_total (x1 : A) (x2 : A) (NE : x1 <> x2) : wltProp x1 x2 \/ wltProp x2 x1
   }.
 
 Infix "⪵" := wltProp : type_scope.
@@ -96,6 +97,34 @@ Infix "⪳" := wleProp : type_scope.
 
 #[local] Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive : poset_hints.
 #[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : poset_hints.
+
+Module OrderExtra1.
+
+Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
+  (DESCENT : forall n, P n -> exists m, m ⪵ n /\ P m)
+  : forall n, ~ P n.
+Proof.
+  intros n. induction (wltProp_well_founded n) as [n _ IH]. intros P_n.
+  pose proof (DESCENT n P_n) as [m [LT P_m]].
+  contradiction (IH m LT P_m).
+Qed.
+
+Lemma minimisation_lemma (classic : forall P : Prop, P \/ ~ P) {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
+  (EXISTENCE : exists n, P n)
+  : exists n, P n /\ ⟪ MIN : forall m, P m -> wleProp n m ⟫.
+Proof.
+  assert (NNPP : forall phi : Prop, (~ (~ phi)) -> phi).
+  { intros phi. pose proof (classic phi) as [YES | NO]; try tauto. }
+  eapply NNPP. intros CONTRA. destruct EXISTENCE as [n P_n].
+  eapply infinite_descent with (P := P) (n := n); [intros i P_i | exact P_n].
+  eapply NNPP. intros CONTRA'. eapply CONTRA. exists i. split; trivial. intros m P_m.
+  assert (WTS : ~ m ⪵ i).
+  { intros H_lt. contradiction CONTRA'. exists m. split; trivial. }
+  repeat red. pose proof (classic (i = m)) as [YES | NO]; try tauto.
+  left. apply wltProp_total in NO. tauto.
+Qed.
+
+End OrderExtra1.
 
 Section BASIC1.
 
@@ -119,6 +148,9 @@ Proof.
   intros f1 f2 f1_eq_f2 x. unfold fixedpointsOf. unfold "\in".
   change (forall x, f1 x == f2 x) in f1_eq_f2. now rewrite f1_eq_f2.
 Qed.
+
+Definition isChain {D : Type} `{PROSET : isProset D} (X : ensemble D) : Prop :=
+  forall x1, forall x2, x1 \in X -> x2 \in X -> (x1 =< x2 \/ x2 =< x1).
 
 Definition prefixedpointsOf {D : Type} `{PROSET : isProset D} (f : D -> D) : ensemble D :=
   fun x => x >= f x.
