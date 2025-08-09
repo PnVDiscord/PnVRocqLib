@@ -79,10 +79,14 @@ Class isWellPoset (A : Type@{U_discourse}) : Type@{U_discourse} :=
   { wltProp :: has_ltProp A
   ; wltProp_Transitive :: Transitive wltProp
   ; wltProp_well_founded : well_founded wltProp
-  ; wltProp_total (x1 : A) (x2 : A) (NE : x1 <> x2) : wltProp x1 x2 \/ wltProp x2 x1
   }.
 
 Infix "⪵" := wltProp : type_scope.
+
+Class isWoset (A : Type@{U_discourse}) : Type@{U_discourse} :=
+  { Woset_isWellPoset :: isWellPoset A
+  ; Woset_total (x1 : A) (x2 : A) (NE : x1 <> x2) : wltProp x1 x2 \/ wltProp x2 x1
+  }.
 
 #[global]
 Instance wltProp_StrictOrder {A : Type} `{WPOSET : isWellPoset A} : StrictOrder wltProp :=
@@ -109,7 +113,7 @@ Proof.
   contradiction (IH m LT P_m).
 Qed.
 
-Lemma minimisation_lemma (classic : forall P : Prop, P \/ ~ P) {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
+Lemma minimisation_lemma (classic : forall P : Prop, P \/ ~ P) {A : Type} {WOSET : isWoset A} (P : A -> Prop)
   (EXISTENCE : exists n, P n)
   : exists n, P n /\ ⟪ MIN : forall m, P m -> wleProp n m ⟫.
 Proof.
@@ -121,7 +125,7 @@ Proof.
   assert (WTS : ~ m ⪵ i).
   { intros H_lt. contradiction CONTRA'. exists m. split; trivial. }
   repeat red. pose proof (classic (i = m)) as [YES | NO]; try tauto.
-  left. apply wltProp_total in NO. tauto.
+  left. apply Woset_total in NO. tauto.
 Qed.
 
 End OrderExtra1.
