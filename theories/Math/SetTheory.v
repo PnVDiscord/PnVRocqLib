@@ -112,13 +112,6 @@ Definition _suc : Ord -> Ord :=
 Definition _lim : forall A : Type@{Set_u}, (A -> Ord) -> Ord :=
   @indexed_union.
 
-#[global]
-Instance Ord_isWellPoset : isWellPoset Ord :=
-  { wltProp := rLt
-  ; wltProp_Transitive := rLt_StrictOrder.(StrictOrder_Transitive)
-  ; wltProp_well_founded := rLt_wf 
-  }.
-
 Section TRANSFINITE.
 
 Context {D : Type@{U_discourse}} (suc : D -> D) (lim : forall A : Type@{Set_u}, (A -> D) -> D).

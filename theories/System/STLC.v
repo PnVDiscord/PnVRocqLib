@@ -5,11 +5,6 @@ Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 Require Import PnV.System.Lambda1.
 
-Reserved Infix "~>β" (at level 70, no associativity).
-Reserved Infix "~>η" (at level 70, no associativity).
-Reserved Infix "~>β*" (at level 70, no associativity).
-Reserved Infix "~>η*" (at level 70, no associativity).
-
 Module ChurchStyleSTLC.
 
 Export ChurchStyleStlc.
@@ -87,8 +82,10 @@ Definition subseteq {A : Set} (X : wp A) (X' : wp A) : Prop :=
 
 #[local] Infix "\subseteq" := subseteq.
 
-Inductive whBeta : trm L -> trm L -> Prop :=
-  | whBeta_app_lam y ty M N
+(* Inductive whBeta (Gamma : ctx L) : trm L -> trm L -> Prop :=
+  | whBeta_app_lam y ty1 ty2 M N
+    (TYPING1 : (y, ty1) :: Gamma ⊢ M ⦂ ty2)
+    (TYPING2 : Gamma ⊢ N ⦂ ty1)
     : App_trm (Lam_trm y ty M) N ~>β subst_trm (one_subst y N) M
   | whBeta_ksi M M' N
     (WHBETA : M ~>β M')
@@ -327,7 +324,7 @@ Proof.
   - exact TYPING.
   - eapply eval_ctx_nil_subst.
 Defined.
-
+*)
 End WEAK_NORMALISATION.
 
 End STLC_META.

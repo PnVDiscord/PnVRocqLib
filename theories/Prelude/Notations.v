@@ -53,3 +53,13 @@ Reserved Notation "Gamma '⊢' M '⦂' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊢' M '=' N '⦂' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊢' M '⇉' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊢' M '⇇' A" (at level 70, no associativity).
+
+Reserved Infix "~>β" (at level 70, no associativity).
+Reserved Infix "~>η" (at level 70, no associativity).
+Reserved Infix "~>β*" (at level 70, no associativity).
+Reserved Infix "~>η*" (at level 70, no associativity).
+
+Reserved Infix "Gamma '⊢' M '~>β' N" (at level 70, no associativity).
+Reserved Infix "Gamma '⊢' M '~>β*' N" (at level 70, no associativity).
+Reserved Infix "Gamma '⊢' M '~>η' N" (at level 70, no associativity).
+Reserved Infix "Gamma '⊢' M '~>η*' N" (at level 70, no associativity).
