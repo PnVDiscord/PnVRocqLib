@@ -5,6 +5,11 @@ Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 Require Import PnV.System.Lambda1.
 
+Reserved Infix "~>β" (at level 70, no associativity).
+Reserved Infix "~>η" (at level 70, no associativity).
+Reserved Infix "~>β*" (at level 70, no associativity).
+Reserved Infix "~>η*" (at level 70, no associativity).
+
 Module ChurchStyleSTLC.
 
 Export ChurchStyleStlc.
@@ -12,7 +17,7 @@ Export ChurchStyleStlc.
 Notation "Gamma '∋' x '⦂' A" := (Lookup x A Gamma) : type_scope.
 Notation "Gamma '⊢' M '=' N '⦂' A" := (equality Gamma M N A) : type_scope.
 
-(* Section STLC_META.
+Section STLC_META.
 
 Context {L : language}.
 
@@ -82,30 +87,34 @@ Definition subseteq {A : Set} (X : wp A) (X' : wp A) : Prop :=
 
 #[local] Infix "\subseteq" := subseteq.
 
-Inductive whBeta (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
-  | whBeta_app_lam y ty1 ty2 M N
-    (TYPING1 : (y, ty1) :: Gamma ⊢ M ⦂ ty2)
-    (TYPING2 : Gamma ⊢ N ⦂ ty1)
-    : Gamma ⊢ App_trm (Lam_trm y ty1 M) N ~>β subst_trm (one_subst y N) M ⦂ ty2
-  | whBeta_ksi M M' N ty1 ty2
-    (TYPING : Gamma ⊢ N ⦂ ty1)
-    (WHBETA : Gamma ⊢ M ~>β M' ⦂ (ty1 -> ty2)%typ)
-    : Gamma ⊢ App_trm M N ~>β App_trm M' N ⦂ ty2
-  where "Gamma '⊢' M '~>β' N '⦂' A" := (whBeta Gamma M N A).
+Inductive whBeta : trm L -> trm L -> Prop :=
+  | whBeta_app_lam y ty M N
+    : App_trm (Lam_trm y ty M) N ~>β subst_trm (one_subst y N) M
+  | whBeta_ksi M M' N
+    (WHBETA : M ~>β M')
+    : App_trm M N ~>β App_trm M' N
+  where "M ~>β N" := (whBeta M N).
 
 Lemma whBeta_preservesTyping Gamma ty M N
-  (WHBETA : Gamma ⊢ M ~>β N ⦂ ty)
+  (WHBETA : M ~>β N)
   : Gamma ⊢ M ⦂ ty <-> Gamma ⊢ N ⦂ ty.
+Proof.
 Admitted.
 
-Inductive whBetaStar (Gamma : ctx L) (N : trm L) (ty : typ L) : trm L -> Prop :=
+Inductive whBetaStar (N : trm L) : trm L -> Prop :=
   | whBetaStar_O
-    : Gamma ⊢ N ~>β* N ⦂ ty
+    : N ~>β* N
   | whBetaStar_S M M'
-    (WHBETA' : Gamma ⊢ M' ~>β* N ⦂ ty)
-    (WHBETA : Gamma ⊢ M ~>β M' ⦂ ty)
-    : Gamma ⊢ M ~>β* N ⦂ ty
-  where "Gamma '⊢' M '~>β*' N '⦂' A" := (whBetaStar Gamma N A M).
+    (WHBETA' : M' ~>β* N)
+    (WHBETA : M ~>β M')
+    : M ~>β* N
+  where "M ~>β* N" := (whBetaStar N M).
+
+Inductive whEta (M : trm L) : trm L -> Prop :=
+  | whEta_intro x ty
+    (FRESH : ~ L.In x (FVs M))
+    : Lam_trm x ty (App_trm M (Var_trm x)) ~>η M
+  where "M ~>η N" := (whEta N M).
 
 Inductive wnNe (Gamma : ctx L) : typ L -> wp (trm L) :=
   | wnNe_Var x ty
@@ -127,7 +136,7 @@ with wnNf (Gamma : ctx L) : typ L -> wp (trm L) :=
     (v_wnNf : (x, ty) :: Gamma ⊢ v ⇇ ty')
     : Lam_trm x ty v \in wnNf Gamma (ty -> ty')%typ
   | wnNf_beta_wnNf v v' ty
-    (WHBETA : Gamma ⊢ v ~>β v' ⦂ ty)
+    (WHBETA : v ~>β v')
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : v \in wnNf Gamma ty
   where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
@@ -136,7 +145,7 @@ Fixpoint le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L) (u_wnNe : Gamma �
   : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ u ⇉ ty
 with le_ctx_wnNf (Gamma : ctx L) (ty : typ L) (v : trm L) (v_wnNf : Gamma ⊢ v ⇇ ty) {struct v_wnNf}
   : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ v ⇇ ty.
-Proof. (*
+Proof.
   - destruct u_wnNe; simpl; intros Gamma' LE.
     + econs 1. eapply LE; eassumption.
     + econs 2.
@@ -156,11 +165,11 @@ Proof. (*
     + econs 3.
       * eassumption.
       * eapply le_ctx_wnNf; eassumption.
-Defined. *) Admitted.
+Defined.
 
 Lemma wnNf_whBetaStar_wnNf Gamma M N ty
   (v_wnNf : Gamma ⊢ N ⇇ ty)
-  (WHBETA' : Gamma ⊢ M ~>β* N ⦂ ty)
+  (WHBETA' : M ~>β* N)
   : Gamma ⊢ M ⇇ ty.
 Proof.
   induction WHBETA'; simpl in *.
@@ -204,12 +213,14 @@ Admitted.
 
 Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) : trm L -> Set :=
   match ty with
-  | bty _ b => fun M => B.sig (trm L) (fun N => Gamma ⊢ N ⇉ bty _ b /\ Gamma ⊢ M ~>β* N ⦂ bty _ b)
-  | (ty1 -> ty2)%typ => fun M => forall Gamma', le_ctx Gamma Gamma' -> forall N, eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
+  | bty _ b => fun M =>
+    B.sig (trm L) (fun N => Gamma ⊢ N ⇉ bty _ b /\ M ~>β* N)
+  | (ty1 -> ty2)%typ => fun M =>
+    forall Gamma', le_ctx Gamma Gamma' -> forall N, eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
   end.
 
 Fixpoint eval_typ_le_ctx Gamma ty {struct ty} : forall M, eval_typ Gamma ty M -> forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty M.
-Proof. (*
+Proof.
   destruct ty as [b | ty1 ty2]; simpl; intros M H_M Gamma' LE.
   - exists H_M.(B.proj1_sig). split.
     + eapply le_ctx_wnNe. exact (proj1 H_M.(B.proj2_sig)). exact LE.
@@ -219,7 +230,7 @@ Proof. (*
       * intros x ty LOOKUP. eapply LE'. eapply LE. exact LOOKUP.
       * exact H_N.
     + intros x ty LOOKUP. exact LOOKUP.
-Defined. *) Admitted.
+Defined.
 
 Fixpoint reflect (Gamma : ctx L) (ty : typ L) {struct ty} : forall e, wnNe Gamma ty e -> eval_typ Gamma ty e
 with reify (Gamma : ctx L) (ty : typ L) {struct ty} : forall e, eval_typ Gamma ty e -> wnNf Gamma ty e.
@@ -240,9 +251,9 @@ Proof.
       * eapply reflect. econs 1. econs 1; reflexivity.
 Defined.
 
-Fixpoint head_expand (Gamma : ctx L) M M' (ty : typ L) (WHBETA : Gamma ⊢ M ~>β M' ⦂ ty) {struct ty} : eval_typ Gamma ty M' -> eval_typ Gamma ty M.
-Proof. (*
-  destruct ty as [b | ty1 ty2]; simpl; intros H_M.
+Fixpoint head_expand (Gamma : ctx L) M M' (ty : typ L) (WHBETA : M ~>β M') {struct ty} : eval_typ Gamma ty M' -> eval_typ Gamma ty M.
+Proof.
+  revert Gamma ty. destruct ty as [b | ty1 ty2]; simpl; intros H_M.
   - exists H_M.(B.proj1_sig). split.
     + exact (proj1 H_M.(B.proj2_sig)).
     + econs 2.
@@ -251,7 +262,7 @@ Proof. (*
   - intros N Gamma' LE H_N. eapply head_expand.
     + econs 2. eassumption.
     + eapply H_M; eassumption.
-Defined. *) Admitted.
+Defined.
 
 Definition eval_ctx (Gamma : ctx L) (Delta : ctx L) : subst L -> Set :=
   fun gamma => forall x, forall ty, Lookup x ty Delta -> eval_typ Gamma ty (gamma x).
@@ -319,6 +330,6 @@ Defined.
 
 End WEAK_NORMALISATION.
 
-End STLC_META. *)
+End STLC_META.
 
 End ChurchStyleSTLC.
