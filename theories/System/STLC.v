@@ -21,6 +21,73 @@ Section STLC_META.
 
 Context {L : language}.
 
+Section UNTYPED.
+
+Inductive uTm : Set :=
+  | uVar (x : Name.t)
+  | uApp (M : uTm) (N : uTm)
+  | uLam (y : Name.t) (M : uTm)
+  | uCon (c : L.(constants)).
+
+Fixpoint to_uTm (M : trm L) : uTm :=
+  match M with
+  | Var_trm x => uVar x
+  | App_trm M N => uApp (to_uTm M) (to_uTm N)
+  | Lam_trm y _ M => uLam y (to_uTm M)
+  | Con_trm c => uCon c
+  end.
+
+Fixpoint uFVs (e : uTm) : list name :=
+  match e with
+  | uVar x => [x]
+  | uApp e1 e2 => uFVs e1 ++ uFVs e2
+  | uLam y e1 => L.remove eq_dec y (uFVs e1)
+  | uCon c => []
+  end.
+
+Definition usubst : Set :=
+  name -> uTm.
+
+Definition nil_usubst : usubst :=
+  fun z : name => uVar z.
+
+Definition cons_usubst (x : name) (e : uTm) (s : usubst) : usubst :=
+  fun z : name => if eq_dec z x then e else s z.
+
+Definition one_usubst (x : name) (e : uTm) : usubst :=
+  cons_usubst x e nil_usubst.
+
+Definition uchi (s : usubst) (e : uTm) : name :=
+  next_name (Name.maxs (uFVs e >>= fun x : name => uFVs (s x))).
+
+Fixpoint subst_uTm (s : usubst) (e : uTm) : uTm :=
+  let z : name := uchi s e in
+  match e with
+  | uVar x => s x
+  | uApp e1 e2 => uApp (subst_uTm s e1) (subst_uTm s e2)
+  | uLam y e1 => uLam z (subst_uTm (cons_usubst y (uVar z) s) e1)
+  | uCon c => uCon c
+  end.
+
+Inductive u_whBeta : uTm -> uTm -> Prop :=
+  | u_whBeta_app_lam y M N
+    : uApp (uLam y M) N ~>β subst_uTm (one_usubst y N) M
+  | u_whBeta_ksi M M' N
+    (WHBETA : M ~>β M')
+    : uApp M N ~>β uApp M' N
+  where "M ~>β N" := (u_whBeta M N).
+
+Inductive u_whBetaStar (N : uTm) : uTm -> Prop :=
+  | u_whBetaStar_O
+    : N ~>β* N
+  | u_whBetaStar_S M M'
+    (WHBETA' : M' ~>β* N)
+    (WHBETA : M ~>β M')
+    : M ~>β* N
+  where "M ~>β* N" := (u_whBetaStar N M).
+
+End UNTYPED.
+
 Corollary subst_cons_lemma N M gamma x y (ty : typ L)
   (x_EQ : x = chi gamma (Lam_trm y ty M))
   : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
