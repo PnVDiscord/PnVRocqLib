@@ -192,7 +192,7 @@ Proof.
     specialize (IHR H_le). destruct IHR as [s1' s2' s3' ? ? ? ?]. exists s1' s2' s3'; try using eqn: H_split.
   - rewrite length_app in pumping_constant_le.
     assert (pumping_constant e1 <= length s1 \/ pumping_constant e1 > length s1) as [H_le1 | H_gt1] by lia; [ | assert (pumping_constant e2 <= length s2 \/ pumping_constant e2 > length s2) as [H_le2 | H_gt2] by lia]; try lia.
-    + specialize (IH1 H_le1). destruct IH1 as [s1' s2' s3' ? ? ? ?]. exists s1' s2' (s3' ++ s2);  try using eqn: H_split.
+    + specialize (IH1 H_le1). destruct IH1 as [s1' s2' s3' ? ? ? ?]. exists s1' s2' (s3' ++ s2); try using eqn: H_split.
       i. replace (s1' ++ s2' ^ m ++ s3' ++ s2) with ((s1' ++ s2' ^ m ++ s3') ++ s2) by done!. eauto.
     + specialize (IH2 H_le2). destruct IH2 as [s1' s2' s3' ? ? ? ?]. exists (s1 ++ s1') s2' s3'; try using eqn: H_split.
   - pose proof (pumping_constant_ge_1 e1) as H_0_ge_1; lia.
