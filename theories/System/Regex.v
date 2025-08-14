@@ -172,6 +172,14 @@ Variant pumping (e : regex A) (s : list A) : Prop :=
     (H_pumping : forall m : nat, s1 ++ s2 ^ m ++ s3 ∈ e)
     : pumping e s.
 
+#[local] Hint Rewrite -> length_app : simplication_hints.
+#[local] Hint Rewrite <- app_assoc : simplication_hints.
+#[local] Hint Constructors Re.in_regex : core.
+
+#[local]
+Tactic Notation "using" "eqn" ":" ident( H ) :=
+  first [simpl; autorewrite with simplication_hints; lia | (try rewrite H); done!].
+
 Theorem pumping_lemma (e : regex A) (s : list A)
   (H_in : s ∈ e)
   (pumping_constant_le : pumping_constant e <= length s)
@@ -181,45 +189,22 @@ Proof.
   - lia.
   - lia.
   - assert (H_le : pumping_constant e1 <= length s) by lia.
-    specialize (IHL H_le). destruct IHL as [s1' s2' s3' ? ? ? ?]. exists s1' s2' s3'.
-    { exact H_split. }
-    { eauto. }
-    { simpl. lia. }
-    { eauto with *. }
+    specialize (IHL H_le). destruct IHL as [s1' s2' s3' ? ? ? ?]. exists s1' s2' s3'; using eqn: H_split.
   - assert (H_le : pumping_constant e2 <= length s) by lia.
-    specialize (IHR H_le). destruct IHR as [s1' s2' s3' ? ? ? ?]. exists s1' s2' s3'.
-    { exact H_split. }
-    { eauto. }
-    { simpl. lia. }
-    { eauto with *. }
+    specialize (IHR H_le). destruct IHR as [s1' s2' s3' ? ? ? ?]. exists s1' s2' s3'; using eqn: H_split.
   - rewrite length_app in pumping_constant_le.
-    assert (pumping_constant e1 <= length s1 \/ pumping_constant e1 > length s1) as [H_le1 | H_gt1] by lia; [ | assert (pumping_constant e2 <= length s2 \/ pumping_constant e2 > length s2) as [H_le2 | H_gt2] by lia].
-    + specialize (IH1 H_le1). destruct IH1 as [s1' s2' s3' ? ? ? ?]. exists s1' s2' (s3' ++ s2).
-      { rewrite H_split. now repeat rewrite <- app_assoc. }
-      { eauto. }
-      { simpl. lia. }
-      { ii. replace (s1' ++ s2' ^ m ++ s3' ++ s2) with ((s1' ++ s2' ^ m ++ s3') ++ s2) by now repeat rewrite <- app_assoc. econstructor; eauto. }
-    + specialize (IH2 H_le2). destruct IH2 as [s1' s2' s3' ? ? ? ?]. exists (s1 ++ s1') s2' s3'.
-      { rewrite H_split. now repeat rewrite <- app_assoc. }
-      { eauto. }
-      { simpl. rewrite length_app. lia. }
-      { ii. replace ((s1 ++ s1') ++ s2' ^ m  ++ s3') with (s1 ++ (s1' ++ s2' ^ m  ++ s3')) by now repeat rewrite <- app_assoc. econstructor; eauto. }
-    + lia.
+    assert (pumping_constant e1 <= length s1 \/ pumping_constant e1 > length s1) as [H_le1 | H_gt1] by lia; [ | assert (pumping_constant e2 <= length s2 \/ pumping_constant e2 > length s2) as [H_le2 | H_gt2] by lia]; try lia.
+    + specialize (IH1 H_le1). destruct IH1 as [s1' s2' s3' ? ? ? ?]. exists s1' s2' (s3' ++ s2);  try using eqn: H_split.
+      i. replace (s1' ++ s2' ^ m ++ s3' ++ s2) with ((s1' ++ s2' ^ m ++ s3') ++ s2) by done!. eauto.
+    + specialize (IH2 H_le2). destruct IH2 as [s1' s2' s3' ? ? ? ?]. exists (s1 ++ s1') s2' s3'; try using eqn: H_split.
   - pose proof (pumping_constant_ge_1 e1) as H_0_ge_1; lia.
   - rewrite length_app in pumping_constant_le.
-    destruct s1 as [ | c1 s1']; [ | assert (length (c1 :: s1') < pumping_constant e1 \/ length (c1 :: s1') >= pumping_constant e1) as [H_lt1 | H_ge1] by lia].
-    + simpl. eapply IH2. simpl in *. lia.
-    + exists [] (c1 :: s1') s2.
-      { eauto. }
-      { discriminate. }
-      { simpl in *. lia. }
-      { simpl. ii. eapply pow_app_star; eauto. }
+    destruct s1 as [ | c1 s1']; [ | assert (length (c1 :: s1') < pumping_constant e1 \/ length (c1 :: s1') >= pumping_constant e1) as [H_lt1 | H_ge1] by lia]; try using eqn: H_split.
+    + exists [] (c1 :: s1') s2; try done!.
+      simpl. i. eapply pow_app_star; eauto.
     + specialize (IH1 H_ge1). destruct IH1 as [s' s2' s3' ? ? ? ?].
-      exists s' s2' (s3' ++ s2).
-      { rewrite H_split. now repeat rewrite <- app_assoc. }
-      { eauto. }
-      { simpl in *. lia. }
-      { ii. replace (s' ++ s2' ^ m ++ s3' ++ s2) with ((s' ++ s2' ^ m ++ s3') ++ s2) by now repeat rewrite <- app_assoc. eauto with *. }
+      exists s' s2' (s3' ++ s2); try using eqn: H_split.
+      i. replace (s' ++ s2' ^ m ++ s3' ++ s2) with ((s' ++ s2' ^ m ++ s3') ++ s2) by now repeat rewrite <- app_assoc. eauto with *.
 Qed.
 
 End REGULAR_LANGUAGE.
