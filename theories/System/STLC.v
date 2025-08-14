@@ -21,72 +21,11 @@ Section STLC_META.
 
 Context {L : language}.
 
-Section UNTYPED.
-
-Inductive uTm : Set :=
-  | uVar (x : Name.t)
-  | uApp (M : uTm) (N : uTm)
-  | uLam (y : Name.t) (M : uTm)
-  | uCon (c : L.(constants)).
-
-Fixpoint to_uTm (M : trm L) : uTm :=
-  match M with
-  | Var_trm x => uVar x
-  | App_trm M N => uApp (to_uTm M) (to_uTm N)
-  | Lam_trm y _ M => uLam y (to_uTm M)
-  | Con_trm c => uCon c
+Fixpoint typ_height (ty : typ L) : nat :=
+  match ty with
+  | bty _ b => 0%nat
+  | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
   end.
-
-Fixpoint uFVs (e : uTm) : list name :=
-  match e with
-  | uVar x => [x]
-  | uApp e1 e2 => uFVs e1 ++ uFVs e2
-  | uLam y e1 => L.remove eq_dec y (uFVs e1)
-  | uCon c => []
-  end.
-
-Definition usubst : Set :=
-  name -> uTm.
-
-Definition nil_usubst : usubst :=
-  fun z : name => uVar z.
-
-Definition cons_usubst (x : name) (e : uTm) (s : usubst) : usubst :=
-  fun z : name => if eq_dec z x then e else s z.
-
-Definition one_usubst (x : name) (e : uTm) : usubst :=
-  cons_usubst x e nil_usubst.
-
-Definition uchi (s : usubst) (e : uTm) : name :=
-  next_name (Name.maxs (uFVs e >>= fun x : name => uFVs (s x))).
-
-Fixpoint subst_uTm (s : usubst) (e : uTm) : uTm :=
-  let z : name := uchi s e in
-  match e with
-  | uVar x => s x
-  | uApp e1 e2 => uApp (subst_uTm s e1) (subst_uTm s e2)
-  | uLam y e1 => uLam z (subst_uTm (cons_usubst y (uVar z) s) e1)
-  | uCon c => uCon c
-  end.
-
-Inductive u_whBeta : uTm -> uTm -> Prop :=
-  | u_whBeta_app_lam y M N
-    : uApp (uLam y M) N ~>β subst_uTm (one_usubst y N) M
-  | u_whBeta_ksi M M' N
-    (WHBETA : M ~>β M')
-    : uApp M N ~>β uApp M' N
-  where "M ~>β N" := (u_whBeta M N).
-
-Inductive u_whBetaStar (N : uTm) : uTm -> Prop :=
-  | u_whBetaStar_O
-    : N ~>β* N
-  | u_whBetaStar_S M M'
-    (WHBETA' : M' ~>β* N)
-    (WHBETA : M ~>β M')
-    : M ~>β* N
-  where "M ~>β* N" := (u_whBetaStar N M).
-
-End UNTYPED.
 
 Corollary subst_cons_lemma N M gamma x y (ty : typ L)
   (x_EQ : x = chi gamma (Lam_trm y ty M))
@@ -161,12 +100,6 @@ Inductive whBeta : trm L -> trm L -> Prop :=
     (WHBETA : M ~>β M')
     : App_trm M N ~>β App_trm M' N
   where "M ~>β N" := (whBeta M N).
-
-Lemma whBeta_preservesTyping Gamma ty M N
-  (WHBETA : M ~>β N)
-  : Gamma ⊢ M ⦂ ty <-> Gamma ⊢ N ⦂ ty.
-Proof.
-Admitted.
 
 Inductive whBetaStar (N : trm L) : trm L -> Prop :=
   | whBetaStar_O
@@ -244,33 +177,6 @@ Proof.
   - econs 3; eassumption.
 Defined.
 
-Lemma wnNe_Typing Gamma ty u
-  (u_wnNe : Gamma ⊢ u ⇉ ty)
-  : Gamma ⊢ u ⦂ ty
-with wnNf_Typing Gamma ty v
-  (v_wnNf : Gamma ⊢ v ⇇ ty)
-  : Gamma ⊢ v ⦂ ty.
-Proof.
-  - destruct u_wnNe.
-    + econs 1. eassumption.
-    + econs 2.
-      * eapply wnNe_Typing. eassumption.
-      * eapply wnNf_Typing. eassumption.
-    + subst ty. econs 4.
-  - destruct v_wnNf.
-    + eapply wnNe_Typing. eassumption.
-    + econs 3. eapply wnNf_Typing. eassumption.
-    + rewrite -> whBeta_preservesTyping.
-      * eapply wnNf_Typing. eassumption.
-      * eassumption.
-Qed.
-
-Lemma wnNe_weankening Gamma ty ty' u
-  (y := Name.fresh_nm (map fst Gamma))
-  (u_wnNe : (y, ty) :: Gamma ⊢ u ⇉ (ty -> ty'))
-  : Gamma ⊢ u ⇉ (ty -> ty').
-Admitted.
-
 Lemma App_Var_wnNf_inv Gamma ty ty' v
   (y := Name.fresh_nm (map fst Gamma))
   (v_wnNf : (y, ty) :: Gamma ⊢ App_trm v (Var_trm y) ⇇ ty')
@@ -278,12 +184,10 @@ Lemma App_Var_wnNf_inv Gamma ty ty' v
 Proof.
 Admitted.
 
-Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) : trm L -> Set :=
+Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : trm L -> Set :=
   match ty with
-  | bty _ b => fun M =>
-    B.sig (trm L) (fun N => Gamma ⊢ N ⇉ bty _ b /\ M ~>β* N)
-  | (ty1 -> ty2)%typ => fun M =>
-    forall Gamma', le_ctx Gamma Gamma' -> forall N, eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
+  | bty _ b => fun M => B.sig (trm L) (fun N => Gamma ⊢ N ⇉ bty _ b /\ M ~>β* N)
+  | (ty1 -> ty2)%typ => fun M => forall Gamma', le_ctx Gamma Gamma' -> forall N, eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
   end.
 
 Fixpoint eval_typ_le_ctx Gamma ty {struct ty} : forall M, eval_typ Gamma ty M -> forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty M.
