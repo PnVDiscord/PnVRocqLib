@@ -187,9 +187,9 @@ Theorem pumping_lemma (e : regex A) (s : list A)
 Proof.
   induction H_in as [ | c | s e1 e2 H_INL IHL | s e1 e2 H_INR IHR | s1 s2 e1 e2 H_IN1 IH1 H_IN2 IH2 | e1 | e1 s1 s2 H_IN1 IH1 H_IN2 IH2]; simpl in *; try lia.
   - assert (H_le : pumping_constant e1 <= length s) by lia.
-    specialize (IHL H_le). destruct IHL as [s1' s2' s3' ? ? ? ?]. exists s1' s2' s3'; using eqn: H_split.
+    specialize (IHL H_le). destruct IHL as [s1' s2' s3' ? ? ? ?]. exists s1' s2' s3'; try using eqn: H_split.
   - assert (H_le : pumping_constant e2 <= length s) by lia.
-    specialize (IHR H_le). destruct IHR as [s1' s2' s3' ? ? ? ?]. exists s1' s2' s3'; using eqn: H_split.
+    specialize (IHR H_le). destruct IHR as [s1' s2' s3' ? ? ? ?]. exists s1' s2' s3'; try using eqn: H_split.
   - rewrite length_app in pumping_constant_le.
     assert (pumping_constant e1 <= length s1 \/ pumping_constant e1 > length s1) as [H_le1 | H_gt1] by lia; [ | assert (pumping_constant e2 <= length s2 \/ pumping_constant e2 > length s2) as [H_le2 | H_gt2] by lia]; try lia.
     + specialize (IH1 H_le1). destruct IH1 as [s1' s2' s3' ? ? ? ?]. exists s1' s2' (s3' ++ s2);  try using eqn: H_split.
@@ -200,9 +200,8 @@ Proof.
     destruct s1 as [ | c1 s1']; [ | assert (length (c1 :: s1') < pumping_constant e1 \/ length (c1 :: s1') >= pumping_constant e1) as [H_lt1 | H_ge1] by lia]; try using eqn: H_split.
     + exists [] (c1 :: s1') s2; try using eqn: H_split.
       simpl. i. eapply pow_app_star; eauto.
-    + specialize (IH1 H_ge1). destruct IH1 as [s' s2' s3' ? ? ? ?].
-      exists s' s2' (s3' ++ s2); try using eqn: H_split.
-      i. replace (s' ++ s2' ^ m ++ s3' ++ s2) with ((s' ++ s2' ^ m ++ s3') ++ s2) by now repeat rewrite <- app_assoc. eauto with *.
+    + specialize (IH1 H_ge1). destruct IH1 as [s' s2' s3' ? ? ? ?]. exists s' s2' (s3' ++ s2); try using eqn: H_split.
+      i. replace (s' ++ s2' ^ m ++ s3' ++ s2) with ((s' ++ s2' ^ m ++ s3') ++ s2) by done!. eauto with *.
 Qed.
 
 End REGULAR_LANGUAGE.
