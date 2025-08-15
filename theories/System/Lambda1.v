@@ -684,6 +684,10 @@ End STLC.
 #[global] Arguments subst : clear implicits.
 #[global] Coercion bty : basic_types >-> typ.
 
+End ChurchStyleStlc.
+
+Module __Lambda1_PRIVATE.
+
 Section NbE_example1.
 
 Inductive testsuite_basic_types : Set :=
@@ -715,6 +719,7 @@ Qed.
 
 End NbE_example1.
 
+<<<<<<< HEAD
 End ChurchStyleStlc.
 
 Module __Lambda1_PRIVATE.
@@ -847,4 +852,6 @@ Qed.
 
 End NbE_example1.
 
+=======
+>>>>>>> ae40c41 (test NbE.)
 End __Lambda1_PRIVATE.
