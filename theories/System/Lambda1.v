@@ -684,6 +684,37 @@ End STLC.
 #[global] Arguments subst : clear implicits.
 #[global] Coercion bty : basic_types >-> typ.
 
+Section NbE_example1.
+
+Inductive testsuite_basic_types : Set :=
+  | b : testsuite_basic_types.
+
+Definition testsuite_lang : language :=
+  {|
+    basic_types := testsuite_basic_types;
+    constants := Empty_set;
+  |}.
+
+#[local]
+Instance testsuite_sig : signature testsuite_lang :=
+  Empty_set_rect _.
+
+Example NbE_testsuite
+  : B.sig (trm testsuite_lang) (fun v => typNf [] v (bty testsuite_lang b -> bty testsuite_lang b)%typ).
+Proof.
+  eapply NbE. eapply App_typ.
+  - eapply Lam_typ with (y := "a"%name). eapply Var_typ. econs 1; reflexivity.
+  - eapply Lam_typ with (y := "b"%name). eapply Var_typ. econs 1; reflexivity.
+Defined.
+
+Example NbE_testsuite_correct
+  : B.proj1_sig NbE_testsuite = (Lam_trm "a0"%name (bty testsuite_lang b) (Var_trm "a0"%name)).
+Proof.
+  reflexivity.
+Qed.
+
+End NbE_example1.
+
 End ChurchStyleStlc.
 
 Module __Lambda1_PRIVATE.
