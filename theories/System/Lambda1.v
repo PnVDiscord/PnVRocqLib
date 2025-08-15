@@ -739,6 +739,10 @@ End STLC.
 #[global] Arguments subst : clear implicits.
 #[global] Coercion bty : basic_types >-> typ.
 
+End ChurchStyleStlc.
+
+Module __Lambda1_PRIVATE.
+
 Section NbE_example1.
 
 Inductive testsuite_basic_types : Set :=
@@ -770,4 +774,4 @@ Qed.
 
 End NbE_example1.
 
-End ChurchStyleStlc.
+End __Lambda1_PRIVATE.
