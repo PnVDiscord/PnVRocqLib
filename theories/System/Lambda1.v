@@ -594,7 +594,7 @@ Proof.
     + exists d.(B.proj1_sig). econs 1. exact d.(B.proj2_sig).
     + set (y := Name.fresh_nm (map fst Gamma)).
       pose proof (le_ctx_cons Gamma ty1) as claim1. simpl in claim1. fold y in claim1.
-      assert (y_hat : B.sig trm (fun u : trm => typNe ((y, ty1) :: Gamma) u ty1)).
+      assert (y_hat : B.sig trm (fun u => typNe ((y, ty1) :: Gamma) u ty1)).
       { exists (Var_trm y). econs 1. econs 1; reflexivity. }
       set (a := reflect ((y, ty1) :: Gamma) ty1 y_hat).
       set (body := reify ((y, ty1) :: Gamma) ty2 (d ((y, ty1) :: Gamma) claim1 a)).
@@ -738,5 +738,36 @@ End STLC.
 #[global] Arguments ctx : clear implicits.
 #[global] Arguments subst : clear implicits.
 #[global] Coercion bty : basic_types >-> typ.
+
+Section NbE_example1.
+
+Inductive testsuite_basic_types : Set :=
+  | b : testsuite_basic_types.
+
+Definition testsuite_lang : language :=
+  {|
+    basic_types := testsuite_basic_types;
+    constants := Empty_set;
+  |}.
+
+#[local]
+Instance testsuite_sig : signature testsuite_lang :=
+  Empty_set_rect _.
+
+Example NbE_testsuite
+  : B.sig (trm testsuite_lang) (fun v => typNf [] v (bty testsuite_lang b -> bty testsuite_lang b)%typ).
+Proof.
+  eapply NbE. eapply App_typ.
+  - eapply Lam_typ with (y := "a"%name). eapply Var_typ. econs 1; reflexivity.
+  - eapply Lam_typ with (y := "b"%name). eapply Var_typ. econs 1; reflexivity.
+Defined.
+
+Example NbE_testsuite_correct
+  : B.proj1_sig NbE_testsuite = (Lam_trm "a0"%name (bty testsuite_lang b) (Var_trm "a0"%name)).
+Proof.
+  reflexivity.
+Qed.
+
+End NbE_example1.
 
 End ChurchStyleStlc.
