@@ -172,21 +172,6 @@ Proof.
   - econs 3; eassumption.
 Defined.
 
-Lemma eta_wnNf_inv Gamma ty ty' v y
-  : Gamma ⊢ (Lam_trm y ty (App_trm v (Var_trm y))) ⇇ (ty -> ty')%typ <-> (y, ty) :: Gamma ⊢ (App_trm v (Var_trm y)) ⇇ ty'.
-Proof.
-  split; intros H.
-  - inv H.
-    + inv u_wnNe.
-    + eassumption.
-    + inv WHBETA.
-  - inv H.
-    + inv u_wnNe. inv v_wnNf; [inv u_wnNe | inv WHBETA]. revert LOOKUP. eapply Lookup_cons; intros.
-      { subst ty0. econs 2. econs 1. econs 2; eauto. econs 1. econs 1. econs 1; reflexivity. }
-      { rewrite Name.ne_iff in x_ne. contradiction. }
-    + econs 2. econs 3; eauto.
-Qed.
-
 Lemma App_Var_wnNf_inv Gamma ty ty' v
   (y := Name.fresh_nm (map fst Gamma ++ FVs v))
   (v_wnNf : (y, ty) :: Gamma ⊢ App_trm v (Var_trm y) ⇇ ty')
