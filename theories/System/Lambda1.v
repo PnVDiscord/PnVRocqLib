@@ -478,6 +478,22 @@ Inductive equality (Gamma : ctx) : trm -> trm -> typ -> Prop :=
 
 End TypingRule.
 
+Section SYNTAX_TH.
+
+Fixpoint typ_height (ty : typ) : nat :=
+  match ty with
+  | bty b => 0%nat
+  | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
+  end.
+
+Corollary subst_cons_lemma N M gamma x y ty
+  (x_EQ : x = chi gamma (Lam_trm y ty M))
+  : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
+Proof.
+Admitted.
+
+End SYNTAX_TH.
+
 Section NORMALISATION_BY_EVALUATION.
 
 Definition le_ctx (Gamma : ctx) (Delta : ctx) : Set :=
@@ -631,15 +647,7 @@ Defined.
 Definition NbE (Gamma : ctx) (e : trm) (ty : typ) (TYPING : Typing Gamma e ty) : B.sig trm (fun v => typNf Gamma v ty) :=
   reify Gamma ty (evalTyping Gamma e ty TYPING Gamma eval_ctx_Gamma_Gamma).
 
-End NORMALISATION_BY_EVALUATION.
-
-Fixpoint typ_height (ty : typ) : nat :=
-  match ty with
-  | bty b => 0%nat
-  | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
-  end.
-
-Lemma Typing_weakening {Sigma : signature L} {Gamma : ctx} {Delta : ctx} {e : trm} {ty : typ}
+Lemma Typing_weakening {Gamma : ctx} {Delta : ctx} {e : trm} {ty : typ}
   (TYPING : Typing Gamma e ty)
   (LE : le_ctx Gamma Delta)
   : Typing Delta e ty.
@@ -652,6 +660,8 @@ Proof.
     + intros x_NE LOOKUP. econs 2; eauto.
   - econs 4.
 Defined.
+
+End NORMALISATION_BY_EVALUATION.
 
 Section SN.
 

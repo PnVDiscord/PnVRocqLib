@@ -21,12 +21,6 @@ Section STLC_META.
 
 Context {L : language}.
 
-Corollary subst_cons_lemma N M gamma x y (ty : typ L)
-  (x_EQ : x = chi gamma (Lam_trm y ty M))
-  : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
-Proof.
-Admitted.
-
 Lemma le_ctx_cons_intro_var1 (Gamma : ctx L) (e : trm L) (ty' : typ L)
   (y := Name.fresh_nm (map fst Gamma ++ FVs e))
   : le_ctx Gamma ((y, ty') :: Gamma).
