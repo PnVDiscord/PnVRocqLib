@@ -21,33 +21,58 @@ Section STLC_META.
 
 Context {L : language}.
 
-Fixpoint typ_height (ty : typ L) : nat :=
-  match ty with
-  | bty _ b => 0%nat
-  | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
-  end.
-
-Corollary subst_cons_lemma N M gamma x y (ty : typ L)
-  (x_EQ : x = chi gamma (Lam_trm y ty M))
-  : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
+Lemma le_ctx_cons_intro_var1 (Gamma : ctx L) (e : trm L) (ty' : typ L)
+  (y := Name.fresh_nm (map fst Gamma ++ FVs e))
+  : le_ctx Gamma ((y, ty') :: Gamma).
 Proof.
-Admitted.
+  intros x ty LOOKUP. econs 2.
+  - assert (H_IN : L.In x (map fst Gamma)).
+    { apply Lookup_to_LookupProp in LOOKUP.
+      subst y. induction Gamma as [ | [x1 ty1] Gamma IH]; simpl in *.
+      - exact LOOKUP.
+      - destruct (eq_dec x x1) as [EQ | NE].
+        + left. symmetry. exact EQ.
+        + right. eapply IH. exact LOOKUP. 
+    }
+    pose proof (Name.fresh_nm_notin (map fst Gamma ++ FVs e)) as claim1.
+    rewrite L.in_app_iff in claim1. fold y in claim1.
+    rewrite Name.ne_iff. intros EQ. subst y. contradiction claim1.
+    left. congruence.
+  - exact LOOKUP.
+Qed.
+
+Inductive whBeta : trm L -> trm L -> Prop :=
+  | whBeta_app_lam y ty M N
+    : App_trm (Lam_trm y ty M) N ~>β subst_trm (one_subst y N) M
+  | whBeta_ksi M M' N
+    (WHBETA : M ~>β M')
+    : App_trm M N ~>β App_trm M' N
+  where "M ~>β N" := (whBeta M N).
+
+Inductive whBetaStar (N : trm L) : trm L -> Prop :=
+  | whBetaStar_O
+    : N ~>β* N
+  | whBetaStar_S M M'
+    (WHBETA' : M' ~>β* N)
+    (WHBETA : M ~>β M')
+    : M ~>β* N
+  where "M ~>β* N" := (whBetaStar N M).
+
+Inductive whEta (M : trm L) : trm L -> Prop :=
+  | whEta_intro x ty
+    (FRESH : ~ L.In x (FVs M))
+    : Lam_trm x ty (App_trm M (Var_trm x)) ~>η M
+  where "M ~>η N" := (whEta N M).
+
+Lemma whEta_intro_var1 (Gamma : ctx L) (e : trm L) (ty : typ L)
+  (y := Name.fresh_nm (map fst Gamma ++ FVs e))
+  : Lam_trm y ty (App_trm e (Var_trm y)) ~>η e.
+Proof.
+  econs 1. pose proof (Name.fresh_nm_notin (map fst Gamma ++ FVs e)) as claim1.
+  rewrite L.in_app_iff in claim1. fold y in claim1. tauto.
+Qed.
 
 Context {Sigma : signature L}.
-
-Lemma Typing_weakening {Gamma : ctx L} {Delta : ctx L} {e : trm L} {ty : typ L}
-  (TYPING : Typing Gamma e ty)
-  (LE : le_ctx Gamma Delta)
-  : Typing Delta e ty.
-Proof.
-  revert Delta LE. induction TYPING; simpl; intros.
-  - econs 1. eapply LE. exact LOOKUP.
-  - econs 2; eauto.
-  - econs 3; eapply IHTYPING. intros x ty LOOKUP. pattern LOOKUP. revert LOOKUP. eapply Lookup_cons.
-    + intros x_EQ ty_EQ. subst x ty. econs 1; reflexivity.
-    + intros x_NE LOOKUP. econs 2; eauto.
-  - econs 4.
-Defined.
 
 Inductive TypingProp (Gamma : ctx L) : trm L -> typ L -> Prop :=
   | TypingProp_Var x ty
@@ -80,65 +105,33 @@ Qed.
 
 Section WEAK_NORMALISATION.
 
-Let wp (A : Set) : Type :=
-  A -> Prop.
-
-Definition In {A : Set} (x : A) (X : wp A) : Prop :=
-  X x.
-
-#[local] Infix "\in" := In.
-
-Definition subseteq {A : Set} (X : wp A) (X' : wp A) : Prop :=
-  forall x, x \in X -> x \in X'.
-
-#[local] Infix "\subseteq" := subseteq.
-
-Inductive whBeta : trm L -> trm L -> Prop :=
-  | whBeta_app_lam y ty M N
-    : App_trm (Lam_trm y ty M) N ~>β subst_trm (one_subst y N) M
-  | whBeta_ksi M M' N
-    (WHBETA : M ~>β M')
-    : App_trm M N ~>β App_trm M' N
-  where "M ~>β N" := (whBeta M N).
-
-Inductive whBetaStar (N : trm L) : trm L -> Prop :=
-  | whBetaStar_O
-    : N ~>β* N
-  | whBetaStar_S M M'
-    (WHBETA' : M' ~>β* N)
-    (WHBETA : M ~>β M')
-    : M ~>β* N
-  where "M ~>β* N" := (whBetaStar N M).
-
-Inductive whEta (M : trm L) : trm L -> Prop :=
-  | whEta_intro x ty
-    (FRESH : ~ L.In x (FVs M))
-    : Lam_trm x ty (App_trm M (Var_trm x)) ~>η M
-  where "M ~>η N" := (whEta N M).
-
-Inductive wnNe (Gamma : ctx L) : typ L -> wp (trm L) :=
+Inductive wnNe (Gamma : ctx L) : typ L -> trm L -> Prop :=
   | wnNe_Var x ty
     (LOOKUP : Gamma ∋ x ⦂ ty)
-    : Var_trm x \in wnNe Gamma ty
+    : Gamma ⊢ Var_trm x ⇉ ty
   | wnNe_App u v ty ty'
     (u_wnNe : Gamma ⊢ u ⇉ (ty -> ty')%typ)
     (v_wnNf : Gamma ⊢ v ⇇ ty)
-    : App_trm u v \in wnNe Gamma ty'
+    : Gamma ⊢ App_trm u v ⇉ ty'
   | wnNe_Con c ty
     (ty_EQ : ty = Sigma c)
-    : Con_trm c \in wnNe Gamma ty
+    : Gamma ⊢ Con_trm c ⇉ ty
   where "Gamma '⊢' M '⇉' A" := (wnNe Gamma A M)
-with wnNf (Gamma : ctx L) : typ L -> wp (trm L) :=
+with wnNf (Gamma : ctx L) : typ L -> trm L -> Prop :=
   | wnNf_of_wnNe u ty
     (u_wnNe : Gamma ⊢ u ⇉ ty)
-    : u \in wnNf Gamma ty
+    : Gamma ⊢ u ⇇ ty
   | wnNf_Lam x v ty ty'
     (v_wnNf : (x, ty) :: Gamma ⊢ v ⇇ ty')
-    : Lam_trm x ty v \in wnNf Gamma (ty -> ty')%typ
-  | wnNf_beta_wnNf v v' ty
+    : Gamma ⊢ Lam_trm x ty v ⇇ (ty -> ty')%typ
+  | wnNf_whbeta_wnNf v v' ty
     (WHBETA : v ~>β v')
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
-    : v \in wnNf Gamma ty
+    : Gamma ⊢ v ⇇ ty
+  | wnNf_eta_wnNf v v' ty
+    (WHBETA : v' ~>η v)
+    (v_wnNf : Gamma ⊢ v' ⇇ ty)
+    : Gamma ⊢ v ⇇ ty
   where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
 
 Fixpoint le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L) (u_wnNe : Gamma ⊢ u ⇉ ty) {struct u_wnNe}
@@ -165,6 +158,9 @@ Proof.
     + econs 3.
       * eassumption.
       * eapply le_ctx_wnNf; eassumption.
+    + econs 4.
+      * eassumption.
+      * eapply le_ctx_wnNf; eassumption.
 Defined.
 
 Lemma wnNf_whBetaStar_wnNf Gamma M N ty
@@ -178,11 +174,14 @@ Proof.
 Defined.
 
 Lemma App_Var_wnNf_inv Gamma ty ty' v
-  (y := Name.fresh_nm (map fst Gamma))
+  (y := Name.fresh_nm (map fst Gamma ++ FVs v))
   (v_wnNf : (y, ty) :: Gamma ⊢ App_trm v (Var_trm y) ⇇ ty')
   : Gamma ⊢ v ⇇ (ty -> ty')%typ.
 Proof.
-Admitted.
+  econs 4.
+  - eapply whEta_intro_var1 with (Gamma := Gamma) (ty := ty).
+  - econs 2. fold y. exact v_wnNf.
+Defined.
 
 Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : trm L -> Set :=
   match ty with
@@ -218,7 +217,7 @@ Proof.
       * econs 1. exact (proj1 (B.proj2_sig H_M)).
       * exact (proj2 (B.proj2_sig H_M)).
     + eapply App_Var_wnNf_inv. eapply reify. eapply H_M.
-      * eapply le_ctx_cons.
+      * eapply le_ctx_cons_intro_var1.
       * eapply reflect. econs 1. econs 1; reflexivity.
 Defined.
 

@@ -148,7 +148,9 @@ Proof.
   ii. rewrite <- app_assoc; eauto with *.
 Qed.
 
-Fixpoint pumping_constant (e : regex A) : nat :=
+Section PUMPING.
+
+Fixpoint pumping_constant (e : regex A) {struct e} : nat :=
   match e with
   | Null => 1
   | Empty => 1
@@ -198,6 +200,8 @@ Proof.
     + exists [] (c1 :: s1') s2; try using eqn: H_split. simpl. i. eapply pow_app_star; eauto.
     + specialize (IH1 H_ge1). destruct IH1 as [s' s2' s3' ? ? ? ?]. exists s' s2' (s3' ++ s2); try using eqn: H_split. i. replace (s' ++ s2' ^ m ++ s3' ++ s2) with ((s' ++ s2' ^ m ++ s3') ++ s2) by done!. eauto with *.
 Qed.
+
+End PUMPING.
 
 End REGULAR_LANGUAGE.
 
