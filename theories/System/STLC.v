@@ -64,7 +64,7 @@ Inductive whEta (M : trm L) : trm L -> Prop :=
     : Lam_trm x ty (App_trm M (Var_trm x)) ~>η M
   where "M ~>η N" := (whEta N M).
 
-Lemma eta_intro_var1 (Gamma : ctx L) (e : trm L) (ty : typ L)
+Lemma whEta_intro_var1 (Gamma : ctx L) (e : trm L) (ty : typ L)
   (y := Name.fresh_nm (map fst Gamma ++ FVs e))
   : Lam_trm y ty (App_trm e (Var_trm y)) ~>η e.
 Proof.
@@ -179,9 +179,9 @@ Lemma App_Var_wnNf_inv Gamma ty ty' v
   : Gamma ⊢ v ⇇ (ty -> ty')%typ.
 Proof.
   econs 4.
-  { eapply eta_intro_var1 with (Gamma := Gamma) (ty := ty). }
-  econs 2. fold y. exact v_wnNf.
-Qed.
+  - eapply whEta_intro_var1 with (Gamma := Gamma) (ty := ty).
+  - econs 2. fold y. exact v_wnNf.
+Defined.
 
 Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : trm L -> Set :=
   match ty with
