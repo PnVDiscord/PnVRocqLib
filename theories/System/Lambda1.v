@@ -496,8 +496,11 @@ Fixpoint typ_height (ty : typ) : nat :=
   | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
   end.
 
-Definition le_ctx (Gamma : ctx) (Delta : ctx) : Set :=
-  forall x : name, forall ty : typ, Lookup x ty Gamma -> Lookup x ty Delta.
+Fixpoint typ_height (ty : typ) : nat :=
+  match ty with
+  | bty b => 0%nat
+  | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
+  end.
 
 Context {Sigma : signature L}.
 
@@ -597,6 +600,8 @@ Proof.
     + intros x_NE LOOKUP. econs 2; eauto.
   - econs 4.
 Defined.
+
+End NORMALISATION_BY_EVALUATION.
 
 Section SN.
 
