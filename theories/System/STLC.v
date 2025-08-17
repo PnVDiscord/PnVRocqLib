@@ -49,7 +49,7 @@ Inductive whBeta : trm L -> trm L -> Prop :=
     : App_trm M N ~>β App_trm M' N
   where "M ~>β N" := (whBeta M N).
 
-Inductive whBetaStar (N : trm L) : trm L -> Prop :=
+Inductive whBetaStar (N : trm L) : trm L -> Set :=
   | whBetaStar_O
     : N ~>β* N
   | whBetaStar_S M M'
@@ -106,7 +106,7 @@ Qed.
 
 Section WEAK_NORMALISATION.
 
-Inductive wnNe (Gamma : ctx L) : typ L -> trm L -> Prop :=
+Inductive wnNe (Gamma : ctx L) : typ L -> trm L -> Set :=
   | wnNe_Var x ty
     (LOOKUP : Gamma ∋ x ⦂ ty)
     : Gamma ⊢ Var_trm x ⇉ ty
@@ -118,7 +118,7 @@ Inductive wnNe (Gamma : ctx L) : typ L -> trm L -> Prop :=
     (ty_EQ : ty = Sigma c)
     : Gamma ⊢ Con_trm c ⇉ ty
   where "Gamma '⊢' M '⇉' A" := (wnNe Gamma A M)
-with wnNf (Gamma : ctx L) : typ L -> trm L -> Prop :=
+with wnNf (Gamma : ctx L) : typ L -> trm L -> Set :=
   | wnNf_of_wnNe u ty
     (u_wnNe : Gamma ⊢ u ⇉ ty)
     : Gamma ⊢ u ⇇ ty
@@ -184,16 +184,16 @@ Defined.
 
 Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : trm L -> Set :=
   match ty with
-  | bty _ b => fun M => B.sig (trm L) (fun N => Gamma ⊢ N ⇉ bty _ b /\ M ~>β* N)
+  | bty _ b => fun M => B.sigT (trm L) (fun N => (Gamma ⊢ N ⇉ bty _ b) * (M ~>β* N))%type
   | (ty1 -> ty2)%typ => fun M => forall Gamma', le_ctx Gamma Gamma' -> forall N, eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
   end.
 
 Fixpoint eval_typ_le_ctx Gamma ty {struct ty} : forall M, eval_typ Gamma ty M -> forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty M.
 Proof.
   destruct ty as [b | ty1 ty2]; simpl; intros M H_M Gamma' LE.
-  - exists H_M.(B.proj1_sig). split.
-    + eapply le_ctx_wnNe. exact (proj1 H_M.(B.proj2_sig)). exact LE.
-    + exact (proj2 H_M.(B.proj2_sig)).
+  - exists H_M.(B.projT1). split.
+    + eapply le_ctx_wnNe. exact (fst H_M.(B.projT2)). exact LE.
+    + exact (snd H_M.(B.projT2)).
   - intros Delta LE' N H_N. eapply eval_typ_le_ctx.
     + eapply H_M with (Gamma' := Delta).
       * intros x ty LOOKUP. eapply LE'. eapply LE. exact LOOKUP.
@@ -212,9 +212,9 @@ Proof.
       * eapply le_ctx_wnNe; [exact H_M | exact LE].
       * eapply reify. exact H_N.
   - destruct ty as [b | ty1 ty2]; simpl; intros M H_M.
-    + eapply wnNf_whBetaStar_wnNf with (N := H_M.(B.proj1_sig)).
-      * econs 1. exact (proj1 (B.proj2_sig H_M)).
-      * exact (proj2 (B.proj2_sig H_M)).
+    + eapply wnNf_whBetaStar_wnNf with (N := H_M.(B.projT1)).
+      * econs 1. exact (fst (B.projT2 H_M)).
+      * exact (snd (B.projT2 H_M)).
     + eapply App_Var_wnNf_inv. eapply reify. eapply H_M.
       * eapply le_ctx_cons_intro_var1.
       * eapply reflect. econs 1. econs 1; reflexivity.
@@ -222,12 +222,12 @@ Defined.
 
 Fixpoint head_expand (Gamma : ctx L) M M' (ty : typ L) (WHBETA : M ~>β M') {struct ty} : eval_typ Gamma ty M' -> eval_typ Gamma ty M.
 Proof.
-  revert Gamma ty. destruct ty as [b | ty1 ty2]; simpl; intros H_M.
-  - exists H_M.(B.proj1_sig). split.
-    + exact (proj1 H_M.(B.proj2_sig)).
+  destruct ty as [b | ty1 ty2]; simpl; intros H_M.
+  - exists H_M.(B.projT1). split.
+    + exact (fst H_M.(B.projT2)).
     + econs 2.
       * eassumption.
-      * exact (proj2 H_M.(B.proj2_sig)).
+      * exact (snd H_M.(B.projT2)).
   - intros N Gamma' LE H_N. eapply head_expand.
     + econs 2. eassumption.
     + eapply H_M; eassumption.
@@ -296,6 +296,43 @@ Proof.
   - exact TYPING.
   - eapply eval_ctx_nil_subst.
 Defined.
+
+Lemma wnNe_typNe (Gamma : ctx L) u ty
+  (u_wnNe : Gamma ⊢ u ⇉ ty)
+  : B.sig (trm L) (fun e => typNe Gamma e ty /\ equality Gamma u e ty)
+with wnNf_typNf (Gamma : ctx L) v ty
+  (v_wnNf : Gamma ⊢ v ⇇ ty)
+  : B.sig (trm L) (fun e => typNf Gamma e ty /\ equality Gamma v e ty).
+Proof.
+  - destruct u_wnNe.
+    + exists (Var_trm x). split.
+      * econs 1. exact LOOKUP.
+      * eapply equality_refl. econs 1. eapply LOOKUP.
+    + pose proof (wnNe_typNe Gamma u (ty -> ty')%typ u_wnNe) as H_M. pose proof (wnNf_typNf Gamma v ty v_wnNf) as H_N.
+      exists (App_trm H_M.(B.proj1_sig) H_N.(B.proj1_sig)). split.
+      * econs 2; [exact (proj1 H_M.(B.proj2_sig)) | exact (proj1 H_N.(B.proj2_sig))].
+      * eapply equality_App; [exact (proj2 H_M.(B.proj2_sig)) | exact (proj2 H_N.(B.proj2_sig))].
+    + exists (Con_trm c). split.
+      * econs 3. exact ty_EQ.
+      * eapply equality_refl. subst ty. econs 4.
+  - destruct v_wnNf.
+    + pose proof (wnNe_typNe Gamma u ty u_wnNe) as H_e.
+      exists H_e.(B.proj1_sig). split.
+      * econs 1. exact (proj1 H_e.(B.proj2_sig)).
+      * exact (proj2 H_e.(B.proj2_sig)).
+    + pose proof (wnNf_typNf ((x, ty) :: Gamma) v ty' v_wnNf) as H_M.
+      exists (Lam_trm x ty H_M.(B.proj1_sig)). split.
+      * econs 2. exact (proj1 H_M.(B.proj2_sig)).
+      * admit.
+    + pose proof (wnNf_typNf Gamma v' ty v_wnNf) as H_e.
+      exists H_e.(B.proj1_sig). split.
+      * exact (proj1 H_e.(B.proj2_sig)).
+      * admit.
+    + pose proof (wnNf_typNf Gamma v' ty v_wnNf) as H_e.
+      exists H_e.(B.proj1_sig). split.
+      * exact (proj1 H_e.(B.proj2_sig)).
+      * admit.
+Admitted.
 
 End WEAK_NORMALISATION.
 
