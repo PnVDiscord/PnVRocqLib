@@ -308,11 +308,11 @@ Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
   | wnStep_Lam x M M' ty ty'
     (H_M : wnStep ((x, ty) :: Gamma) M M' ty')
     : wnStep Gamma (Lam_trm x ty M) (Lam_trm x ty M') (ty -> ty')%typ
-  | wnStep_betaReduce v v' e ty
+  | wnStep_whBetaReduce v v' e ty
     (H_M : wnStep Gamma v' e ty)
     (WHBETA : v ~>β v')
     : wnStep Gamma v e ty
-  | wnStep_etaExpand v v' e ty
+  | wnStep_whEtaExpand v v' e ty
     (H_M : wnStep Gamma v' e ty)
     (WHETA : v' ~>η v)
     : wnStep Gamma v e ty.
@@ -347,11 +347,11 @@ Proof.
     + pose proof (wnNf_typNf Gamma v' ty v_wnNf) as H_e.
       exists H_e.(B.proj1_sig). split.
       * exact (proj1 H_e.(B.proj2_sig)).
-      * eapply wnStep_betaReduce; [exact (proj2 H_e.(B.proj2_sig)) | exact WHBETA].
+      * eapply wnStep_whBetaReduce; [exact (proj2 H_e.(B.proj2_sig)) | exact WHBETA].
     + pose proof (wnNf_typNf Gamma v' ty v_wnNf) as H_e.
       exists H_e.(B.proj1_sig). split.
       * exact (proj1 H_e.(B.proj2_sig)).
-      * eapply wnStep_etaExpand; [exact (proj2 H_e.(B.proj2_sig)) | exact WHETA].
+      * eapply wnStep_whEtaExpand; [exact (proj2 H_e.(B.proj2_sig)) | exact WHETA].
 Defined.
 
 Definition NbE {Gamma : ctx L} {M : trm L} {ty : typ L} (TYPING : Typing Gamma M ty) : B.sig (trm L) (fun e => typNf Gamma e ty /\ wnStep Gamma (subst_trm nil_subst M) e ty) :=
