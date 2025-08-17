@@ -1179,6 +1179,14 @@ Record sig {A : Set} {P : A -> Prop} : Set :=
 
 #[global] Arguments B.sig : clear implicits.
 
+#[projections(primitive)]
+Record sigT {A : Set} {P : A -> Set} : Set :=
+  { projT1 : A
+  ; projT2 : P projT1
+  }.
+
+#[global] Arguments B.sigT : clear implicits.
+
 #[universes(template), projections(primitive)]
 Class retracts (X : Type) (P : Prop) : Type :=
   { section : X -> P

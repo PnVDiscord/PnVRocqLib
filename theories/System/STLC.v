@@ -53,15 +53,15 @@ Inductive whBetaStar (N : trm L) : trm L -> Prop :=
   | whBetaStar_O
     : N ~>β* N
   | whBetaStar_S M M'
-    (WHBETA' : M' ~>β* N)
     (WHBETA : M ~>β M')
+    (WHBETA' : M' ~>β* N)
     : M ~>β* N
   where "M ~>β* N" := (whBetaStar N M).
 
-Inductive whEta (M : trm L) : trm L -> Prop :=
+Inductive whEta (N : trm L) : trm L -> Prop :=
   | whEta_intro x ty
-    (FRESH : ~ L.In x (FVs M))
-    : Lam_trm x ty (App_trm M (Var_trm x)) ~>η M
+    (FRESH : ~ L.In x (FVs N))
+    : Lam_trm x ty (App_trm N (Var_trm x)) ~>η N
   where "M ~>η N" := (whEta N M).
 
 Lemma whEta_intro_var1 (Gamma : ctx L) (e : trm L) (ty : typ L)
@@ -69,8 +69,9 @@ Lemma whEta_intro_var1 (Gamma : ctx L) (e : trm L) (ty : typ L)
   : Lam_trm y ty (App_trm e (Var_trm y)) ~>η e.
 Proof.
   econs 1. pose proof (Name.fresh_nm_notin (map fst Gamma ++ FVs e)) as claim1.
-  rewrite L.in_app_iff in claim1. fold y in claim1. tauto.
-Qed.
+  rewrite L.in_app_iff in claim1. fold y in claim1. intros H_contra.
+  contradiction claim1. right. exact H_contra.
+Defined.
 
 Context {Sigma : signature L}.
 
@@ -124,20 +125,18 @@ with wnNf (Gamma : ctx L) : typ L -> trm L -> Prop :=
   | wnNf_Lam x v ty ty'
     (v_wnNf : (x, ty) :: Gamma ⊢ v ⇇ ty')
     : Gamma ⊢ Lam_trm x ty v ⇇ (ty -> ty')%typ
-  | wnNf_whbeta_wnNf v v' ty
+  | wnNf_whBetaReduce_wnNf v v' ty
     (WHBETA : v ~>β v')
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
-  | wnNf_eta_wnNf v v' ty
+  | wnNf_whEtaExpand_wnNf v v' ty
     (WHBETA : v' ~>η v)
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
   where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
 
-Fixpoint le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L) (u_wnNe : Gamma ⊢ u ⇉ ty) {struct u_wnNe}
-  : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ u ⇉ ty
-with le_ctx_wnNf (Gamma : ctx L) (ty : typ L) (v : trm L) (v_wnNf : Gamma ⊢ v ⇇ ty) {struct v_wnNf}
-  : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ v ⇇ ty.
+Fixpoint le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L) (u_wnNe : Gamma ⊢ u ⇉ ty) {struct u_wnNe} : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ u ⇉ ty
+with le_ctx_wnNf (Gamma : ctx L) (ty : typ L) (v : trm L) (v_wnNf : Gamma ⊢ v ⇇ ty) {struct v_wnNf} : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ v ⇇ ty.
 Proof.
   - destruct u_wnNe; simpl; intros Gamma' LE.
     + econs 1. eapply LE; eassumption.
@@ -227,8 +226,8 @@ Proof.
   - exists H_M.(B.proj1_sig). split.
     + exact (proj1 H_M.(B.proj2_sig)).
     + econs 2.
-      * exact (proj2 H_M.(B.proj2_sig)).
       * eassumption.
+      * exact (proj2 H_M.(B.proj2_sig)).
   - intros N Gamma' LE H_N. eapply head_expand.
     + econs 2. eassumption.
     + eapply H_M; eassumption.
