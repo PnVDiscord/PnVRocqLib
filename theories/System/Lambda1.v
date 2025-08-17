@@ -496,12 +496,6 @@ Fixpoint typ_height (ty : typ) : nat :=
   | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
   end.
 
-Fixpoint typ_height (ty : typ) : nat :=
-  match ty with
-  | bty b => 0%nat
-  | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
-  end.
-
 Context {Sigma : signature L}.
 
 Inductive typNe (Gamma : ctx) : trm -> typ -> Prop :=
