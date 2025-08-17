@@ -110,6 +110,16 @@ Inductive alphaEquiv : trm -> trm -> Prop :=
 
 End alphaEquivalence.
 
+Section BASIC_THEORY_ON_SYNTAX.
+
+Corollary subst_cons_lemma N M gamma x y ty
+  (x_EQ : x = chi gamma (Lam_trm y ty M))
+  : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
+Proof.
+Admitted.
+
+End BASIC_THEORY_ON_SYNTAX.
+
 Section TypingRule.
 
 Definition ctx : Set :=
@@ -477,16 +487,6 @@ Inductive equality (Gamma : ctx) : trm -> trm -> typ -> Prop :=
   where "Gamma '⊢' M '=' N '⦂' A" := (equality Gamma M N A).
 
 End TypingRule.
-
-Section THEORY_ON_SYNTAX.
-
-Corollary subst_cons_lemma N M gamma x y ty
-  (x_EQ : x = chi gamma (Lam_trm y ty M))
-  : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
-Proof.
-Admitted.
-
-End THEORY_ON_SYNTAX.
 
 Section AUX1.
 

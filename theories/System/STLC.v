@@ -308,55 +308,56 @@ Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
     (WHETA : v' ~>η v)
     : wnStep Gamma v e ty.
 
-Theorem wnNe_typNe (Gamma : ctx L) u ty
+Theorem wnNe_wnStep_typNe (Gamma : ctx L) u ty
   (u_wnNe : Gamma ⊢ u ⇉ ty)
-  : B.sig (trm L) (fun e => typNe Gamma e ty /\ wnStep Gamma u e ty)
-with wnNf_typNf (Gamma : ctx L) v ty
+  : B.sig (trm L) (fun e => wnStep Gamma u e ty /\ typNe Gamma e ty)
+with wnNf_wnStep_typNf (Gamma : ctx L) v ty
   (v_wnNf : Gamma ⊢ v ⇇ ty)
-  : B.sig (trm L) (fun e => typNf Gamma e ty /\ wnStep Gamma v e ty).
+  : B.sig (trm L) (fun e => wnStep Gamma v e ty /\ typNf Gamma e ty).
 Proof.
   - destruct u_wnNe.
     + exists (Var_trm x). split.
-      * econs 1. exact LOOKUP.
       * eapply wnStep_refl. econs 1. eapply LOOKUP.
-    + pose proof (wnNe_typNe Gamma u (ty -> ty')%typ u_wnNe) as H_M. pose proof (wnNf_typNf Gamma v ty v_wnNf) as H_N.
+      * econs 1. exact LOOKUP.
+    + pose proof (wnNe_wnStep_typNe Gamma u (ty -> ty')%typ u_wnNe) as H_M.
+      pose proof (wnNf_wnStep_typNf Gamma v ty v_wnNf) as H_N.
       exists (App_trm H_M.(B.proj1_sig) H_N.(B.proj1_sig)). split.
-      * econs 2; [exact (proj1 H_M.(B.proj2_sig)) | exact (proj1 H_N.(B.proj2_sig))].
-      * eapply wnStep_App; [exact (proj2 H_M.(B.proj2_sig)) | exact (proj2 H_N.(B.proj2_sig))].
+      * eapply wnStep_App; [exact (proj1 H_M.(B.proj2_sig)) | exact (proj1 H_N.(B.proj2_sig))].
+      * econs 2; [exact (proj2 H_M.(B.proj2_sig)) | exact (proj2 H_N.(B.proj2_sig))].
     + exists (Con_trm c). split.
-      * econs 3. exact ty_EQ.
       * eapply wnStep_refl. subst ty. econs 4.
+      * econs 3. exact ty_EQ.
   - destruct v_wnNf.
-    + pose proof (wnNe_typNe Gamma u ty u_wnNe) as H_e.
+    + pose proof (wnNe_wnStep_typNe Gamma u ty u_wnNe) as H_e.
       exists H_e.(B.proj1_sig). split.
-      * econs 1. exact (proj1 H_e.(B.proj2_sig)).
-      * exact (proj2 H_e.(B.proj2_sig)).
-    + pose proof (wnNf_typNf ((x, ty) :: Gamma) v ty' v_wnNf) as H_M.
+      * exact (proj1 H_e.(B.proj2_sig)).
+      * econs 1. exact (proj2 H_e.(B.proj2_sig)).
+    + pose proof (wnNf_wnStep_typNf ((x, ty) :: Gamma) v ty' v_wnNf) as H_M.
       exists (Lam_trm x ty H_M.(B.proj1_sig)). split.
-      * econs 2. exact (proj1 H_M.(B.proj2_sig)).
-      * eapply wnStep_Lam. exact (proj2 H_M.(B.proj2_sig)).
-    + pose proof (wnNf_typNf Gamma v' ty v_wnNf) as H_e.
+      * eapply wnStep_Lam. exact (proj1 H_M.(B.proj2_sig)).
+      * econs 2. exact (proj2 H_M.(B.proj2_sig)).
+    + pose proof (wnNf_wnStep_typNf Gamma v' ty v_wnNf) as H_e.
       exists H_e.(B.proj1_sig). split.
-      * exact (proj1 H_e.(B.proj2_sig)).
-      * eapply wnStep_whBetaReduce; [exact (proj2 H_e.(B.proj2_sig)) | exact WHBETA].
-    + pose proof (wnNf_typNf Gamma v' ty v_wnNf) as H_e.
+      * eapply wnStep_whBetaReduce; [exact (proj1 H_e.(B.proj2_sig)) | exact WHBETA].
+      * exact (proj2 H_e.(B.proj2_sig)).
+    + pose proof (wnNf_wnStep_typNf Gamma v' ty v_wnNf) as H_e.
       exists H_e.(B.proj1_sig). split.
-      * exact (proj1 H_e.(B.proj2_sig)).
-      * eapply wnStep_whEtaExpand; [exact (proj2 H_e.(B.proj2_sig)) | exact WHETA].
+      * eapply wnStep_whEtaExpand; [exact (proj1 H_e.(B.proj2_sig)) | exact WHETA].
+      * exact (proj2 H_e.(B.proj2_sig)).
 Defined.
 
 Corollary Normalisation_by_Evaluation (Gamma : ctx L) (M : trm L) (ty : typ L)
   (TYPING : Typing Gamma M ty)
-  : B.sig (trm L) (fun e => typNf Gamma e ty /\ wnStep Gamma (subst_trm nil_subst M) e ty).
+  : B.sig (trm L) (fun e => wnStep Gamma (subst_trm nil_subst M) e ty /\ typNf Gamma e ty).
 Proof.
-  exact (wnNf_typNf Gamma (subst_trm nil_subst M) ty (reify Gamma ty (subst_trm nil_subst M) (semanticTyping_sound Gamma M ty TYPING Gamma nil_subst eval_ctx_nil_subst))).
+  exact (wnNf_wnStep_typNf Gamma (subst_trm nil_subst M) ty (reify Gamma ty (subst_trm nil_subst M) (semanticTyping_sound Gamma M ty TYPING Gamma nil_subst eval_ctx_nil_subst))).
 Defined.
 
 Definition NbE {Gamma} {M} {ty} (TYPING : Typing Gamma M ty) : trm L :=
   (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj1_sig).
 
 Lemma NbE_property (Gamma : ctx L) (M : trm L) (ty : typ L) (TYPING : Typing Gamma M ty)
-  : typNf Gamma (NbE TYPING) ty /\ wnStep Gamma (subst_trm nil_subst M) (NbE TYPING) ty.
+  : wnStep Gamma (subst_trm nil_subst M) (NbE TYPING) ty /\ typNf Gamma (NbE TYPING) ty.
 Proof.
   exact (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj2_sig).
 Defined.
