@@ -130,7 +130,7 @@ with wnNf (Gamma : ctx L) : typ L -> trm L -> Set :=
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
   | wnNf_whEtaExpand_wnNf v v' ty
-    (WHBETA : v' ~>η v)
+    (WHETA : v' ~>η v)
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
   where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
@@ -297,24 +297,44 @@ Proof.
   - eapply eval_ctx_nil_subst.
 Defined.
 
-Lemma wnNe_typNe (Gamma : ctx L) u ty
+Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
+  | wnStep_refl M ty
+    (TYPING : Typing Gamma M ty)
+    : wnStep Gamma M M ty
+  | wnStep_App M M' N N' ty ty'
+    (H_M : wnStep Gamma M M' (ty -> ty')%typ)
+    (H_N : wnStep Gamma N N' ty)
+    : wnStep Gamma (App_trm M N) (App_trm M' N') ty'
+  | wnStep_Lam x M M' ty ty'
+    (H_M : wnStep ((x, ty) :: Gamma) M M' ty')
+    : wnStep Gamma (Lam_trm x ty M) (Lam_trm x ty M') (ty -> ty')%typ
+  | wnStep_betaReduce v v' e ty
+    (H_M : wnStep Gamma v' e ty)
+    (WHBETA : v ~>β v')
+    : wnStep Gamma v e ty
+  | wnStep_etaExpand v v' e ty
+    (H_M : wnStep Gamma v' e ty)
+    (WHETA : v' ~>η v)
+    : wnStep Gamma v e ty.
+
+Theorem wnNe_typNe (Gamma : ctx L) u ty
   (u_wnNe : Gamma ⊢ u ⇉ ty)
-  : B.sig (trm L) (fun e => typNe Gamma e ty /\ equality Gamma u e ty)
+  : B.sig (trm L) (fun e => typNe Gamma e ty /\ wnStep Gamma u e ty)
 with wnNf_typNf (Gamma : ctx L) v ty
   (v_wnNf : Gamma ⊢ v ⇇ ty)
-  : B.sig (trm L) (fun e => typNf Gamma e ty /\ equality Gamma v e ty).
+  : B.sig (trm L) (fun e => typNf Gamma e ty /\ wnStep Gamma v e ty).
 Proof.
   - destruct u_wnNe.
     + exists (Var_trm x). split.
       * econs 1. exact LOOKUP.
-      * eapply equality_refl. econs 1. eapply LOOKUP.
+      * eapply wnStep_refl. econs 1. eapply LOOKUP.
     + pose proof (wnNe_typNe Gamma u (ty -> ty')%typ u_wnNe) as H_M. pose proof (wnNf_typNf Gamma v ty v_wnNf) as H_N.
       exists (App_trm H_M.(B.proj1_sig) H_N.(B.proj1_sig)). split.
       * econs 2; [exact (proj1 H_M.(B.proj2_sig)) | exact (proj1 H_N.(B.proj2_sig))].
-      * eapply equality_App; [exact (proj2 H_M.(B.proj2_sig)) | exact (proj2 H_N.(B.proj2_sig))].
+      * eapply wnStep_App; [exact (proj2 H_M.(B.proj2_sig)) | exact (proj2 H_N.(B.proj2_sig))].
     + exists (Con_trm c). split.
       * econs 3. exact ty_EQ.
-      * eapply equality_refl. subst ty. econs 4.
+      * eapply wnStep_refl. subst ty. econs 4.
   - destruct v_wnNf.
     + pose proof (wnNe_typNe Gamma u ty u_wnNe) as H_e.
       exists H_e.(B.proj1_sig). split.
@@ -323,16 +343,19 @@ Proof.
     + pose proof (wnNf_typNf ((x, ty) :: Gamma) v ty' v_wnNf) as H_M.
       exists (Lam_trm x ty H_M.(B.proj1_sig)). split.
       * econs 2. exact (proj1 H_M.(B.proj2_sig)).
-      * admit.
+      * eapply wnStep_Lam. exact (proj2 H_M.(B.proj2_sig)).
     + pose proof (wnNf_typNf Gamma v' ty v_wnNf) as H_e.
       exists H_e.(B.proj1_sig). split.
       * exact (proj1 H_e.(B.proj2_sig)).
-      * admit.
+      * eapply wnStep_betaReduce; [exact (proj2 H_e.(B.proj2_sig)) | exact WHBETA].
     + pose proof (wnNf_typNf Gamma v' ty v_wnNf) as H_e.
       exists H_e.(B.proj1_sig). split.
       * exact (proj1 H_e.(B.proj2_sig)).
-      * admit.
-Admitted.
+      * eapply wnStep_etaExpand; [exact (proj2 H_e.(B.proj2_sig)) | exact WHETA].
+Defined.
+
+Definition NbE {Gamma : ctx L} {M : trm L} {ty : typ L} (TYPING : Typing Gamma M ty) : B.sig (trm L) (fun e => typNf Gamma e ty /\ wnStep Gamma (subst_trm nil_subst M) e ty) :=
+  wnNf_typNf Gamma (subst_trm nil_subst M) ty (NbE_aux1 TYPING).
 
 End WEAK_NORMALISATION.
 
