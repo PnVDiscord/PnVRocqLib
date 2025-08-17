@@ -288,15 +288,6 @@ Proof.
   - eapply reflect. econs 3. reflexivity.
 Defined.
 
-Corollary NbE_aux1 {Gamma : ctx L} {M : trm L} {ty : typ L}
-  (TYPING : Typing Gamma M ty)
-  : wnNf Gamma ty (subst_trm nil_subst M).
-Proof.
-  eapply reify. eapply semanticTyping_sound.
-  - exact TYPING.
-  - eapply eval_ctx_nil_subst.
-Defined.
-
 Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
   | wnStep_refl M ty
     (TYPING : Typing Gamma M ty)
@@ -354,8 +345,21 @@ Proof.
       * eapply wnStep_whEtaExpand; [exact (proj2 H_e.(B.proj2_sig)) | exact WHETA].
 Defined.
 
-Definition NbE {Gamma : ctx L} {M : trm L} {ty : typ L} (TYPING : Typing Gamma M ty) : B.sig (trm L) (fun e => typNf Gamma e ty /\ wnStep Gamma (subst_trm nil_subst M) e ty) :=
-  wnNf_typNf Gamma (subst_trm nil_subst M) ty (NbE_aux1 TYPING).
+Corollary Normalisation_by_Evaluation (Gamma : ctx L) (M : trm L) (ty : typ L)
+  (TYPING : Typing Gamma M ty)
+  : B.sig (trm L) (fun e => typNf Gamma e ty /\ wnStep Gamma (subst_trm nil_subst M) e ty).
+Proof.
+  exact (wnNf_typNf Gamma (subst_trm nil_subst M) ty (reify Gamma ty (subst_trm nil_subst M) (semanticTyping_sound Gamma M ty TYPING Gamma nil_subst eval_ctx_nil_subst))).
+Defined.
+
+Definition NbE {Gamma} {M} {ty} (TYPING : Typing Gamma M ty) : trm L :=
+  (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj1_sig).
+
+Lemma NbE_property (Gamma : ctx L) (M : trm L) (ty : typ L) (TYPING : Typing Gamma M ty)
+  : typNf Gamma (NbE TYPING) ty /\ wnStep Gamma (subst_trm nil_subst M) (NbE TYPING) ty.
+Proof.
+  exact (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj2_sig).
+Defined.
 
 End WEAK_NORMALISATION.
 
