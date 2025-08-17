@@ -578,28 +578,6 @@ Defined.
 
 End AUX1.
 
-Fixpoint typ_height (ty : typ) : nat :=
-  match ty with
-  | bty b => 0%nat
-  | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
-  end.
-
-Lemma Typing_weakening {Sigma : signature L} {Gamma : ctx} {Delta : ctx} {e : trm} {ty : typ}
-  (TYPING : Typing Gamma e ty)
-  (LE : le_ctx Gamma Delta)
-  : Typing Delta e ty.
-Proof.
-  revert Delta LE. induction TYPING; simpl; intros.
-  - econs 1. eapply LE. exact LOOKUP.
-  - econs 2; eauto.
-  - econs 3; eapply IHTYPING. intros x ty LOOKUP. pattern LOOKUP. revert LOOKUP. eapply Lookup_cons.
-    + intros x_EQ ty_EQ. subst x ty. econs 1; reflexivity.
-    + intros x_NE LOOKUP. econs 2; eauto.
-  - econs 4.
-Defined.
-
-End AUX1.
-
 Section SN.
 
 Inductive betaOnce : trm -> trm -> Prop :=
