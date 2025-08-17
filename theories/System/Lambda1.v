@@ -496,6 +496,9 @@ Fixpoint typ_height (ty : typ) : nat :=
   | (ty1 -> ty2)%typ => 1 + max (typ_height ty1) (typ_height ty2)
   end.
 
+Definition le_ctx (Gamma : ctx) (Delta : ctx) : Set :=
+  forall x, forall ty, Lookup x ty Gamma -> Lookup x ty Delta.
+
 Context {Sigma : signature L}.
 
 Inductive typNe (Gamma : ctx) : trm -> typ -> Prop :=
