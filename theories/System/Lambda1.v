@@ -522,6 +522,26 @@ with typNf (Gamma : ctx) : trm -> typ -> Prop :=
     : typNf Gamma (Lam_trm x ty v) (ty -> ty')%typ
   where "Gamma '⊢' M '⇇' A" := (typNf Gamma M A).
 
+Lemma typNe_Typing Gamma u ty
+  (u_typNe : typNe Gamma u ty)
+  : inhabited (Typing Gamma u ty)
+with typNf_Typing Gamma v ty
+  (v_typNf : typNf Gamma v ty)
+  : inhabited (Typing Gamma v ty).
+Proof.
+  - destruct u_typNe.
+    + split. econs 1. exact LOOKUP.
+    + pose proof (typNe_Typing _ _ _ u_typNe) as [H_M].
+      pose proof (typNf_Typing _ _ _ v_typNf) as [H_N].
+      split. econs 2; [exact H_M | exact H_N].
+    + subst ty. split. econs 4.
+  - destruct v_typNf.
+    + pose proof (typNe_Typing _ _ _ u_typNe) as [H_M].
+      split. exact H_M.
+    + pose proof (typNf_Typing _ _ _ v_typNf) as [H_N].
+      split. econs 3. exact H_N.
+Defined.
+
 Lemma le_ctx_preserves_typNe (Gamma : ctx) (u : trm) (ty : typ)
   (u_typNe : typNe Gamma u ty)
   : forall Delta, le_ctx Gamma Delta -> typNe Delta u ty
