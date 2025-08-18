@@ -110,7 +110,7 @@ Inductive alphaEquiv : trm -> trm -> Prop :=
 
 End alphaEquivalence.
 
-Section BASIC_THEORY_ON_SYNTAX.
+Section BASIC_THEORY1_ON_SYNTAX.
 
 Corollary subst_cons_lemma N M gamma x y ty
   (x_EQ : x = chi gamma (Lam_trm y ty M))
@@ -118,7 +118,7 @@ Corollary subst_cons_lemma N M gamma x y ty
 Proof.
 Admitted.
 
-End BASIC_THEORY_ON_SYNTAX.
+End BASIC_THEORY1_ON_SYNTAX.
 
 Section TypingRule.
 
@@ -596,7 +596,23 @@ Proof.
   - econs 4.
 Defined.
 
+Definition TypingSubst (Gamma : ctx) (gamma : subst) (Delta : ctx) : Set :=
+  forall x, forall ty, Lookup x ty Delta -> Typing Gamma (gamma x) ty.
+
 End AUX1.
+
+Section BASIC_THEORY2_ON_SYNTAX.
+
+Context {Sigma : signature L}.
+
+Corollary typing_subst_lemma {Gamma : ctx} {Delta : ctx} {gamma : subst} {e : trm} {ty : typ}
+  (TYPING_SUBST : TypingSubst Gamma gamma Delta)
+  (TYPING : Typing Delta e ty)
+  : Typing Gamma (subst_trm gamma e) ty.
+Proof.
+Admitted.
+
+End BASIC_THEORY2_ON_SYNTAX.
 
 Section SN.
 
