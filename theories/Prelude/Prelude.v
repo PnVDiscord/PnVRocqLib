@@ -434,7 +434,7 @@ Qed.
 #[universes(polymorphic=yes)]
 Class isMonad@{d c} (M : Type@{d} -> Type@{c}) : Type :=
   { bind {A : Type@{d}} {B : Type@{d}} (m : M A) (k : A -> M B) : M B
-  ; pure {A : Type@{d}} : A -> M A
+  ; pure {A : Type@{d}} (x : A) : M A
   }.
 
 Class MonadLaws (M : Type -> Type) `{SETOID1 : isSetoid1 M} `{MONAD : isMonad M} : Prop :=
