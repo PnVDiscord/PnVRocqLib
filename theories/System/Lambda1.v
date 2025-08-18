@@ -706,7 +706,7 @@ End STLC.
 
 End ChurchStyleStlc.
 
-Module __Lambda1_PRIVATE.
+Module _Lambda1__PRIVATE.
 
 Section NORMALISATION_BY_EVALUATION.
 
@@ -836,4 +836,4 @@ Qed.
 
 End NbE_example1.
 
-End __Lambda1_PRIVATE.
+End _Lambda1__PRIVATE.
