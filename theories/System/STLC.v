@@ -356,11 +356,17 @@ Defined.
 Definition NbE {Gamma} {M} {ty} (TYPING : Typing Gamma M ty) : trm L :=
   (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj1_sig).
 
-Lemma NbE_property (Gamma : ctx L) (M : trm L) (ty : typ L) (TYPING : Typing Gamma M ty)
-  : wnStep Gamma (subst_trm nil_subst M) (NbE TYPING) ty /\ typNf Gamma (NbE TYPING) ty.
+Lemma NbE_wnStep (Gamma : ctx L) (M : trm L) (ty : typ L) (TYPING : Typing Gamma M ty)
+  : wnStep Gamma (subst_trm nil_subst M) (NbE TYPING) ty.
 Proof.
-  exact (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj2_sig).
-Defined.
+  exact (proj1 (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj2_sig)).
+Qed.
+
+Lemma NbE_typNf (Gamma : ctx L) (M : trm L) (ty : typ L) (TYPING : Typing Gamma M ty)
+  : typNf Gamma (NbE TYPING) ty.
+Proof.
+  exact (proj2 (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj2_sig)).
+Qed.
 
 End WEAK_NORMALISATION.
 
