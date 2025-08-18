@@ -1171,16 +1171,16 @@ Inductive sum1 (X : Type -> Type) (Y : Type -> Type) (A : Type) : Type :=
 
 Inductive void1 (A : Type) : Type :=.
 
-#[projections(primitive)]
-Record sig {A : Set} {P : A -> Prop} : Set :=
+#[universes(template), projections(primitive)]
+Record sig {A : Type} {P : A -> Prop} : Type :=
   { proj1_sig : A
   ; proj2_sig : P proj1_sig
   }.
 
 #[global] Arguments B.sig : clear implicits.
 
-#[projections(primitive)]
-Record sigT {A : Set} {P : A -> Set} : Set :=
+#[universes(template), projections(primitive)]
+Record sigT {A : Type} {P : A -> Type} : Type :=
   { projT1 : A
   ; projT2 : P projT1
   }.
@@ -1209,6 +1209,8 @@ Instance trivial_retraction (P : Prop) : retracts (Prop_to_Set P) P :=
   }.
 
 End B.
+
+Notation StateT k := {| B.runStateT := k |}.
 
 Infix "+'" := B.sum1 (at level 50, left associativity) : type_scope.
 
