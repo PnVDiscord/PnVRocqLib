@@ -5,7 +5,7 @@ Require Export Coq.Arith.PeanoNat.
 Require Export Coq.Arith.Wf_nat.
 Require Export Coq.Bool.Bool.
 Require Export Coq.Classes.RelationClasses.
-Require Export Coq.Strings.String.
+Require Import Coq.Strings.String.
 Require Export Coq.Lists.List.
 Require Export Coq.micromega.Lia.
 Require Export Coq.Program.Basics.
