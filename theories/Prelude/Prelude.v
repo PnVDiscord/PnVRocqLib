@@ -1014,6 +1014,7 @@ Definition kcompose {M} {MONAD : isMonad M} {A} {B} {C} (k1 : A -> M B) (k2 : B 
 
 #[local] Infix ">=>" := kcompose : program_scope.
 
+#[universes(template)]
 Record stateT (S : Type) (M : Type -> Type) (X : Type) : Type :=
   StateT { runStateT : S -> M (X * S)%type }.
 
@@ -1022,8 +1023,8 @@ Record stateT (S : Type) (M : Type -> Type) (X : Type) : Type :=
 
 #[global]
 Instance stateT_isMonad {S} {M} `(M_isMonad : isMonad M) : isMonad (B.stateT S M) :=
-  { pure {A} (x : A) := B.StateT $ curry pure x
-  ; bind {A} {B} (m : B.stateT S M A) (k : A -> B.stateT S M B) := B.StateT $ B.runStateT m >=> uncurry (B.runStateT ∘ k)
+  { pure {A} (x : A) := B.StateT (curry pure x)
+  ; bind {A} {B} (m : B.stateT S M A) (k : A -> B.stateT S M B) := B.StateT (B.runStateT m >=> uncurry (B.runStateT ∘ k))
   }.
 
 Definition stateT_isSetoid {S} {M} `{SETOID1 : isSetoid1 M} X : isSetoid (B.stateT S M X) :=
@@ -1193,6 +1194,14 @@ Record sigT {A : Type} {P : A -> Type} : Type :=
   }.
 
 #[global] Arguments B.sigT : clear implicits.
+
+#[universes(template), projections(primitive)]
+Record pair {A : Type} {B : Type} : Type :=
+  { fst : A
+  ; snd : B
+  }.
+
+#[global] Arguments B.pair : clear implicits.
 
 #[universes(template), projections(primitive)]
 Class retracts (X : Type) (P : Prop) : Type :=
