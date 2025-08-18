@@ -5,6 +5,7 @@ Require Export Coq.Arith.PeanoNat.
 Require Export Coq.Arith.Wf_nat.
 Require Export Coq.Bool.Bool.
 Require Export Coq.Classes.RelationClasses.
+Require Export Coq.Strings.String.
 Require Export Coq.Lists.List.
 Require Export Coq.micromega.Lia.
 Require Export Coq.Program.Basics.
@@ -28,6 +29,12 @@ Universe U_cosmos.
 
 Class isGood (A : Type@{U_cosmos}) : Type@{U_cosmos} :=
   is_good : A -> Prop.
+
+Definition addComment {A : Type@{U_cosmos}} (comment : string) (obj : A) : A :=
+  obj.
+
+Class hasComment (A : Type@{U_cosmos}) : Set :=
+  comment : string.
 
 Universe U_discourse.
 
