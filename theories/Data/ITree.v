@@ -74,7 +74,7 @@ Definition stateE_handler {S : Type} : stateE S ~~> B.stateT S (itree E) :=
   @stateE_rect S (fun X : Type => fun _ : stateE S X => B.stateT S (itree E) X) get put.
 
 Definition itree_interpret {M : Type -> Type} {M_isMonad : isMonad M} {M_isMonadIter : isMonadIter M} (handler : E ~~> M) : itree E ~~> M :=
-  fun R : Type => monad_iter $ fun t0 : itree E R =>
+  fun R : Type => monad_iter (M := M) $ fun t0 : itree E R =>
     match observe t0 with
     | RetF r => pure (inr r)
     | TauF t => pure (inl t)
