@@ -1187,6 +1187,8 @@ Record sig {A : Type} {P : A -> Prop} : Type :=
 
 #[global] Arguments B.sig : clear implicits.
 
+Notation exist x y := {| proj1_sig := x; proj2_sig := y; |}.
+
 #[universes(template), projections(primitive)]
 Record sigT {A : Type} {P : A -> Type} : Type :=
   { projT1 : A
@@ -1195,13 +1197,17 @@ Record sigT {A : Type} {P : A -> Type} : Type :=
 
 #[global] Arguments B.sigT : clear implicits.
 
+Notation existT x y := {| projT1 := x; projT2 := y; |}.
+
 #[universes(template), projections(primitive)]
-Record pair {A : Type} {B : Type} : Type :=
+Record prod {A : Type} {B : Type} : Type :=
   { fst : A
   ; snd : B
   }.
 
-#[global] Arguments B.pair : clear implicits.
+#[global] Arguments B.prod : clear implicits.
+
+Notation pair x y := {| fst := x; snd := y; |}.
 
 #[universes(template), projections(primitive)]
 Class retracts (X : Type) (P : Prop) : Type :=
