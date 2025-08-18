@@ -995,6 +995,9 @@ Module B.
 
 #[local] Open Scope program_scope.
 
+Definition Prop_to_Set (P : Prop) : Set :=
+  P.
+
 #[universes(polymorphic=yes)]
 Definition isSome@{u} {A : Type@{u}} (m : option A) : bool :=
   match m with
@@ -1076,17 +1079,17 @@ Definition either {A : Type} {B : Type} {C : (A + B) -> Type} (f : forall x : A,
   end.
 
 Definition Some_dec {A : Type} (x : option A)
-  : { x' : A | x = Some x' } + { x = None }.
+  : { x' : A | x = Some x' } + B.Prop_to_Set (x = None).
 Proof.
   destruct x as [x' | ].
   - left. exists x'. reflexivity.
-  - right. reflexivity.
+  - right. red. reflexivity.
 Defined.
 
 Definition ne_None_elim {A : Type} (x : option A) (ne_None : x <> None) : { x' : A | x = Some x' } :=
   match Some_dec x with
-  | inleft x' => x'
-  | inright eq_None => False_rect _ (ne_None eq_None)
+  | inl x' => x'
+  | inr eq_None => False_rect _ (ne_None eq_None)
   end.
 
 #[global]
@@ -1218,9 +1221,6 @@ Class retracts (X : Type) (P : Prop) : Type :=
   ; section_retraction (H : P)
     : section (retraction H) = H
   }.
-
-Definition Prop_to_Set (P : Prop) : Set :=
-  P.
 
 #[local]
 Instance trivial_retraction (P : Prop) : retracts (Prop_to_Set P) P :=
