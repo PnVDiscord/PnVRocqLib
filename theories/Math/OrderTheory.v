@@ -83,11 +83,6 @@ Class isWellPoset (A : Type@{U_discourse}) : Type@{U_discourse} :=
 
 Infix "⪵" := wltProp : type_scope.
 
-Class isWoset (A : Type@{U_discourse}) : Type@{U_discourse} :=
-  { Woset_isWellPoset :: isWellPoset A
-  ; Woset_total (x1 : A) (x2 : A) (NE : x1 <> x2) : wltProp x1 x2 \/ wltProp x2 x1
-  }.
-
 #[global]
 Instance wltProp_StrictOrder {A : Type} `{WPOSET : isWellPoset A} : StrictOrder wltProp :=
   { StrictOrder_Irreflexive := well_founded_implies_Irreflexive wltProp wltProp_well_founded
@@ -101,34 +96,6 @@ Infix "⪳" := wleProp : type_scope.
 
 #[local] Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive : poset_hints.
 #[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : poset_hints.
-
-Module OrderExtra1.
-
-Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
-  (DESCENT : forall n, P n -> exists m, m ⪵ n /\ P m)
-  : forall n, ~ P n.
-Proof.
-  intros n. induction (wltProp_well_founded n) as [n _ IH]. intros P_n.
-  pose proof (DESCENT n P_n) as [m [LT P_m]].
-  contradiction (IH m LT P_m).
-Qed.
-
-Lemma minimisation_lemma (classic : forall P : Prop, P \/ ~ P) {A : Type} {WOSET : isWoset A} (P : A -> Prop)
-  (EXISTENCE : exists n, P n)
-  : exists n, P n /\ ⟪ MIN : forall m, P m -> wleProp n m ⟫.
-Proof.
-  assert (NNPP : forall phi : Prop, (~ (~ phi)) -> phi).
-  { intros phi. pose proof (classic phi) as [YES | NO]; try tauto. }
-  eapply NNPP. intros CONTRA. destruct EXISTENCE as [n P_n].
-  eapply infinite_descent with (P := P) (n := n); [intros i P_i | exact P_n].
-  eapply NNPP. intros CONTRA'. eapply CONTRA. exists i. split; trivial. intros m P_m.
-  assert (WTS : ~ m ⪵ i).
-  { intros H_lt. contradiction CONTRA'. exists m. split; trivial. }
-  repeat red. pose proof (classic (i = m)) as [YES | NO]; try tauto.
-  left. apply Woset_total in NO. tauto.
-Qed.
-
-End OrderExtra1.
 
 Section BASIC1.
 
@@ -472,6 +439,25 @@ Proof with eauto with *.
 Qed.
 
 End BASIC1.
+
+Class isWoset (A : Type@{U_discourse}) {SETOID : isSetoid A} : Type@{U_discourse} :=
+  { Woset_isWellPoset :: isWellPoset A
+  ; Woset_total (x1 : A) (x2 : A) (NE : ~ x1 == x2) : wltProp x1 x2 \/ wltProp x2 x1
+  ; Woset_irrefl (x1 : A) (x2 : A) (LT : wltProp x1 x2) : ~ x1 == x2
+  }.
+
+Module OrderExtra1.
+
+Lemma infinite_descent {A : Type} {WELLPOSET : isWellPoset A} (P : A -> Prop)
+  (DESCENT : forall n, P n -> exists m, wltProp m n /\ P m)
+  : forall n, ~ P n.
+Proof.
+  intros n. induction (wltProp_well_founded n) as [n _ IH]. intros P_n.
+  pose proof (DESCENT n P_n) as [m [LT P_m]].
+  contradiction (IH m LT P_m).
+Qed.
+
+End OrderExtra1.
 
 Class isUpperSemilattice (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
   { join_lattice (x : D) (y : D) : D
