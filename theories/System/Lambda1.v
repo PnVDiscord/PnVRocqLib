@@ -41,7 +41,7 @@ Section STLC.
 
 #[local] Notation bty := (bty _).
 
-Context {L : language}.
+Context `{L : !language}.
 
 #[local] Notation typ := (typ L).
 
@@ -274,7 +274,7 @@ Qed.
 
 End LOOKUP.
 
-Context {Sigma : signature L}.
+Context `{Sigma : !signature L}.
 
 Inductive Typing (Gamma : ctx) : trm -> typ -> Set :=
   | Var_typ (x : name) (ty : typ)
@@ -500,7 +500,7 @@ Fixpoint typ_height (ty : typ) : nat :=
 Definition le_ctx (Gamma : ctx) (Delta : ctx) : Set :=
   forall x, forall ty, Lookup x ty Gamma -> Lookup x ty Delta.
 
-Context {Sigma : signature L}.
+Context `{Sigma : !signature L}.
 
 Inductive typNe (Gamma : ctx) : trm -> typ -> Prop :=
   | typNe_Var x ty
@@ -604,7 +604,7 @@ End AUX1.
 
 Section BASIC_THEORY2_ON_SYNTAX.
 
-Context {Sigma : signature L}.
+Context `{Sigma : !signature L}.
 
 Corollary TypingSubstLemma {Gamma} {Delta} {gamma} {e} {ty}
   (TYPING_SUBST : TypingSubst Gamma gamma Delta)
