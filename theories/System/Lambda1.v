@@ -94,7 +94,7 @@ End Substitution.
 Section alphaEquivalence.
 
 Inductive alphaEquiv : trm -> trm -> Prop :=
-  | alphaEquiv_Var x
+  | alphaEquiv_Var x x'
     (x_EQ : x = x')
     : alphaEquiv (Var_trm x) (Var_trm x')
   | alphaEquiv_App M M' N N'
