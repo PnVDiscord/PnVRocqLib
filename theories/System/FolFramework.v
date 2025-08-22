@@ -7,6 +7,7 @@ Require Import PnV.Logic.HilbertFol2.
 Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 Require Import PnV.System.Lambda1.
+Require Import PnV.System.STLC.
 Require Import PnV.Logic.ClassicalFol.
 
 #[global]
@@ -129,6 +130,24 @@ Instance fol_signature : signature mk_fol :=
 
 #[local] Notation typ := (typ mk_fol).
 #[local] Notation ctx := (ctx mk_fol).
+
+Import ChurchStyleSTLC.
+
+Example L_in_example3
+  : @Typing mk_fol fol_signature [("x"%name, @bty mk_fol trm_bty)] (App_trm (@Con_trm mk_fol ExistentialQuantifier_symbol) (App_trm (@Con_trm mk_fol Equality_symbol) (Var_trm "x"))) (@bty mk_fol frm_bty).
+Proof.
+  eapply App_typ with (ty1 := (@bty mk_fol trm_bty -> @bty mk_fol frm_bty)%typ).
+  - econs 4.
+  - eapply App_typ with (ty1 := (@bty mk_fol trm_bty)%typ).
+    + econs 4.
+    + econs 1. econs 1; reflexivity.
+Defined.
+
+Example L_in_example3_unfold
+  : NbE L_in_example3 = App_trm (@Con_trm mk_fol ExistentialQuantifier_symbol) (Lam_trm "a0" (@bty mk_fol trm_bty) (App_trm (App_trm (@Con_trm mk_fol Equality_symbol) (Var_trm "x")) (Var_trm "a0"))).
+Proof.
+  reflexivity.
+Qed.
 
 End HOAS.
 
