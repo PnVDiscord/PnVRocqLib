@@ -442,8 +442,8 @@ End BASIC1.
 
 Class isWoset (A : Type@{U_discourse}) {SETOID : isSetoid A} : Type@{U_discourse} :=
   { Woset_isWellPoset :: isWellPoset A
-  ; Woset_total (x1 : A) (x2 : A) (NE : ~ x1 == x2) : wltProp x1 x2 \/ wltProp x2 x1
-  ; Woset_irrefl (x1 : A) (x2 : A) (LT : wltProp x1 x2) : ~ x1 == x2
+  ; Woset_extensional (x : A) (y : A)
+    : x == y <-> (forall z, wltProp z x <-> wltProp z y)
   }.
 
 Module OrderExtra1.
