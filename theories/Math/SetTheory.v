@@ -143,7 +143,7 @@ Definition add (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
   Ord.orec o1 suc o2.
 
 Definition mul (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
-  Ord.orec empty (fun o => Ord.add o o1) o2.
+  Ord.orec zer (fun o => Ord.add o o1) o2.
 
 Definition exp (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
   Ord.orec (suc zer) (fun o => Ord.mul o o1) o2.
