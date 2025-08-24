@@ -212,6 +212,7 @@ End TOTALIFY.
 
 Module Cardinality.
 
+#[projections(primitive)]
 Record t : Type@{Set_V} :=
   mk
   { carrier : Type@{Set_u}
