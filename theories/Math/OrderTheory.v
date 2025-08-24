@@ -447,6 +447,11 @@ Class isWoset (A : Type@{U_discourse}) {SETOID : isSetoid A} : Type@{U_discourse
     : x == y <-> (forall z, wltProp z x <-> wltProp z y)
   }.
 
+Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
+  wltProp (isWellPoset := @Woset_isWellPoset A SETOID WOSET) x y.
+
+Infix "≺" := wlt.
+
 Module OrderExtra1.
 
 Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
@@ -457,11 +462,6 @@ Proof.
   pose proof (DESCENT n P_n) as [m [LT P_m]].
   contradiction (IH m LT P_m).
 Qed.
-
-Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
-  wltProp (isWellPoset := @Woset_isWellPoset A SETOID WOSET) x y.
-
-Infix "≺" := wlt.
 
 #[local]
 Instance wlt_StrictOrder {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} : StrictOrder wlt :=
