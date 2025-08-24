@@ -193,7 +193,7 @@ Definition _Ord_exp : Ord -> Ord -> Ord :=
 Section HARTOGS.
 
 Definition Hartogs (D : Type@{Set_u}) : Ord :=
-  mkNode { R : D -> D -> Prop | well_founded R } (fun RWF => @fromWf D (proj1_sig RWF) (proj2_sig RWF)).
+  mkNode (B.sig (D -> D -> Prop) (@well_founded D)) (fun RWF => @fromWf D RWF.(B.proj1_sig) RWF.(B.proj2_sig)).
 
 End HARTOGS.
 
