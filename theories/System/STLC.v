@@ -5,11 +5,6 @@ Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 Require Import PnV.System.Lambda1.
 
-Reserved Infix "~>β" (at level 70, no associativity).
-Reserved Infix "~>η" (at level 70, no associativity).
-Reserved Infix "~>β*" (at level 70, no associativity).
-Reserved Infix "~>η*" (at level 70, no associativity).
-
 Module ChurchStyleSTLC.
 
 Export ChurchStyleStlc.

@@ -447,12 +447,23 @@ Class isWoset (A : Type@{U_discourse}) {SETOID : isSetoid A} : Type@{U_discourse
     : x == y <-> (forall z, wltProp z x <-> wltProp z y)
   }.
 
+Module OrderExtra1.
+
+Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
+  (DESCENT : forall n, P n -> exists m, wltProp m n /\ P m)
+  : forall n, ~ P n.
+Proof.
+  intros n. induction (wltProp_well_founded n) as [n _ IH]. intros P_n.
+  pose proof (DESCENT n P_n) as [m [LT P_m]].
+  contradiction (IH m LT P_m).
+Qed.
+
 Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
   wltProp (isWellPoset := @Woset_isWellPoset A SETOID WOSET) x y.
 
-Infix "≺" := wlt : type_scope.
+Infix "≺" := wlt.
 
-#[global]
+#[local]
 Instance wlt_StrictOrder {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} : StrictOrder wlt :=
   wltProp_StrictOrder (WPOSET := @Woset_isWellPoset A SETOID WOSET).
 
@@ -464,17 +475,6 @@ Proof.
   intros a1 b1 EQ1 a2 b2 EQ2. split; intros H_lt.
   - eapply Woset_eqPropCompatible2; eauto; symmetry; eauto.
   - eapply Woset_eqPropCompatible2; eauto.
-Qed.
-
-Module OrderExtra1.
-
-Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
-  (DESCENT : forall n, P n -> exists m, wltProp m n /\ P m)
-  : forall n, ~ P n.
-Proof.
-  intros n. induction (wltProp_well_founded n) as [n _ IH]. intros P_n.
-  pose proof (DESCENT n P_n) as [m [LT P_m]].
-  contradiction (IH m LT P_m).
 Qed.
 
 Theorem wlt_trichotomous {classic : forall P : Prop, P \/ ~ P} {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (a : A) (b : A)
@@ -506,7 +506,21 @@ Proof.
     - eauto.
     - contradiction H_GT'. left. exists a'. eauto.
   }
-  left. eapply Woset_extensional. done!.
+  left. rewrite Woset_extensional. done!.
+Qed.
+
+Theorem minimisation_lemma {classic : forall P : Prop, P \/ ~ P} {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (P : A -> Prop)
+  (EXISTENCE : exists n, P n)
+  : exists n, P n /\ ⟪ MIN : forall m, P m -> (wlt n m \/ n == m) ⟫.
+Proof.
+  assert (NNPP : forall phi : Prop, ⟪ NNP : ~ (~ phi) ⟫ -> phi).
+  { intros phi NNP; unnw. pose proof (classic phi) as [YES | NO]; tauto. }
+  unnw. eapply NNPP. intros CONTRA. destruct EXISTENCE as [n P_n].
+  eapply infinite_descent with (P := P) (n := n); [intros i P_i | exact P_n].
+  eapply NNPP. intros CONTRA'. eapply CONTRA. exists i. split; trivial. intros m P_m.
+  assert (WTS : ~ wlt m i).
+  { intros H_lt. contradiction CONTRA'. exists m. split; trivial. }
+  pose proof (@wlt_trichotomous classic A SETOID WOSET i m). tauto.
 Qed.
 
 End OrderExtra1.
