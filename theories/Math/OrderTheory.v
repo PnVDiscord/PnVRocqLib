@@ -442,19 +442,71 @@ End BASIC1.
 
 Class isWoset (A : Type@{U_discourse}) {SETOID : isSetoid A} : Type@{U_discourse} :=
   { Woset_isWellPoset :: isWellPoset A
+  ; Woset_eqPropCompatible2 :: eqPropCompatible2 wltProp
   ; Woset_extensional (x : A) (y : A)
     : x == y <-> (forall z, wltProp z x <-> wltProp z y)
   }.
 
+Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
+  wltProp (isWellPoset := @Woset_isWellPoset A SETOID WOSET) x y.
+
+Infix "≺" := wlt : type_scope.
+
+#[global]
+Instance wlt_StrictOrder {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} : StrictOrder wlt :=
+  wltProp_StrictOrder (WPOSET := @Woset_isWellPoset A SETOID WOSET).
+
+#[global]
+Add Parametric Morphism {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A (SETOID := SETOID)}
+  : (@wlt A SETOID WOSET) with signature (eqProp ==> eqProp ==> iff)
+  as Woset_wlt_eqProp.
+Proof.
+  intros a1 b1 EQ1 a2 b2 EQ2. split; intros H_lt.
+  - eapply Woset_eqPropCompatible2; eauto; symmetry; eauto.
+  - eapply Woset_eqPropCompatible2; eauto.
+Qed.
+
 Module OrderExtra1.
 
-Lemma infinite_descent {A : Type} {WELLPOSET : isWellPoset A} (P : A -> Prop)
+Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
   (DESCENT : forall n, P n -> exists m, wltProp m n /\ P m)
   : forall n, ~ P n.
 Proof.
   intros n. induction (wltProp_well_founded n) as [n _ IH]. intros P_n.
   pose proof (DESCENT n P_n) as [m [LT P_m]].
   contradiction (IH m LT P_m).
+Qed.
+
+Theorem wlt_trichotomous {classic : forall P : Prop, P \/ ~ P} {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (a : A) (b : A)
+  : (a == b) \/ (wlt a b \/ wlt b a).
+Proof.
+  revert a b.
+  assert (forall P : A -> Prop, ⟪ NOT_FORALL_NOT : ~ (forall x : A, ~ P x) ⟫ -> exists x : A, P x).
+  { intros P H; unnw. pose proof (classic (exists x : A, P x)) as [YES | NO]; trivial.
+    contradiction H. intros x P_x. contradiction NO. exists x. exact P_x.
+  }
+  unnw.
+  intros a. pose proof (wltProp_well_founded a) as H_Acc_a.
+  induction H_Acc_a as [a _ IH_a]. intros b. pose proof (wltProp_well_founded b) as H_Acc_b. induction H_Acc_b as [b _ IH_b].
+  pose proof (classic ((exists b', wlt b' b /\ wlt a b') \/ (exists b', wlt b' b /\ a == b'))) as [[H_LT | H_EQ] | H_GT].
+  { des. right. left. transitivity b'; eauto. }
+  { destruct H_EQ as [a' [H_LT H_EQ]]. right. left. rewrite -> H_EQ. exact H_LT. }
+  assert (claim1 : forall b', wlt b' b -> wlt b' a).
+  { intros b' H_lt_b. pose proof (IH_b b' H_lt_b) as [H_eq | [H_lt | H_gt]].
+    - contradiction H_GT. right. exists b'. eauto.
+    - contradiction H_GT. left. exists b'. eauto.
+    - eauto.
+  }
+  pose proof (classic ((exists a', wlt a' a /\ wlt b a') \/ (exists a', wlt a' a /\ a' == b))) as [[H_LT' | H_EQ'] | H_GT'].
+  { des. right. right. transitivity a'; eauto. }
+  { destruct H_EQ' as [a' [H_LT H_EQ']]. right. right. rewrite <- H_EQ'. exact H_LT. }
+  assert (claim2 : forall a', wlt a' a -> wlt a' b).
+  { intros a' H_lt_a. pose proof (IH_a a' H_lt_a b) as [H_eq | [H_lt | H_gt]].
+    - contradiction H_GT'. right. exists a'. eauto.
+    - eauto.
+    - contradiction H_GT'. left. exists a'. eauto.
+  }
+  left. eapply Woset_extensional. done!.
 Qed.
 
 End OrderExtra1.
