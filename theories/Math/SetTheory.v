@@ -34,7 +34,7 @@ Parameter _zer : Ord.
 
 Parameter _suc : Ord -> Ord.
 
-Parameter _lim : forall A : Type@{Set_u}, (A -> Ord) -> Ord.
+Parameter _sup : forall A : Type@{Set_u}, (A -> Ord) -> Ord.
 
 Parameter _transfinite_rec : forall D : Type@{U_discourse}, (D -> D) -> (forall A : Type@{Set_u}, (A -> D) -> D) -> Ord -> D.
 
@@ -133,11 +133,11 @@ Definition zer : Ord.t :=
 Definition suc : Ord.t -> Ord.t :=
   @succ.
 
-Definition lim : forall A : Type@{Set_u}, (A -> Ord.t) -> Ord.t :=
+Definition sup : forall A : Type@{Set_u}, (A -> Ord.t) -> Ord.t :=
   @indexed_union.
 
 Definition orec (base : Ord.t) (succ : Ord.t -> Ord.t) : Ord.t -> Ord.t :=
-  rec base succ lim.
+  rec base succ sup.
 
 Definition add (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
   Ord.orec o1 suc o2.
@@ -168,8 +168,8 @@ Definition _zer : Ord :=
 Definition _suc : Ord -> Ord :=
   Ord.suc.
 
-Definition _lim : forall A : Type@{Set_u}, (A -> Ord) -> Ord :=
-  Ord.lim.
+Definition _sup : forall A : Type@{Set_u}, (A -> Ord) -> Ord :=
+  Ord.sup.
 
 #[global]
 Instance Ord_isWellPoset : isWellPoset Ord :=
