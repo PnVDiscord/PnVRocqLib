@@ -91,8 +91,67 @@ Definition _unordered_pair : V -> V -> V :=
 Definition _unions : V -> V :=
   @unions.
 
-Definition Ord : Type@{Set_V} :=
+Module Ord.
+
+Definition t : Type@{Set_V} :=
   @Tree.
+
+Section TRANSFINITE.
+
+Context {D : Type@{U_discourse}}.
+
+Section FIRST.
+
+Context (suc : D -> D) (bigjoin : forall A : Type@{Set_u}, (A -> D) -> D).
+
+Fixpoint transfinite_rec (t : Ord.t) {struct t} : D :=
+  match t with
+  | mkNode cs ts => bigjoin cs (fun c : cs => suc (transfinite_rec (ts c)))
+  end.
+
+End FIRST.
+
+Section SECOND.
+
+Context (base : D) (suc : D -> D) (bigjoin : forall A : Type@{Set_u}, (A -> D) -> D).
+
+Definition join (x : D) (y : D) : D :=
+  bigjoin bool (fun b => if b then x else y).
+
+Fixpoint rec (t : Ord.t) {struct t} : D :=
+  match t with
+  | mkNode cs ts => join base (bigjoin cs (fun c : cs => suc (rec (ts c))))
+  end.
+
+End SECOND.
+
+End TRANSFINITE.
+
+Definition zer : Ord.t :=
+  @empty.
+
+Definition suc : Ord.t -> Ord.t :=
+  @succ.
+
+Definition lim : forall A : Type@{Set_u}, (A -> Ord.t) -> Ord.t :=
+  @indexed_union.
+
+Definition orec (base : Ord.t) (succ : Ord.t -> Ord.t) : Ord.t -> Ord.t :=
+  rec base succ lim.
+
+Definition add (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
+  Ord.orec o1 suc o2.
+
+Definition mul (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
+  Ord.orec empty (fun o => Ord.add o o1) o2.
+
+Definition exp (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
+  Ord.orec (suc zer) (fun o => Ord.mul o o1) o2.
+
+End Ord.
+
+Definition Ord : Type@{Set_V} :=
+  Ord.t.
 
 Definition _Ord_eq : Ord -> Ord -> Prop :=
   @rEq.
@@ -104,13 +163,13 @@ Definition _Ord_le : Ord -> Ord -> Prop :=
   @rLe.
 
 Definition _zer : Ord :=
-  @empty.
+  Ord.zer.
 
 Definition _suc : Ord -> Ord :=
-  @succ.
+  Ord.suc.
 
 Definition _lim : forall A : Type@{Set_u}, (A -> Ord) -> Ord :=
-  @indexed_union.
+  Ord.lim.
 
 #[global]
 Instance Ord_isWellPoset : isWellPoset Ord :=
@@ -119,28 +178,17 @@ Instance Ord_isWellPoset : isWellPoset Ord :=
   ; wltProp_well_founded := rLt_wf 
   }.
 
-Section TRANSFINITE.
-
-Context {D : Type@{U_discourse}} (suc : D -> D) (lim : forall A : Type@{Set_u}, (A -> D) -> D).
-
-Fixpoint transfinite_rec (t : Ord) {struct t} : D :=
-  match t with
-  | mkNode cs ts => lim cs (fun c : cs => suc (transfinite_rec (ts c)))
-  end.
-
-End TRANSFINITE.
-
 Definition _transfinite_rec : forall D : Type@{U_discourse}, (D -> D) -> (forall A : Type@{Set_u}, (A -> D) -> D) -> Ord -> D :=
-  @transfinite_rec.
+  @Ord.transfinite_rec.
 
-Definition _Ord_add : Ord -> Ord -> Ord.
-Admitted.
+Definition _Ord_add : Ord -> Ord -> Ord :=
+  Ord.add.
 
-Definition _Ord_mul : Ord -> Ord -> Ord.
-Admitted.
+Definition _Ord_mul : Ord -> Ord -> Ord :=
+  Ord.mul.
 
-Definition _Ord_exp : Ord -> Ord -> Ord.
-Admitted.
+Definition _Ord_exp : Ord -> Ord -> Ord :=
+  Ord.exp.
 
 Section HARTOGS.
 
