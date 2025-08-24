@@ -162,20 +162,49 @@ Definition toSet_eqProp (lhs : A) (rhs : A) : Prop :=
 
 End TOTALIFY.
 
+Module Cardinality.
+
+Record t : Type@{Set_V} :=
+  mk
+  { carrier : Type@{Set_u}
+  ; carrier_isSetoid : isSetoid carrier
+  }.
+
+#[global] Existing Instance carrier_isSetoid.
+
+Variant le (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
+  | le_intro (f : lhs.(carrier) -> rhs.(carrier))
+    (INJ : forall x1, forall x2, f x1 == f x2 -> x1 == x2)
+    : le lhs rhs.
+
+Variant eq (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
+  | eq_intro
+    (LE : Cardinality.le lhs rhs)
+    (GE : Cardinality.le rhs lhs)
+    : eq lhs rhs.
+
+Variant lt (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
+  | lt_intro
+    (LE : Cardinality.le lhs rhs)
+    (NE : ~ Cardinality.eq lhs rhs)
+    : lt lhs rhs.
+
+End Cardinality.
+
 Definition Card : Type@{Set_V} :=
-  Tree.
+  Cardinality.t.
 
-Definition _Card_eq : Card -> Card -> Prop.
-Admitted.
+Definition _Card_eq : Card -> Card -> Prop :=
+  Cardinality.eq.
 
-Definition _Card_lt : Card -> Card -> Prop.
-Admitted.
+Definition _Card_lt : Card -> Card -> Prop :=
+  Cardinality.lt.
 
-Definition _Card_le : Card -> Card -> Prop.
-Admitted.
+Definition _Card_le : Card -> Card -> Prop :=
+  Cardinality.le.
 
-Definition _card : forall A : Type@{Set_u}, isSetoid A -> Card.
-Admitted.
+Definition _card : forall A : Type@{Set_u}, isSetoid A -> Card :=
+  Cardinality.mk.
 
 Definition _Card_add : Card -> Card -> Card.
 Admitted.

@@ -1333,13 +1333,35 @@ Proof.
   ).
 Defined.
 
+#[universes(template)]
 Class Similarity (A : Type) (B : Type) : Type :=
   is_similar_to (x : A) (y : B) : Prop.
 
+Section SIMILARITY.
+
+Infix "=~=" := is_similar_to.
+
 #[global]
 Instance Similarity_forall {D : Type} {D' : Type} {C : D -> Type} {C' : D' -> Type} (DOM_SIM : Similarity D D') (COD_SIM : forall x : D, forall x' : D', is_similar_to (Similarity := DOM_SIM) x x' -> Similarity (C x) (C' x')) : Similarity (forall x : D, C x) (forall x' : D', C' x') :=
-  fun f => fun f' => forall x : D, forall x' : D', forall x_corres : is_similar_to (Similarity := DOM_SIM) x x', @is_similar_to (C x) (C' x') (COD_SIM x x' x_corres) (f x) (f' x').
+  fun f => fun f' => forall x : D, forall x' : D', forall x_corres : is_similar_to (Similarity := DOM_SIM) x x', is_similar_to (Similarity := COD_SIM x x' x_corres) (f x) (f' x').
 
+Inductive Similarity_sum {A : Type} {A' : Type} {B : Type} {B' : Type} {A_SIM : Similarity A A'} {B_SIM : Similarity B B'} : (A + B)%type -> (A' + B')%type -> Prop :=
+  | inl_corres (x : A) (x' : A')
+    (x_corres : x =~= x')
+    : inl x =~= inl x'
+  | inr_corres (y : B) (y' : B')
+    (y_corres : y =~= y')
+    : inr y =~= inr y'.
+
+Inductive Similarity_prod {A : Type} {A' : Type} {B : Type} {B' : Type} {A_SIM : Similarity A A'} {B_SIM : Similarity B B'} : (A * B)%type -> (A' * B')%type -> Prop :=
+  | pair_corres (p : A * B) (p' : A' * B')
+    (fst_corres : fst p =~= fst p')
+    (snd_corres : snd p =~= snd p')
+    : p =~= p'.
+
+End SIMILARITY.
+
+#[universes(template)]
 Class isEnumerable (A : Type) : Type :=
   { enum : nat -> A
   ; enum_spec : forall x : A, { n : nat | enum n = x }
@@ -1360,6 +1382,7 @@ Instance nat_isEnumerable : isEnumerable nat :=
   ; enum_spec x := @exist _ _ x eq_refl
   }.
 
+#[universes(template)]
 Class isCountable (A : Type) : Type :=
   { encode : A -> nat
   ; decode : nat -> option A
