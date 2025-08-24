@@ -1387,7 +1387,7 @@ Qed.
 
 #[local, program]
 Instance fun_isSetoid {A : Type} {B : Type} {A_isSetoid : isSetoid A} {B_isSetoid : isSetoid B} : isSetoid { f : A -> B | eqPropCompatible1 f } :=
-  { eqProp f1 f2 := forall x1, forall x2, is_similar_to (Similarity := eqProp) x1 x2 -> is_similar_to (Similarity := eqProp) (f1 x1) (f2 x2) }.
+  { eqProp f1 f2 := forall x1 : A, forall x2 : A, is_similar_to (Similarity := eqProp) x1 x2 -> is_similar_to (Similarity := eqProp) (proj1_sig f1 x1) (proj1_sig f2 x2) }.
 Next Obligation.
   split.
   - intros [f1 H_f1]; ii; simpl in *. unfold is_similar_to in *. eauto with *.
