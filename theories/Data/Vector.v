@@ -173,6 +173,15 @@ Next Obligation.
   - f_equal. erewrite le_pirrel with (LE1 := H_lt). eapply getFin_runFin_id.
 Qed.
 
+#[local] Infix "=~=" := is_similar_to.
+
+Inductive Similarity_Fin : forall n : nat, Similarity (Fin.t n) nat :=
+  | F1_corres n
+    : @Fin.FZ n =~= O
+  | FS_corres n (i : Fin.t n) (m : nat)
+    (m_corres : i =~= m)
+    : @Fin.FS n i =~= S m.
+
 End Fin.
 
 Notation FZ := Fin.FZ.

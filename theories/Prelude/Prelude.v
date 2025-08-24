@@ -995,6 +995,27 @@ Module B.
 
 #[local] Open Scope program_scope.
 
+Inductive transitiveClosure {A : Type} (R : A -> A -> Prop) (x : A) (y : A) : Prop :=
+  | transitiveClosure_once
+    (STEP : R x y)
+    : transitiveClosure R x y
+  | transitiveClosure_trans z
+    (STEPs : transitiveClosure R x z)
+    (STEP : transitiveClosure R z y)
+    : transitiveClosure R x y.
+
+#[local] Hint Constructors transitiveClosure : core.
+
+Lemma transitiveClosure_lift_well_founded {A : Type} (R : A -> A -> Prop)
+  (R_wf : well_founded R)
+  : well_founded (transitiveClosure R).
+Proof.
+  intros x. pose proof (R_wf x) as H_ACC. clear R_wf.
+  induction H_ACC as [x H_ACC_inv IH]. constructor 1.
+  induction 1 as [ x y | x y z H1 IH1 H2 IH2 ]; auto.
+  eapply IH2; eauto.
+Qed.
+
 Definition Prop_to_Set (P : Prop) : Set :=
   P.
 
