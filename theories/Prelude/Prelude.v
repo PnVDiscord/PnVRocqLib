@@ -1353,11 +1353,47 @@ Inductive Similarity_sum {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : 
     (y_corres : y =~= y')
     : inr y =~= inr y'.
 
+#[local] Hint Constructors Similarity_sum : simplication_hints.
+
 Inductive Similarity_prod {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : Similarity A A') (B_SIM : Similarity B B') : (A * B)%type -> (A' * B')%type -> Prop :=
   | pair_corres (p : A * B) (p' : A' * B')
     (fst_corres : fst p =~= fst p')
     (snd_corres : snd p =~= snd p')
     : p =~= p'.
+
+#[local] Hint Constructors Similarity_prod : simplication_hints.
+
+#[local] Obligation Tactic := i.
+
+#[local, program]
+Instance sum_isSetoid {A : Type} {B : Type} {A_isSetoid : isSetoid A} {B_isSetoid : isSetoid B} : isSetoid (A + B)%type :=
+  { eqProp := Similarity_sum eqProp eqProp }.
+Next Obligation.
+  split; ii.
+  - destruct x; econs; eauto with *.
+  - destruct x, y; inv H; econs; eauto with *.
+  - destruct x, y, z; inv H; inv H0; econs; etransitivity; eauto with *.
+Qed.
+
+#[local, program]
+Instance prod_isSetoid {A : Type} {B : Type} {A_isSetoid : isSetoid A} {B_isSetoid : isSetoid B} : isSetoid (A * B)%type :=
+  { eqProp := Similarity_prod eqProp eqProp }.
+Next Obligation.
+  split; ii.
+  - destruct x; econs; eauto with *.
+  - destruct x, y; inv H; econs; eauto with *.
+  - destruct x, y, z; inv H; inv H0; econs; etransitivity; eauto with *.
+Qed.
+
+#[local, program]
+Instance fun_isSetoid {A : Type} {B : Type} {A_isSetoid : isSetoid A} {B_isSetoid : isSetoid B} : isSetoid { f : A -> B | eqPropCompatible1 f } :=
+  { eqProp f1 f2 := forall x1, forall x2, is_similar_to (Similarity := eqProp) x1 x2 -> is_similar_to (Similarity := eqProp) (f1 x1) (f2 x2) }.
+Next Obligation.
+  split.
+  - intros [f1 H_f1]; ii; simpl in *. unfold is_similar_to in *. eauto with *.
+  - intros [f1 H_f1] [f2 H_f2]; ii; simpl in *. unfold is_similar_to in *. symmetry; eauto with *.
+  - intros [f1 H_f1] [f2 H_f2] [f3 H_f3]; ii; simpl in *. unfold is_similar_to in *. transitivity (f2 x2); eauto with *.
+Qed.
 
 End SIMILARITY.
 

@@ -237,6 +237,15 @@ Variant lt (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
     (NE : ~ Cardinality.eq lhs rhs)
     : lt lhs rhs.
 
+Definition add (kappa : Cardinality.t) (lambda : Cardinality.t) : Cardinality.t :=
+  mk (kappa.(carrier) + lambda.(carrier))%type sum_isSetoid.
+
+Definition mul (kappa : Cardinality.t) (lambda : Cardinality.t) : Cardinality.t :=
+  mk (kappa.(carrier) * lambda.(carrier))%type prod_isSetoid.
+
+Definition exp (kappa : Cardinality.t) (lambda : Cardinality.t) : Cardinality.t :=
+  mk { f : kappa.(carrier) -> lambda.(carrier) | eqPropCompatible1 f } fun_isSetoid.
+
 End Cardinality.
 
 Definition Card : Type@{Set_V} :=
@@ -254,13 +263,13 @@ Definition _Card_le : Card -> Card -> Prop :=
 Definition _card : forall A : Type@{Set_u}, isSetoid A -> Card :=
   Cardinality.mk.
 
-Definition _Card_add : Card -> Card -> Card.
-Admitted.
+Definition _Card_add : Card -> Card -> Card :=
+  Cardinality.add.
 
-Definition _Card_mul : Card -> Card -> Card.
-Admitted.
+Definition _Card_mul : Card -> Card -> Card :=
+  Cardinality.mul.
 
-Definition _Card_exp : Card -> Card -> Card.
-Admitted.
+Definition _Card_exp : Card -> Card -> Card :=
+  Cardinality.exp.
 
 End TypeTheoreticImplementation.
