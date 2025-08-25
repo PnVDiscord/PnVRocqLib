@@ -42,8 +42,6 @@ Parameter _Ord_add : Ord -> Ord -> Ord.
 
 Parameter _Ord_mul : Ord -> Ord -> Ord.
 
-Parameter _Ord_exp : Ord -> Ord -> Ord.
-
 Parameter Card : Type@{Set_V}.
 
 Parameter _Card_eq : Card -> Card -> Prop.
@@ -145,9 +143,6 @@ Definition add (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
 Definition mul (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
   Ord.orec zer (fun o => Ord.add o o1) o2.
 
-Definition exp (o1 : Ord.t) (o2 : Ord.t) : Ord.t :=
-  Ord.orec (suc zer) (fun o => Ord.mul o o1) o2.
-
 End Ord.
 
 Definition Ord : Type@{Set_V} :=
@@ -186,9 +181,6 @@ Definition _Ord_add : Ord -> Ord -> Ord :=
 
 Definition _Ord_mul : Ord -> Ord -> Ord :=
   Ord.mul.
-
-Definition _Ord_exp : Ord -> Ord -> Ord :=
-  Ord.exp.
 
 Section HARTOGS.
 
