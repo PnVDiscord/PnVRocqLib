@@ -10,7 +10,7 @@ Require Import Coq.Arith.Wf_nat.
 
 Module InternalSyntax.
 
-#[projections(primitive)]
+#[projections(primitive)]as
 Record language : Type :=
   { function_symbols : Set
   ; constant_symbols : Set
@@ -1101,7 +1101,7 @@ Proof.
       apply EQUIV in claim2. destruct claim2 as [y [FREE FREE']]. apply fv_is_free_in_frm in FREE. apply fv_is_free_in_trm in FREE'. exists y. done!.
   }
   apply maxs_ext in claim. unfold chi_frm. f_equal. unfold last_ivar_trm.
-  assert (ENOUGH: forall xs: list ivar, forall f: ivar -> list ivar, maxs (List.map (maxs ∘ f) xs) = maxs (List.flat_map f xs)).
+      assert (ENOUGH : forall xs : list ivar, forall f : ivar -> list ivar, maxs (List.map (maxs ∘ f) xs) = maxs (List.flat_map f xs)).
   { induction xs; simpl; i; eauto; rewrite maxs_app; ss!. }
   do 2 rewrite <- ENOUGH in claim. done!.
 Qed.
