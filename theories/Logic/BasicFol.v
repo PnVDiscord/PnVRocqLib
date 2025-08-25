@@ -10,7 +10,7 @@ Require Import Coq.Arith.Wf_nat.
 
 Module InternalSyntax.
 
-#[projections(primitive)]as
+#[projections(primitive)]
 Record language : Type :=
   { function_symbols : Set
   ; constant_symbols : Set
