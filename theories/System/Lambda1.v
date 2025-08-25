@@ -91,26 +91,6 @@ Fixpoint subst_trm (s : subst) (e : trm) : trm :=
 
 End Substitution.
 
-Section alphaEquivalence.
-
-Inductive alphaEquiv : trm -> trm -> Prop :=
-  | alphaEquiv_Var x x'
-    (x_EQ : x = x')
-    : alphaEquiv (Var_trm x) (Var_trm x')
-  | alphaEquiv_App M M' N N'
-    (ALPHA1 : alphaEquiv M M')
-    (ALPHA2 : alphaEquiv N N')
-    : alphaEquiv (App_trm M N) (App_trm M' N')
-  | alphaEquiv_Lam x x' x'' ty M M'
-    (FRESH1 : ~ L.In x'' (FVs (Lam_trm x ty M)))
-    (FRESH2 : ~ L.In x'' (FVs (Lam_trm x' ty M')))
-    (ALPHA1 : alphaEquiv (subst_trm (one_subst x (Var_trm x'')) M) (subst_trm (one_subst x' (Var_trm x'')) M'))
-    : alphaEquiv (Lam_trm x ty M) (Lam_trm x' ty M')
-  | alphaEquiv_con c
-    : alphaEquiv (Con_trm c) (Con_trm c).
-
-End alphaEquivalence.
-
 Section BASIC_THEORY1_ON_SYNTAX.
 
 #[local] Open Scope program_scope.
@@ -348,6 +328,22 @@ Proof.
     rewrite L.forallb_forall in claim2. rewrite -> is_free_in_iff in claim1.
     pose proof (claim2 z claim1) as claim3. ss!.
 Qed.
+
+Inductive alphaEquiv : trm -> trm -> Set :=
+  | alphaEquiv_Var x x'
+    (x_EQ : x = x')
+    : alphaEquiv (Var_trm x) (Var_trm x')
+  | alphaEquiv_App M M' N N'
+    (ALPHA1 : alphaEquiv M M')
+    (ALPHA2 : alphaEquiv N N')
+    : alphaEquiv (App_trm M N) (App_trm M' N')
+  | alphaEquiv_Lam x'' x x' ty M M'
+    (FRESH1 : is_free_in x'' (Lam_trm x ty M) = false)
+    (FRESH2 : is_free_in x'' (Lam_trm x' ty M') = false)
+    (ALPHA1 : alphaEquiv (subst_trm (one_subst x (Var_trm x'')) M) (subst_trm (one_subst x' (Var_trm x'')) M'))
+    : alphaEquiv (Lam_trm x ty M) (Lam_trm x' ty M')
+  | alphaEquiv_con c
+    : alphaEquiv (Con_trm c) (Con_trm c).
 
 End BASIC_THEORY1_ON_SYNTAX.
 
