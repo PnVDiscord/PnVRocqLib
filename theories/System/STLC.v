@@ -280,7 +280,7 @@ Proof.
     { intros x ty LOOKUP. exact LOOKUP. }
     eapply IHTYPING2.
     { eassumption. }
-  - intros N Gamma' LE a. eapply head_expand.
+  - intros Gamma' LE N a. eapply head_expand.
     { econs 1. }
     set (x := chi gamma (Lam_trm y ty1 e1)).
     eapply eval_typ_alpha.
