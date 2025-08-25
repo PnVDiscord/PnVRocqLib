@@ -183,6 +183,11 @@ Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : trm L -> Set :=
   | (ty1 -> ty2)%typ => fun M => forall Gamma', le_ctx Gamma Gamma' -> forall N, eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
   end.
 
+Lemma eval_typ_alpha (e : trm L) (e' : trm L)
+  (ALPHA : subst_trm nil_subst e = subst_trm nil_subst e')
+  : forall Gamma, forall ty, eval_typ Gamma ty e -> eval_typ Gamma ty e'.
+Admitted.
+
 Fixpoint eval_typ_le_ctx Gamma ty {struct ty} : forall M, eval_typ Gamma ty M -> forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty M.
 Proof.
   destruct ty as [b | ty1 ty2]; simpl; intros M H_M Gamma' LE.
@@ -278,8 +283,9 @@ Proof.
   - intros N Gamma' LE a. eapply head_expand.
     { econs 1. }
     set (x := chi gamma (Lam_trm y ty1 e1)).
-    rewrite subst_cons_lemma with (ty := ty1); [eapply IHTYPING | reflexivity].
-    eapply eval_ctx_cons_subst; [exact a | eapply eval_ctx_le_ctx]; eassumption.
+    eapply eval_typ_alpha.
+    { symmetry. eapply subst_cons_lemma_aux1 with (ty := ty1); reflexivity. }
+    eapply IHTYPING. eapply eval_ctx_cons_subst; [exact a | eapply eval_ctx_le_ctx]; eassumption.
   - eapply reflect. econs 3. reflexivity.
 Defined.
 

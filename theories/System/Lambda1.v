@@ -349,12 +349,6 @@ Proof.
     pose proof (claim2 z claim1) as claim3. ss!.
 Qed.
 
-Corollary subst_cons_lemma N M gamma x y ty
-  (x_EQ : x = chi gamma (Lam_trm y ty M))
-  : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
-Proof.
-Admitted.
-
 End BASIC_THEORY1_ON_SYNTAX.
 
 Section TypingRule.
