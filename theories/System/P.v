@@ -25,6 +25,13 @@ Definition un_name (nm : name) : nat :=
   | mk_name seed => seed
   end.
 
+Lemma un_name_inj nm nm'
+  (EQ : un_name nm = un_name nm')
+  : nm = nm'.
+Proof.
+  destruct nm, nm'; ss!.
+Defined.
+
 Section PP_name.
 
 Lemma print_name1_aux_lemma (n : nat)
@@ -227,13 +234,39 @@ Fixpoint maxs (nms : list Name.t) : Name.t :=
 
 Lemma in_le_maxs (nms : list name) (nm : name)
   (IN : L.In nm nms)
-  : un_name nm <= un_name (maxs nms).
+  : un_name nm <= un_name (Name.maxs nms).
 Proof.
   revert nm IN. induction nms as [ | [n] nms IH]; simpl.
   - tauto.
   - intros nm [<- | IN]; simpl.
     + lia.
     + rewrite IH; trivial; lia.
+Qed.
+
+Lemma maxs_app nms1 nms2
+  : un_name (Name.maxs (nms1 ++ nms2)) = Nat.max (un_name (Name.maxs nms1)) (un_name (Name.maxs nms2)).
+Proof.
+  revert nms2. induction nms1 as [ | nm1 nms1 IH]; i; s!; eauto.
+  rewrite IH. lia.
+Qed.
+
+Lemma maxs_subset (ns1 : list Name.t) (ns2 : list Name.t)
+  (H_SUBSET : forall n, In n ns1 -> In n ns2)
+  : un_name (maxs ns1) <= un_name (maxs ns2).
+Proof with try now (lia || firstorder; eauto).
+  revert ns2 H_SUBSET; induction ns1 as [ | n1 ns1 IH]; simpl...
+  intros ns2 H. destruct (le_gt_dec (un_name n1) (un_name (maxs ns1))).
+  - enough (ENOUGH : (un_name (maxs ns1)) <= un_name (maxs ns2))...
+  - enough (ENOUGH : (un_name n1) <= un_name (maxs ns2))... eapply in_le_maxs...
+Qed.
+
+Lemma maxs_ext (ns1 : list Name.t) (ns2 : list Name.t)
+  (H_EXT_EQ : forall n, In n ns1 <-> In n ns2)
+  : Name.maxs ns1 = Name.maxs ns2.
+Proof with try now firstorder.
+  assert (claim1 : un_name (maxs ns1) <= un_name (maxs ns2) /\ un_name (maxs ns2) <= un_name (maxs ns1)).
+  { split; eapply maxs_subset... }
+  eapply un_name_inj. lia.
 Qed.
 
 Definition ne (nm1 : Name.t) (nm2 : Name.t) : Prop :=

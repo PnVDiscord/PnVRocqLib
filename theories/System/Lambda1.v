@@ -113,6 +113,237 @@ End alphaEquivalence.
 
 Section BASIC_THEORY1_ON_SYNTAX.
 
+#[local] Open Scope program_scope.
+
+Fixpoint is_free_in (x : Name.t) (e : trm) : bool :=
+  match e with
+  | Var_trm x' => Prelude.eqb x x'
+  | App_trm e1 e2 => is_free_in x e1 || is_free_in x e2
+  | Lam_trm x' ty e1 => negb (Prelude.eqb x x') && is_free_in x e1
+  | Con_trm c => false
+  end.
+
+#[local] Hint Rewrite @eqb_spec : simplication_hints.
+#[local] Hint Rewrite andb_true_iff : simplication_hints.
+#[local] Hint Rewrite orb_true_iff : simplication_hints.
+#[local] Hint Rewrite negb_true_iff : simplication_hints.
+#[local] Hint Rewrite Name.maxs_app : simplication_hints.
+#[local] Hint Rewrite @L.in_remove_iff : simplication_hints.
+#[local] Hint Rewrite @L.in_concat : simplication_hints.
+
+Lemma is_free_in_iff x e
+  : is_free_in x e = true <-> L.In x (FVs e).
+Proof.
+  split; intros H_free.
+  - revert x e H_free; induction e; ss!.
+  - revert x H_free; induction e; done!.
+Qed.
+
+#[local] Hint Rewrite <- is_free_in_iff : simplication_hints.
+
+Lemma last_ivar_trm_gt z e
+  (GT : un_name z > un_name (Name.maxs (FVs e)))
+  : is_free_in z e = false.
+Proof.
+  enough (ENOUGH : ~ L.In z (FVs e)) by ss!.
+  pose proof (Name.in_le_maxs (FVs e)) as claim1.
+  intros CONTRA. apply claim1 in CONTRA. ss!.
+Qed.
+
+Lemma chi_not_free s e x
+  (FREE : L.In x (FVs e))
+  : is_free_in (chi s e) (s x) = false.
+Proof.
+  enough (ENOUGH : un_name (Name.maxs (FVs (s x))) < un_name (chi s e)) by now eapply last_ivar_trm_gt.
+  unfold chi. unfold "<". unfold next_name. set (36 * _) as z. simpl un_name.
+  enough (un_name (Name.maxs (FVs (s x))) <= z) by lia.
+  enough (un_name (Name.maxs (FVs (s x))) <= un_name (Name.maxs (FVs e >>= (fun x : Name.t => FVs (s x))))) by lia.
+  eapply Name.maxs_subset. clear z. i; s!. exists (FVs (s x)). ss!. exists x; done!.
+Qed.
+
+Definition is_fresh_in_subst x s e : bool :=
+  L.forallb (negb ∘ is_free_in x ∘ s) (FVs e).
+
+Theorem chi_is_fresh_in_subst e s
+  : is_fresh_in_subst (chi s e) s e = true.
+Proof.
+  unfold is_fresh_in_subst. rewrite forallb_forall. ii.
+  unfold "∘". rewrite negb_true_iff. eapply chi_not_free. done!.
+Qed.
+
+Lemma chi_nil_subst e
+  : is_free_in (chi nil_subst e) e = false.
+Proof.
+  pose proof (chi_is_fresh_in_subst e nil_subst) as claim1.
+  unfold is_fresh_in_subst in claim1.
+  eapply not_true_iff_false. intros CONTRA. 
+  rewrite forallb_forall in claim1. unfold "∘" in claim1. simpl in claim1.
+  rewrite -> is_free_in_iff in CONTRA. apply claim1 in CONTRA. ss!.
+Qed.
+
+#[local] Hint Unfold compose : simplication_hints.
+#[local] Hint Unfold one_subst : simplication_hints.
+#[local] Hint Unfold cons_subst : simplication_hints.
+#[local] Hint Unfold nil_subst : simplication_hints.
+
+Theorem is_fresh_in_subst_iff e z s
+  : is_fresh_in_subst z s e = true <-> is_free_in z (subst_trm s e) = false.
+Proof.
+  unfold is_fresh_in_subst; revert z s. induction e; simpl; ii; s!.
+  - done!.
+  - done!.
+  - split.
+    + intros H_forallb.
+      pose proof (eq_dec z (chi s (Lam_trm y ty e))) as [YES | NO]; [left; ss! | right].
+      eapply IHe. rewrite L.forallb_forall. intros x x_in. s!. destruct (eq_dec x y) as [H_eq | H_ne].
+      * subst y. ss!.
+      * rewrite forallb_forall in H_forallb. rewrite <- negb_true_iff. eapply H_forallb. ss!.
+    + intros [-> | NOT_FREE].
+      * rewrite forallb_forall. intros x x_in. ss!. eapply chi_not_free. ss!.
+      * apply IHe in NOT_FREE. rewrite forallb_forall in NOT_FREE. rewrite forallb_forall. intros x x_in; s!.
+        exploit (NOT_FREE x). ss!. destruct (eq_dec x y) as [EQ | NE]; ss!.
+  - done!.
+Qed.
+
+Definition equiv_subst (s1 : subst) (s2 : subst) (e : trm) : Prop :=
+  forall z : Name.t, forall FREE : is_free_in z e = true, s1 z = s2 z.
+
+Lemma chi_compat_equiv_subst s1 s2 e
+  (EQUIV : equiv_subst s1 s2 e)
+  : chi s1 e = chi s2 e.
+Proof.
+  red in EQUIV. unfold chi. f_equal. eapply Name.maxs_ext. i; ss!; exists x; ss!; exists x0; ss!.
+Qed.
+
+Lemma equiv_subst_implies_subst_same s1 s2 e
+  (EQUIV : equiv_subst s1 s2 e)
+  : subst_trm s1 e = subst_trm s2 e.
+Proof.
+  red in EQUIV. revert s1 s2 EQUIV. induction e; ii; s!.
+  - eapply EQUIV. ss!.
+  - f_equal; [eapply IHe1 | eapply IHe2]; ss!.
+  - assert (claim1 : chi s1 (Lam_trm y ty e) = chi s2 (Lam_trm y ty e)) by now eapply chi_compat_equiv_subst.
+    f_equal; trivial. eapply IHe; ii; destruct (eq_dec z y) as [EQ | NE]; ss!. ii; eapply EQUIV; ss!.
+  - reflexivity.
+Qed.
+
+Definition subst_compose (s1 : subst) (s2 : subst) : subst :=
+  fun z => subst_trm s2 (s1 z).
+
+Lemma distr_compose_one (s1 : subst) (s2 : subst) (x : Name.t) (x' : Name.t) (e : trm) (z : Name.t) (e' : trm)
+  (FRESH : forallb (negb ∘ is_free_in x ∘ s1) (remove eq_dec x' (FVs e')) = true)
+  (FREE : is_free_in z e' = true)
+  : cons_subst x' e (subst_compose s1 s2) z = subst_compose (cons_subst x' (Var_trm x) s1) (cons_subst x e s2) z.
+Proof.
+  unfold subst_compose, cons_subst. destruct (eq_dec z x') as [H_eq | H_ne].
+  - subst z. simpl. destruct (eq_dec x x); [reflexivity | contradiction].
+  - rewrite forallb_forall in FRESH. unfold "∘" in FRESH.
+    assert (NOT_FREE : is_free_in x (s1 z) = false).
+    { rewrite <- negb_true_iff. eapply FRESH. ss!. }
+    eapply equiv_subst_implies_subst_same.
+    intros z' FREE'. destruct (eq_dec z' x) as [EQ | NE]; [congruence | reflexivity].
+Qed.
+
+Definition free_in_wrt (x : Name.t) (s : subst) (e : trm) : Prop :=
+  exists y : Name.t, is_free_in y e = true /\ is_free_in x (s y) = true.
+
+Theorem free_in_wrt_iff e z s
+  : free_in_wrt z s e <-> is_free_in z (subst_trm s e) = true.
+Proof.
+  revert z s. unfold free_in_wrt. induction e; simpl; i.
+  - split.
+    + intros [y [EQ FREE]]. ss!.
+    + intros FREE. exists x. ss!.
+  - split.
+    + intros [y [FREE FREE']]. rewrite orb_true_iff in FREE. rewrite orb_true_iff. destruct FREE as [FREE | FREE].
+      { left. done!. }
+      { right. done!. }
+    + rewrite orb_true_iff. intros [FREE | FREE].
+      { rewrite <- IHe1 in FREE. destruct FREE as [y [FREE FREE']]. exists y. done!. }
+      { rewrite <- IHe2 in FREE. destruct FREE as [y [FREE FREE']]. exists y. done!. }
+  - split.
+    + intros (w & FREE & FREE'). s!. split.
+      * intros CONTRA. subst z.
+        assert (claim1 : is_fresh_in_subst (chi s (Lam_trm y ty e)) s (Lam_trm y ty e) = true).
+        { eapply chi_is_fresh_in_subst. }
+        unfold is_fresh_in_subst in claim1. rewrite forallb_forall in claim1.
+        assert (claim2 : In w (FVs (Lam_trm y ty e))).
+        { done!. }
+        apply claim1 in claim2. done!.
+      * eapply IHe. exists w. ss!. destruct (eq_dec w y) as [? | ?]; ss!.
+    + rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_spec.
+      set (w := chi s (Lam_trm y ty e)). intros [NE FREE].
+      rewrite <- IHe in FREE. destruct FREE as [x [FREE FREE']].
+      unfold cons_subst in FREE'. destruct (eq_dec x y) as [x_eq_y | x_ne_y].
+      * subst x. contradiction NE. done!.
+      * exists x. done!.
+  - ss!.
+Qed.
+
+Lemma chi_frm_ext s1 s2 e1 e2
+  (EQUIV : forall z : ivar, free_in_frm_wrt z s1 e1 <-> free_in_frm_wrt z s2 e2)
+  : chi_frm s1 e1 = chi_frm s2 e2.
+Proof.
+  assert (claim : forall z : ivar, In z (flat_map (fvs_trm ∘ s1) (fvs_frm p1)) <-> In z (flat_map (fvs_trm ∘ s2) (fvs_frm p2))).
+  { unfold free_in_frm_wrt in EQUIV. intros z. do 2 rewrite in_flat_map.
+    split; intros [x [H_IN1 H_IN2]]; rewrite fv_is_free_in_frm in H_IN1; apply fv_is_free_in_trm in H_IN2; unfold "∘" in *. 
+    - assert (claim1 : exists y : ivar, is_free_in_frm y p1 = true /\ is_free_in_trm z (s1 y) = true) by done!.
+      apply EQUIV in claim1. destruct claim1 as [y [FREE FREE']]. apply fv_is_free_in_frm in FREE. apply fv_is_free_in_trm in FREE'. exists y. done!.
+    - assert (claim2 : exists y : ivar, is_free_in_frm y p2 = true /\ is_free_in_trm z (s2 y) = true) by done!.
+      apply EQUIV in claim2. destruct claim2 as [y [FREE FREE']]. apply fv_is_free_in_frm in FREE. apply fv_is_free_in_trm in FREE'. exists y. done!.
+  }
+  apply maxs_ext in claim. unfold chi_frm. f_equal. unfold last_ivar_trm.
+  assert (ENOUGH: forall xs : list ivar, forall f : ivar -> list ivar, maxs (List.map (maxs ∘ f) xs) = maxs (List.flat_map f xs)).
+  { induction xs; simpl; i; eauto; rewrite maxs_app; ss!. }
+  do 2 rewrite <- ENOUGH in claim. done!.
+Qed.
+
+Theorem subst_compose_trm_spec (t : trm L) (s : subst L) (s' : subst L)
+  : subst_trm (subst_compose s s') t = subst_trm s' (subst_trm s t)
+with subst_compose_trms_spec n (ts : trms L n) (s : subst L) (s' : subst L)
+  : subst_trms (subst_compose s s') ts = subst_trms s' (subst_trms s ts).
+Proof.
+  - clear subst_compose_trm_spec; revert s s'. trm_ind t; simpl; i; done!.
+  - clear subst_compose_trms_spec; revert s s'. trms_ind ts; simpl; i; done!.
+Qed.
+
+#[local] Hint Rewrite <- subst_compose_trm_spec subst_compose_trms_spec : simplication_hints.
+
+Theorem subst_compose_frm_spec (p : frm L) (s : subst L) (s' : subst L)
+  : subst_frm (subst_compose s s') p = subst_frm s' (subst_frm s p).
+Proof.
+  revert s s'. frm_ind p; simpl; i.
+  - done!.
+  - done!.
+  - done!.
+  - done!.
+  - enough (ENOUGH : chi_frm s' (subst_frm s (All_frm y p1)) = chi_frm (subst_compose s s') (All_frm y p1)).
+    { revert ENOUGH.
+      set (x := chi_frm s (All_frm y p1)).
+      set (z := chi_frm (subst_compose s s') (All_frm y p1)).
+      set (w := chi_frm s' (All_frm x (subst_frm (cons_subst y (Var_trm x) s) p1))).
+      i. rewrite <- IH1. assert (EQ : z = w) by done. subst z. f_equal; trivial.
+      eapply equiv_subst_in_frm_implies_subst_frm_same. unfold equiv_subst_in_frm. ii.
+      rewrite <- distr_compose_one with (p := p1).
+      - now rewrite EQ.
+      - change (frm_is_fresh_in_subst x s (All_frm y p1) = true). eapply chi_frm_is_fresh_in_subst.
+      - done.
+    }
+    eapply chi_frm_ext. intros z. split.
+    + simpl. unfold free_in_frm_wrt. intros [x [FREE FREE']]. simpl in FREE.
+      rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite Nat.eqb_neq in FREE.
+      destruct FREE as [FREE NE]. apply free_in_frm_wrt_iff in FREE. unfold free_in_frm_wrt in FREE.
+      destruct FREE as [w [FREE1 FREE2]]. unfold cons_subst in FREE2. destruct (eq_dec w y) as [w_eq_y | w_ne_y].
+      * unfold is_free_in_trm in FREE2. rewrite Nat.eqb_eq in FREE2. subst x y. done.
+      * exists w. simpl. done!.
+    + intros [x [FREE FREE']]. simpl in FREE. rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite Nat.eqb_neq in FREE. destruct FREE as [FREE NE].
+      apply free_in_trm_wrt_iff in FREE'. destruct FREE' as [u [FREE' FREE'']]. exists u. split.
+      * eapply free_in_frm_wrt_iff. exists x. simpl. done!.
+      * done!.
+Qed.
+
+#[local] Hint Rewrite <- subst_compose_frm_spec : simplication_hints.
+
 Corollary subst_cons_lemma N M gamma x y ty
   (x_EQ : x = chi gamma (Lam_trm y ty M))
   : subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M) = subst_trm (cons_subst y N gamma) M.
