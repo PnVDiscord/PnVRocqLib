@@ -36,20 +36,31 @@ Proof.
   - exact LOOKUP.
 Qed.
 
+Definition alpha_equiv (M : trm L) (N : trm L) : Prop :=
+  subst_trm nil_subst M = subst_trm nil_subst N.
+
 Inductive whBeta : trm L -> trm L -> Prop :=
-  | whBeta_app_lam y ty M N
+  | whBeta_Beta y ty M N
     : App_trm (Lam_trm y ty M) N ~>β subst_trm (one_subst y N) M
-  | whBeta_ksi M M' N
+  | whBeta_AppL M M' N
     (WHBETA : M ~>β M')
     : App_trm M N ~>β App_trm M' N
+  | whBeta_alpha M N N'
+    (WHBETA : M ~>β N)
+    (ALPHA : alpha_equiv N N')
+    : M ~>β N'
   where "M ~>β N" := (whBeta M N).
 
 Inductive whBetaStar (N : trm L) : trm L -> Set :=
-  | whBetaStar_O
-    : N ~>β* N
-  | whBetaStar_S M M'
-    (WHBETA : M ~>β M')
-    (WHBETA' : M' ~>β* N)
+  | whBetaStar_nil M
+    (ALPHA : alpha_equiv M N)
+    : M ~>β* N
+  | whBetaStar_one M
+    (WHBETA : M ~>β N)
+    : M ~>β* N
+  | whBetaStar_app M M'
+    (WHBETAs1 : M ~>β* M')
+    (WHBETAs2 : M' ~>β* N)
     : M ~>β* N
   where "M ~>β* N" := (whBetaStar N M).
 
@@ -128,6 +139,10 @@ with wnNf (Gamma : ctx L) : typ L -> trm L -> Set :=
     (WHETA : v' ~>η v)
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
+  | wnNf_alpha_wnNf v v' ty
+    (ALPHA : alpha_equiv v v')
+    (v_wnNf : Gamma ⊢ v' ⇇ ty)
+    : Gamma ⊢ v ⇇ ty
   where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
 
 Fixpoint le_ctx_wnNe (Gamma : ctx L) (ty : typ L) (u : trm L) (u_wnNe : Gamma ⊢ u ⇉ ty) {struct u_wnNe} : forall Gamma', le_ctx Gamma Gamma' -> Gamma' ⊢ u ⇉ ty
@@ -155,6 +170,9 @@ Proof.
     + econs 4.
       * eassumption.
       * eapply le_ctx_wnNf; eassumption.
+    + econs 5.
+      * eassumption.
+      * eapply le_ctx_wnNf; eassumption.
 Defined.
 
 Lemma wnNf_whBetaStar_wnNf Gamma M N ty
@@ -162,9 +180,10 @@ Lemma wnNf_whBetaStar_wnNf Gamma M N ty
   (WHBETA' : M ~>β* N)
   : Gamma ⊢ M ⇇ ty.
 Proof.
-  induction WHBETA'; simpl in *.
-  - eassumption.
-  - econs 3; eassumption.
+  revert Gamma v_wnNf; induction WHBETA'; i; simpl in *.
+  - econs 5; eauto.
+  - econs 3; eauto.
+  - eauto.
 Defined.
 
 Lemma App_Var_wnNf_inv Gamma ty ty' v
@@ -184,9 +203,19 @@ Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : trm L -> Set :=
   end.
 
 Lemma eval_typ_alpha (e : trm L) (e' : trm L)
-  (ALPHA : subst_trm nil_subst e = subst_trm nil_subst e')
+  (ALPHA : alpha_equiv e e')
   : forall Gamma, forall ty, eval_typ Gamma ty e -> eval_typ Gamma ty e'.
-Admitted.
+Proof.
+  intros Gamma ty; revert e e' ALPHA Gamma. induction ty as [b | ty1 IH1 ty2 IH2]; simpl; intros ? ? ? ? H_e.
+  - exists H_e.(B.projT1). split.
+    + exact (fst H_e.(B.projT2)).
+    + econs 3.
+      * econs 1. red in ALPHA |- *. symmetry. exact ALPHA.
+      * exact (snd H_e.(B.projT2)).
+  - intros Gamma' LE N H_N. eapply IH2 with (e := App_trm e N).
+    + red in ALPHA |- *. simpl. congruence.
+    + eapply H_e; eauto.
+Defined.
 
 Fixpoint eval_typ_le_ctx Gamma ty {struct ty} : forall M, eval_typ Gamma ty M -> forall Gamma', le_ctx Gamma Gamma' -> eval_typ Gamma' ty M.
 Proof.
@@ -207,7 +236,7 @@ Proof.
   - destruct ty as [b | ty1 ty2]; simpl; intros M H_M.
     + exists M. split.
       * eassumption.
-      * econs 1.
+      * econs 1. red; reflexivity.
     + intros Gamma' LE N H_N. eapply reflect. econs 2.
       * eapply le_ctx_wnNe; [exact H_M | exact LE].
       * eapply reify. exact H_N.
@@ -225,8 +254,8 @@ Proof.
   destruct ty as [b | ty1 ty2]; simpl; intros H_M.
   - exists H_M.(B.projT1). split.
     + exact (fst H_M.(B.projT2)).
-    + econs 2.
-      * eassumption.
+    + econs 3.
+      * econs 2. eassumption.
       * exact (snd H_M.(B.projT2)).
   - intros N Gamma' LE H_N. eapply head_expand.
     + econs 2. eassumption.
@@ -284,7 +313,7 @@ Proof.
     { econs 1. }
     set (x := chi gamma (Lam_trm y ty1 e1)).
     eapply eval_typ_alpha.
-    { symmetry. eapply subst_cons_lemma_aux1 with (ty := ty1); reflexivity. }
+    { red. symmetry. eapply subst_cons_lemma_aux1 with (ty := ty1); reflexivity. }
     eapply IHTYPING. eapply eval_ctx_cons_subst; [exact a | eapply eval_ctx_le_ctx]; eassumption.
   - eapply reflect. econs 3. reflexivity.
 Defined.
@@ -307,6 +336,10 @@ Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
   | wnStep_whEtaExpand v v' e ty
     (H_M : wnStep Gamma v' e ty)
     (WHETA : v' ~>η v)
+    : wnStep Gamma v e ty
+  | wnStep_alpha v v' e ty
+    (H_M : wnStep Gamma v' e ty)
+    (WHETA : alpha_equiv v v')
     : wnStep Gamma v e ty.
 
 Theorem wnNe_wnStep_typNe (Gamma : ctx L) u ty
@@ -344,6 +377,10 @@ Proof.
     + pose proof (wnNf_wnStep_typNf Gamma v' ty v_wnNf) as H_e.
       exists H_e.(B.proj1_sig). split.
       * eapply wnStep_whEtaExpand; [exact (proj1 H_e.(B.proj2_sig)) | exact WHETA].
+      * exact (proj2 H_e.(B.proj2_sig)).
+    + pose proof (wnNf_wnStep_typNf Gamma v' ty v_wnNf) as H_e.
+      exists H_e.(B.proj1_sig). split.
+      * eapply wnStep_alpha; [exact (proj1 H_e.(B.proj2_sig)) | exact ALPHA].
       * exact (proj2 H_e.(B.proj2_sig)).
 Defined.
 

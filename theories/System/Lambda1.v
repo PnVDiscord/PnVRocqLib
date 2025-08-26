@@ -832,13 +832,6 @@ Section BASIC_THEORY2_ON_SYNTAX.
 
 Context `{Sigma : !signature L}.
 
-Corollary TypingSubstLemma {Gamma} {Delta} {gamma} {e} {ty}
-  (TYPING_SUBST : TypingSubst Gamma gamma Delta)
-  (TYPING : Typing Delta e ty)
-  : Typing Gamma (subst_trm gamma e) ty.
-Proof.
-Admitted.
-
 End BASIC_THEORY2_ON_SYNTAX.
 
 Section SN.
