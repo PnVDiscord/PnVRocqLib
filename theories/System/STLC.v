@@ -51,18 +51,18 @@ Inductive whBeta : trm L -> trm L -> Prop :=
     : M ~>β N'
   where "M ~>β N" := (whBeta M N).
 
-Inductive whBetaStar (N : trm L) : trm L -> Set :=
-  | whBetaStar_nil M
+Inductive whBetaStar (M : trm L) (N : trm L) : Set :=
+  | whBetaStar_alpha
     (ALPHA : alpha_equiv M N)
     : M ~>β* N
-  | whBetaStar_one M
+  | whBetaStar_beta
     (WHBETA : M ~>β N)
     : M ~>β* N
-  | whBetaStar_app M M'
+  | whBetaStar_trans M'
     (WHBETAs1 : M ~>β* M')
     (WHBETAs2 : M' ~>β* N)
     : M ~>β* N
-  where "M ~>β* N" := (whBetaStar N M).
+  where "M ~>β* N" := (whBetaStar M N).
 
 Inductive whEta (N : trm L) : trm L -> Prop :=
   | whEta_intro x ty
