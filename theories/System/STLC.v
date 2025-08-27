@@ -339,7 +339,7 @@ Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
     : wnStep Gamma v e ty
   | wnStep_alpha v v' e ty
     (H_M : wnStep Gamma v' e ty)
-    (WHETA : alpha_equiv v v')
+    (ALPHA : alpha_equiv v v')
     : wnStep Gamma v e ty.
 
 Theorem wnNe_wnStep_typNe (Gamma : ctx L) u ty
