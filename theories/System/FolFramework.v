@@ -149,6 +149,24 @@ Proof.
   reflexivity.
 Qed.
 
+Example L_in_example4 c
+  : @Typing mk_fol fol_signature [("p"%name, (@bty mk_fol trm_bty -> @bty mk_fol frm_bty)%typ)] (App_trm (Lam_trm "x" (@bty mk_fol trm_bty) (App_trm (Var_trm "p") (Var_trm "x"))) (@Con_trm mk_fol (Constant_symbol c))) (@bty mk_fol frm_bty).
+Proof.
+  eapply App_typ with (ty1 := (@bty mk_fol trm_bty)%typ).
+  - eapply Lam_typ. eapply App_typ with (ty1 := (@bty mk_fol trm_bty)).
+    + econs 1. econs 2.
+      { cbv. left. repeat econs. }
+      { econs 1; reflexivity. }
+    + econs 1. econs 1; reflexivity.
+  - econs 4.
+Defined.
+
+Example L_in_example4_unfold c
+  : NbE (L_in_example4 c) = (App_trm (Var_trm "p") (@Con_trm mk_fol (Constant_symbol c))).
+Proof.
+  reflexivity.
+Qed.
+
 End HOAS.
 
 #[global] Arguments fol_symbols : clear implicits.
