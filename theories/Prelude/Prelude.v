@@ -1012,7 +1012,7 @@ Lemma transitiveClosure_lift_well_founded {A : Type} (R : A -> A -> Prop)
 Proof.
   intros x. pose proof (R_wf x) as H_ACC. clear R_wf.
   induction H_ACC as [x H_ACC_inv IH]. constructor 1.
-  induction 1 as [ x y | x y z H1 IH1 H2 IH2 ]; auto.
+  induction 1 as [x y | x y z H1 IH1 H2 IH2]; eauto.
   eapply IH2; eauto.
 Qed.
 
