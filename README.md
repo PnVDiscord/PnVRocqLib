@@ -142,7 +142,7 @@ Our main results are:
 1. [A Mathematical Introduction to Logic](https://www.amazon.com/Mathematical-Introduction-Logic-Herbert-Enderton/dp/0122384520)
 1. [The Lambda Calculus: Its Syntax and Semantics](https://api.pageplace.de/preview/DT0400.9780080933757_A23543814/preview-9780080933757_A23543814.pdf)
 
-## Thanks to
+## 4. Thanks to
 
 - [SoonWon Moon](https://github.com/damhiya)
 
@@ -150,7 +150,9 @@ Our main results are:
 
 - [Clare Jang](https://github.com/ailrun)
 
-## Goals (2024-10-16)
+## 5. Goals 
+
+### Established at 2024-10-16
 
 1. Ordinal Numbers
 1. Regular Language: Regex, e-NFA, DFA, and Lexer Genrartor
