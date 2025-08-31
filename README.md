@@ -121,20 +121,19 @@ Our main results are:
 
 ## 3. References
 
+### Sources
+
 1. [sflib](https://github.com/snu-sf/sflib)
+1. [stdpp](https://plv.mpi-sws.org/coqdoc/stdpp)
+1. [Murec_Extraction](https://github.com/DmxLarchey/Murec_Extraction)
+1. [CoqGym/goedel](https://github.com/princeton-vl/CoqGym/tree/master/coq_projects/goedel)
+1. [formalmetatheory-stoughton](https://github.com/ernius/formalmetatheory-stoughton)
+1. [Constructive Analysis of First-Order Completeness](https://github.com/uds-psl/fol-completeness-theorems/tree/master)
+1. [snu-sf/Ordinal](https://github.com/snu-sf/Ordinal)
+1. [Lean Zulip Chat](https://leanprover.zulipchat.com/#narrow/stream/270676-lean4/topic/Bug.20in.20kernel.20level.20normalization/near/306169266)
 
-2. [stdpp](https://plv.mpi-sws.org/coqdoc/stdpp)
+### Literatures
 
-3. [A note written by Jayadev Misra](https://www.cs.utexas.edu/users/misra/Notes.dir/KnasterTarski.pdf)
-
-4. [Constructive Completeness Proofs and Delimited Control](https://theses.hal.science/pastel-00530424/)
-
-5. [Murec_Extraction](https://github.com/DmxLarchey/Murec_Extraction)
-
-6. [CoqGym/goedel](https://github.com/princeton-vl/CoqGym/tree/master/coq_projects/goedel)
-
-7. [formalmetatheory-stoughton](https://github.com/ernius/formalmetatheory-stoughton)
-
-8. [Constructive Analysis of First-Order Completeness](https://github.com/uds-psl/fol-completeness-theorems/tree/master)
-
-9. [snu-sf/Ordinal](https://github.com/snu-sf/Ordinal)
+1. [A note written by Jayadev Misra](https://www.cs.utexas.edu/users/misra/Notes.dir/KnasterTarski.pdf)
+1. [Constructive Completeness Proofs and Delimited Control](https://theses.hal.science/pastel-00530424/)
+1. [A Mathematical Introduction to Logic](https://www.amazon.com/Mathematical-Introduction-Logic-Herbert-Enderton/dp/0122384520)
