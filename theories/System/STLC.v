@@ -142,9 +142,6 @@ Proof.
   - exact LOOKUP.
 Qed.
 
-Definition alpha_equiv (M : trm L) (N : trm L) : Prop :=
-  subst_trm nil_subst M = subst_trm nil_subst N.
-
 Inductive whBeta : trm L -> trm L -> Prop :=
   | whBeta_Beta y ty M N
     : App_trm (Lam_trm y ty M) N ~>β subst_trm (one_subst y N) M

@@ -745,6 +745,9 @@ Defined.
 Definition TypingSubst (Gamma : ctx) (gamma : subst) (Delta : ctx) : Set :=
   forall x, forall ty, Lookup x ty Delta -> Typing Gamma (gamma x) ty.
 
+Definition alpha_equiv (M : trm) (N : trm) : Prop :=
+  subst_trm nil_subst M = subst_trm nil_subst N.
+
 End AUX1.
 
 Section BASIC_THEORY2_ON_SYNTAX.
@@ -772,9 +775,6 @@ Inductive fullEtaOnce : trm -> trm -> Prop :=
   | fullEtaOnce_eta x ty M
     (FRESH : ~ L.In x (FVs M))
     : fullEtaOnce M (Lam_trm x ty (App_trm M (Var_trm x)))
-  | fullEtaOnce_appl M M' N
-    (ETA' : fullEtaOnce M M')
-    : fullEtaOnce (App_trm M N) (App_trm M' N)
   | fullEtaOnce_appr M N N'
     (ETA' : fullEtaOnce N N')
     : fullEtaOnce (App_trm M N) (App_trm M N')
