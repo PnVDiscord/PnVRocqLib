@@ -133,7 +133,8 @@ Our main results are:
 1. [uds-psl/Constructive Analysis of First-Order Completeness](https://github.com/uds-psl/fol-completeness-theorems)
 1. [snu-sf/Ordinal](https://github.com/snu-sf/Ordinal)
 1. [Damhiya/Logos](https://github.com/damhiya/Logos)
-1. [Lean Zulip Chat (A)](https://leanprover.zulipchat.com/#narrow/stream/270676-lean4/topic/Bug.20in.20kernel.20level.20normalization/near/306169266)
+1. [Lean Zulip Chat (1)](https://leanprover.zulipchat.com/#narrow/stream/270676-lean4/topic/Bug.20in.20kernel.20level.20normalization/near/306169266)
+1. [Interaction Trees](https://github.com/DeepSpec/InteractionTrees)
 
 ### Literature
 
@@ -141,13 +142,12 @@ Our main results are:
 1. [Constructive Completeness Proofs and Delimited Control](https://theses.hal.science/pastel-00530424/)
 1. [A Mathematical Introduction to Logic](https://www.amazon.com/Mathematical-Introduction-Logic-Herbert-Enderton/dp/0122384520)
 1. [The Lambda Calculus: Its Syntax and Semantics](https://api.pageplace.de/preview/DT0400.9780080933757_A23543814/preview-9780080933757_A23543814.pdf)
+1. [The Power of Parameterization in Coinductive Proof](https://plv.mpi-sws.org/paco/ppcp.pdf)
 
 ## 4. Thanks to
 
 - [SoonWon Moon](https://github.com/damhiya)
-
 - [Hanul Jeon](https://github.com/hanuljeon95)
-
 - [Clare Jang](https://github.com/ailrun)
 
 ## 5. Goals 
@@ -155,7 +155,7 @@ Our main results are:
 ### Established at 2024-10-16
 
 1. Ordinal Numbers
-1. Regular Language: Regex, e-NFA, DFA, and Lexer Genrartor
+1. Regular Language: Regex, ε-NFA, DFA, and Lexer Genrartor
 1. Parser Generator
 1. Generalized Kleene's Fixed-point Theorem
 1. Gödel's Incompleteness Theorem
