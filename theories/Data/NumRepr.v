@@ -380,3 +380,139 @@ Proof.
 Qed.
 
 End LittleEndianDecimal.
+
+Module BijectiveNumeration.
+
+Section BijectiveNumeration_basic_theory.
+
+Variable b : nat.
+
+Hypothesis b_ge_2 : b >= 2.
+
+Lemma from_num_aux_aux1 (n : nat)
+  (NE_0 : n <> 0)
+  : n / b < n.
+Proof.
+  pose proof (Nat.mod_bound_pos n b).
+  pose proof (Nat.div_mod n b). nia.
+Qed.
+
+Lemma from_num_aux_aux2 (n : nat)
+  (NE_0 : n <> 0)
+  : (n / b) - 1 < n.
+Proof.
+  pose proof (from_num_aux_aux1 n NE_0). lia.
+Qed.
+
+#[local] Hint Resolve from_num_aux_aux1 : core.
+#[local] Hint Resolve from_num_aux_aux2 : core.
+
+Fixpoint from_num_aux (n : nat) (H_Acc : @Acc nat lt n) {struct H_Acc} : list nat :=
+  match eq_dec n 0 with
+  | left EQ => []
+  | right NE =>
+    let r := n mod b in
+    if eq_dec r 0 then
+      from_num_aux ((n / b) - 1) (Acc_inv H_Acc _ (from_num_aux_aux2 _ NE)) ++ [b]
+    else
+      from_num_aux (n / b) (Acc_inv H_Acc _ (from_num_aux_aux1 _ NE)) ++ [r]
+  end.
+
+Fixpoint from_num_aux_pirrel1 (n : nat) (H_Acc : Acc lt n) (H_Acc' : Acc lt n) {struct H_Acc} : from_num_aux n H_Acc = from_num_aux n H_Acc'.
+Proof.
+  destruct H_Acc, H_Acc'; simpl. destruct (eq_dec _ _); f_equal. destruct (eq_dec _ _); f_equal; eapply from_num_aux_pirrel1.
+Qed.
+
+Lemma from_num_aux_pirrel (n : nat) (m : nat) (EQ : n = m) (H_Acc : Acc lt n) (H_Acc' : Acc lt m) : from_num_aux n H_Acc = from_num_aux m H_Acc'.
+Proof.
+  subst m. eapply from_num_aux_pirrel1.
+Qed.
+
+Lemma from_num_aux_unfold (n : nat) (H_Acc : @Acc nat lt n) :
+  from_num_aux n H_Acc =
+  match eq_dec n 0 with
+  | left EQ => []
+  | right NE =>
+    let r := n mod b in
+    if eq_dec r 0 then
+      from_num_aux ((n / b) - 1) (Acc_inv H_Acc _ (from_num_aux_aux2 _ NE)) ++ [b]
+    else
+      from_num_aux (n / b) (Acc_inv H_Acc _ (from_num_aux_aux1 _ NE)) ++ [r]
+  end.
+Proof.
+  destruct H_Acc. reflexivity.
+Qed.
+
+Definition from_num (n : nat) : list nat :=
+  from_num_aux n (lt_wf n).
+
+Lemma from_num_unfold n :
+  from_num n =
+  match eq_dec n 0 with
+  | left EQ => []
+  | right NE =>
+    let r := n mod b in
+    if eq_dec r 0 then
+      from_num ((n / b) - 1) ++ [b]
+    else
+      from_num (n / b) ++ [r]
+  end.
+Proof.
+  unfold from_num at 1. rewrite from_num_aux_unfold.
+  destruct (eq_dec _ _) as [EQ1 | NE1].
+  - reflexivity.
+  - cbn zeta. destruct (eq_dec _ _) as [EQ2 | NE2]; f_equal; eapply from_num_aux_pirrel1.
+Qed.
+
+#[local] Opaque from_num.
+
+Definition to_num (ns : list nat) : nat :=
+  fold_left (fun n => fun a => a + b * n) ns 0.
+
+Lemma to_num_from_num n
+  : to_num (from_num n) = n.
+Proof.
+  induction (lt_wf n) as [n _ IH]. rewrite from_num_unfold.
+  destruct (eq_dec _ _) as [EQ1 | NE1]; eauto.
+  cbn zeta. destruct (eq_dec _ _) as [EQ2 | NE2].
+  - unfold to_num in *. rewrite fold_left_app. simpl. rewrite IH; eauto.
+    erewrite Nat.div_mod with (x := n) (y := b) at 2; try lia. rewrite EQ2.
+    rewrite Nat.add_0_r. replace (n / b) with (1 + ((n / b) - 1)) at 2; try lia.
+    pose proof (Nat.div_mod n b). pose proof (Nat.mod_bound_pos n 0). nia.
+  - unfold to_num in *. rewrite fold_left_app. simpl. rewrite IH; eauto.
+    symmetry. rewrite Nat.add_comm. eapply Nat.div_mod. lia.
+Qed.
+
+Lemma from_num_to_num ns
+  (ns_bound : Forall (fun n => 1 <= n /\ n <= b) ns)
+  : from_num (to_num ns) = ns.
+Proof.
+  induction ns as [ | n ns IH] using L.list_rev_rect; eauto.
+  rewrite Forall_app in ns_bound. destruct ns_bound as [ns_bound n_bound].
+  specialize (IH ns_bound). unfold to_num. rewrite fold_left_app. simpl.
+  rewrite from_num_unfold. cbn zeta. inv n_bound.
+  destruct (eq_dec _ _) as [EQ1 | NE1]; try lia. destruct (eq_dec _ _) as [EQ2 | NE2].
+  - rewrite Nat.mul_comm in EQ2. rewrite Nat.Div0.mod_add in EQ2.
+    assert (claim1 : n = b).
+    { enough (~ n < b) by lia. intros H_contra.
+      pose proof (COPY := H_contra). rewrite <- Nat.div_small_iff in COPY; try lia.
+      pose proof (Nat.div_mod n b) as claim. rewrite -> COPY, -> EQ2 in claim. lia.
+    }
+    subst n. f_equal. rewrite <- IH at 2. f_equal. unfold to_num. set (X := fold_left _ _ _) in *.
+    replace ((b + b * X) / b) with (1 + X); try lia.
+    pose proof (div_mod_uniqueness (b + b * X) b (1 + X) 0). lia.
+  - revert NE1 NE2. set (fold_left _ _ _) as X. i.
+    assert (n < b) as claim1.
+    { enough (~ n = b) as H_contra by lia. intros H_contra. subst n.
+      rewrite Nat.mul_comm in NE2. rewrite Nat.Div0.mod_add in NE2.
+      rewrite Nat.Div0.mod_same in NE2. contradiction.
+    }
+    assert ((n + b * X) mod b = n) as claim2.
+    { pose proof (div_mod_uniqueness (n + b * X) b X n). lia. }
+    rewrite claim2. f_equal. rewrite <- IH. f_equal. transitivity X; eauto.
+    pose proof (div_mod_uniqueness (n + b * X) b X n). lia.
+Qed.
+
+End BijectiveNumeration_basic_theory.
+
+End BijectiveNumeration.

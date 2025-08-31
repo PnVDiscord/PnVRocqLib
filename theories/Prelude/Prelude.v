@@ -1261,6 +1261,7 @@ Infix "$" := B.dollar.
 Infix ">>=" := bind.
 Infix ">=>" := B.kcompose : program_scope.
 
+#[universes(template)]
 Class hasEqDec (A : Type) : Type :=
   eq_dec (x : A) (y : A) : {x = y} + {x <> y}.
 
