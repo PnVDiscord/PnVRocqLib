@@ -49,6 +49,8 @@ Our main results are:
 
 - `ITree.v` : Basic Definitions on interaction tree.
 
+- `NumRepr.v` : Number Representation.
+
 - `Vector.v` : Replaces `Stdlib.Vectors.VectorDef.t`.
 
 ### Index
