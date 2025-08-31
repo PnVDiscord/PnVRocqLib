@@ -993,7 +993,7 @@ Variant isOrdinal (alpha : Tree) : Prop :=
 #[local] Hint Constructors isOrdinal : core.
 
 Lemma isOrdinal_member_isOrdinal alpha beta
-(ORDINAL : isOrdinal alpha)
+  (ORDINAL : isOrdinal alpha)
   (MEMBER : beta \in alpha)
   : isOrdinal beta.
 Proof.
