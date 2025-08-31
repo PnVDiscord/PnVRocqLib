@@ -728,87 +728,6 @@ Definition le_ctx (Gamma : ctx) (Delta : ctx) : Set :=
 
 Context `{Sigma : !signature L}.
 
-Inductive typNe (Gamma : ctx) : trm -> typ -> Prop :=
-  | typNe_Var x ty
-    (LOOKUP : Lookup x ty Gamma)
-    : typNe Gamma (Var_trm x) ty
-  | typNe_App u v ty ty'
-    (u_typNe : typNe Gamma u (ty -> ty')%typ)
-    (v_typNf : typNf Gamma v ty)
-    : typNe Gamma (App_trm u v) ty'
-  | typNe_Con c ty
-    (ty_eq : ty = Sigma c)
-    : typNe Gamma (Con_trm c) ty
-  where "Gamma '⊢' M '⇉' A" := (typNe Gamma M A)
-with typNf (Gamma : ctx) : trm -> typ -> Prop :=
-  | typNf_of_typNe u ty
-    (u_typNe : typNe Gamma u ty)
-    : typNf Gamma u ty
-  | typNf_Lam x v ty ty'
-    (v_typNf : typNf ((x, ty) :: Gamma) v ty')
-    : typNf Gamma (Lam_trm x ty v) (ty -> ty')%typ
-  where "Gamma '⊢' M '⇇' A" := (typNf Gamma M A).
-
-Lemma typNe_Typing Gamma u ty
-  (u_typNe : typNe Gamma u ty)
-  : inhabited (Typing Gamma u ty)
-with typNf_Typing Gamma v ty
-  (v_typNf : typNf Gamma v ty)
-  : inhabited (Typing Gamma v ty).
-Proof.
-  - destruct u_typNe.
-    + split. econs 1. exact LOOKUP.
-    + pose proof (typNe_Typing _ _ _ u_typNe) as [H_M].
-      pose proof (typNf_Typing _ _ _ v_typNf) as [H_N].
-      split. econs 2; [exact H_M | exact H_N].
-    + subst ty. split. econs 4.
-  - destruct v_typNf.
-    + pose proof (typNe_Typing _ _ _ u_typNe) as [H_M].
-      split. exact H_M.
-    + pose proof (typNf_Typing _ _ _ v_typNf) as [H_N].
-      split. econs 3. exact H_N.
-Defined.
-
-Lemma le_ctx_preserves_typNe (Gamma : ctx) (u : trm) (ty : typ)
-  (u_typNe : typNe Gamma u ty)
-  : forall Delta, le_ctx Gamma Delta -> typNe Delta u ty
-with le_ctx_preserves_typNf (Gamma : ctx) (v : trm) (ty : typ)
-  (v_typNf : typNf Gamma v ty)
-  : forall Delta, le_ctx Gamma Delta -> typNf Delta v ty.
-Proof.
-  - destruct u_typNe; intros Delta LE.
-    + econs 1. eapply LE; eassumption.
-    + econs 2.
-      * eapply le_ctx_preserves_typNe; eassumption.
-      * eapply le_ctx_preserves_typNf; eassumption.
-    + econs 3; eassumption.
-  - destruct v_typNf; intros Delta LE.
-    + econs 1. eapply le_ctx_preserves_typNe; eassumption.
-    + econs 2. eapply le_ctx_preserves_typNf; try eassumption.
-      red in LE |- *. intros x1 ty1 LOOKUP1. pattern LOOKUP1. revert LOOKUP1.
-      eapply Lookup_cons.
-      * intros. econs 1; eassumption.
-      * intros. econs 2; try eassumption. eapply LE; eassumption.
-Defined.
-
-Lemma le_ctx_preserves_Typing {Gamma} {e} {ty}
-  (TYPING : Typing Gamma e ty)
-  : forall Delta : ctx, le_ctx Gamma Delta -> Typing Delta e ty.
-Proof.
-  induction TYPING; simpl; intros Delta LE.
-  - econs 1. eapply LE. exact LOOKUP.
-  - econs 2.
-    + eapply IHTYPING1. exact LE.
-    + eapply IHTYPING2. exact LE.
-  - econs 3. eapply IHTYPING.
-    intros x ty LOOKUP. pattern LOOKUP. revert LOOKUP. eapply Lookup_cons.
-    + intros x_EQ ty_EQ. subst x ty. econs 1; reflexivity.
-    + intros x_NE LOOKUP. econs 2.
-      * exact x_NE.
-      * eapply LE; eassumption.
-  - econs 4.
-Defined.
-
 Lemma Typing_weakening {Gamma : ctx} {Delta : ctx} {e : trm} {ty : typ}
   (TYPING : Typing Gamma e ty)
   (LE : le_ctx Gamma Delta)
@@ -836,21 +755,35 @@ End BASIC_THEORY2_ON_SYNTAX.
 
 Section SN.
 
-Inductive betaOnce : trm -> trm -> Prop :=
-  | betaOnce_beta x ty M N
-    : betaOnce (App_trm (Lam_trm x ty M) N) (subst_trm (one_subst x N) M)
-  | betaOnce_appl M M' N
-    (BETA' : betaOnce M M')
-    : betaOnce (App_trm M N) (App_trm M' N)
-  | betaOnce_appr M N N'
-    (BETA' : betaOnce N N')
-    : betaOnce (App_trm M N) (App_trm M N')
-  | betaOnce_lam x ty M M'
-    (BETA' : betaOnce M M')
-    : betaOnce (Lam_trm x ty M) (Lam_trm x ty M').
+Inductive fullBetaOnce : trm -> trm -> Prop :=
+  | fullBetaOnce_beta x ty M N
+    : fullBetaOnce (App_trm (Lam_trm x ty M) N) (subst_trm (one_subst x N) M)
+  | fullBetaOnce_appl M M' N
+    (BETA' : fullBetaOnce M M')
+    : fullBetaOnce (App_trm M N) (App_trm M' N)
+  | fullBetaOnce_appr M N N'
+    (BETA' : fullBetaOnce N N')
+    : fullBetaOnce (App_trm M N) (App_trm M N')
+  | fullBetaOnce_lam x ty M M'
+    (BETA' : fullBetaOnce M M')
+    : fullBetaOnce (Lam_trm x ty M) (Lam_trm x ty M').
 
-Lemma betaOnce_dec (M : trm)
-  : B.sig trm (fun N => betaOnce M N) + B.Prop_to_Set (forall N : trm, ~ betaOnce M N).
+Inductive fullEtaOnce : trm -> trm -> Prop :=
+  | fullEtaOnce_eta x ty M
+    (FRESH : ~ L.In x (FVs M))
+    : fullEtaOnce M (Lam_trm x ty (App_trm M (Var_trm x)))
+  | fullEtaOnce_appl M M' N
+    (ETA' : fullEtaOnce M M')
+    : fullEtaOnce (App_trm M N) (App_trm M' N)
+  | fullEtaOnce_appr M N N'
+    (ETA' : fullEtaOnce N N')
+    : fullEtaOnce (App_trm M N) (App_trm M N')
+  | fullEtaOnce_lam x ty M M'
+    (ETA' : fullEtaOnce M M')
+    : fullEtaOnce (Lam_trm x ty M) (Lam_trm x ty M').
+
+Lemma fullBetaOnce_dec (M : trm)
+  : B.sig trm (fun N => fullBetaOnce M N) + B.Prop_to_Set (forall N : trm, ~ fullBetaOnce M N).
 Proof.
   induction M.
   - right. red. intros N BETA. inv BETA.
@@ -886,23 +819,23 @@ Defined.
 
 Inductive sn (M : trm) : Prop :=
   | sn_intro
-    (sn_inv : forall N, betaOnce M N -> sn N)
+    (sn_inv : forall N, fullBetaOnce M N -> sn N)
     : sn M.
 
-Definition sn_inv {M : trm} (H_sn : sn M) : forall N, betaOnce M N -> sn N :=
+Definition sn_inv {M : trm} (H_sn : sn M) : forall N, fullBetaOnce M N -> sn N :=
   match H_sn with
   | @sn_intro _ sn_inv => sn_inv
   end.
 
 Fixpoint normalize_with_sn (M : trm) (H_sn : sn M) {struct H_sn} : trm :=
-  match betaOnce_dec M with
+  match fullBetaOnce_dec M with
   | inl YES => let N : trm := B.proj1_sig YES in normalize_with_sn N (sn_inv H_sn N (B.proj2_sig YES))
   | inr NO => M
   end.
 
 Lemma normalize_with_sn_unfold M H_sn :
   normalize_with_sn M H_sn =
-  match betaOnce_dec M with
+  match fullBetaOnce_dec M with
   | inl YES => let N : trm := B.proj1_sig YES in normalize_with_sn N (sn_inv H_sn N (B.proj2_sig YES))
   | inr NO => M
   end.
@@ -912,14 +845,14 @@ Defined.
 
 Fixpoint normalize_with_sn_pirrel (M : trm) (H_sn : sn M) (H_sn' : sn M) {struct H_sn} : normalize_with_sn M H_sn = normalize_with_sn M H_sn'.
 Proof.
-  destruct H_sn, H_sn'; simpl. destruct (betaOnce_dec M) as [YES | NO]; simpl.
+  destruct H_sn, H_sn'; simpl. destruct (fullBetaOnce_dec M) as [YES | NO]; simpl.
   - eapply normalize_with_sn_pirrel.
   - reflexivity.
 Qed.
 
-Fixpoint normalize_with_sn_normalized (M : trm) (N : trm) (H_sn : sn M) {struct H_sn} : ~ betaOnce (normalize_with_sn M H_sn) N.
+Fixpoint normalize_with_sn_normalized (M : trm) (N : trm) (H_sn : sn M) {struct H_sn} : ~ fullBetaOnce (normalize_with_sn M H_sn) N.
 Proof.
-  destruct H_sn; simpl. intros BETA. destruct (betaOnce_dec M) as [YES | NO].
+  destruct H_sn; simpl. intros BETA. destruct (fullBetaOnce_dec M) as [YES | NO].
   - eapply normalize_with_sn_normalized. exact BETA.
   - red in NO. exact (NO N BETA).
 Qed.
@@ -936,134 +869,6 @@ End STLC.
 End ChurchStyleStlc.
 
 Module _Lambda1__PRIVATE.
-
-Section NORMALISATION_BY_EVALUATION.
-
-Import ChurchStyleStlc.
-
-Context {L : language}.
-
-Lemma le_ctx_cons (Gamma : ctx L) (ty' : typ L)
-  (y := Name.fresh_nm (map fst Gamma))
-  : le_ctx Gamma ((y, ty') :: Gamma).
-Proof.
-  intros x ty LOOKUP. econs 2.
-  - assert (H_IN : L.In x (map fst Gamma)).
-    { apply Lookup_to_LookupProp in LOOKUP.
-      subst y. induction Gamma as [ | [x1 ty1] Gamma IH]; simpl in *.
-      - exact LOOKUP.
-      - destruct (eq_dec x x1) as [EQ | NE].
-        + left. symmetry. exact EQ.
-        + right. eapply IH. exact LOOKUP. 
-    }
-    pose proof (Name.fresh_nm_notin (map fst Gamma)) as claim1.
-    fold y in claim1. rewrite Name.ne_iff. intros EQ. congruence.
-  - exact LOOKUP.
-Defined.
-
-Context {Sigma : signature L}.
-
-Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : Set :=
-  match ty with
-  | bty _ b => B.sig (trm L) (fun u => typNe Gamma u (bty L b))
-  | (ty1 -> ty2)%typ => forall Gamma' : ctx L, le_ctx Gamma Gamma' -> eval_typ Gamma' ty1 -> eval_typ Gamma' ty2
-  end.
-
-Lemma le_ctx_preserves_eval_typ {Gamma} {ty}
-  (d : eval_typ Gamma ty)
-  : forall Delta : ctx L, le_ctx Gamma Delta -> eval_typ Delta ty.
-Proof.
-  induction ty; simpl in *; intros Delta LE.
-  - exists d.(B.proj1_sig). eapply le_ctx_preserves_typNe; [exact d.(B.proj2_sig) | exact LE].
-  - intros Gamma' LE' a; eapply d.
-    + intros x ty LOOKUP. eapply LE'. eapply LE. exact LOOKUP.
-    + exact a.
-Defined.
-
-Fixpoint reflect (Gamma : ctx L) (ty : typ L) {struct ty} : B.sig (trm L) (fun u => typNe Gamma u ty) -> eval_typ Gamma ty
-with reify (Gamma : ctx L) (ty : typ L) {struct ty} : eval_typ Gamma ty -> B.sig (trm L) (fun v => typNf Gamma v ty).
-Proof.
-  - destruct ty as [b | ty1 ty2]; simpl; intros u_hat.
-    + eapply u_hat.
-    + intros Delta LE a. set (v_hat := reify Delta ty1 a).
-      eapply reflect. exists (App_trm (u_hat).(B.proj1_sig) (v_hat).(B.proj1_sig)). econs 2.
-      * eapply le_ctx_preserves_typNe; [exact (u_hat).(B.proj2_sig) | exact LE].
-      * exact (v_hat).(B.proj2_sig).
-  - destruct ty as [b | ty1 ty2]; simpl; intros d.
-    + exists d.(B.proj1_sig). econs 1. exact d.(B.proj2_sig).
-    + set (y := Name.fresh_nm (map fst Gamma)).
-      pose proof (le_ctx_cons Gamma ty1) as claim1. simpl in claim1. fold y in claim1.
-      assert (y_hat : B.sig (trm L) (fun u => typNe ((y, ty1) :: Gamma) u ty1)).
-      { exists (Var_trm y). econs 1. econs 1; reflexivity. }
-      set (a := reflect ((y, ty1) :: Gamma) ty1 y_hat).
-      set (body := reify ((y, ty1) :: Gamma) ty2 (d ((y, ty1) :: Gamma) claim1 a)).
-      exists (Lam_trm y ty1 body.(B.proj1_sig)). econs 2. exact (body).(B.proj2_sig).
-Defined.
-
-Definition eval_ctx (Gamma : ctx L) (Delta : ctx L) : Set :=
-  forall x : name, forall ty : typ L, Lookup x ty Gamma -> eval_typ Delta ty.
-
-Fixpoint evalTyping Gamma e ty (TYPING : Typing Gamma e ty) {struct TYPING} : forall Delta : ctx L, eval_ctx Gamma Delta -> eval_typ Delta ty.
-Proof.
-  destruct TYPING; simpl; intros Delta rho.
-  - refine (rho x ty LOOKUP).
-  - refine (evalTyping Gamma e1 (ty1 -> ty2)%typ TYPING1 Delta rho _ _ (evalTyping Gamma e2 ty1 TYPING2 Delta rho)).
-    intros x ty LOOKUP. exact LOOKUP.
-  - intros Gamma' LE a.
-    eapply evalTyping with (Gamma := (y, ty1) :: Gamma) (e := e1).
-    { exact TYPING. }
-    intros x ty LOOKUP. pattern LOOKUP. revert LOOKUP. eapply Lookup_cons.
-    + intros x_EQ ty_EQ. subst ty1. exact a.
-    + intros NE LOOKUP.
-      pose proof (rho_x := rho x ty LOOKUP).
-      exact (le_ctx_preserves_eval_typ rho_x Gamma' LE).
-  - eapply reflect. exists (Con_trm c). econs 3. reflexivity.
-Defined.
-
-Lemma eval_ctx_Gamma_Gamma {Gamma : ctx L}
-  : eval_ctx Gamma Gamma.
-Proof.
-  intros x ty LOOKUP. eapply reflect.
-  exists (Var_trm x). econs 1. exact LOOKUP.
-Defined.
-
-Definition NbE (Gamma : ctx L) (e : trm L) (ty : typ L) (TYPING : Typing Gamma e ty) : B.sig (trm L) (fun v => typNf Gamma v ty) :=
-  reify Gamma ty (evalTyping Gamma e ty TYPING Gamma eval_ctx_Gamma_Gamma).
-
-End NORMALISATION_BY_EVALUATION.
-
-Section NbE_example1.
-
-Import ChurchStyleStlc.
-
-Inductive testsuite_basic_types : Set :=
-  | b : testsuite_basic_types.
-
-Definition testsuite_lang : language :=
-  {|
-    basic_types := testsuite_basic_types;
-    constants := Empty_set;
-  |}.
-
-#[local]
-Instance testsuite_sig : signature testsuite_lang :=
-  Empty_set_rect _.
-
-Example NbE_testsuite
-  : B.sig (trm testsuite_lang) (fun v => typNf [] v (bty testsuite_lang b -> bty testsuite_lang b)%typ).
-Proof.
-  eapply NbE. eapply App_typ.
-  - eapply Lam_typ with (y := "a"%name). eapply Var_typ. econs 1; reflexivity.
-  - eapply Lam_typ with (y := "b"%name). eapply Var_typ. econs 1; reflexivity.
-Defined.
-
-Example NbE_testsuite_correct
-  : B.proj1_sig NbE_testsuite = (Lam_trm "a0"%name (bty testsuite_lang b) (Var_trm "a0"%name)).
-Proof.
-  reflexivity.
-Qed.
-
-End NbE_example1.
 
 Section GIRARD'S_PARADOX.
 

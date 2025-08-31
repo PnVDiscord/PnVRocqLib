@@ -12,6 +12,112 @@ Export ChurchStyleStlc.
 Notation "Gamma '∋' x '⦂' A" := (Lookup x A Gamma) : type_scope.
 Notation "Gamma '⊢' M '=' N '⦂' A" := (equality Gamma M N A) : type_scope.
 
+Section AUX1.
+
+Context {L : language}.
+
+Definition is_basic (ty : typ L) : Prop :=
+  match ty with
+  | bty _ _ => True
+  | _ => False
+  end.
+
+Definition is_lambda (e : trm L) : Prop :=
+  match e with
+  | Lam_trm _ _ _ => True
+  | _ => False
+  end.
+
+Context `{Sigma : !signature L}.
+
+Inductive typNe (Gamma : ctx L) : trm L -> typ L -> Prop :=
+  | typNe_Var x ty
+    (LOOKUP : Lookup x ty Gamma)
+    : typNe Gamma (Var_trm x) ty
+  | typNe_App u v ty ty'
+    (u_typNe : typNe Gamma u (ty -> ty')%typ)
+    (v_typNf : typNf Gamma v ty)
+    : typNe Gamma (App_trm u v) ty'
+  | typNe_Con c ty
+    (ty_eq : ty = Sigma c)
+    : typNe Gamma (Con_trm c) ty
+  where "Gamma '⊢' M '⇉' A" := (typNe Gamma M A)
+with typNf (Gamma : ctx L) : trm L -> typ L -> Prop :=
+  | typNf_of_typNe u ty
+    (u_typNe : typNe Gamma u ty)
+    : typNf Gamma u ty
+  | typNf_Lam x v ty ty'
+    (v_typNf : typNf ((x, ty) :: Gamma) v ty')
+    : typNf Gamma (Lam_trm x ty v) (ty -> ty')%typ
+  where "Gamma '⊢' M '⇇' A" := (typNf Gamma M A).
+
+Lemma typNe_Typing Gamma u ty
+  (u_typNe : typNe Gamma u ty)
+  : inhabited (Typing Gamma u ty)
+with typNf_Typing Gamma v ty
+  (v_typNf : typNf Gamma v ty)
+  : inhabited (Typing Gamma v ty).
+Proof.
+  - destruct u_typNe.
+    + split. econs 1. exact LOOKUP.
+    + pose proof (typNe_Typing _ _ _ u_typNe) as [H_M].
+      pose proof (typNf_Typing _ _ _ v_typNf) as [H_N].
+      split. econs 2; [exact H_M | exact H_N].
+    + subst ty. split. econs 4.
+  - destruct v_typNf.
+    + pose proof (typNe_Typing _ _ _ u_typNe) as [H_M].
+      split. exact H_M.
+    + pose proof (typNf_Typing _ _ _ v_typNf) as [H_N].
+      split. econs 3. exact H_N.
+Defined.
+
+Lemma typNe_betaNf Gamma u ty
+  (u_typNe : typNe Gamma u ty)
+  : (~ is_lambda u) /\ (forall e, ~ fullBetaOnce u e)
+with typNf_betaNf Gamma v ty
+  (v_typNf : typNf Gamma v ty)
+  : (forall e, ~ fullBetaOnce v e).
+Proof.
+  - destruct u_typNe; simpl.
+    + split; [eauto | intros e BETA]. inv BETA.
+    + split; [eauto | intros e BETA].
+      pose proof (typNe_betaNf Gamma u (ty -> ty')%typ u_typNe) as [claim1 claim2].
+      pose proof (typNf_betaNf Gamma v ty v_typNf) as claim3.
+      clear typNe_betaNf typNf_betaNf. inv BETA; ss!.
+    + split; [eauto | intros e BETA]. inv BETA.
+  - destruct v_typNf; simpl.
+    + intros e BETA.
+      pose proof (typNe_betaNf Gamma u ty u_typNe) as [claim1 claim2].
+      contradiction (claim2 e BETA).
+    + intros e BETA.
+      pose proof (typNf_betaNf ((x, ty) :: Gamma) v ty' v_typNf) as claim1.
+      clear typNe_betaNf typNf_betaNf. inv BETA; ss!.
+Qed.
+
+Lemma le_ctx_preserves_typNe (Gamma : ctx L) (u : trm L) (ty : typ L)
+  (u_typNe : typNe Gamma u ty)
+  : forall Delta, le_ctx Gamma Delta -> typNe Delta u ty
+with le_ctx_preserves_typNf (Gamma : ctx L) (v : trm L) (ty : typ L)
+  (v_typNf : typNf Gamma v ty)
+  : forall Delta, le_ctx Gamma Delta -> typNf Delta v ty.
+Proof.
+  - destruct u_typNe; intros Delta LE.
+    + econs 1. eapply LE; eassumption.
+    + econs 2.
+      * eapply le_ctx_preserves_typNe; eassumption.
+      * eapply le_ctx_preserves_typNf; eassumption.
+    + econs 3; eassumption.
+  - destruct v_typNf; intros Delta LE.
+    + econs 1; try eassumption. eapply le_ctx_preserves_typNe; eassumption.
+    + econs 2. eapply le_ctx_preserves_typNf; try eassumption.
+      red in LE |- *. intros x1 ty1 LOOKUP1. pattern LOOKUP1. revert LOOKUP1.
+      eapply Lookup_cons.
+      * intros. econs 1; eassumption.
+      * intros. econs 2; try eassumption. eapply LE; eassumption.
+Defined.
+
+End AUX1.
+
 Section STLC_META.
 
 Context {L : language}.
