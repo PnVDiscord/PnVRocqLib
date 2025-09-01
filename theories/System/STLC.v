@@ -16,12 +16,6 @@ Section AUX1.
 
 Context {L : language}.
 
-Definition is_basic (ty : typ L) : Prop :=
-  match ty with
-  | bty _ _ => True
-  | _ => False
-  end.
-
 Definition is_lambda (e : trm L) : Prop :=
   match e with
   | Lam_trm _ _ _ => True

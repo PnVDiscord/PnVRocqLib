@@ -771,17 +771,6 @@ Inductive fullBetaOnce : trm -> trm -> Prop :=
     (BETA' : fullBetaOnce M M')
     : fullBetaOnce (Lam_trm x ty M) (Lam_trm x ty M').
 
-Inductive fullEtaOnce : trm -> trm -> Prop :=
-  | fullEtaOnce_eta x ty M
-    (FRESH : ~ L.In x (FVs M))
-    : fullEtaOnce M (Lam_trm x ty (App_trm M (Var_trm x)))
-  | fullEtaOnce_appr M N N'
-    (ETA' : fullEtaOnce N N')
-    : fullEtaOnce (App_trm M N) (App_trm M N')
-  | fullEtaOnce_lam x ty M M'
-    (ETA' : fullEtaOnce M M')
-    : fullEtaOnce (Lam_trm x ty M) (Lam_trm x ty M').
-
 Lemma fullBetaOnce_dec (M : trm)
   : B.sig trm (fun N => fullBetaOnce M N) + B.Prop_to_Set (forall N : trm, ~ fullBetaOnce M N).
 Proof.
