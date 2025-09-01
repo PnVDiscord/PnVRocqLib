@@ -91,6 +91,16 @@ Instance wltProp_StrictOrder {A : Type} `{WPOSET : isWellPoset A} : StrictOrder 
   ; StrictOrder_Transitive := wltProp_Transitive
   }.
 
+#[global, program]
+Instance subWwellPoset {A : Type} {P : A -> Prop} (WPOSET : isWellPoset A) : isWellPoset { x : A | P x } :=
+  { wltProp := binary_relation_on_image wltProp (@proj1_sig A P) }.
+Next Obligation.
+  intros x1 x2 x3 H_1LE2 H_2LE3. exact (wltProp_Transitive (proj1_sig x1) (proj1_sig x2) (proj1_sig x3) H_1LE2 H_2LE3).
+Defined.
+Next Obligation.
+  eapply relation_on_image_liftsWellFounded. exact wltProp_well_founded.
+Defined.
+
 Definition wleProp {A : Type} `{WPOSET : isWellPoset A} : forall lhs : A, forall rhs : A, Prop :=
   leProp (isProset := Poset_isProset (isPoset := mkProsetFrom_ltProp_isPoset (ltProp := wltProp) wltProp_StrictOrder)).
 
@@ -445,8 +455,9 @@ End BASIC1.
 Class isWoset (A : Type) {SETOID : isSetoid A} : Type :=
   { Woset_isWellPoset :: isWellPoset A
   ; Woset_eqPropCompatible2 :: eqPropCompatible2 wltProp
-  ; Woset_extensional (x : A) (y : A)
-    : x == y <-> (forall z, wltProp z x <-> wltProp z y)
+  ; Woset_ext_eq (x : A) (y : A)
+    (EXT_EQ : forall z, wltProp z x <-> wltProp z y)
+    : x == y
   }.
 
 Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
@@ -454,14 +465,28 @@ Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y :
 
 Infix "≺" := wlt.
 
+Lemma Woset_extensional {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A)
+  : x == y <-> (forall z, wlt z x <-> wlt z y).
+Proof.
+  split; intros EQ.
+  - intros z. split; intros H_LT.
+    + eapply Woset_eqPropCompatible2; cycle -1; eauto with *.
+    + eapply Woset_eqPropCompatible2; cycle -1; eauto with *.
+  - eapply Woset_ext_eq. exact EQ.
+Qed.
+
 Module O.
 
 #[projections(primitive)]
-Record Ord : Type@{U_cosmos} :=
-  { carrier : Type@{U_discourse}
+Record Ord : Type@{U_discourse} :=
+  { carrier :> Type@{U_small}
   ; carrier_isSetoid : isSetoid carrier
   ; carrier_isWoset : isWoset carrier
   }.
+
+#[global] Existing Instance carrier_isSetoid.
+
+#[global] Existing Instance carrier_isWoset.
 
 Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
   (DESCENT : forall n, P n -> exists m, wltProp m n /\ P m)
@@ -488,7 +513,7 @@ Qed.
 
 Section CLASSICAL_WELLORDERING.
 
-Variable classic : forall P : Prop, P \/ ~ P.
+Context {classic : forall P : Prop, P \/ ~ P}.
 
 Theorem wlt_trichotomous {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (a : A) (b : A)
   : (a == b) \/ (wlt a b \/ wlt b a).
@@ -534,6 +559,30 @@ Proof.
   assert (WTS : ~ wlt m i).
   { intros H_lt. contradiction CONTRA'. exists m. split; trivial. }
   pose proof (@wlt_trichotomous A SETOID WOSET i m). tauto.
+Qed.
+
+#[global, program]
+Instance Woset_isWellfoundedToset {A : Type} {SETOID : isSetoid A} {WPOSET : isWellPoset A} (wltProp_eqPropCompatible2 : eqPropCompatible2 wltProp) (wltProp_trichotomous : forall a : A, forall b : A, (a == b) \/ (wltProp a b \/ wltProp b a)) : isWoset A (SETOID := SETOID) :=
+  { Woset_isWellPoset := WPOSET
+  ; Woset_eqPropCompatible2 := wltProp_eqPropCompatible2
+  }.
+Next Obligation.
+  revert x y EXT_EQ.
+  assert (NNPP : forall phi : Prop, ⟪ NNP : ~ (~ phi) ⟫ -> phi).
+  { intros phi NNP; unnw. pose proof (classic phi) as [YES | NO]; tauto. }
+  unnw.
+  intros a. pose proof (wltProp_well_founded a) as H_Acc_a. induction H_Acc_a as [a _ IH_a].
+  intros b. pose proof (wltProp_well_founded b) as H_Acc_b. induction H_Acc_b as [b _ IH_b].
+  intros EXT_EQ. eapply NNPP. intros CONTRA.
+  assert (not_balanced : exists c : A, (wltProp c a /\ ~ wltProp c b) \/ (wltProp c b /\ ~ wltProp c a)).
+  { eapply NNPP. intros CONTRA'.
+    pose proof (classic (wltProp a b)) as [LT1 | NLT1].
+    { contradiction CONTRA'. exists a. right. split; eauto. }
+    pose proof (classic (wltProp b a)) as [LT2 | NLT2].
+    { contradiction CONTRA'. exists b. left. split; eauto. }
+    pose proof (wltProp_trichotomous a b). tauto.
+  }
+  destruct not_balanced as [c [[? ?] | [? ?]]]; ss!. 
 Qed.
 
 End CLASSICAL_WELLORDERING.
