@@ -454,7 +454,14 @@ Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y :
 
 Infix "≺" := wlt.
 
-Module OrderExtra1.
+Module O.
+
+#[projections(primitive)]
+Record Ord : Type@{U_cosmos} :=
+  { carrier : Type@{U_discourse}
+  ; carrier_isSetoid : isSetoid carrier
+  ; carrier_isWoset : isWoset carrier
+  }.
 
 Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
   (DESCENT : forall n, P n -> exists m, wltProp m n /\ P m)
@@ -479,7 +486,11 @@ Proof.
   - eapply Woset_eqPropCompatible2; eauto.
 Qed.
 
-Theorem wlt_trichotomous {classic : forall P : Prop, P \/ ~ P} {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (a : A) (b : A)
+Section CLASSICAL_WELLORDERING.
+
+Variable classic : forall P : Prop, P \/ ~ P.
+
+Theorem wlt_trichotomous {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (a : A) (b : A)
   : (a == b) \/ (wlt a b \/ wlt b a).
 Proof.
   revert a b.
@@ -511,7 +522,7 @@ Proof.
   left. rewrite Woset_extensional. done!.
 Qed.
 
-Theorem minimisation_lemma {classic : forall P : Prop, P \/ ~ P} {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (P : A -> Prop)
+Theorem minimisation_lemma {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (P : A -> Prop)
   (EXISTENCE : exists n, P n)
   : exists n, P n /\ ⟪ MIN : forall m, P m -> (wlt n m \/ n == m) ⟫.
 Proof.
@@ -522,10 +533,12 @@ Proof.
   eapply NNPP. intros CONTRA'. eapply CONTRA. exists i. split; trivial. intros m P_m.
   assert (WTS : ~ wlt m i).
   { intros H_lt. contradiction CONTRA'. exists m. split; trivial. }
-  pose proof (@wlt_trichotomous classic A SETOID WOSET i m). tauto.
+  pose proof (@wlt_trichotomous A SETOID WOSET i m). tauto.
 Qed.
 
-End OrderExtra1.
+End CLASSICAL_WELLORDERING.
+
+End O.
 
 #[universes(template)]
 Class isUpperSemilattice (D : Type) {PROSET : isProset D} : Type :=
