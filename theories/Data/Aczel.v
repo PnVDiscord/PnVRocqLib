@@ -1004,7 +1004,7 @@ End ORDINAL_basic1.
 
 Section ToWoSet.
 
-Inductive le_insert_top {A : Type@{U_discourse}} (le : A -> A -> Prop) (x : option A) : option A -> Prop :=
+Inductive le_insert_top {A : Type} (le : A -> A -> Prop) (x : option A) : option A -> Prop :=
   | le_insert_top_rhs_None
     : le_insert_top le x None
   | le_insert_top_rhs_Some x' y'
@@ -1012,16 +1012,38 @@ Inductive le_insert_top {A : Type@{U_discourse}} (le : A -> A -> Prop) (x : opti
     (LE : le x' y')
     : le_insert_top le x (Some y').
 
-Definition toWoSet_lt {Idx : Type@{Set_u}} {A : Idx -> Type@{U_discourse}} (lt : forall i : Idx, A i -> A i -> Prop) (lhs : { i : Idx & option (A i) }) (rhs : { i : Idx & option (A i) }) : Prop :=
+#[local] Hint Constructors le_insert_top : simplication_hints.
+
+Definition toWoSet_lt {Idx : Type@{Set_u}} {A : Idx -> Type} (lt : forall i : Idx, A i -> A i -> Prop) (lhs : { i : Idx & option (A i) }) (rhs : { i : Idx & option (A i) }) : Prop :=
   exists x : option (A (projT1 rhs)), le_insert_top (fun a : A (projT1 rhs) => fun a' : A (projT1 rhs) => lt (projT1 rhs) a a' \/ a = a') x (projT2 rhs) /\ lhs = @existT _ _ (projT1 rhs) x /\ rhs <> @existT _ _ (projT1 rhs) x.
 
-Lemma toWoSet_lt_well_founded {Idx : Type@{Set_u}} {A : Idx -> Type@{U_discourse}} (lt : forall i : Idx, A i -> A i -> Prop)
+Lemma toWoSet_lt_well_founded {Idx : Type@{Set_u}} {A : Idx -> Type} (lt : forall i : Idx, A i -> A i -> Prop)
   (lt_wf : forall i : Idx, well_founded (lt i))
   : well_founded (toWoSet_lt lt).
 Proof.
   enough (WTS : forall i : Idx, forall x' : A i, Acc (toWoSet_lt lt) (@existT _ _ i (Some x'))).
   { intros [i1 [x1' | ]]; eauto. econs. intros [i2 x2]. unfold toWoSet_lt at 1. intros (x3 & H_le_insert_top & EQ & NE); simpl in *. rewrite EQ. destruct x3 as [x3' | ]; eauto. congruence. }
   intros i x. induction (lt_wf i x) as [x _ IH]. i. econs. i. inv H. des; subst. inv H0. destruct LE; eauto. subst x'. simpl in *; congruence.
+Qed.
+
+Lemma toWoSet_lt_Transitive {projT2_eq : forall A : Type, forall B : A -> Type, forall x : A, forall y : B x, forall y' : B x, @existT A B x y = @existT A B x y' -> y = y'} {Idx : Type@{Set_u}} {A : Idx -> Type} (lt : forall i : Idx, A i -> A i -> Prop)
+  (lt_Irreflexive : forall i : Idx, Irreflexive (lt i))
+  (lt_Transitive : forall i : Idx, Transitive (lt i))
+  : Transitive (toWoSet_lt lt).
+Proof.
+  red. intros [cx H_cx] [cy H_cy] [cz H_cz]; simpl.
+  assert (le_Transitive : forall i, Transitive (fun lhs => fun rhs => lt i lhs rhs \/ lhs = rhs)).
+  { intros i; specialize (lt_Transitive i). red in lt_Transitive |- *. ss!. }
+  intros H1 H2. red in H1, H2 |- *. des; simpl in *.
+  pose proof (lt_Transitive cy) as claim1. red in claim1. inv H1; inv H2; simpl in *.
+  - destruct H_cx, x0, x; ss!.
+    + inv H0.
+    + inv H4.
+  - inv H0.
+  - pose proof LE as COPY. destruct x; inv H0. ss!.
+  - inv H0. inv H4. inv H2. destruct H_cx; inv H1. apply projT2_eq in H0, H2. subst a y'. destruct LE, LE0; ss!.
+    exists (Some x'); ss!; ss!. intros H_contra. apply projT2_eq in H_contra. inv H_contra.
+    contradiction (lt_Irreflexive cz x'); ss!.
 Qed.
 
 Fixpoint toWoSet (t : Tree) : { D : Type@{Set_u} & D -> D -> Prop } :=
@@ -1035,5 +1057,12 @@ Proof.
   induction t as [cs ts IH]; simpl in *.
   eapply toWoSet_lt_well_founded. exact IH.
 Defined.
+
+Lemma toWoSet_Transitive {projT2_eq : forall A : Type, forall B : A -> Type, forall x : A, forall y : B x, forall y' : B x, @existT A B x y = @existT A B x y' -> y = y'} (t : Tree)
+  : @Transitive (projT1 (toWoSet t)) (projT2 (toWoSet t)).
+Proof.
+  induction t as [cs ts IH]; simpl. eapply @toWoSet_lt_Transitive; eauto.
+  intros i. eapply well_founded_implies_Irreflexive. eapply toWoSet_well_founded.
+Qed.
 
 End ToWoSet.
