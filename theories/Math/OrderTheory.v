@@ -23,7 +23,8 @@ Next Obligation.
   intros x y. cbn. unfold flip. split; firstorder try congruence. contradiction (StrictOrder_Irreflexive x). firstorder.
 Qed.
 
-Class isPoset (A : Type@{U_discourse}) : Type@{U_discourse} :=
+#[universes(template)]
+Class isPoset (A : Type) : Type :=
   { Poset_isProset :: isProset A
   ; Poset_eqProp_spec (x : A) (y : A)
     : x == y <-> x = y
@@ -43,12 +44,13 @@ Instance mkProsetFrom_ltProp_isPoset {A : Type} {ltProp : A -> A -> Prop} (ltPro
   ; Poset_eqProp_spec x y := conj (fun H : x = y => H) (fun H : x = y => H)
   }.
 
-Class has_ltProp (A : Type@{U_discourse}) : Type@{U_discourse} :=
+#[universes(template)]
+Class has_ltProp (A : Type) : Type :=
   ltProp (lhs : A) (rhs : A) : Prop.
 
 Infix "≨" := ltProp : type_scope.
 
-Class hasStrictOrder (A : Type@{U_discourse}) : Type@{U_discourse} :=
+Class hasStrictOrder (A : Type) : Type :=
   { lt :: has_ltProp A
   ; lt_StrictOrder :: StrictOrder lt
   }.
@@ -75,7 +77,7 @@ Proof.
   reflexivity.
 Qed.
 
-Class isWellPoset (A : Type@{U_discourse}) : Type@{U_discourse} :=
+Class isWellPoset (A : Type) : Type :=
   { wltProp :: has_ltProp A
   ; wltProp_Transitive :: Transitive wltProp
   ; wltProp_well_founded : well_founded wltProp
@@ -440,7 +442,7 @@ Qed.
 
 End BASIC1.
 
-Class isWoset (A : Type@{U_discourse}) {SETOID : isSetoid A} : Type@{U_discourse} :=
+Class isWoset (A : Type) {SETOID : isSetoid A} : Type :=
   { Woset_isWellPoset :: isWellPoset A
   ; Woset_eqPropCompatible2 :: eqPropCompatible2 wltProp
   ; Woset_extensional (x : A) (y : A)
@@ -525,7 +527,8 @@ Qed.
 
 End OrderExtra1.
 
-Class isUpperSemilattice (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
+#[universes(template)]
+Class isUpperSemilattice (D : Type) {PROSET : isProset D} : Type :=
   { join_lattice (x : D) (y : D) : D
   ; bot_lattice : D
   ; join_lattice_spec (x : D) (y : D)
@@ -576,7 +579,8 @@ Qed.
 
 End UPPER_SEMILATTICE.
 
-Class isLowerSemilattice (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
+#[universes(template)]
+Class isLowerSemilattice (D : Type) {PROSET : isProset D} : Type :=
   { meet_lattice (x : D) (y : D) : D
   ; top_lattice : D
   ; meet_lattice_spec (x1 : D) (x2 : D)
@@ -599,7 +603,8 @@ Qed.
 
 End LOWER_SEMILATTICE.
 
-Class isLattice (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
+#[universes(template)]
+Class isLattice (D : Type) {PROSET : isProset D} : Type :=
   { Lattice_asUpperSemilattice :: isUpperSemilattice D (PROSET := PROSET)
   ; Lattice_asLowerSemilattice :: isLowerSemilattice D (PROSET := PROSET)
   }.
@@ -654,7 +659,8 @@ Import ListNotations.
 
 Notation "`[ A -> B ]" := { f : A -> B | isMonotonic1 f }.
 
-Class isCola (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
+#[universes(template)]
+Class isCola (D : Type) {PROSET : isProset D} : Type :=
   supremum_cola (X : ensemble D) : { sup_X : D | is_supremum_of sup_X X }.
 
 #[program]
@@ -800,7 +806,8 @@ End MAKE_CPO_FROM_COLA.
 
 End CpoDef.
 
-Class hsOrd (A : Type@{U_discourse}) `{PROSET : isProset A} : Type@{U_discourse} :=
+#[universes(template)]
+Class hsOrd (A : Type) `{PROSET : isProset A} : Type :=
   { compare (x : A) (y : A) : comparison
   ; compare_Lt x y
     (OBS_Lt : compare x y = Lt)

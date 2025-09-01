@@ -60,7 +60,8 @@ Definition reify_lemma@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} 
 
 (** Section SETOID. *)
 
-Class isSetoid (A : Type@{U_discourse}) : Type@{U_discourse} :=
+#[universes(template)]
+Class isSetoid (A : Type) : Type :=
   { eqProp (lhs : A) (rhs : A) : Prop
   ; eqProp_Equivalence :: Equivalence eqProp
   }.
@@ -129,7 +130,7 @@ Proof with eauto.
 Qed.
 
 #[global, program]
-Instance option_isSetoid {A : Type@{U_discourse}} (SETOID : isSetoid A) : isSetoid (option A) :=
+Instance option_isSetoid {A : Type} (SETOID : isSetoid A) : isSetoid (option A) :=
   { eqProp := option_eqProp eqProp
   ; eqProp_Equivalence := option_eqProp_Equivalence eqProp eqProp_Equivalence
   }.
@@ -180,7 +181,8 @@ Defined.
 
 (** Section PROSET. *)
 
-Class isProset (A : Type@{U_discourse}) : Type@{U_discourse} :=
+#[universes(template)]
+Class isProset (A : Type) : Type :=
   { leProp (lhs : A) (rhs : A) : Prop
   ; Proset_isSetoid :: isSetoid A
   ; leProp_PreOrder :: PreOrder leProp
@@ -325,8 +327,9 @@ Proof.
   firstorder.
 Qed.
 
-Class isSetoid1 (F : Type@{U_discourse} -> Type@{U_discourse}) : Type@{U_cosmos} :=
-  liftSetoid1 (X : Type@{U_discourse}) `(SETOID : isSetoid X) : isSetoid (F X).
+#[universes(template)]
+Class isSetoid1 (F : Type -> Type) : Type :=
+  liftSetoid1 (X : Type) `(SETOID : isSetoid X) : isSetoid (F X).
 
 Definition mkSetoid_from_eq {A : Type} : isSetoid A :=
   {| eqProp := @eq A; eqProp_Equivalence := eq_equivalence |}.
@@ -1968,14 +1971,14 @@ Qed.
 
 End SUBSPACE_TOPOLOGY.
 
-#[projections(primitive)]
-Class isQuotientOf (Q : Type@{U_discourse}) (X : Type@{U_discourse}) {SETOID : isSetoid X} : Type@{U_cosmos} :=
+#[universes(template)]
+Class isQuotientOf (Q : Type) (X : Type) {SETOID : isSetoid X} : Type :=
   { prj : X -> Q
   ; prj_eq (x1 : X) (x2 : X) (EQUIV : x1 == x2) : prj x1 = prj x2
-  ; rec {Y : Type@{U_discourse}} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2) : Q -> Y
-  ; rec_compute {Y : Type@{U_discourse}} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
+  ; rec {Y : Type} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2) : Q -> Y
+  ; rec_compute {Y : Type} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
     : forall x, rec f f_cong (prj x) = f x
-  ; rec_unique {Y : Type@{U_discourse}} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
+  ; rec_unique {Y : Type} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
     : forall rec', (forall x, rec' (prj x) = f x) -> (forall q, rec' q = rec f f_cong q)
   }.
 
