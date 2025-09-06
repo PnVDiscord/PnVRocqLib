@@ -185,11 +185,14 @@ Definition _Ord_mul : Ord -> Ord -> Ord :=
 Section HARTOGS.
 
 Definition Hartogs (D : Type@{Set_u}) : Ord :=
-  mkNode (B.sig (D -> D -> Prop) (@well_founded D)) (fun RWF => @fromWf D RWF.(B.proj1_sig) RWF.(B.proj2_sig)).
+  mkNode (B.sig (D -> D -> Prop) (@well_founded D)) (fun RWF => @fromWfSet D RWF.(B.proj1_sig) RWF.(B.proj2_sig)).
 
 End HARTOGS.
 
 Section TOTALIFY.
+
+Definition toSet (t : Tree) : Type@{Set_u} :=
+  projT1 (toWoSet t).
 
 Context {A : Type@{Set_u}}.
 
@@ -198,9 +201,17 @@ Variable R : A -> A -> Prop.
 Hypothesis R_wf : well_founded R.
 
 Definition toSet_eqProp (lhs : A) (rhs : A) : Prop :=
-  @fromAcc A R lhs (R_wf lhs) =ᵣ @fromAcc A R rhs (R_wf rhs).
+  @fromWf A R R_wf lhs =ᵣ @fromWf A R R_wf rhs.
 
 End TOTALIFY.
+
+#[global] Arguments toSet_eqProp {A} R R_wf / lhs rhs.
+
+#[global]
+Instance toSet_isSetoid (t : Tree) : isSetoid (toSet t) :=
+  { eqProp := toSet_eqProp (projT2 (toWoSet t)) (toWoSet_well_founded t)
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence rEq_Equivalence (@fromWf (projT1 (toWoSet t)) (projT2 (toWoSet t)) (toWoSet_well_founded t))
+  }.
 
 Module Cardinality.
 
@@ -239,7 +250,7 @@ Definition mul (kappa : Cardinality.t) (lambda : Cardinality.t) : Cardinality.t 
   mk (kappa.(carrier) * lambda.(carrier))%type prod_isSetoid.
 
 Definition exp (kappa : Cardinality.t) (lambda : Cardinality.t) : Cardinality.t :=
-  mk { f : kappa.(carrier) -> lambda.(carrier) | eqPropCompatible1 f } fun_isSetoid.
+  mk { f : kappa.(carrier) -> lambda.(carrier) | eqPropCompatible1 f }%type fun_isSetoid.
 
 End Cardinality.
 

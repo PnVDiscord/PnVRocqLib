@@ -168,13 +168,13 @@ Proof.
 Qed.
 
 Example L_in_example5
-  : @Typing mk_fol fol_signature [("p"%name, (@bty mk_fol trm_bty -> @bty mk_fol frm_bty)%typ)] (Var_trm "p") (@bty mk_fol trm_bty -> @bty mk_fol frm_bty)%typ.
+  : @Typing mk_fol fol_signature [("p"%name, ((@bty mk_fol trm_bty -> @bty mk_fol frm_bty) -> @bty mk_fol frm_bty)%typ)] (Var_trm "p") ((@bty mk_fol trm_bty -> @bty mk_fol frm_bty) -> @bty mk_fol frm_bty)%typ.
 Proof.
   eapply Var_typ. econs 1; reflexivity.
 Defined.
 
 Example L_in_example5_unfold
-  : NbE (L_in_example5) = (Lam_trm "a0" (@bty mk_fol trm_bty) (App_trm (Var_trm "p") (Var_trm "a0"))).
+  : NbE (L_in_example5) = Lam_trm "a0" (@bty mk_fol trm_bty -> @bty mk_fol frm_bty)%typ (App_trm (Var_trm "p") (Lam_trm "a00" (@bty mk_fol trm_bty) (App_trm (Var_trm "a0") (Var_trm "a00")))).
 Proof.
   reflexivity.
 Qed.

@@ -22,6 +22,12 @@ Definition is_lambda (e : trm L) : Prop :=
   | _ => False
   end.
 
+Fixpoint typ_ord (ty : typ L) : nat :=
+  match ty with
+  | bty _ b => 0
+  | (ty1 -> ty2)%typ => Nat.max (1 + typ_ord ty1) (typ_ord ty2)
+  end.
+
 Context `{Sigma : !signature L}.
 
 Inductive typNe (Gamma : ctx L) : trm L -> typ L -> Prop :=
@@ -39,6 +45,7 @@ Inductive typNe (Gamma : ctx L) : trm L -> typ L -> Prop :=
 with typNf (Gamma : ctx L) : trm L -> typ L -> Prop :=
   | typNf_of_typNe u ty
     (u_typNe : typNe Gamma u ty)
+    (ty_basic : typ_ord ty = 0)
     : typNf Gamma u ty
   | typNf_Lam x v ty ty'
     (v_typNf : typNf ((x, ty) :: Gamma) v ty')
@@ -224,6 +231,7 @@ Inductive wnNe (Gamma : ctx L) : typ L -> trm L -> Set :=
 with wnNf (Gamma : ctx L) : typ L -> trm L -> Set :=
   | wnNf_of_wnNe u ty
     (u_wnNe : Gamma ⊢ u ⇉ ty)
+    (ty_basic : typ_ord ty = 0)
     : Gamma ⊢ u ⇇ ty
   | wnNf_Lam x v ty ty'
     (v_wnNf : (x, ty) :: Gamma ⊢ v ⇇ ty')
@@ -252,7 +260,7 @@ Proof.
       * eapply le_ctx_wnNf; eassumption.
     + econs 3; eassumption.
   - destruct v_wnNf; simpl; intros Gamma' LE.
-    + econs 1. eapply le_ctx_wnNe; eassumption.
+    + econs 1; [eapply le_ctx_wnNe; eassumption | exact ty_basic].
     + econs 2. eapply le_ctx_wnNf.
       * eassumption.
       * red in LE |- *. intros x1 ty1 LOOKUP1. pattern LOOKUP1. revert LOOKUP1. eapply Lookup_cons.
@@ -339,7 +347,7 @@ Proof.
       * eapply reify. exact H_N.
   - destruct ty as [b | ty1 ty2]; simpl; intros M H_M.
     + eapply wnNf_whBetaStar_wnNf with (N := H_M.(B.projT1)).
-      * econs 1. exact (fst (B.projT2 H_M)).
+      * econs 1; [exact (fst (B.projT2 H_M)) | reflexivity].
       * exact (snd (B.projT2 H_M)).
     + eapply App_Var_wnNf_inv. eapply reify. eapply H_M.
       * eapply le_ctx_cons_intro_var1.
@@ -462,7 +470,7 @@ Proof.
     + pose proof (wnNe_wnStep_typNe Gamma u ty u_wnNe) as H_e.
       exists H_e.(B.proj1_sig). split.
       * exact (proj1 H_e.(B.proj2_sig)).
-      * econs 1. exact (proj2 H_e.(B.proj2_sig)).
+      * econs 1; [exact (proj2 H_e.(B.proj2_sig)) | exact ty_basic].
     + pose proof (wnNf_wnStep_typNf ((x, ty) :: Gamma) v ty' v_wnNf) as H_M.
       exists (Lam_trm x ty H_M.(B.proj1_sig)). split.
       * eapply wnStep_Lam. exact (proj1 H_M.(B.proj2_sig)).

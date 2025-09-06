@@ -77,6 +77,7 @@ Proof.
   reflexivity.
 Qed.
 
+#[projections(primitive)]
 Class isWellPoset (A : Type) : Type :=
   { wltProp :: has_ltProp A
   ; wltProp_Transitive :: Transitive wltProp
@@ -452,6 +453,7 @@ Qed.
 
 End BASIC1.
 
+#[projections(primitive)]
 Class isWoset (A : Type) {SETOID : isSetoid A} : Type :=
   { Woset_isWellPoset :: isWellPoset A
   ; Woset_eqPropCompatible2 :: eqPropCompatible2 wltProp
@@ -518,14 +520,8 @@ Context {classic : forall P : Prop, P \/ ~ P}.
 Theorem wlt_trichotomous {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (a : A) (b : A)
   : (a == b) \/ (wlt a b \/ wlt b a).
 Proof.
-  revert a b.
-  assert (forall P : A -> Prop, ⟪ NOT_FORALL_NOT : ~ (forall x : A, ~ P x) ⟫ -> exists x : A, P x).
-  { intros P H; unnw. pose proof (classic (exists x : A, P x)) as [YES | NO]; trivial.
-    contradiction H. intros x P_x. contradiction NO. exists x. exact P_x.
-  }
-  unnw.
-  intros a. pose proof (wltProp_well_founded a) as H_Acc_a.
-  induction H_Acc_a as [a _ IH_a]. intros b. pose proof (wltProp_well_founded b) as H_Acc_b. induction H_Acc_b as [b _ IH_b].
+  revert b. pose proof (wltProp_well_founded a) as H_Acc_a. induction H_Acc_a as [a _ IH_a].
+  intros b. pose proof (wltProp_well_founded b) as H_Acc_b. induction H_Acc_b as [b _ IH_b].
   pose proof (classic ((exists b', wlt b' b /\ wlt a b') \/ (exists b', wlt b' b /\ a == b'))) as [[H_LT | H_EQ] | H_GT].
   { des. right. left. transitivity b'; eauto. }
   { destruct H_EQ as [a' [H_LT H_EQ]]. right. left. rewrite -> H_EQ. exact H_LT. }
@@ -561,8 +557,8 @@ Proof.
   pose proof (@wlt_trichotomous A SETOID WOSET i m). tauto.
 Qed.
 
-#[global, program]
-Instance Woset_isWellfoundedToset {A : Type} {SETOID : isSetoid A} {WPOSET : isWellPoset A} (wltProp_eqPropCompatible2 : eqPropCompatible2 wltProp) (wltProp_trichotomous : forall a : A, forall b : A, (a == b) \/ (wltProp a b \/ wltProp b a)) : isWoset A (SETOID := SETOID) :=
+#[local, program]
+Instance WellfoundedToset_isWoset {A : Type} {SETOID : isSetoid A} {WPOSET : isWellPoset A} {wltProp_eqPropCompatible2 : eqPropCompatible2 wltProp} (wltProp_trichotomous : forall a : A, forall b : A, (a == b) \/ (wltProp a b \/ wltProp b a)) : isWoset A (SETOID := SETOID) :=
   { Woset_isWellPoset := WPOSET
   ; Woset_eqPropCompatible2 := wltProp_eqPropCompatible2
   }.
@@ -582,8 +578,17 @@ Next Obligation.
     { contradiction CONTRA'. exists b. left. split; eauto. }
     pose proof (wltProp_trichotomous a b). tauto.
   }
-  destruct not_balanced as [c [[? ?] | [? ?]]]; ss!. 
+  destruct not_balanced as [c [[? ?] | [? ?]]]; ss!.
 Qed.
+
+#[global]
+Instance subWoset {A : Type} {SETOID : isSetoid A} (WOSET : isWoset A (SETOID := SETOID)) (P : A -> Prop)
+  : isWoset (@sig A P) (SETOID := subSetoid (SETOID := SETOID) P).
+Proof.
+  pose (@WellfoundedToset_isWoset (@sig A P) (@subSetoid A SETOID P) (subWwellPoset WOSET.(Woset_isWellPoset))) as THIS. eapply THIS; clear THIS.
+  - red. intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]; simpl. unfold binary_relation_on_image. simpl. eapply Woset_eqPropCompatible2.
+  - intros [a H_a] [b H_b]; simpl. unfold binary_relation_on_image. simpl. eapply wlt_trichotomous.
+Defined.
 
 End CLASSICAL_WELLORDERING.
 

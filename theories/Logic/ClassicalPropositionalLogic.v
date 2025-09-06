@@ -157,7 +157,7 @@ Qed.
 Lemma hasModel_ifConsistent (X : ensemble formula)
   (CONSISTENT : X ⊬ ContradictionF)
   : X \subseteq MaximallyConsistentSet X /\ is_structure (MaximallyConsistentSet X).
-Proof with first [eassumption | trivial]. (* Infinitely grateful for Sohn's advice! *)
+Proof with first [eassumption | trivial]. (* Infinitely grateful for Paul Sohn's advice! *)
   ii. set (X_dagger := MaximallyConsistentSet X).
   pose proof (theorem_of_1_3_10 X) as [? ? ? ? ?].
   fold X_dagger in SUBSET, EQUICONSISTENT, CLOSED_infers, META_DN, IMPLICATION_FAITHFUL.

@@ -209,3 +209,421 @@ Proof.
 Defined.
 
 #[global] Opaque dec_finds_minimum_if_exists.
+
+Module EQ_FACTS.
+
+Section EQ_CONSTRUCTORS.
+
+Context {A : Type}.
+
+Definition eq_reflexivity (x1 : A) : x1 = x1 :=
+  @eq_refl A x1.
+
+Definition eq_symmetry (x1 : A) (x2 : A) (hyp_1EQ2 : x1 = x2) : x2 = x1 :=
+  @eq_ind A x1 (fun x : A => x = x1) (@eq_refl A x1) x2 hyp_1EQ2.
+
+Definition eq_transitivity (x1 : A) (x2 : A) (x3 : A) (hyp_1EQ2 : x1 = x2) (hyp_2EQ3 : x2 = x3) : x1 = x3 :=
+  @eq_ind A x2 (fun x : A => x1 = x) hyp_1EQ2 x3 hyp_2EQ3.
+
+Context {B : Type}.
+
+Definition eq_congruence (f : A -> B) (x1 : A) (x2 : A) (hyp_1EQ2 : x1 = x2) : f x1 = f x2 :=
+  @eq_ind A x1 (fun x : A => f x1 = f x) (@eq_refl B (f x1)) x2 hyp_1EQ2.
+
+Context {C : Type}.
+
+Definition eq_congruence2 (f : A -> B -> C) (x1 : A) (x2 : A) (hyp_x_EQ : x1 = x2) (y1 : B) (y2 : B) (hyp_y_EQ : y1 = y2) : f x1 y1 = f x2 y2 :=
+  @eq_ind B y1 (fun y : B => f x1 y1 = f x2 y) (@eq_ind A x1 (fun x : A => f x1 y1 = f x y1) (@eq_refl C (f x1 y1)) x2 hyp_x_EQ) y2 hyp_y_EQ.
+
+End EQ_CONSTRUCTORS.
+
+Section EQ_DESTRUCTORS.
+
+Context {A : Type}.
+
+Definition rect_eq_l (lhs : A) (phi : forall rhs : A, lhs = rhs -> Type) (phi_pf : phi lhs (eq_reflexivity lhs)) (rhs : A) (hyp_eq : lhs = rhs) : phi rhs hyp_eq :=
+  match hyp_eq as hyp_eq' in eq _ lhs' return phi lhs' hyp_eq' with
+  | eq_refl => phi_pf
+  end.
+
+Definition rect_eq_r_aux (rhs : A) (lhs : A) (hyp_eq : lhs = rhs) : forall phi : forall lhs : A, lhs = rhs -> Type, phi rhs (eq_reflexivity rhs) -> phi lhs hyp_eq :=
+  match hyp_eq as hyp_eq' in eq _ rhs' return forall phi' : forall lhs' : A, lhs' = rhs' -> Type, phi' rhs' (eq_reflexivity rhs') -> phi' lhs hyp_eq' with
+  | eq_refl => fun phi' : forall lhs' : A, lhs' = lhs -> Type => fun phi_pf' : phi' lhs (eq_reflexivity lhs) => phi_pf'
+  end.
+
+Definition rect_eq_r (rhs : A) (phi : forall lhs : A, lhs = rhs -> Type) (phi_pf : phi rhs (eq_reflexivity rhs)) (lhs : A) (hyp_eq : lhs = rhs) : phi lhs hyp_eq :=
+  rect_eq_r_aux rhs lhs hyp_eq phi phi_pf.
+
+Context {B : A -> Type}.
+
+Definition elim_eq_l (x1 : A) (x2 : A) (hyp_eq : x1 = x2) (pf : B x1) : B x2 :=
+  eq_rect x1 B pf x2 hyp_eq.
+
+Definition elim_eq_r (x1 : A) (x2 : A) (hyp_eq : x1 = x2) (pf : B x2) : B x1 :=
+  eq_rect x2 B pf x1 (eq_symmetry x1 x2 hyp_eq).
+
+#[local] Notation pi_A_B := (forall x : A, B x).
+
+Lemma elim_eq_l_spec (x1 : A) (x2 : A) (f : pi_A_B) (hyp_eq : x1 = x2)
+  : elim_eq_l x1 x2 hyp_eq (f x1) = elim_eq_l x2 x2 (eq_reflexivity x2) (f x2).
+Proof.
+  destruct hyp_eq; reflexivity.
+Defined.
+
+Lemma elim_eq_r_spec (x1 : A) (x2 : A) (f : pi_A_B) (hyp_eq : x1 = x2)
+  : elim_eq_r x1 x2 hyp_eq (f x2) = elim_eq_r x1 x1 (eq_reflexivity x1) (f x1).
+Proof.
+  destruct hyp_eq; reflexivity.
+Defined.
+
+Definition transport {x1 : A} {x2 : A} (hyp_eq : x1 = x2) : B x1 -> B x2 :=
+  elim_eq_l x1 x2 hyp_eq.
+
+End EQ_DESTRUCTORS.
+
+Section EQ_EM_implies_EQ_PIRREL. (* Reference: "https://coq.inria.fr/library/Coq.Logic.Eqdep_dec.html" *)
+
+Context {A : Type}.
+
+Definition eq_round_trip (x : A) : forall y : A, forall hyp_eq : x = y, eq_transitivity y x y (eq_symmetry x y hyp_eq) hyp_eq = eq_reflexivity y :=
+  rect_eq_l x (fun y : A => fun hyp_eq : x = y => eq_transitivity y x y (eq_symmetry x y hyp_eq) hyp_eq = eq_reflexivity y) (eq_reflexivity (eq_reflexivity x)).
+
+Variable x : A.
+
+Section ABSTRACT_FORM.
+
+Variable eq_encoder : forall y : A, x = y -> x = y.
+
+Let eq_decoder (y : A) : x = y -> x = y :=
+  eq_transitivity x x y (eq_symmetry x x (eq_encoder x (eq_reflexivity x))).
+
+Let eq_decoder_decodes_properly : forall y : A, forall hyp_eq : x = y, eq_decoder y (eq_encoder y hyp_eq) = hyp_eq :=
+  rect_eq_l x (fun y : A => fun hyp_eq : x = y => eq_decoder y (eq_encoder y hyp_eq) = hyp_eq) (eq_round_trip x x (eq_encoder x (eq_reflexivity x))).
+
+Hypothesis all_eq_codes_are_indistinguishable_from_each_other : forall y : A, forall hyp_eq1 : x = y, forall hyp_eq2 : x = y, eq_encoder y hyp_eq1 = eq_encoder y hyp_eq2.
+
+Definition eq_pirrel_holds_if_we_have_an_eq_encoder_which_returns_the_same_code (y : A) (hyp_eq1 : x = y) (hyp_eq2 : x = y) : hyp_eq1 = hyp_eq2 :=
+  let claim1 : eq_decoder y (eq_encoder y hyp_eq1) = eq_decoder y (eq_encoder y hyp_eq2) := eq_congruence (eq_decoder y) (eq_encoder y hyp_eq1) (eq_encoder y hyp_eq2) (all_eq_codes_are_indistinguishable_from_each_other y hyp_eq1 hyp_eq2) in
+  eq_ind (eq_decoder y (eq_encoder y hyp_eq2)) (fun hyp_eq : x = y => hyp_eq1 = hyp_eq) (eq_ind (eq_decoder y (eq_encoder y hyp_eq1)) (fun hyp_eq : x = y => hyp_eq = eq_decoder y (eq_encoder y hyp_eq2)) claim1 hyp_eq1 (eq_decoder_decodes_properly y hyp_eq1)) hyp_eq2 (eq_decoder_decodes_properly y hyp_eq2).
+
+End ABSTRACT_FORM.
+
+Hypothesis eq_em : forall y : A, x = y \/ x <> y.
+
+Let my_eq_encoder (y : A) (hyp_eq : x = y) : x = y :=
+  match eq_em y return x = y with
+  | or_introl h_eq => h_eq
+  | or_intror h_ne => False_ind (x = y) (h_ne hyp_eq)
+  end.
+
+Lemma my_eq_encoder_x_eq_reflexivity_x_is
+  (hyp_eq : x = x)
+  : my_eq_encoder x (eq_reflexivity x) = my_eq_encoder x hyp_eq.
+Proof.
+  refine (
+    let ret (eq_em_x : x = x \/ x <> x) (h_eq : x = x) :=
+    match eq_em_x return x = x with
+    | or_introl Heq => Heq
+    | or_intror Hne => False_ind (x = x) (Hne h_eq)
+    end in _
+  ).
+  exact (
+    match eq_em x as eq_em_x return ret eq_em_x (eq_reflexivity x) = ret eq_em_x hyp_eq with
+    | or_introl h_eq => eq_reflexivity h_eq
+    | or_intror h_ne => False_ind (False_ind (x = x) (h_ne (eq_reflexivity x)) = False_ind (x = x) (h_ne hyp_eq)) (h_ne hyp_eq)
+    end
+  ).
+Defined.
+
+Definition eq_em_implies_eq_pirrel : forall y : A, forall hyp_eq1 : x = y, forall hyp_eq2 : x = y, hyp_eq1 = hyp_eq2 :=
+  eq_pirrel_holds_if_we_have_an_eq_encoder_which_returns_the_same_code my_eq_encoder (rect_eq_l x (fun y : A => fun hyp_eq1 : x = y => forall hyp_eq2 : x = y, my_eq_encoder y hyp_eq1 = my_eq_encoder y hyp_eq2) my_eq_encoder_x_eq_reflexivity_x_is).
+
+End EQ_EM_implies_EQ_PIRREL.
+
+Lemma eq_pirrel_fromEqDec {A : Type} {requiresEqDec : hasEqDec A}
+  : forall x : A, forall y : A, forall hyp_eq1 : x = y, forall hyp_eq2 : x = y, hyp_eq1 = hyp_eq2.
+Proof.
+  intros x.
+  refine (
+    let eq_em (y : A) :=
+    match eq_dec x y with
+    | left hyp_yes => or_introl hyp_yes
+    | right hyp_no => or_intror hyp_no
+    end in _
+  ).
+  exact (fun y : A => fun hyp_eq1 : x = y =>
+    match hyp_eq1 as hyp_eq1' in eq _ y' return forall hyp_eq : x = y', hyp_eq1' = hyp_eq with
+    | eq_refl => eq_em_implies_eq_pirrel x eq_em x (eq_reflexivity x)
+    end
+  ).
+Defined.
+
+End EQ_FACTS.
+
+Module FUN_FACTS.
+
+Import EQ_FACTS.
+
+Definition projT2_eq_STMT (A : Type) (B : A -> Type) (x : A) : Prop :=
+  forall y1 : B x, forall y2 : B x, << PAIR_EQ : @existT A B x y1 = @existT A B x y2 >> -> y1 = y2.
+
+Definition axiomK_STMT (A : Type) (x : A) : Prop :=
+  forall phi : x = x -> Prop, << phi_refl : phi (eq_reflexivity x) >> -> forall hyp_eq : x = x, phi hyp_eq.
+
+Definition eq_rect_eq_STMT (A : Type) (phi : A -> Type) (x : A) : Prop :=
+  forall phi_x : phi x, forall hyp_eq : x = x, @eq_rect A x phi phi_x x hyp_eq = phi_x.
+
+Definition pirrel_STMT (phi : Prop) : Prop :=
+  forall pf1 : phi, forall pf2 : phi, pf1 = pf2.
+
+Inductive BB : Prop :=
+  | TrueBB
+  | FalseBB.
+
+Record RETRACT (A : Prop) (B : Prop) : Prop :=
+  { _i : A -> B
+  ; _j : B -> A
+  ; _inv : forall x : A, _j (_i x) = x
+  }.
+
+#[global] Arguments _i {A} {B}.
+#[global] Arguments _j {A} {B}.
+#[global] Arguments _inv {A} {B}.
+
+Record RETRACT2 (A : Prop) (B : Prop) : Prop :=
+  { _i2 : A -> B
+  ; _j2 : B -> A
+  ; _inv2 : RETRACT A B -> forall x : A, _j2 (_i2 x) = x
+  }.
+
+#[global] Arguments _i2 {A} {B}.
+#[global] Arguments _j2 {A} {B}.
+#[global] Arguments _inv2 {A} {B}.
+
+Definition RETRACT_REFL (A : Prop) : RETRACT A A :=
+  {| _i := fun x : A => x; _j := fun x : A => x; _inv := @eq_refl A |}.
+
+#[local] Hint Resolve _inv _inv2 RETRACT_REFL : core.
+
+Lemma derive_fixedpoint_combinator (D : Prop)
+  (RETRACT_DtoD_D : RETRACT (D -> D) D)
+  : {Y : (D -> D) -> D | forall f : D -> D, Y f = f (Y f)}.
+Proof.
+  destruct RETRACT_DtoD_D as [lam_D app_D beta_D].
+  pose (Y_combinator_of_Curry := fun f : D -> D => app_D (lam_D (fun x : D => f (app_D x x))) (lam_D (fun x : D => f (app_D x x)))).
+  exists (Y_combinator_of_Curry). intros f.
+  change (app_D (lam_D (fun x : D => f (app_D x x))) (lam_D (fun x : D => f (app_D x x))) = f (Y_combinator_of_Curry f)).
+  now replace (app_D (lam_D (fun x : D => f (app_D x x)))) with (fun x : D => f (app_D x x)).
+Qed.
+
+Lemma TrueBB_eq_FalseBB_iff_pirrel
+  : TrueBB = FalseBB <-> ⟪ PROOF_IRRELEVANCE : forall phi : Prop, pirrel_STMT phi ⟫.
+Proof.
+  unnw. split.
+  - intros hyp_eq phi pf1 pf2. exact (eq_congruence (fun b : BB => if b then pf1 else pf2) TrueBB FalseBB hyp_eq).
+  - intros h_pirrel. exact (h_pirrel BB TrueBB FalseBB).
+Qed.
+
+Lemma pirrel_iff_eq_rect_eq (A : Type) (x : A)
+  : ⟪ PROOF_IRRELEVANCE : pirrel_STMT (x = x) ⟫ <-> ⟪ EQ_RECT_EQ : forall B : A -> Type, eq_rect_eq_STMT A B x ⟫.
+Proof.
+  ii; split; ii; des.
+  - now rewrite H with (pf1 := hyp_eq) (pf2 := eq_reflexivity x).
+  - now do 2 (match goal with [ pf : x = x |- _ ] => rewrite <- H with (B := eq x) (phi_x := pf) (hyp_eq := eq_symmetry x x pf); destruct pf end).
+Qed.
+
+Lemma pirrel_iff_axiomK (A : Type) (x : A)
+  : ⟪ PROOF_IRRELEVANCE : pirrel_STMT (x = x) ⟫ <-> ⟪ AXIOM_K : axiomK_STMT A x ⟫.
+Proof.
+  ii; split; ii; des.
+  - now rewrite H with (pf1 := hyp_eq) (pf2 := eq_reflexivity x).
+  - now do 2 (match goal with [ pf : x = x |- _ ] => pattern pf; revert pf; eapply H end).
+Qed.
+
+Lemma eq_rect_eq_iff_projT2_eq (A : Type) (B : A -> Type) (x : A)
+  : ⟪ EQ_RECT_EQ : eq_rect_eq_STMT A B x ⟫ <-> ⟪ projT2_eq : projT2_eq_STMT A B x ⟫.
+Proof.
+  ii; split; ii; des.
+  - set (phi := fun pr1 : @sigT A B => fun pr2 : @sigT A B => fun projT1_eq : projT1 pr1 = projT1 pr2 => @eq_rect A (projT1 pr1) B (projT2 pr1) (projT1 pr2) projT1_eq = projT2 pr2).
+    assert (claim1 : phi (@existT A B x y1) (@existT A B x y2) (eq_congruence (@projT1 A B) (@existT A B x y1) (@existT A B x y2) H0)) by now rewrite <- H0.
+    unfold phi in claim1. rewrite H in claim1. exact (claim1).
+  - eapply H. now destruct hyp_eq.
+Qed.
+
+Section EXCLUSIVE_MIDDLE_implies_PROOF_IRRELEVANCE. (* Reference: "https://coq.inria.fr/library/Coq.Logic.Berardi.html" *)
+
+Hypothesis exclusive_middle : forall P : Prop, P \/ ~ P.
+
+Let POW (P : Prop) : Prop :=
+  P -> BB.
+
+Let RETRACT2_POW_A_POW_B (A : Prop) (B : Prop)
+  : RETRACT2 (POW A) (POW B).
+Proof.
+  destruct (exclusive_middle (RETRACT (POW A) (POW B))) as [hyp_yes | hyp_no].
+  - exact ({| _i2 := _i hyp_yes; _j2 := _j hyp_yes; _inv2 := fun _ : RETRACT (POW A) (POW B) => _inv hyp_yes |}).
+  - exact ({| _i2 := fun _ : POW A => fun _ : B => FalseBB; _j2 := fun _ : POW B => fun _ : A => FalseBB; _inv2 := fun r : RETRACT (POW A) (POW B) => False_ind (forall pa : POW A, (fun _ : A => FalseBB) = pa) (hyp_no r) |}).
+Qed.
+
+Let UNIV : Prop :=
+  forall P : Prop, POW P.
+
+Let SET_BUILDER_NOTATION (phi : UNIV -> BB) : UNIV :=
+  fun P : Prop =>
+  let LEFT : POW UNIV -> POW P := _j2 (RETRACT2_POW_A_POW_B P UNIV) in
+  let RIGHT : POW UNIV -> POW UNIV := _i2 (RETRACT2_POW_A_POW_B UNIV UNIV) in
+  LEFT (RIGHT phi).
+
+#[local] Notation " ⦃ x | P ⦄ " := (SET_BUILDER_NOTATION (fun x : UNIV => P)) (x binder, at level 0, no associativity) : type_scope.
+
+Let HAS_AS_AN_ELEMENT (x : UNIV) : UNIV -> BB :=
+  x UNIV.
+
+#[local] Notation " z ∈ x " := (HAS_AS_AN_ELEMENT x z) : type_scope.
+
+Let SET_BUILDER_NOTATION_SPEC (phi : UNIV -> BB)
+  : (fun z : UNIV => z ∈ ⦃ x | phi x ⦄) = phi.
+Proof.
+  unfold SET_BUILDER_NOTATION, HAS_AS_AN_ELEMENT.
+  destruct (RETRACT2_POW_A_POW_B UNIV UNIV); cbn in *; eauto.
+Qed.
+
+Let NAIVE_SET_THEORY : RETRACT (POW UNIV) UNIV :=
+  {| _i := SET_BUILDER_NOTATION; _j := HAS_AS_AN_ELEMENT; _inv := SET_BUILDER_NOTATION_SPEC |}.
+
+Let NotBB (b : BB) : BB :=
+  match exclusive_middle (b = TrueBB) return BB with
+  | or_introl if_b_eq_TRUE_BB => FalseBB
+  | or_intror if_b_ne_TRUE_BB => TrueBB
+  end.
+
+#[local] Notation " ¬ b " := (NotBB b) (at level 55, right associativity) : type_scope.
+
+Let NOT_BB_SPEC1 (b : BB)
+  (if_b_eq_TrueBB : b = TrueBB)
+  : (¬ b) = FalseBB.
+Proof.
+  cbv; destruct (exclusive_middle (b = TrueBB)); tauto.
+Qed.
+
+Let NOT_BB_SPEC2 (b : BB)
+  (if_b_ne_TrueBB : b <> TrueBB)
+  : (¬ b) = TrueBB.
+Proof.
+  cbv; destruct (exclusive_middle (b = TrueBB)); tauto.
+Qed.
+
+Let russell (r : UNIV) : BB :=
+  ¬ (r ∈ r).
+
+Let R : UNIV :=
+  ⦃ r | russell r ⦄.
+
+Let RUSSELL : BB :=
+  R ∈ R.
+
+Let PARADOX_OF_BERARDI
+  : RUSSELL = ¬ RUSSELL.
+Proof with eauto.
+  enough (it_is_sufficient_to_show : RUSSELL = russell R)...
+  replace (russell) with (fun r : UNIV => r ∈ R)...
+Qed.
+
+Theorem exclusive_middle_implies_proof_irrelevance (P : Prop)
+  : pirrel_STMT P.
+Proof.
+  eapply TrueBB_eq_FalseBB_iff_pirrel.
+  destruct (exclusive_middle (RUSSELL = TrueBB)) as [RUSSELL_eq_TrueBB | RUSSELL_ne_TrueBB].
+  - rewrite <- RUSSELL_eq_TrueBB. rewrite PARADOX_OF_BERARDI. now eapply NOT_BB_SPEC1.
+  - contradiction (RUSSELL_ne_TrueBB). rewrite PARADOX_OF_BERARDI. now eapply NOT_BB_SPEC2.
+Qed.
+
+End EXCLUSIVE_MIDDLE_implies_PROOF_IRRELEVANCE.
+
+Section UNTYPED_LAMBDA_CALCULUS_FOR_BB_implies_PARADOX_OF_RUSSELL.
+
+Hypothesis untyped_lambda_calculus_for_BB : RETRACT (BB -> BB) BB.
+
+Let NotBB (b : BB) : BB :=
+  match b return BB with
+  | TrueBB => FalseBB
+  | FalseBB => TrueBB
+  end.
+
+Theorem untyped_lambda_calculus_for_BB_implies_paradox_of_russell
+  : TrueBB = FalseBB.
+Proof.
+  pose proof (derive_fixedpoint_combinator BB untyped_lambda_calculus_for_BB) as [Y Y_spec]. set (RUSSELL := Y NotBB).
+  assert (PARADOX_OF_RUSSELL : RUSSELL = NotBB RUSSELL) by exact (Y_spec NotBB). now destruct RUSSELL.
+Qed.
+
+End UNTYPED_LAMBDA_CALCULUS_FOR_BB_implies_PARADOX_OF_RUSSELL.
+
+Section PROPOSITIONAL_EXTENSIONALITY_implies_PROOF_IRRELEVANCE. (* Reference: "https://coq.inria.fr/library/Coq.Logic.ClassicalFacts.html" *)
+
+Hypothesis propositional_extensionality : forall P1 : Prop, forall P2 : Prop, (P1 <-> P2) -> (P1 = P2).
+
+Let D_coerce_D_ARROW_D_for_any_inhabited_Prop_D (D : Prop)
+  (D_inhabited : inhabited D)
+  : D = (D -> D).
+Proof.
+  destruct D_inhabited as [D_holds].
+  eapply propositional_extensionality; tauto.
+Qed.
+
+Let UNTYPED_LAMBDA_CALCULUS_for_any_inhabited_Prop (D : Prop)
+  (D_inhabited : inhabited D)
+  : RETRACT (D -> D) D.
+Proof.
+  replace (D -> D) with (D); eauto.
+Qed.
+
+Theorem propositional_extensionality_implies_proof_irrelevance (P : Prop)
+  : pirrel_STMT P.
+Proof.
+  assert (BB_inhabited : inhabited BB) by now constructor; exact (FalseBB).
+  eapply TrueBB_eq_FalseBB_iff_pirrel, untyped_lambda_calculus_for_BB_implies_paradox_of_russell; eauto.
+Qed.
+
+End PROPOSITIONAL_EXTENSIONALITY_implies_PROOF_IRRELEVANCE.
+
+Lemma propositional_extensionality_implies_proof_irrelevance_variant1
+  (PROPOSITIONAL_EXTENSIONALITY : forall P1 : Prop, forall P2 : Prop, (P1 <-> P2) -> (P1 = P2))
+  : forall P : Prop, pirrel_STMT P.
+Proof. (* Thanks to Minki Cho *)
+  intros P p. assert (P_is_True : P = True) by now eapply PROPOSITIONAL_EXTENSIONALITY; tauto.
+  revert p. subst P. now intros [] [].
+Qed.
+
+Section GIRARD'S_PARADOX. (* Reference: "https://leanprover.zulipchat.com/#narrow/stream/270676-lean4/topic/Bug.20in.20kernel.20level.20normalization/near/306169266" *)
+
+Universe u.
+
+#[local] Notation star := Type@{u}.
+
+Theorem GIRARD'S_PARADOX
+  (PI : (star -> star) -> star)
+  (LAM : forall A : star -> star, (forall x, A x) -> PI A)
+  (APP : forall A : star -> star, PI A -> (forall x, A x))
+  (BETA: forall A : star -> star, forall f, forall x, APP A (LAM A f) x = f x)
+  : forall X : Prop, X.
+Proof.
+  set (F X := (ensemble (ensemble X) -> X) -> ensemble (ensemble X)).
+  set (U := PI F).
+  refine (let G (T : ensemble (ensemble U)) (X : Type) : F X := fun f => fun p => T (fun x => p (f (APP F x X f))) in _).
+  refine (let tau (T : ensemble (ensemble U)) : U := LAM F (G T) in _).
+  refine (let sigma (S : U) : ensemble (ensemble U) := APP F S U tau in _).
+  assert (sigma_tau : forall s, forall S, sigma (tau S) s <-> S (fun x => s (tau (sigma x)))).
+  { intros s S. enough (WTS : sigma (tau S) s = S (fun x => s (tau (sigma x)))) by now rewrite WTS.
+    specialize BETA with (f := G S) (x := U). apply f_equal with (f := fun phi => phi tau s) in BETA. exact BETA.
+  }
+  refine (let omega : ensemble (ensemble U) := fun p => forall x, sigma x p -> p x in _).
+  refine (let delta (S : ensemble (ensemble U)) := forall p, S p -> p (tau S) in _).
+  assert (delta_omega : delta omega).
+  { intros p d. eapply d. rewrite -> sigma_tau. intros x h. eapply d. rewrite -> sigma_tau. exact h. }
+  exact (fun X : Prop => delta_omega (fun y => delta (sigma y) -> X) (fun x => fun e => fun f => f _ e (fun p => fun h => f _ (proj1 (sigma_tau _ _) h))) (fun p => fun h => delta_omega _ (proj1 (sigma_tau _ _) h))).
+Qed.
+
+End GIRARD'S_PARADOX.
+
+End FUN_FACTS.
