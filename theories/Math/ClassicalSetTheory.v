@@ -42,7 +42,7 @@ Proof.
 Qed.
 
 Lemma toSet_wlt_extensional {t : Tree} (x : toSet t) (y : toSet t)
-  (EXT_EQ : forall z, wltProp z x <-> wltProp z y)
+  (EXT_EQ : forall z : toSet t, wltProp z x <-> wltProp z y)
   : x == y.
 Proof.
   simpl in *. eapply rEq_ext. intros z. split; intros H_rLt.
@@ -70,5 +70,11 @@ Instance toSet_isWoset (t : Tree) : isWoset (toSet t) :=
   ; Woset_eqPropCompatible2 := toSet_wlt_eqPropCompatible2 t
   ; Woset_ext_eq := toSet_wlt_extensional
   }.
+
+Corollary toSet_wlt_trichotomous (t : Tree)
+  : forall x : toSet t, forall y : toSet t, x == y \/ (x ≺ y \/ y ≺ x).
+Proof.
+  eapply @O.wlt_trichotomous. exact classic.
+Qed.
 
 End ClassicalWoset.

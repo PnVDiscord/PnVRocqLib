@@ -480,8 +480,8 @@ Qed.
 Module O.
 
 #[projections(primitive)]
-Record Ord : Type@{U_discourse} :=
-  { carrier :> Type@{U_small}
+Record Ord : Type :=
+  { carrier :> Type
   ; carrier_isSetoid : isSetoid carrier
   ; carrier_isWoset : isWoset carrier
   }.

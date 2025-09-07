@@ -36,7 +36,7 @@ Parameter _suc : Ord -> Ord.
 
 Parameter _sup : forall A : Type@{Set_u}, (A -> Ord) -> Ord.
 
-Parameter _transfinite_rec : forall D : Type@{U_discourse}, (D -> D) -> (forall A : Type@{Set_u}, (A -> D) -> D) -> Ord -> D.
+Parameter _transfinite_rec : forall D : Type@{Set_V}, (D -> D) -> (forall A : Type@{Set_u}, (A -> D) -> D) -> Ord -> D.
 
 Parameter _Ord_add : Ord -> Ord -> Ord.
 
@@ -96,7 +96,7 @@ Definition t : Type@{Set_V} :=
 
 Section TRANSFINITE.
 
-Context {D : Type@{U_discourse}}.
+Context {D : Type@{Set_V}}.
 
 Section FIRST.
 
@@ -173,7 +173,7 @@ Instance Ord_isWellPoset : isWellPoset Ord :=
   ; wltProp_well_founded := rLt_wf 
   }.
 
-Definition _transfinite_rec : forall D : Type@{U_discourse}, (D -> D) -> (forall A : Type@{Set_u}, (A -> D) -> D) -> Ord -> D :=
+Definition _transfinite_rec : forall D : Type@{Set_V}, (D -> D) -> (forall A : Type@{Set_u}, (A -> D) -> D) -> Ord -> D :=
   @Ord.transfinite_rec.
 
 Definition _Ord_add : Ord -> Ord -> Ord :=
