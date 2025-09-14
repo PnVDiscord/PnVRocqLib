@@ -677,60 +677,60 @@ Instance option_injective : hasBijection A B :=
   { _rarr x := option_injective_aux _ x _ _ eq_refl eq_refl
   ; _larr y := option_injective_aux _ y _ _ eq_refl eq_refl
   }.
-Next Obligation.
-  gen (eq_refl (_larr (Some y))) as ea. gen (eq_refl (_larr None)) as eb.
-  generalize (_larr (Some y)) at -1 as oa. generalize (_larr None) at -1 as ob.
-  intros. destruct oa, ob; subst; cbn.
-  - gen (eq_refl (_rarr (Some a))) as ec. gen (eq_refl (_rarr None)) as ed.
-    generalize (_rarr (Some a)) at -1 as oc. generalize (_rarr None) at -1 as od.
-    intros. destruct oc, od; subst; cbn.
-    + rewrite <- ea in ec. erewrite _rarr_larr in ec. inversion ec; auto.
-    + rewrite <- ea in ec. erewrite _rarr_larr in ec. inversion ec; auto.
-    + rewrite <- ea in ec. erewrite _rarr_larr in ec. congruence.
-    + exfalso. rewrite <- ea in ec. erewrite _rarr_larr in ec. congruence.
-  - gen (eq_refl (_rarr (Some a))) as ec. gen (eq_refl (_rarr None)) as ed.
-    generalize (_rarr (Some a)) at -1 as oc. generalize (_rarr None) at -1 as od.
+Next Obligation with congruence || eauto.
+  gen (eq_refl (_larr (Some y))) as ea; gen (eq_refl (_larr None)) as eb.
+  generalize (_larr (Some y)) at -1 as oa; generalize (_larr None) at -1 as ob.
+  intros; destruct oa, ob; subst; cbn.
+  - gen (eq_refl (_rarr (Some a))) as ec; gen (eq_refl (_rarr None)) as ed.
+    generalize (_rarr (Some a)) at -1 as oc; generalize (_rarr None) at -1 as od.
     intros; destruct oc, od; subst; cbn.
-    + rewrite <- ea in ec. erewrite _rarr_larr in ec. inversion ec; auto.
-    + rewrite <- ea in ec. erewrite _rarr_larr in ec. inversion ec; auto.
-    + rewrite <- ea in ec. erewrite _rarr_larr in ec. inversion ec; auto.
-    + exfalso. rewrite <- ea in ec. erewrite _rarr_larr in ec. congruence.
-  - gen (eq_refl (_rarr (Some a))) as ec. gen (eq_refl (_rarr None)) as ed.
-    generalize (_rarr (Some a)) at -1 as oc. generalize (_rarr None) at -1 as od.
-    intros. destruct oc, od; subst; cbn.
-    + rewrite <- eb in ec. rewrite _rarr_larr in ec. congruence.
-    + rewrite <- eb in ec. rewrite _rarr_larr in ec. congruence.
-    + rewrite <- ea in ed. rewrite _rarr_larr in ed. congruence.
-    + exfalso. rewrite <- ea in ed. erewrite _rarr_larr in ed. congruence.
-  - exfalso. rewrite <-  eb in ea. apply f_equal with (f := _rarr) in ea.
+    + rewrite <- ea in ec; rewrite _rarr_larr in ec...
+    + rewrite <- ea in ec; rewrite _rarr_larr in ec...
+    + rewrite <- ea in ec; rewrite _rarr_larr in ec...
+    + exfalso. rewrite <- ea in ec; rewrite _rarr_larr in ec...
+  - gen (eq_refl (_rarr (Some a))) as ec; gen (eq_refl (_rarr None)) as ed.
+    generalize (_rarr (Some a)) at -1 as oc; generalize (_rarr None) at -1 as od.
+    intros; destruct oc, od; subst; cbn.
+    + rewrite <- ea in ec; rewrite _rarr_larr in ec...
+    + rewrite <- ea in ec; rewrite _rarr_larr in ec...
+    + rewrite <- ea in ec; rewrite _rarr_larr in ec...
+    + exfalso. rewrite <- ea in ec; rewrite _rarr_larr in ec...
+  - gen (eq_refl (_rarr (Some a))) as ec; gen (eq_refl (_rarr None)) as ed.
+    generalize (_rarr (Some a)) at -1 as oc; generalize (_rarr None) at -1 as od.
+    intros; destruct oc, od; subst; cbn.
+    + rewrite <- eb in ec; rewrite _rarr_larr in ec...
+    + rewrite <- eb in ec; rewrite _rarr_larr in ec...
+    + rewrite <- ea in ed; rewrite _rarr_larr in ed...
+    + exfalso. rewrite <- ea in ed; rewrite _rarr_larr in ed...
+  - exfalso. rewrite <- eb in ea. apply f_equal with (f := _rarr) in ea.
     now do 2 rewrite _rarr_larr in ea.
 Qed.
-Next Obligation.
-  gen (eq_refl (_rarr (Some x))) as ea. gen (eq_refl (_rarr None)) as eb.
-  generalize (_rarr (Some x)) at -1 as oa. generalize  (_rarr None) at -1 as ob.
-  intros. destruct oa, ob; subst; cbn.
-  - gen (eq_refl (_larr (Some b))) as ec. gen (eq_refl (_larr None)) as ed.
-    generalize (_larr (Some b)) at -1 as oc. generalize (_larr None) at -1 as od.
+Next Obligation with congruence || eauto.
+  gen (eq_refl (_rarr (Some x))) as ea; gen (eq_refl (_rarr None)) as eb.
+  generalize (_rarr (Some x)) at -1 as oa; generalize  (_rarr None) at -1 as ob.
+  intros; destruct oa, ob; subst; cbn.
+  - gen (eq_refl (_larr (Some b))) as ec; gen (eq_refl (_larr None)) as ed.
+    generalize (_larr (Some b)) at -1 as oc; generalize (_larr None) at -1 as od.
     intros. destruct oc, od; subst; cbn.
-    + rewrite <- ea in ec. erewrite _larr_rarr in ec. inversion ec; auto.
-    + rewrite <- ea in ec. erewrite _larr_rarr in ec. inversion ec; auto.
-    + rewrite <- ea in ec. erewrite _larr_rarr in ec. inversion ec; auto.
-    + exfalso. rewrite <- ea in ec. erewrite _larr_rarr in ec. congruence.
-  - gen (eq_refl (_larr (Some b))) as ec. gen (eq_refl (_larr None)) as ed.
-    generalize (_larr (Some b)) at -1 as oc. generalize (_larr None) at -1 as od.
+    + rewrite <- ea in ec; rewrite _larr_rarr in ec...
+    + rewrite <- ea in ec; rewrite _larr_rarr in ec...
+    + rewrite <- ea in ec; rewrite _larr_rarr in ec...
+    + exfalso. rewrite <- ea in ec; rewrite _larr_rarr in ec...
+  - gen (eq_refl (_larr (Some b))) as ec; gen (eq_refl (_larr None)) as ed.
+    generalize (_larr (Some b)) at -1 as oc; generalize (_larr None) at -1 as od.
     intros. destruct oc, od; subst; cbn.
-    + rewrite <- ea in ec. erewrite _larr_rarr in ec. inversion ec; auto.
-    + rewrite <- ea in ec. erewrite _larr_rarr in ec. inversion ec; auto.
-    + rewrite <- ea in ec. erewrite _larr_rarr in ec. inversion ec; auto.
-    + exfalso. rewrite <- ea in ec. erewrite _larr_rarr in ec. congruence.
-  - gen (eq_refl (_larr (Some b))) as ec. gen (eq_refl (_larr None)) as ed.
-    generalize (_larr (Some b)) at -1 as oc. generalize (_larr None) at -1 as od.
-    intros. destruct oc, od; subst; cbn.
-    + rewrite <- eb in ec. rewrite _larr_rarr in ec. congruence.
-    + rewrite <- eb in ec. rewrite _larr_rarr in ec. congruence.
-    + rewrite <- ea in ed. rewrite _larr_rarr in ed. congruence.
-    + exfalso. rewrite <- ea in ed. erewrite _larr_rarr in ed. congruence.
-  - exfalso. rewrite <-  eb in ea. apply f_equal with (f := _larr) in ea.
+    + rewrite <- ea in ec; rewrite _larr_rarr in ec...
+    + rewrite <- ea in ec; rewrite _larr_rarr in ec...
+    + rewrite <- ea in ec; rewrite _larr_rarr in ec...
+    + exfalso. rewrite <- ea in ec; rewrite _larr_rarr in ec...
+  - gen (eq_refl (_larr (Some b))) as ec; gen (eq_refl (_larr None)) as ed.
+    generalize (_larr (Some b)) at -1 as oc; generalize (_larr None) at -1 as od.
+    intros; destruct oc, od; subst; cbn.
+    + rewrite <- eb in ec. rewrite _larr_rarr in ec...
+    + rewrite <- eb in ec. rewrite _larr_rarr in ec...
+    + rewrite <- ea in ed. rewrite _larr_rarr in ed...
+    + exfalso. rewrite <- ea in ed; rewrite _larr_rarr in ed...
+  - exfalso. rewrite <- eb in ea. apply f_equal with (f := _larr) in ea.
     now do 2 rewrite _larr_rarr in ea.
 Qed.
 
