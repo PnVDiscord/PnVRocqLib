@@ -25,6 +25,9 @@ Require Export Coq.Setoids.Setoid.
 Tactic Notation "rewrite!" :=
   autorewrite with simplication_hints in *.
 
+Tactic Notation "gen" uconstr( t ) "as" ident( X ) :=
+  eset (X := t); clearbody X; revert X.
+
 Universe U_cosmos.
 
 Class isGood (A : Type@{U_cosmos}) : Type@{U_cosmos} :=
