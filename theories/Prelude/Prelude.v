@@ -864,6 +864,31 @@ Tactic Notation "ss!" :=
 Tactic Notation "done!" :=
   now ii; first [congruence | lia | repeat ss!; done].
 
+Module Tac.
+
+Ltac lightening_hook :=
+  contradiction || done!.
+
+Ltac lightening :=
+  ii;
+  first
+  [ lazymatch goal with
+    | [ |- context [@False_rect _ ?FF] ] => exfalso; contradiction FF
+    | [ |- context [@False_rec _ ?FF] ] => exfalso; contradiction FF
+    | [ |- context [@False_ind _ ?FF] ] => exfalso; contradiction FF
+    | [ H : context [@False_rect _ ?FF] |- _ ] => exfalso; contradiction FF
+    | [ H : context [@False_rec _ ?FF] |- _ ] => exfalso; contradiction FF
+    | [ H : context [@False_ind _ ?FF] |- _ ] => exfalso; contradiction FF
+    end
+  | exfalso; tauto congruence
+  | exfalso; lightening_hook
+  ].
+
+Ltac done :=
+  done!.
+
+End Tac.
+
 Section OPERATION_PROPS.
 
 Context {A : Type} `{SETOID : isSetoid A}.
