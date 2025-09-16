@@ -693,6 +693,16 @@ Definition option_injective_aux (x : A) (o1 : option B) (o2 : option B) : _rarr 
 
 End option_injective_aux.
 
+#[local]
+Tactic Notation "safedestruct2" uconstr( X ) uconstr( Y ) :=
+  let ea := fresh "ea" in
+  let eb := fresh "eb" in
+  gen (eq_refl X) as ea; gen (eq_refl Y) as eb;
+  let oa := fresh "oa" in
+  let ob := fresh "ob" in
+  generalize X at -1 as oa; generalize Y at -1 as ob;
+  intros; destruct oa, ob; subst; cbn.
+
 Context {A : Type} {B : Type} (option_A_eq_option_B : hasBijection (option A) (option B)).
 
 #[local]
@@ -707,10 +717,10 @@ Instance option_injective : hasBijection A B :=
   ; _larr y := option_injective_aux _ y _ _ eq_refl eq_refl
   }.
 Next Obligation.
-  eqreflgeneralise2 (_larr (Some y)) (_larr None); first [eqreflgeneralise2 (_rarr (Some a)) (_rarr None); Tac.lightening_hook | Tac.lightening].
+  safedestruct2 (_larr (Some y)) (_larr None); first [safedestruct2 (_rarr (Some a)) (_rarr None); Tac.lightening_hook | Tac.lightening].
 Qed.
-Next Obligation with Tac.lightening_hook.
-  eqreflgeneralise2 (_rarr (Some x)) (_rarr None); first [eqreflgeneralise2 (_larr (Some b)) (_larr None); Tac.lightening_hook | Tac.lightening].
+Next Obligation.
+  safedestruct2 (_rarr (Some x)) (_rarr None); first [safedestruct2 (_larr (Some b)) (_larr None); Tac.lightening_hook | Tac.lightening].
 Qed.
 
 End option_injective.
