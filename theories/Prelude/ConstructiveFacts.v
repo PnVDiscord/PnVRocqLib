@@ -646,7 +646,7 @@ Instance hasBijection_refl {A : Type} : hasBijection A A :=
   { _rarr x := x
   ; _larr x := x
   ; _rarr_larr x := eq_refl
-  ; _larr_rarr y := eq_refl
+  ; _larr_rarr x := eq_refl
   }.
 
 #[local]
