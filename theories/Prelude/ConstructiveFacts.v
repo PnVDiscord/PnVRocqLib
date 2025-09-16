@@ -696,16 +696,6 @@ End option_injective_aux.
 Context {A : Type} {B : Type} (option_A_eq_option_B : hasBijection (option A) (option B)).
 
 #[local]
-Tactic Notation "autogeneralise" uconstr( X ) uconstr( Y ) :=
-  let ea := fresh "ea" in
-  let eb := fresh "eb" in
-  gen (eq_refl X) as ea; gen (eq_refl Y) as eb;
-  let oa := fresh "oa" in
-  let ob := fresh "ob" in
-  generalize X at -1 as oa; generalize Y at -1 as ob;
-  intros; destruct oa, ob; subst; cbn.
-
-#[local]
 Ltac Tac.lightening_hook ::=
   match goal with
   | [ H1 : _ = ?X, H2 : context [?X] |- _ ] => rewrite <- H1 in H2; done!
@@ -716,19 +706,11 @@ Instance option_injective : hasBijection A B :=
   { _rarr x := option_injective_aux _ x _ _ eq_refl eq_refl
   ; _larr y := option_injective_aux _ y _ _ eq_refl eq_refl
   }.
-Next Obligation with Tac.lightening_hook.
-  autogeneralise (_larr (Some y)) (_larr None).
-  - autogeneralise (_rarr (Some a)) (_rarr None)...
-  - autogeneralise (_rarr (Some a)) (_rarr None)...
-  - autogeneralise (_rarr (Some a)) (_rarr None)...
-  - Tac.lightening.
+Next Obligation.
+  eqreflgeneralise2 (_larr (Some y)) (_larr None); first [eqreflgeneralise2 (_rarr (Some a)) (_rarr None); Tac.lightening_hook | Tac.lightening].
 Qed.
 Next Obligation with Tac.lightening_hook.
-  autogeneralise (_rarr (Some x)) (_rarr None).
-  - autogeneralise (_larr (Some b)) (_larr None)...
-  - autogeneralise (_larr (Some b)) (_larr None)...
-  - autogeneralise (_larr (Some b)) (_larr None)...
-  - Tac.lightening.
+  eqreflgeneralise2 (_rarr (Some x)) (_rarr None); first [eqreflgeneralise2 (_larr (Some b)) (_larr None); Tac.lightening_hook | Tac.lightening].
 Qed.
 
 End option_injective.

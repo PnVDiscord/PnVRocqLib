@@ -850,6 +850,8 @@ Qed.
 
 #[global] Hint Rewrite unfold_ensemble_eqProp : simplication_hints.
 
+(** Section Tactics. *)
+
 Tactic Notation "s!" :=
   repeat (
     autorewrite with simplication_hints in *;
@@ -863,6 +865,24 @@ Tactic Notation "ss!" :=
 
 Tactic Notation "done!" :=
   now ii; first [congruence | lia | repeat ss!; done].
+
+#[global]
+Tactic Notation "eqreflgeneralise1" uconstr( X ) uconstr( Y ) :=
+  let ea := fresh "ea" in
+  gen (eq_refl X) as ea;
+  let oa := fresh "oa" in
+  generalize X at -1 as oa;
+  intros; destruct oa; subst; cbn.
+
+#[global]
+Tactic Notation "eqreflgeneralise2" uconstr( X ) uconstr( Y ) :=
+  let ea := fresh "ea" in
+  let eb := fresh "eb" in
+  gen (eq_refl X) as ea; gen (eq_refl Y) as eb;
+  let oa := fresh "oa" in
+  let ob := fresh "ob" in
+  generalize X at -1 as oa; generalize Y at -1 as ob;
+  intros; destruct oa, ob; subst; cbn.
 
 Module Tac.
 
@@ -888,6 +908,8 @@ Ltac done :=
   done!.
 
 End Tac.
+
+(** End Tactics. *)
 
 Section OPERATION_PROPS.
 
