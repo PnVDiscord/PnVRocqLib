@@ -696,7 +696,7 @@ Definition option_injective_aux (x : A) (o1 : option B) (o2 : option B) : _rarr 
   | None, Some y2 => fun _ => fun _ => y2
   | None, None => fun EQ1 : _rarr (Some x) = None => fun EQ2 : _rarr None = None =>
     let EQ3 : _rarr (Some x) = _rarr None := eq_transitivity _ _ _ EQ1 (eq_symmetry _ _ EQ2) in
-    False_rect B (option_injective_aux_lemma x EQ3)
+    @False_rect B (option_injective_aux_lemma x EQ3)
   end.
 
 End option_injective_aux.
