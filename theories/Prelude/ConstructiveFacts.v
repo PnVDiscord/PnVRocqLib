@@ -637,7 +637,7 @@ Class hasBijection (A : Type) (B : Type) : Type :=
 #[global] Hint Rewrite @_rarr_larr : simplication_hints.
 #[global] Hint Rewrite @_larr_rarr : simplication_hints.
 
-Section option_injective. (* Reference: https://proofassistants.stackexchange.com/a/5248/3232 *)
+Section hasBijection_instances.
 
 #[local] Obligation Tactic := intros; simpl.
 
@@ -669,6 +669,14 @@ Next Obligation.
   ss!.
 Qed.
 
+End hasBijection_instances.
+
+Section option_injective. (* Reference: https://proofassistants.stackexchange.com/a/5248/3232 *)
+
+#[local] Obligation Tactic := intros; simpl.
+
+#[local] Existing Instance hasBijection_sym.
+
 Section option_injective_aux.
 
 Context {A : Type} {B : Type} (option_A_eq_option_B : hasBijection (option A) (option B)).
@@ -695,21 +703,19 @@ End option_injective_aux.
 
 #[local]
 Tactic Notation "safedestruct2" uconstr( X ) uconstr( Y ) :=
-  let ea := fresh "ea" in
-  let eb := fresh "eb" in
+  let ea := fresh "ea" in let eb := fresh "eb" in
   gen (eq_refl X) as ea; gen (eq_refl Y) as eb;
-  let oa := fresh "oa" in
-  let ob := fresh "ob" in
+  let oa := fresh "oa" in let ob := fresh "ob" in
   generalize X at -1 as oa; generalize Y at -1 as ob;
   intros; destruct oa, ob; subst; cbn.
-
-Context {A : Type} {B : Type} (option_A_eq_option_B : hasBijection (option A) (option B)).
 
 #[local]
 Ltac Tac.lightening_hook ::=
   match goal with
   | [ H1 : _ = ?X, H2 : context [?X] |- _ ] => rewrite <- H1 in H2; done!
   end.
+
+Context {A : Type} {B : Type} (option_A_eq_option_B : hasBijection (option A) (option B)).
 
 #[local, program]
 Instance option_injective : hasBijection A B :=
