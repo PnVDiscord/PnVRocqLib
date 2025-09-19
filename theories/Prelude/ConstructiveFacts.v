@@ -626,60 +626,15 @@ Qed.
 
 End GIRARD'S_PARADOX.
 
-#[universes(template), projections(primitive)]
-Class hasBijection (A : Type) (B : Type) : Type :=
-  { _rarr (x : A) : B
-  ; _larr (y : B) : A
-  ; _rarr_larr y : _rarr (_larr y) = y
-  ; _larr_rarr x : _larr (_rarr x) = x
-  }.
-
-#[global] Hint Rewrite @_rarr_larr : simplication_hints.
-#[global] Hint Rewrite @_larr_rarr : simplication_hints.
-
-Section hasBijection_instances.
-
-#[local] Obligation Tactic := intros; simpl.
-
-#[local]
-Instance hasBijection_refl {A : Type} : hasBijection A A :=
-  { _rarr x := x
-  ; _larr x := x
-  ; _rarr_larr x := eq_refl
-  ; _larr_rarr x := eq_refl
-  }.
-
-#[local]
-Instance hasBijection_sym {A : Type} {B : Type} (A_eq_B : hasBijection A B) : hasBijection B A :=
-  { _rarr y := _larr y
-  ; _larr x := _rarr x
-  ; _rarr_larr x := _larr_rarr x
-  ; _larr_rarr y := _rarr_larr y
-  }.
-
-#[local, program]
-Instance hasBijection_trans {A : Type} {B : Type} {C : Type} (A_eq_B : hasBijection A B) (B_eq_C : hasBijection B C) : hasBijection A C :=
-  { _rarr x := _rarr (_rarr x)
-  ; _larr z := _larr (_larr z)
-  }.
-Next Obligation.
-  ss!.
-Qed.
-Next Obligation.
-  ss!.
-Qed.
-
-End hasBijection_instances.
-
 Section option_injective. (* Reference: https://proofassistants.stackexchange.com/a/5248/3232 *)
 
 #[local] Obligation Tactic := intros; simpl.
 
-#[local] Existing Instance hasBijection_sym.
+#[local] Existing Instance Equipotent_Symmetric.
 
 Section option_injective_aux.
 
-Context {A : Type} {B : Type} (option_A_eq_option_B : hasBijection (option A) (option B)).
+Context {A : Type} {B : Type} (option_A_eq_option_B : Equipotent (option A) (option B)).
 
 Lemma option_injective_aux_lemma (x : A)
   (EQ : _rarr (Some x) = _rarr None)
@@ -704,7 +659,7 @@ End option_injective_aux.
 #[local]
 Tactic Notation "safedestruct2" uconstr( X ) uconstr( Y ) :=
   let ea := fresh "ea" in let eb := fresh "eb" in
-  gen (eq_refl X) as ea; gen (eq_refl Y) as eb;
+  gen (@eq_refl _ X) as ea; gen (@eq_refl _ Y) as eb;
   let oa := fresh "oa" in let ob := fresh "ob" in
   generalize X at -1 as oa; generalize Y at -1 as ob;
   intros; destruct oa, ob; subst; cbn.
@@ -715,12 +670,12 @@ Ltac Tac.lightening_hook ::=
   | [ H1 : _ = ?X, H2 : context [?X] |- _ ] => rewrite <- H1 in H2; done!
   end.
 
-Context {A : Type} {B : Type} (option_A_eq_option_B : hasBijection (option A) (option B)).
+Context {A : Type} {B : Type} (option_A_eq_option_B : Equipotent (option A) (option B)).
 
 #[local, program]
-Instance option_injective : hasBijection A B :=
-  { _rarr x := option_injective_aux _ x _ _ eq_refl eq_refl
-  ; _larr y := option_injective_aux _ y _ _ eq_refl eq_refl
+Instance option_injective : Equipotent A B :=
+  { _rarr (x : A) := option_injective_aux option_A_eq_option_B x (_rarr (Some x)) (_rarr None) eq_refl eq_refl
+  ; _larr (y : B) := option_injective_aux (Equipotent_Symmetric option_A_eq_option_B) y (_rarr (Some y)) (_rarr None) eq_refl eq_refl
   }.
 Next Obligation.
   safedestruct2 (_larr (Some y)) (_larr None); first [safedestruct2 (_rarr (Some a)) (_rarr None); Tac.lightening_hook | Tac.lightening].

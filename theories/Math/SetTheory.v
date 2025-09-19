@@ -225,16 +225,17 @@ Record t : Type@{Set_V} :=
 #[global] Existing Instance carrier_isSetoid.
 
 Variant le (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
-  | le_intro (f : lhs.(carrier) -> rhs.(carrier))
+  | le_intro (f : forall x : lhs.(carrier), rhs.(carrier))
     (f_cong : eqPropCompatible1 f)
     (f_inj : forall x1, forall x2, f x1 == f x2 -> x1 == x2)
     : le lhs rhs.
 
 Variant eq (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
-  | eq_intro (f : lhs.(carrier) -> rhs.(carrier))
+  | eq_intro (f : forall x : lhs.(carrier), rhs.(carrier)) (g : forall y : rhs.(carrier), lhs.(carrier))
     (f_cong : eqPropCompatible1 f)
+    (g_cong : eqPropCompatible1 g)
     (f_inj : forall x1, forall x2, f x1 == f x2 -> x1 == x2)
-    (f_surj : forall y, exists x, y == f x)
+    (g_inj : forall y1, forall y2, g y1 == g y2 -> y1 == y2)
     : eq lhs rhs.
 
 Variant lt (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=

@@ -2031,3 +2031,52 @@ End QuotientTopology.
 End Quot.
 
 (** End BASIC_TOPOLOGY. *)
+
+#[universes(template), projections(primitive)]
+Class Equipotent (A : Type) (B : Type) : Type :=
+  { _rarr (x : A) : B
+  ; _larr (y : B) : A
+  ; _rarr_larr y : _rarr (_larr y) = y
+  ; _larr_rarr x : _larr (_rarr x) = x
+  }.
+
+#[global] Hint Rewrite @_rarr_larr : simplication_hints.
+#[global] Hint Rewrite @_larr_rarr : simplication_hints.
+
+Section Equipotent_instances.
+
+#[local] Obligation Tactic := intros; simpl.
+
+#[local]
+Instance Equipotent_Reflexive {A : Type} : Equipotent A A :=
+  { _rarr (x : A) := x
+  ; _larr (x : A) := x
+  ; _rarr_larr (x : A) := eq_refl
+  ; _larr_rarr (x : A) := eq_refl
+  }.
+
+#[local]
+Instance Equipotent_Symmetric {A : Type} {B : Type} (A_eq_B : Equipotent A B) : Equipotent B A :=
+  { _rarr (y : B) := _larr y
+  ; _larr (x : A) := _rarr x
+  ; _rarr_larr (x : A) := _larr_rarr x
+  ; _larr_rarr (y : B) := _rarr_larr y
+  }.
+
+#[local, program]
+Instance Equipotent_Transitive {A : Type} {B : Type} {C : Type} (A_eq_B : Equipotent A B) (B_eq_C : Equipotent B C) : Equipotent A C :=
+  { _rarr (x : A) := _rarr (_rarr x)
+  ; _larr (z : C) := _larr (_larr z)
+  }.
+Next Obligation.
+  rewrite _rarr_larr with (y := _larr y). eapply _rarr_larr.
+Defined.
+Next Obligation.
+  rewrite _larr_rarr with (x := _rarr x). eapply _larr_rarr.
+Defined.
+
+End Equipotent_instances.
+
+#[universes(template)]
+Class equipotent (A : Type) (B : Type) : Prop :=
+  equipotent_proof : inhabited (Equipotent A B).
