@@ -1,7 +1,7 @@
 Require Import PnV.Prelude.Prelude.
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Coq.Logic.EqdepFacts.
-Require Import Coq.Arith.Wf_nat.
+Require Import Stdlib.Logic.Eqdep_dec.
+Require Import Stdlib.Logic.EqdepFacts.
+Require Import Stdlib.Arith.Wf_nat.
 
 Lemma eq_pirrel_fromEqDec {A : Type} {hasEqDec : hasEqDec A} (lhs : A) (rhs : A)
   (EQ1 : lhs = rhs)

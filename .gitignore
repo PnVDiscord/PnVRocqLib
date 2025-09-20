@@ -53,5 +53,7 @@ time-of-build-both.log
 time-of-build-pretty.log
 
 # PvNRocqLib
+CoqMakefile
+CoqMakefile.conf
 Makefile
 Makefile.conf

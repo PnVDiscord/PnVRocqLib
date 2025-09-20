@@ -1059,7 +1059,7 @@ Proof.
     + inv H0.
     + inv H4.
   - inv H0.
-  - pose proof LE as COPY. destruct x; inv H0. ss!.
+  - destruct x; inv H0. apply projT2_eq in H2. subst a. ss!. exists (Some x'); ss!; done!.
   - inv H0. inv H4. inv H2. destruct H_cx; inv H1. apply projT2_eq in H0, H2. subst a y'. destruct LE, LE0; ss!.
     exists (Some x'); ss!; ss!. intros H_contra. apply projT2_eq in H_contra. inv H_contra.
     contradiction (lt_Irreflexive cz x'); ss!.
@@ -1087,7 +1087,7 @@ Lemma fromWfSet_toWoset_lt_superset {projT2_eq : forall A : Type, forall B : A -
   : mkNode A (fun i : A => fromWfSet (R i) (R_wf i)) \subseteq fromWfSet (toWoSet_lt R) (toWoSet_lt_well_founded R R_wf).
 Proof.
   unfold fromWfSet. intros z H_EQ. ss!. simpl in *. eexists (@existT _ _ x None). simpl. rewrite H. clear z H. eapply extensionality. intros z; split; intros H_EQ.
-  - ss!. simpl in *. rewrite H. erewrite <- @fromWf_toWoset_lt at 1; eauto. unfold fromWf. eapply fromAcc_member_fromAcc_intro. exists (Some x0). ss!.
+  - ss!. simpl in *. rewrite H. erewrite <- @fromWf_toWoset_lt at 1; eauto. unfold fromWf. eapply fromAcc_member_fromAcc_intro. exists (Some x0). ss!; done!.
   - unfold fromWf in H_EQ. rewrite fromAcc_unfold in H_EQ. ss!. destruct x0 as [[i y] H_y]; simpl in *. pose proof (COPY := H_y). inv COPY. ss!. inv H0. destruct x0; ss!. inv H1. apply projT2_eq in H4. subst y. exists b. simpl. rewrite H. rewrite <- @fromWf_toWoset_lt; eauto. eapply fromAcc_pirrel.
 Qed.
 

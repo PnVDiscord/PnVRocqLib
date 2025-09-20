@@ -1,26 +1,24 @@
 Require Export PnV.Prelude.SfLib.
 Require Export PnV.Prelude.Notations.
-Require Export Coq.Arith.Compare_dec.
-Require Export Coq.Arith.PeanoNat.
-Require Export Coq.Arith.Wf_nat.
-Require Export Coq.Bool.Bool.
-Require Export Coq.Classes.RelationClasses.
-Require Import Coq.Strings.String.
-Require Export Coq.Lists.List.
-Require Export Coq.micromega.Lia.
-Require Export Coq.Program.Basics.
-Require Export Coq.Program.Utils.
-Require Export Coq.Relations.Relation_Definitions.
-Require Export Coq.Relations.Relation_Operators.
-Require Export Coq.Setoids.Setoid.
+Require Export Stdlib.Arith.Compare_dec.
+Require Export Stdlib.Arith.PeanoNat.
+Require Export Stdlib.Arith.Wf_nat.
+Require Export Stdlib.Bool.Bool.
+Require Export Stdlib.Classes.RelationClasses.
+Require Import Stdlib.Strings.String.
+Require Export Stdlib.Lists.List.
+Require Export Stdlib.micromega.Lia.
+Require Export Stdlib.Program.Basics.
+Require Export Stdlib.Program.Utils.
+Require Export Stdlib.Relations.Relation_Definitions.
+Require Export Stdlib.Relations.Relation_Operators.
+Require Export Stdlib.Setoids.Setoid.
 
 #[local] Obligation Tactic := idtac.
 
 #[global] Create HintDb simplication_hints.
 
 #[global] Hint Rewrite forallb_app orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq not_true_iff_false not_false_iff_true : simplication_hints.
-
-#[global] Unset Automatic Proposition Inductives.
 
 Tactic Notation "rewrite!" :=
   autorewrite with simplication_hints in *.
@@ -330,7 +328,6 @@ Proof.
   firstorder.
 Qed.
 
-#[universes(template)]
 Class isSetoid1 (F : Type -> Type) : Type :=
   liftSetoid1 (X : Type) `(SETOID : isSetoid X) : isSetoid (F X).
 
@@ -1296,7 +1293,6 @@ Infix "$" := B.dollar.
 Infix ">>=" := bind.
 Infix ">=>" := B.kcompose : program_scope.
 
-#[universes(template)]
 Class hasEqDec (A : Type) : Type :=
   eq_dec (x : A) (y : A) : {x = y} + {x <> y}.
 
@@ -1369,7 +1365,6 @@ Proof.
   ).
 Defined.
 
-#[universes(template)]
 Class Similarity (A : Type) (B : Type) : Type :=
   is_similar_to (x : A) (y : B) : Prop.
 
@@ -1485,7 +1480,7 @@ Instance Empty_set_isCountable : isCountable Empty_set :=
 
 Module L.
 
-Include Coq.Lists.List.
+Include Stdlib.Lists.List.
 
 Definition null {A : Type} (l : list A) : bool :=
   match l with
@@ -2077,6 +2072,5 @@ Defined.
 
 End Equipotent_instances.
 
-#[universes(template)]
 Class equipotent (A : Type) (B : Type) : Prop :=
   equipotent_proof : inhabited (Equipotent A B).

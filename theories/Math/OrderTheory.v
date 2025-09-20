@@ -44,7 +44,6 @@ Instance mkProsetFrom_ltProp_isPoset {A : Type} {ltProp : A -> A -> Prop} (ltPro
   ; Poset_eqProp_spec x y := conj (fun H : x = y => H) (fun H : x = y => H)
   }.
 
-#[universes(template)]
 Class has_ltProp (A : Type) : Type :=
   ltProp (lhs : A) (rhs : A) : Prop.
 
@@ -726,7 +725,6 @@ Import ListNotations.
 
 Notation "`[ A -> B ]" := { f : A -> B | isMonotonic1 f }.
 
-#[universes(template)]
 Class isCola (D : Type) {PROSET : isProset D} : Type :=
   supremum_cola (X : ensemble D) : { sup_X : D | is_supremum_of sup_X X }.
 

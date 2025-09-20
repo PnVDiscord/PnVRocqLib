@@ -11,7 +11,7 @@
 
 (** Symbols starting with [sflib__] are internal. *)
 
-Require Import Bool List Arith ZArith String Program.
+From Stdlib Require Import Bool List Arith ZArith String Program.
 (* Require Export paconotation newtac. *)
 
 (* "Modified by Kijeong Lim" *)

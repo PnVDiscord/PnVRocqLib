@@ -1,10 +1,10 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Math.ThN.
-Require Import Coq.Strings.String.
-Require Import Coq.Arith.Wf_nat.
-Require Import Coq.Arith.PeanoNat.
-Require Import Coq.Init.Byte.
+Require Import Stdlib.Strings.String.
+Require Import Stdlib.Arith.Wf_nat.
+Require Import Stdlib.Arith.PeanoNat.
+Require Import Stdlib.Init.Byte.
 
 Inductive name : Set :=
   | mk_name (seed : nat) : name.
