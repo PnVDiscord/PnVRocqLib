@@ -24,14 +24,14 @@ Class signature (L : language) : Set :=
 
 End StlcLang.
 
+#[global] Bind Scope typ_scope with StlcLang.typ.
+#[global] Notation "D -> C" := (@StlcLang.arr _ D C) : typ_scope.
+
 Module ChurchStyleStlc.
 
 Include StlcLang.
 
 #[local] Open Scope name_scope.
-
-#[global] Bind Scope typ_scope with typ.
-#[global] Notation "D -> C" := (@arr _ D C) : typ_scope.
 
 #[global]
 Instance typ_hasEqDec (L : language)
