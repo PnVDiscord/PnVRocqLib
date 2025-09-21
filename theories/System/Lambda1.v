@@ -7,7 +7,7 @@ Require Import PnV.Data.Vector.
 Declare Scope typ_scope.
 Delimit Scope typ_scope with typ.
 
-Module STLC.
+Module StlcLang.
 
 #[projections(primitive)]
 Class language : Type :=
@@ -19,11 +19,14 @@ Inductive typ (L : language) : Set :=
   | bty (B : L.(basic_types)) : typ L
   | arr (D : typ L) (C : typ L) : typ L.
 
-End STLC.
+Class signature (L : language) : Set :=
+  typ_of_constant (c : L.(constants)) : typ L.
+
+End StlcLang.
 
 Module ChurchStyleStlc.
 
-Include STLC.
+Include StlcLang.
 
 #[local] Open Scope name_scope.
 
@@ -37,9 +40,6 @@ Instance typ_hasEqDec (L : language)
 Proof.
   red in bty_hasEqDec |- *. decide equality.
 Defined.
-
-Class signature (L : language) : Set :=
-  typ_of_constant (c : L.(constants)) : typ L.
 
 Section STLC.
 
