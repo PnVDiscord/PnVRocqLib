@@ -1,40 +1,40 @@
--Q theories PnV #
-# Sort in lexicographical order
-theories/Control/Category.v #
-theories/Control/Monad.v #
-theories/Data/Aczel.v #
-theories/Data/Graph.v #
-theories/Data/ITree.v #
-theories/Data/NumRepr.v #
-theories/Data/Vector.v #
-theories/Index/Index.v #
-theories/Logic/BasicFol.v #
-theories/Logic/BasicFol2.v #
-theories/Logic/ClassicalFol.v #
-theories/Logic/ClassicalPropositionalLogic.v #
-theories/Logic/ExtraFol.v #
-theories/Logic/HilbertFol.v #
-theories/Logic/HilbertFol2.v #
-theories/Logic/MuRec.v #
-theories/Logic/PrimRec.v #
-theories/Logic/PropositionalLogic.v #
-theories/Math/BooleanAlgebra.v #
-theories/Math/ClassicalDomainTheory.v #
-theories/Math/ClassicalSetTheory.v #
-theories/Math/DomainTheory.v #
-theories/Math/OrderTheory.v #
-theories/Math/SetTheory.v #
-theories/Math/ThN.v #
-theories/Prelude/AC.v #
-theories/Prelude/ClassicalFacts.v #
-theories/Prelude/ConstructiveFacts.v #
-theories/Prelude/Notations.v #
-theories/Prelude/Prelude.v #
-theories/Prelude/Quot.v #
-theories/Prelude/SfLib.v #
-theories/System/BasicITreeTh.v #
-theories/System/FolFramework.v #
-theories/System/Lambda1.v #
-theories/System/P.v #
-theories/System/Regex.v #
-theories/System/STLC.v #
+-Q theories PnV                                 #
+#
+theories/Control/Category.v                     #  1
+theories/Control/Monad.v                        #  2
+theories/Data/Aczel.v                           #  3
+theories/Data/Graph.v                           #  4
+theories/Data/ITree.v                           #  5
+theories/Data/NumRepr.v                         #  6
+theories/Data/Vector.v                          #  7
+theories/Index/Index.v                          #  8
+theories/Logic/BasicFol.v                       #  9
+theories/Logic/BasicFol2.v                      # 10
+theories/Logic/ClassicalFol.v                   # 11
+theories/Logic/ClassicalPropositionalLogic.v    # 12
+theories/Logic/ExtraFol.v                       # 13
+theories/Logic/HilbertFol.v                     # 14
+theories/Logic/HilbertFol2.v                    # 15
+theories/Logic/MuRec.v                          # 16
+theories/Logic/PrimRec.v                        # 17
+theories/Logic/PropositionalLogic.v             # 18
+theories/Math/BooleanAlgebra.v                  # 19
+theories/Math/ClassicalDomainTheory.v           # 20
+theories/Math/ClassicalSetTheory.v              # 21
+theories/Math/DomainTheory.v                    # 22
+theories/Math/OrderTheory.v                     # 23
+theories/Math/SetTheory.v                       # 24
+theories/Math/ThN.v                             # 25
+theories/Prelude/AC.v                           # 26
+theories/Prelude/ClassicalFacts.v               # 27
+theories/Prelude/ConstructiveFacts.v            # 28
+theories/Prelude/Notations.v                    # 29
+theories/Prelude/Prelude.v                      # 30
+theories/Prelude/Quot.v                         # 31
+theories/Prelude/SfLib.v                        # 32
+theories/System/BasicITreeTh.v                  # 33
+theories/System/FolFramework.v                  # 34
+theories/System/Lambda1.v                       # 35
+theories/System/P.v                             # 36
+theories/System/Regex.v                         # 37
+theories/System/STLC.v                          # 38

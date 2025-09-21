@@ -7,12 +7,10 @@ Require Import PnV.Data.Vector.
 Declare Scope typ_scope.
 Delimit Scope typ_scope with typ.
 
-Module ChurchStyleStlc.
-
-#[local] Open Scope name_scope.
+Module STLC.
 
 #[projections(primitive)]
-Record language : Type :=
+Class language : Type :=
   { basic_types : Set
   ; constants : Set
   }.
@@ -20,6 +18,14 @@ Record language : Type :=
 Inductive typ (L : language) : Set :=
   | bty (B : L.(basic_types)) : typ L
   | arr (D : typ L) (C : typ L) : typ L.
+
+End STLC.
+
+Module ChurchStyleStlc.
+
+Include STLC.
+
+#[local] Open Scope name_scope.
 
 #[global] Bind Scope typ_scope with typ.
 #[global] Notation "D -> C" := (@arr _ D C) : typ_scope.
