@@ -102,11 +102,11 @@ Variant fol_symbols : Set :=
   | UniversalQuantifier_symbol
   | ExistentialQuantifier_symbol.
 
-Definition mk_fol : language :=
-  {|
-    basic_types := fol_basic_types;
-    constants := fol_symbols;
-  |}.
+#[global]
+Instance mk_fol : language :=
+  { basic_types := fol_basic_types
+  ; constants := fol_symbols
+  }.
 
 #[global]
 Instance fol_signature : signature mk_fol :=
@@ -128,32 +128,33 @@ Instance fol_signature : signature mk_fol :=
   | ExistentialQuantifier_symbol => (arr mk_fol (arr mk_fol (bty mk_fol (trm_bty)) (bty mk_fol (frm_bty))) (bty mk_fol (frm_bty)))
   end.
 
-#[local] Notation typ := (typ mk_fol).
-#[local] Notation ctx := (ctx mk_fol).
-
 Import ChurchStyleSTLC.
 
+#[local] Notation typ := (typ mk_fol).
+#[local] Notation ctx := (ctx mk_fol).
+#[local] Notation bty := (bty mk_fol).
+
 Example L_in_example3
-  : @Typing mk_fol fol_signature [("x"%name, @bty mk_fol trm_bty)] (App_trm (@Con_trm mk_fol ExistentialQuantifier_symbol) (App_trm (@Con_trm mk_fol Equality_symbol) (Var_trm "x"))) (@bty mk_fol frm_bty).
+  : Typing [("x"%name, bty trm_bty)] (App_trm (Con_trm ExistentialQuantifier_symbol) (App_trm (Con_trm Equality_symbol) (Var_trm "x"))) (bty frm_bty).
 Proof.
-  eapply App_typ with (ty1 := (@bty mk_fol trm_bty -> @bty mk_fol frm_bty)%typ).
+  eapply App_typ with (ty1 := (bty trm_bty -> bty frm_bty)%typ).
   - econs 4.
-  - eapply App_typ with (ty1 := (@bty mk_fol trm_bty)%typ).
+  - eapply App_typ with (ty1 := (bty trm_bty)%typ).
     + econs 4.
     + econs 1. econs 1; reflexivity.
 Defined.
 
 Example L_in_example3_unfold
-  : NbE L_in_example3 = App_trm (@Con_trm mk_fol ExistentialQuantifier_symbol) (Lam_trm "a0" (@bty mk_fol trm_bty) (App_trm (App_trm (@Con_trm mk_fol Equality_symbol) (Var_trm "x")) (Var_trm "a0"))).
+  : NbE L_in_example3 = App_trm (Con_trm ExistentialQuantifier_symbol) (Lam_trm "a0" (bty trm_bty) (App_trm (App_trm (Con_trm Equality_symbol) (Var_trm "x")) (Var_trm "a0"))).
 Proof.
   reflexivity.
 Qed.
 
 Example L_in_example4 c
-  : @Typing mk_fol fol_signature [("p"%name, (@bty mk_fol trm_bty -> @bty mk_fol frm_bty)%typ)] (App_trm (Lam_trm "x" (@bty mk_fol trm_bty) (App_trm (Var_trm "p") (Var_trm "x"))) (@Con_trm mk_fol (Constant_symbol c))) (@bty mk_fol frm_bty).
+  : Typing [("p"%name, (bty trm_bty -> bty frm_bty)%typ)] (App_trm (Lam_trm "x" (bty trm_bty) (App_trm (Var_trm "p") (Var_trm "x"))) (Con_trm (Constant_symbol c))) (@bty frm_bty).
 Proof.
-  eapply App_typ with (ty1 := (@bty mk_fol trm_bty)%typ).
-  - eapply Lam_typ. eapply App_typ with (ty1 := (@bty mk_fol trm_bty)).
+  eapply App_typ with (ty1 := (bty trm_bty)%typ).
+  - eapply Lam_typ. eapply App_typ with (ty1 := (bty trm_bty)).
     + econs 1. econs 2.
       { cbv. left. repeat econs. }
       { econs 1; reflexivity. }
@@ -162,19 +163,19 @@ Proof.
 Defined.
 
 Example L_in_example4_unfold c
-  : NbE (L_in_example4 c) = (App_trm (Var_trm "p") (@Con_trm mk_fol (Constant_symbol c))).
+  : NbE (L_in_example4 c) = (App_trm (Var_trm "p") (Con_trm (Constant_symbol c))).
 Proof.
   reflexivity.
 Qed.
 
 Example L_in_example5
-  : @Typing mk_fol fol_signature [("p"%name, ((@bty mk_fol trm_bty -> @bty mk_fol frm_bty) -> @bty mk_fol frm_bty)%typ)] (Var_trm "p") ((@bty mk_fol trm_bty -> @bty mk_fol frm_bty) -> @bty mk_fol frm_bty)%typ.
+  : @Typing mk_fol fol_signature [("p"%name, ((bty trm_bty -> bty frm_bty) -> bty frm_bty)%typ)] (Var_trm "p") ((bty trm_bty -> bty frm_bty) -> bty frm_bty)%typ.
 Proof.
   eapply Var_typ. econs 1; reflexivity.
 Defined.
 
 Example L_in_example5_unfold
-  : NbE (L_in_example5) = Lam_trm "a0" (@bty mk_fol trm_bty -> @bty mk_fol frm_bty)%typ (App_trm (Var_trm "p") (Lam_trm "a00" (@bty mk_fol trm_bty) (App_trm (Var_trm "a0") (Var_trm "a00")))).
+  : NbE (L_in_example5) = Lam_trm "a0" (bty trm_bty -> bty frm_bty)%typ (App_trm (Var_trm "p") (Lam_trm "a00" (bty trm_bty) (App_trm (Var_trm "a0") (Var_trm "a00")))).
 Proof.
   reflexivity.
 Qed.
