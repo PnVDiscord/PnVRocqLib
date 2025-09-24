@@ -607,6 +607,21 @@ Qed.
 
 End HEQ.
 
+Fixpoint vec_sim_vec {A : Type} {A' : Type} {SIM : Similarity A A'} {n : nat} {m : nat} (xs : Vector.t A n) (ys : Vector.t A' m) {struct xs} : Prop :=
+  match xs, ys with
+  | [], [] => True
+  | x :: xs, y :: ys => is_similar_to x y /\ vec_sim_vec xs ys
+  | _, _ => False
+  end.
+
+Theorem vec_heq_iff {A : Type} (n : nat) (m : nat) (xs : Vector.t A n) (ys : Vector.t A m)
+  : vec_heq n xs m ys <-> vec_sim_vec (SIM := eq) xs ys.
+Proof.
+  split.
+  - intros <-. clear m ys. induction xs as [ | n x xs IH]; simpl; ss!.
+  - revert m ys. induction xs, ys; simpl; ss!. pose proof (IHxs _ _ H0) as claim. rewrite <- claim. red in H. done!.
+Qed.
+
 Fixpoint snoc {A : Type} {n : nat} (xs : Vector.t A n) (x : A) {struct xs} : Vector.t A (S n) :=
   match xs with
   | [] => [x]
