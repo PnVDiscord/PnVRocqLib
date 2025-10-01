@@ -1285,27 +1285,27 @@ Instance trivial_retraction (P : Prop) : retracts (Prop_to_Set P) P :=
 
 Section STEP_ACC.
 
-Context {V : Type} {Label : Type} (step : V -> Label -> V -> Prop).
+Context {V : Type} {Label : Type} (step : V -> V -> Label -> Prop).
 
-#[local] Notation "v_in ⟿[  ls  ] v_out" := (step v_in ls v_out).
+#[local] Notation "v_in ⟿[  ls  ] v_out" := (step v_in v_out ls).
 
 Definition transition (v_out : V) (v_in : V) : Prop :=
-  exists ls : Label, v_in ⟿[  ls  ] v_out.
+  exists ls : Label, v_in ⟿[ ls ] v_out.
 
 Variable app : Label -> Label -> Label.
 
-Inductive steps (v_in : V) : Label -> V -> Prop :=
-  | steps_one v_out ls
+Inductive steps (v_in : V) (v_out : V) : Label -> Prop :=
+  | steps_one ls
     (STEP : v_in ⟿[ ls ] v_out)
     : v_in ⟿⁺[ ls ] v_out
-  | steps_trans v v_out ls1 ls2
+  | steps_trans v ls1 ls2
     (STEPS1 : v_in ⟿⁺[ ls1 ] v)
     (STEPS2 : v ⟿⁺[ ls2 ] v_out)
     : v_in ⟿⁺[ app ls1 ls2 ] v_out
-  where "v_in ⟿⁺[  ls  ] v_out" := (steps v_in ls v_out).
+  where "v_in ⟿⁺[  ls  ] v_out" := (steps v_in v_out ls).
 
 Definition one_or_more_transitions (v_out : V) (v_in : V) : Prop :=
-  exists ls : Label, v_in ⟿⁺[  ls  ] v_out.
+  exists ls : Label, v_in ⟿⁺[ ls ] v_out.
 
 Theorem transition_well_founded_implies_one_or_more_transitions_well_founded
   (H_wf : well_founded transition)
