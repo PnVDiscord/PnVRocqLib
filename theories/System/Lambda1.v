@@ -775,7 +775,19 @@ Inductive fullBetaOnce : trm -> trm -> Prop :=
     : fullBetaOnce (App_trm M N) (App_trm M N')
   | fullBetaOnce_lam x ty M M'
     (BETA' : fullBetaOnce M M')
-    : fullBetaOnce (Lam_trm x ty M) (Lam_trm x ty M').
+    : fullBetaOnce (Lam_trm x ty M) (Lam_trm x ty M')
+  where "M ~>β N" := (fullBetaOnce M N).
+
+Inductive fullBetaMany (N : trm) : trm -> Prop :=
+  | fullBetaMany_init
+    : N ~>β* N
+  | fullBetaMany_step M M'
+    (STEP : M ~>β M')
+    (STEPS : M' ~>β* N)
+    : M ~>β* N
+  where "M ~>β* N" := (fullBetaMany N M).
+
+#[local] Hint Constructors fullBetaMany : core.
 
 Lemma fullBetaOnce_dec (M : trm)
   : B.sig trm (fun N => fullBetaOnce M N) + B.Prop_to_Set (forall N : trm, ~ fullBetaOnce M N).

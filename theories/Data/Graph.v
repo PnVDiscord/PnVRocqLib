@@ -4,6 +4,48 @@ Require Import PnV.Control.Category.
 #[local] Notation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 
+Reserved Infix "⟿[  labels  ]" (at level 70, no associativity).
+Reserved Infix "⟿⁺[  labels  ]" (at level 70, no associativity).
+Reserved Infix "⟿*[  labels  ]" (at level 70, no associativity).
+
+Section STEP_ACC.
+
+Context {V : Type} {Label : Type} (step : V -> Label -> V -> Prop).
+
+#[local] Notation "v_in ⟿[  ls  ] v_out" := (step v_in ls v_out).
+
+Definition transition (v_out : V) (v_in : V) : Prop :=
+  exists ls : Label, v_in ⟿[  ls  ] v_out.
+
+Context {app : Label -> Label -> Label}.
+
+Inductive steps (v_in : V) : Label -> V -> Prop :=
+  | steps_one v_out ls
+    (STEP : v_in ⟿[ ls ] v_out)
+    : v_in ⟿⁺[ ls ] v_out
+  | steps_trans v v_out ls1 ls2
+    (STEPS1 : v_in ⟿⁺[ ls1 ] v)
+    (STEPS2 : v ⟿⁺[ ls2 ] v_out)
+    : v_in ⟿⁺[ app ls1 ls2 ] v_out
+  where "v_in ⟿⁺[  ls  ] v_out" := (steps v_in ls v_out).
+
+Definition one_or_more_transitions (v_out : V) (v_in : V) : Prop :=
+  exists ls : Label, v_in ⟿⁺[  ls  ] v_out.
+
+Theorem transition_well_founded_implies_one_or_more_transitions_well_founded
+  (H_wf : well_founded transition)
+  : well_founded one_or_more_transitions.
+Proof.
+  intros v_out. pose proof (H_wf v_out) as H_ACC. induction H_ACC as [v_out _ IH].
+  constructor. intros v' [ls STEPS]. revert v' ls STEPS. induction 1.
+  - eapply IH. exists ls. exact STEP.
+  - eapply IHSTEPS1.
+    + exact IH.
+    + exists ls2. exact STEPS2.
+Qed.
+
+End STEP_ACC.
+
 Module GRAPH.
 
 #[projections(primitive)]

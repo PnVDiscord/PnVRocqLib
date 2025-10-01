@@ -6,6 +6,8 @@ Require Import PnV.Data.ITree.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.
 
+Module ITREE_BISIMULATION.
+
 Section ITREE_BISIMULATION.
 
 #[local] Notation In := L.In.
@@ -402,3 +404,78 @@ Instance itree_MonadLaws : MonadLaws (itree E) :=
   }.
 
 End ITREE_BISIMULATION.
+
+End ITREE_BISIMULATION.
+
+Module EQIT.
+
+Section eqit.
+
+#[local] Notation In := L.In.
+#[local] Infix "\in" := E.In : type_scope.
+#[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
+
+#[local] Existing Instance ensemble_isUpperSemilattice.
+
+#[local] Hint Resolve bot_lattice_spec : poset_hints.
+#[local] Hint Resolve join_lattice_spec : poset_hints.
+#[local] Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive : poset_hints.
+#[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : poset_hints.
+#[local] Hint Unfold upperboundsOf : poset_hints.
+
+#[universes(polymorphic=yes)]
+Definition subseteq1@{u1 u2} {A : Type@{u1}} (REL : A -> Prop) (REL' : A -> Prop) : Prop :=
+  forall x : A, REL x -> REL' x.
+
+#[universes(polymorphic=yes)]
+Definition subseteq2@{u1 u2} {A : Type@{u1}} {B : Type@{u2}} (REL : A -> B -> Prop) (REL' : A -> B -> Prop) : Prop :=
+  forall x : A, forall y : B, REL x y -> REL' x y.
+
+#[universes(polymorphic=yes)]
+Definition subseteq3@{u1 u2 u3} {A : Type@{u1}} {B : Type@{u2}} {C : Type@{u3}} (REL : A -> B -> C -> Prop) (REL' : A -> B -> C -> Prop) : Prop :=
+  forall x : A, forall y : B, forall z, REL x y z -> REL' x y z.
+
+#[local] Hint Unfold subseteq1 subseteq2 subseteq3 : core.
+
+Context {E : Type -> Type}.
+
+Section SETOID.
+
+Context {R : Type} {SETOID : isSetoid R}.
+
+Inductive eqitF {blhs : bool} {brhs : bool} {vclo : (itree E R -> itree E R -> Prop) -> itree E R -> itree E R -> Prop} {sim : itree E R -> itree E R -> Prop} : forall lhs : itreeF (itree E R) E R, forall rhs : itreeF (itree E R) E R, Prop :=
+  | EqRetF (r1 : R) (r2 : R)
+    (REL : r1 == r2)
+    : eqitF (RetF r1) (RetF r2)
+  | EqTauF (t1 : itree E R) (t2 : itree E R)
+    (REL : sim t1 t2)
+    : eqitF (TauF t1) (TauF t2)
+  | EqVisF (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R)
+    (REL : forall x : X, vclo sim (k1 x) (k2 x))
+    : eqitF (VisF X e k1) (VisF X e k2)
+  | EqTauLhsF (t1 : itree E R) (ot2 : itreeF (itree E R) E R)
+    (blhs_is_true : blhs = true)
+    (REL : @eqitF blhs brhs vclo sim (observe t1) ot2)
+    : eqitF (TauF t1) ot2
+  | EqTauRhsF (ot1 : itreeF (itree E R) E R) (t2 : itree E R)
+    (brhs_is_true : brhs = true)
+    (REL : @eqitF blhs brhs vclo sim ot1 (observe t2))
+    : eqitF ot1 (TauF t2).
+
+#[local] Hint Constructors eqitF : core.
+
+Lemma eqitF_monotonic blhs brhs lhs rhs vclo vclo' sim sim'
+  (IN : @eqitF blhs brhs vclo sim lhs rhs)
+  (Mon_vclo : forall sim, forall sim', subseteq2 sim sim' -> subseteq2 (vclo sim) (vclo sim'))
+  (LE_vclo : subseteq3 vclo vclo')
+  (LE_sim : subseteq2 sim sim')
+  : @eqitF blhs brhs vclo' sim' lhs rhs.
+Proof.
+  induction IN; simpl; eauto. econstructor; i. eapply LE_vclo; eapply Mon_vclo; eauto.
+Qed.
+
+End SETOID.
+
+End eqit.
+
+End EQIT.
