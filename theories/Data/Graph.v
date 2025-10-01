@@ -4,10 +4,6 @@ Require Import PnV.Control.Category.
 #[local] Notation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 
-Reserved Infix "⟿[  labels  ]" (at level 70, no associativity).
-Reserved Infix "⟿⁺[  labels  ]" (at level 70, no associativity).
-Reserved Infix "⟿*[  labels  ]" (at level 70, no associativity).
-
 Section STEP_ACC.
 
 Context {V : Type} {Label : Type} (step : V -> Label -> V -> Prop).
@@ -17,7 +13,7 @@ Context {V : Type} {Label : Type} (step : V -> Label -> V -> Prop).
 Definition transition (v_out : V) (v_in : V) : Prop :=
   exists ls : Label, v_in ⟿[  ls  ] v_out.
 
-Context {app : Label -> Label -> Label}.
+Context (app : Label -> Label -> Label).
 
 Inductive steps (v_in : V) : Label -> V -> Prop :=
   | steps_one v_out ls
