@@ -6,7 +6,7 @@ Require Import PnV.Data.ITree.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.
 
-Module ITREE_BISIMULATION.
+Module ItreeBisimulation.
 
 Section ITREE_BISIMULATION.
 
@@ -405,7 +405,7 @@ Instance itree_MonadLaws : MonadLaws (itree E) :=
 
 End ITREE_BISIMULATION.
 
-End ITREE_BISIMULATION.
+End ItreeBisimulation.
 
 Module EQIT.
 
@@ -439,28 +439,30 @@ Definition subseteq3@{u1 u2 u3} {A : Type@{u1}} {B : Type@{u2}} {C : Type@{u3}} 
 
 Context {E : Type -> Type}.
 
-Section SETOID.
+Section SIMILARITY.
 
-Context {R : Type} {SETOID : isSetoid R}.
+#[local] Infix "=~=" := is_similar_to.
 
-Inductive eqitF {blhs : bool} {brhs : bool} {vclo : (itree E R -> itree E R -> Prop) -> itree E R -> itree E R -> Prop} {sim : itree E R -> itree E R -> Prop} : forall lhs : itreeF (itree E R) E R, forall rhs : itreeF (itree E R) E R, Prop :=
-  | EqRetF (r1 : R) (r2 : R)
-    (REL : r1 == r2)
-    : eqitF (RetF r1) (RetF r2)
-  | EqTauF (t1 : itree E R) (t2 : itree E R)
+Context {R : Type} {R' : Type} {R_sim : Similarity R R'}.
+
+Inductive eqitF {blhs : bool} {brhs : bool} (vclo : (itree E R -> itree E R' -> Prop) -> itree E R -> itree E R' -> Prop) (sim : itree E R -> itree E R' -> Prop) : Similarity (itreeF (itree E R) E R) (itreeF (itree E R') E R') :=
+  | EqRetF (r1 : R) (r2 : R')
+    (REL : is_similar_to r1 r2)
+    : RetF r1 =~= RetF r2
+  | EqTauF (t1 : itree E R) (t2 : itree E R')
     (REL : sim t1 t2)
-    : eqitF (TauF t1) (TauF t2)
-  | EqVisF (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R)
+    : TauF t1 =~= TauF t2
+  | EqVisF (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R')
     (REL : forall x : X, vclo sim (k1 x) (k2 x))
-    : eqitF (VisF X e k1) (VisF X e k2)
-  | EqTauLhsF (t1 : itree E R) (ot2 : itreeF (itree E R) E R)
+    : VisF X e k1 =~= VisF X e k2
+  | EqTauLhsF (t1 : itree E R) (ot2 : itreeF (itree E R') E R')
     (blhs_is_true : blhs = true)
     (REL : @eqitF blhs brhs vclo sim (observe t1) ot2)
-    : eqitF (TauF t1) ot2
-  | EqTauRhsF (ot1 : itreeF (itree E R) E R) (t2 : itree E R)
+    : TauF t1 =~= ot2
+  | EqTauRhsF (ot1 : itreeF (itree E R) E R) (t2 : itree E R')
     (brhs_is_true : brhs = true)
     (REL : @eqitF blhs brhs vclo sim ot1 (observe t2))
-    : eqitF ot1 (TauF t2).
+    : ot1 =~= TauF t2.
 
 #[local] Hint Constructors eqitF : core.
 
@@ -471,10 +473,11 @@ Lemma eqitF_monotonic blhs brhs lhs rhs vclo vclo' sim sim'
   (LE_sim : subseteq2 sim sim')
   : @eqitF blhs brhs vclo' sim' lhs rhs.
 Proof.
+  change (is_similar_to (Similarity := @eqitF blhs brhs vclo' sim') lhs rhs).
   induction IN; simpl; eauto. econstructor; i. eapply LE_vclo; eapply Mon_vclo; eauto.
-Qed.
+Defined.
 
-End SETOID.
+End SIMILARITY.
 
 End eqit.
 

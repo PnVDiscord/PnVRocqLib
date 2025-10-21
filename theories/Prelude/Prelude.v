@@ -1403,7 +1403,8 @@ Proof.
   ).
 Defined.
 
-Class Similarity (A : Type) (B : Type) : Type :=
+#[universes(polymorphic=yes)]
+Class Similarity@{u v} (A : Type@{u}) (B : Type@{v}) : Type@{max(u, v, U_small)} :=
   is_similar_to (x : A) (y : B) : Prop.
 
 Section SIMILARITY.
@@ -1414,7 +1415,11 @@ Infix "=~=" := is_similar_to.
 Instance Similarity_forall {D : Type} {D' : Type} {C : D -> Type} {C' : D' -> Type} (DOM_SIM : Similarity D D') (COD_SIM : forall x : D, forall x' : D', is_similar_to (Similarity := DOM_SIM) x x' -> Similarity (C x) (C' x')) : Similarity (forall x : D, C x) (forall x' : D', C' x') :=
   fun f => fun f' => forall x : D, forall x' : D', forall x_corres : is_similar_to (Similarity := DOM_SIM) x x', is_similar_to (Similarity := COD_SIM x x' x_corres) (f x) (f' x').
 
-Inductive Similarity_sum {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : Similarity A A') (B_SIM : Similarity B B') : (A + B)%type -> (A' + B')%type -> Prop :=
+#[global]
+Instance Similarity_BsigT {A : Type} {A' : Type} {B : A -> Type} {B' : A' -> Type} (A_sim : Similarity A A') (B_sim : forall x : A, forall x' : A', is_similar_to (Similarity := A_sim) x x' -> Similarity (B x) (B' x')) : Similarity (B.sigT A B) (B.sigT A' B') :=
+  fun p => fun p' => exists projT1_corres : is_similar_to (Similarity := A_sim) (B.projT1 p) (B.projT1 p'), is_similar_to (Similarity := B_sim (B.projT1 p) (B.projT1 p') projT1_corres) (B.projT2 p) (B.projT2 p').
+
+Inductive Similarity_sum {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : Similarity A A') (B_SIM : Similarity B B') : Similarity (A + B) (A' + B') :=
   | inl_corres (x : A) (x' : A')
     (x_corres : x =~= x')
     : inl x =~= inl x'
@@ -1424,13 +1429,9 @@ Inductive Similarity_sum {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : 
 
 #[local] Hint Constructors Similarity_sum : simplication_hints.
 
-Inductive Similarity_prod {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : Similarity A A') (B_SIM : Similarity B B') : (A * B)%type -> (A' * B')%type -> Prop :=
-  | pair_corres (p : A * B) (p' : A' * B')
-    (fst_corres : fst p =~= fst p')
-    (snd_corres : snd p =~= snd p')
-    : p =~= p'.
-
-#[local] Hint Constructors Similarity_prod : simplication_hints.
+#[global]
+Instance Similarity_prod {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : Similarity A A') (B_SIM : Similarity B B') : Similarity (A * B) (A' * B') :=
+  fun p : A * B => fun p' : A' * B' => fst p =~= fst p' /\ snd p =~= snd p'.
 
 #[local] Obligation Tactic := i.
 
