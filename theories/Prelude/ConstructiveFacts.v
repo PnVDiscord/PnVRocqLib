@@ -686,4 +686,13 @@ Qed.
 
 End option_injective.
 
+Lemma existT_eq_existT_elim {A : Type} {B : A -> Type} (x1 : A) (x2 : A) (y1 : B x1) (y2 : B x2)
+  (existT_eq_existT : @existT A B x1 y1 = @existT A B x2 y2)
+  : { H : x1 = x2 | @eq_rect A x1 B y1 x2 H = y2 }.
+Proof.
+  change x2 with (projT1 (@existT A B x2 y2)).
+  change y2 with (projT2 (@existT A B x2 y2)) at 5.
+  destruct existT_eq_existT; simpl. exists eq_refl. reflexivity.
+Qed.
+
 End FUN_FACTS.

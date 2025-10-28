@@ -1404,7 +1404,7 @@ Proof.
 Defined.
 
 #[universes(polymorphic=yes)]
-Class Similarity@{u v} (A : Type@{u}) (B : Type@{v}) : Type@{max(u, v, U_small)} :=
+Class Similarity@{u1 u2} (A : Type@{u1}) (B : Type@{u2}) : Type@{max(u1, u2, Set + 1)} :=
   is_similar_to (x : A) (y : B) : Prop.
 
 Section SIMILARITY.
@@ -1429,7 +1429,7 @@ Inductive Similarity_sum {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : 
 
 #[local] Hint Constructors Similarity_sum : simplication_hints.
 
-#[global]
+#[local]
 Instance Similarity_prod {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : Similarity A A') (B_SIM : Similarity B B') : Similarity (A * B) (A' * B') :=
   fun p : A * B => fun p' : A' * B' => fst p =~= fst p' /\ snd p =~= snd p'.
 

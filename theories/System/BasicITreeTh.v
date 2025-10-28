@@ -1,10 +1,27 @@
 Require Import PnV.Prelude.Prelude.
-Require Import PnV.Prelude.ClassicalFacts.
+Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Control.Monad.
 Require Import PnV.Control.Category.
 Require Import PnV.Data.ITree.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.
+
+Lemma VisF_eq_VisF_elim {E : Type -> Type} {R : Type} (X1 : Type) (X2 : Type) (e1 : E X1) (e2 : E X2) (k1 : X1 -> itree E R) (k2 : X2 -> itree E R)
+  (VisF_eq_VisF : @VisF (itree E R) E R X1 e1 k1 = @VisF (itree E R) E R X2 e2 k2)
+  : { H : X1 = X2 | @eq_rect Type X1 (fun X => E X * (X -> itree E R))%type (e1, k1) X2 H = (e2, k2) }.
+Proof.
+  set (view := fun default : { X : Type & (E X * (X -> itree E R))%type } => fun ot : @itreeF (itree E R) E R =>
+    match ot return { X : Type & (E X * (X -> itree E R))%type } with
+    | RetF _ => default
+    | TauF _ => default
+    | VisF X e k => @existT Type (fun X : Type => (E X * (X -> itree E R)))%type X (e, k)
+    end
+  ).
+  pose proof (f_equal (view (@existT Type (fun X : Type => (E X * (X -> itree E R)))%type X1 (e1, k1))) VisF_eq_VisF) as H. simpl in H.
+  clear VisF_eq_VisF view. revert H. generalize (e1, k1) as a1. generalize (e2, k2) as a2. intros.
+  set (B := fun X : Type => (E X * (X -> itree E R))%type). change (B X1) in a1. change (B X2) in a2. change (@existT Type B X1 a1 = @existT Type B X2 a2) in H.
+  exact (FUN_FACTS.existT_eq_existT_elim X1 X2 a1 a2 H).
+Qed.
 
 Module ItreeBisimulation.
 
@@ -134,15 +151,8 @@ Proof with eauto with *.
     apply E.in_union_iff in REL1, REL2. destruct REL1 as [REL1 | REL1]; [inversion REL1 | ]. destruct REL2 as [REL2 | REL2]; [inversion REL2 | ].
     econstructor 2. left. right. exists t3...
   - rewrite <- H_t_obs in lhs_eq_t, t_eq_rhs. revert H_t_obs. destruct t_eq_rhs as [r2' r2 REL2 | t2' t2 REL | X2 e2 k2' k2 REL2]; try congruence.
-    ii. rewrite H_t_obs in lhs_eq_t. destruct lhs_eq_t as [r1 r1' REL1 | t1 t1' REL1 | X1 e1 k1 k1' REL1]; try congruence.
-    assert (X2_eq_X1 : X2 = X1).
-    { exact (@f_equal _ _ (fun ot : itreeF (itree E R) E R => match ot with VisF X e k => X | _ => X1 end) (VisF X2 e2 k2') (VisF X1 e1 k1') H_t_obs). }
-    subst X2. rename X1 into X.
-    assert (e1_eq_e2 : e1 = e2).
-    { inversion H_t_obs. eapply @ClassicalFacts.projT2_eq with (B := fun X' : Type => E X')... }
-    assert (k1_eq_k2 : k1' = k2').
-    { inversion H_t_obs. eapply @ClassicalFacts.projT2_eq with (B := fun X' : Type => X' -> itree E R)... }
-    subst e2 k2'. rename e1 into e, k1' into k.
+    ii. rewrite H_t_obs in lhs_eq_t. destruct lhs_eq_t as [r1 r1' REL1 | t1 t1' REL1 | X1 e1 k1 k1' REL1]; try congruence. 
+    apply VisF_eq_VisF_elim in H_t_obs. destruct H_t_obs as [<- H_EQ]. simpl in H_EQ. inv H_EQ. rename e1 into e, k1' into k.
     econstructor 3. intros x. specialize REL1 with (x := x). specialize REL2 with (x := x).
     apply E.in_union_iff in REL1, REL2. destruct REL1 as [REL1 | REL1]; [inversion REL1 | ]. destruct REL2 as [REL2 | REL2]; [inversion REL2 | ].
     left. right. exists (k x)...
@@ -409,7 +419,7 @@ End ItreeBisimulation.
 
 Module EQIT.
 
-Section eqit.
+Section eqit_defn.
 
 #[local] Notation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
@@ -437,48 +447,66 @@ Definition subseteq3@{u1 u2 u3} {A : Type@{u1}} {B : Type@{u2}} {C : Type@{u3}} 
 
 #[local] Hint Unfold subseteq1 subseteq2 subseteq3 : core.
 
-Context {E : Type -> Type}.
-
-Section SIMILARITY.
-
 #[local] Infix "=~=" := is_similar_to.
 
-Context {R : Type} {R' : Type} {R_sim : Similarity R R'}.
+Context {E : Type -> Type} {R : Type} {R' : Type} {R_sim : Similarity R R'}.
 
-Inductive eqitF {blhs : bool} {brhs : bool} (vclo : (itree E R -> itree E R' -> Prop) -> itree E R -> itree E R' -> Prop) (sim : itree E R -> itree E R' -> Prop) : Similarity (itreeF (itree E R) E R) (itreeF (itree E R') E R') :=
+Inductive eqitF {skip_l : bool} {skip_r : bool} (vclo : (itree E R -> itree E R' -> Prop) -> itree E R -> itree E R' -> Prop) (sim : Similarity (itree E R) (itree E R')) : Similarity (itreeF (itree E R) E R) (itreeF (itree E R') E R') :=
   | EqRetF (r1 : R) (r2 : R')
-    (REL : is_similar_to r1 r2)
+    (REL : r1 =~= r2)
     : RetF r1 =~= RetF r2
   | EqTauF (t1 : itree E R) (t2 : itree E R')
-    (REL : sim t1 t2)
+    (REL : t1 =~= t2)
     : TauF t1 =~= TauF t2
   | EqVisF (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R')
     (REL : forall x : X, vclo sim (k1 x) (k2 x))
     : VisF X e k1 =~= VisF X e k2
   | EqTauLhsF (t1 : itree E R) (ot2 : itreeF (itree E R') E R')
-    (blhs_is_true : blhs = true)
-    (REL : @eqitF blhs brhs vclo sim (observe t1) ot2)
+    (skip_l_is_true : skip_l = true)
+    (REL : @eqitF skip_l skip_r vclo sim (observe t1) ot2)
     : TauF t1 =~= ot2
   | EqTauRhsF (ot1 : itreeF (itree E R) E R) (t2 : itree E R')
-    (brhs_is_true : brhs = true)
-    (REL : @eqitF blhs brhs vclo sim ot1 (observe t2))
+    (skip_r_is_true : skip_r = true)
+    (REL : @eqitF skip_l skip_r vclo sim ot1 (observe t2))
     : ot1 =~= TauF t2.
 
+#[local] Hint Unfold is_similar_to : core.
 #[local] Hint Constructors eqitF : core.
 
-Lemma eqitF_monotonic blhs brhs lhs rhs vclo vclo' sim sim'
-  (IN : @eqitF blhs brhs vclo sim lhs rhs)
+Context (skip_l : bool) (skip_r : bool).
+
+Lemma eqitF_monotonic lhs rhs vclo vclo' sim sim'
+  (IN : @eqitF skip_l skip_r vclo sim lhs rhs)
   (Mon_vclo : forall sim, forall sim', subseteq2 sim sim' -> subseteq2 (vclo sim) (vclo sim'))
   (LE_vclo : subseteq3 vclo vclo')
   (LE_sim : subseteq2 sim sim')
-  : @eqitF blhs brhs vclo' sim' lhs rhs.
+  : @eqitF skip_l skip_r vclo' sim' lhs rhs.
 Proof.
-  change (is_similar_to (Similarity := @eqitF blhs brhs vclo' sim') lhs rhs).
+  change (is_similar_to (Similarity := @eqitF skip_l skip_r vclo' sim') lhs rhs).
   induction IN; simpl; eauto. econstructor; i. eapply LE_vclo; eapply Mon_vclo; eauto.
 Defined.
 
-End SIMILARITY.
+Definition eqitF' vclo sim : ensemble (itree E R * itree E R') :=
+  fun '(t, t') => is_similar_to (Similarity := @eqitF skip_l skip_r vclo sim) (observe t) (observe t').
 
-End eqit.
+#[local]
+Instance eqit : Similarity (itree E R) (itree E R') :=
+  curry (paco (fun REL => eqitF' id (curry REL)) E.empty).
+
+End eqit_defn.
+
+Section eqit_prop.
+
+#[local] Infix "≈ₜ" := (eqit true true).
+#[local] Infix "≳ₜ" := (eqit true false).
+#[local] Infix "≲ₜ" := (eqit false true).
+#[local] Infix "≅ₜ" := (eqit false false).
+
+End eqit_prop.
 
 End EQIT.
+
+Infix "≈ₜ" := (EQIT.eqit (R_sim := eqProp) true true).
+Infix "≳ₜ" := (EQIT.eqit (R_sim := eqProp) true false).
+Infix "≲ₜ" := (EQIT.eqit (R_sim := eqProp) false true).
+Infix "≅ₜ" := (EQIT.eqit (R_sim := eqProp) false false).
