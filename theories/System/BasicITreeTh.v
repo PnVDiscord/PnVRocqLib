@@ -1,5 +1,4 @@
 Require Import PnV.Prelude.Prelude.
-Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Control.Monad.
 Require Import PnV.Control.Category.
@@ -199,7 +198,7 @@ Lemma Ret_eq_Ret_iff (x1 : R) (x2 : R)
 Proof.
   repeat rewrite eqITree_iff_itreeBisim. split; intros H_EQ.
   - apply unfold_itreeBisim in H_EQ. now inversion H_EQ; subst.
-  - econstructor. now econstructor 1. 
+  - econstructor. now econstructor 1.
 Qed.
 
 Lemma Tau_eq_Tau_iff (t1 : itree E R) (t2 : itree E R)
@@ -207,21 +206,21 @@ Lemma Tau_eq_Tau_iff (t1 : itree E R) (t2 : itree E R)
 Proof.
   repeat rewrite eqITree_iff_itreeBisim. split; intros H_EQ.
   - apply unfold_itreeBisim in H_EQ. now inversion H_EQ.
-  - econstructor. now econstructor 2. 
+  - econstructor. now econstructor 2.
 Qed.
 
-Lemma Vis_eq_Vis_iff (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R)
+Lemma Vis_eq_Vis_iff {projT2_eq : forall B : Type -> Type, forall x : Type, forall y1 : B x, forall y2 : B x, @existT Type B x y1 = @existT Type B x y2 -> y1 = y2} (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R)
   : Vis X e k1 == Vis X e k2 <-> k1 == k2.
 Proof.
   change (eqITree (Vis X e k1) (Vis X e k2) <-> (forall x : X, eqITree (k1 x) (k2 x))). split; intros H_EQ.
   - rewrite eqITree_iff_itreeBisim in H_EQ. apply unfold_itreeBisim in H_EQ.
     inversion H_EQ as [ | | X' e' k1' k2' REL]; subst X'.
     assert (e_eq_e' : e = e').
-    { now eapply @ClassicalFacts.projT2_eq with (B := fun X' : Type => E X'). }
+    { now eapply projT2_eq with (B := fun X' : Type => E X'). }
     assert (k1_eq_k1' : k1 = k1').
-    { now eapply @ClassicalFacts.projT2_eq with (B := fun X' : Type => X' -> itree E R). }
+    { now eapply projT2_eq with (B := fun X' : Type => X' -> itree E R). }
     assert (k2_eq_k2' : k2 = k2').
-    { now eapply @ClassicalFacts.projT2_eq with (B := fun X' : Type => X' -> itree E R). }
+    { now eapply projT2_eq with (B := fun X' : Type => X' -> itree E R). }
     subst e' k1' k2'. intros x; rewrite eqITree_iff_itreeBisim; exact (REL x).
   - rewrite eqITree_iff_itreeBisim. econstructor. econstructor 3.
     intros x; rewrite <- eqITree_iff_itreeBisim; exact (H_EQ x).
