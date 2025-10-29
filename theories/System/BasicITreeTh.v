@@ -427,12 +427,6 @@ Section eqit_defn.
 
 #[local] Existing Instance ensemble_isUpperSemilattice.
 
-#[local] Hint Resolve bot_lattice_spec : poset_hints.
-#[local] Hint Resolve join_lattice_spec : poset_hints.
-#[local] Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive : poset_hints.
-#[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : poset_hints.
-#[local] Hint Unfold upperboundsOf : poset_hints.
-
 #[universes(polymorphic=yes)]
 Definition subseteq1@{u1 u2} {A : Type@{u1}} (REL : A -> Prop) (REL' : A -> Prop) : Prop :=
   forall x : A, REL x -> REL' x.
@@ -451,12 +445,12 @@ Definition subseteq3@{u1 u2 u3} {A : Type@{u1}} {B : Type@{u2}} {C : Type@{u3}} 
 
 Context {E : Type -> Type} {R : Type} {R' : Type} {R_sim : Similarity R R'}.
 
-Inductive eqitF {skip_l : bool} {skip_r : bool} (vclo : (itree E R -> itree E R' -> Prop) -> itree E R -> itree E R' -> Prop) (sim : Similarity (itree E R) (itree E R')) : Similarity (itreeF (itree E R) E R) (itreeF (itree E R') E R') :=
+Inductive eqitF {skip_l : bool} {skip_r : bool} (vclo : (itree E R -> itree E R' -> Prop) -> itree E R -> itree E R' -> Prop) (sim : itree E R -> itree E R' -> Prop) : Similarity (itreeF (itree E R) E R) (itreeF (itree E R') E R') :=
   | EqRetF (r1 : R) (r2 : R')
     (REL : r1 =~= r2)
     : RetF r1 =~= RetF r2
   | EqTauF (t1 : itree E R) (t2 : itree E R')
-    (REL : t1 =~= t2)
+    (REL : sim t1 t2)
     : TauF t1 =~= TauF t2
   | EqVisF (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R')
     (REL : forall x : X, vclo sim (k1 x) (k2 x))
@@ -493,14 +487,70 @@ Definition eqitF' (vclo : Similarity (itree E R) (itree E R') -> Similarity (itr
 Instance eqit : Similarity (itree E R) (itree E R') :=
   curry (paco (fun REL : ensemble (itree E R * itree E R') => eqitF' id (curry REL)) E.empty).
 
+#[local] Hint Unfold is_similar_to : core.
+
+Section FST_BASE.
+
+#[local] Notation R1 := R.
+#[local] Notation R2 := R'.
+#[local] Notation RR := R_sim.
+#[local] Notation b1 := skip_l.
+#[local] Notation b2 := skip_r.
+#[local] Notation SIM := (Similarity (itree E R1) (itree E R2)).
+
+Let __local_instance_eqitF (vclo : SIM -> SIM) (sim : SIM) : Similarity (@itreeF (itree E R1) E R1) (@itreeF (itree E R2) E R2) :=
+  @eqitF b1 b2 vclo sim.
+
+#[local] Existing Instance __local_instance_eqitF.
+
+Lemma t1_eqitF_VisF_X2_e2_k2_elim {vclo : SIM -> SIM} {sim : SIM} (t1 : @itreeF (itree E R1) E R1) (X2 : Type) (e2 : E X2) (k2 : X2 -> itree E R2)
+  (H_eqitF : is_similar_to (Similarity := __local_instance_eqitF vclo sim) t1 (VisF X2 e2 k2))
+  : ⟪ is_VisF : exists k1, t1 = VisF X2 e2 k1 /\ forall x : X2, is_similar_to (Similarity := vclo sim) (k1 x) (k2 x) ⟫ \/ ⟪ is_TauF : b1 = true /\ exists t1', t1 = TauF t1' /\ is_similar_to (Similarity := __local_instance_eqitF vclo sim) (observe t1') (VisF X2 e2 k2) ⟫.
+Proof.
+  revert H_eqitF. unnw.
+  refine (fun H =>
+    match H in eqitF _ _ t1 t2 return
+      match t2 return Prop with
+      | VisF X2 e2 k2 => _
+      | _ => True
+      end
+    with
+    | EqVisF _ _ _ _ _ _ _ => _
+    | _ => _
+    end
+  ); try exact I.
+  - left; eauto.
+  - destruct i0; eauto.
+Qed.
+
+End FST_BASE.
+
 End eqit_defn.
 
 Section eqit_prop.
+
+#[local] Hint Unfold is_similar_to : core.
+
+#[local] Notation In := L.In.
+#[local] Infix "\in" := E.In : type_scope.
+#[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
+
+#[local] Existing Instance ensemble_isUpperSemilattice.
+
+#[local] Infix "=~=" := is_similar_to.
 
 #[local] Infix "≈ₜ" := (eqit true true).
 #[local] Infix "≳ₜ" := (eqit true false).
 #[local] Infix "≲ₜ" := (eqit false true).
 #[local] Infix "≅ₜ" := (eqit false false).
+
+#[local] Hint Resolve bot_lattice_spec : poset_hints.
+#[local] Hint Resolve join_lattice_spec : poset_hints.
+#[local] Hint Resolve Equivalence_Reflexive Equivalence_Symmetric Equivalence_Transitive : poset_hints.
+#[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : poset_hints.
+#[local] Hint Unfold upperboundsOf : poset_hints.
+
+Context {E : Type -> Type}.
 
 End eqit_prop.
 
