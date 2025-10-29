@@ -193,11 +193,11 @@ Instance itree_isSetoid : isSetoid (itree E R) :=
   ; eqProp_Equivalence := eqITree_Equivalence
   }.
 
-Definition eqITree_code (t1 : itree E R) (t2 : itree E R) : Prop :=
-  match observe t1, observe t2 with
+Definition eqITree_code (lhs : itree E R) (rhs : itree E R) : Prop :=
+  match observe lhs, observe rhs with
   | RetF r1, RetF r2 => r1 == r2
   | TauF t1, TauF t2 => t1 == t2
-  | VisF X1 e1 k1, VisF X2 e2 k2 => { H : X1 = X2 | @eq_rect Type X1 (fun X : Type => E X) e1 X2 H = e2 /\ @eq_rect Type X1 (fun X : Type => X -> itree E R) k1 X2 H == k2 }
+  | VisF X1 e1 k1, VisF X2 e2 k2 => { X_EQ : X1 = X2 | @eq_rect Type X1 (fun X : Type => E X) e1 X2 X_EQ = e2 /\ @eq_rect Type X1 (fun X : Type => X -> itree E R) k1 X2 X_EQ == k2 }
   | _, _ => False
   end.
 
