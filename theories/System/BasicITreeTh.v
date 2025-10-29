@@ -446,20 +446,20 @@ Definition subseteq3@{u1 u2 u3} {A : Type@{u1}} {B : Type@{u2}} {C : Type@{u3}} 
 Context {E : Type -> Type} {R : Type} {R' : Type} {R_sim : Similarity R R'}.
 
 Inductive eqitF {skip_l : bool} {skip_r : bool} (vclo : (itree E R -> itree E R' -> Prop) -> itree E R -> itree E R' -> Prop) (sim : itree E R -> itree E R' -> Prop) : Similarity (itreeF (itree E R) E R) (itreeF (itree E R') E R') :=
-  | EqRetF (r1 : R) (r2 : R')
+  | EqRet (r1 : R) (r2 : R')
     (REL : r1 =~= r2)
     : RetF r1 =~= RetF r2
-  | EqTauF (t1 : itree E R) (t2 : itree E R')
+  | EqTau (t1 : itree E R) (t2 : itree E R')
     (REL : sim t1 t2)
     : TauF t1 =~= TauF t2
-  | EqVisF (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R')
+  | EqVis (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R')
     (REL : forall x : X, vclo sim (k1 x) (k2 x))
     : VisF X e k1 =~= VisF X e k2
-  | EqTauLhsF (t1 : itree E R) (ot2 : itreeF (itree E R') E R')
+  | EqTauL (t1 : itree E R) (ot2 : itreeF (itree E R') E R')
     (skip_l_is_true : skip_l = true)
     (REL : @eqitF skip_l skip_r vclo sim (observe t1) ot2)
     : TauF t1 =~= ot2
-  | EqTauRhsF (ot1 : itreeF (itree E R) E R) (t2 : itree E R')
+  | EqTauR (ot1 : itreeF (itree E R) E R) (t2 : itree E R')
     (skip_r_is_true : skip_r = true)
     (REL : @eqitF skip_l skip_r vclo sim ot1 (observe t2))
     : ot1 =~= TauF t2.
@@ -489,7 +489,7 @@ Instance eqit : Similarity (itree E R) (itree E R') :=
 
 #[local] Hint Unfold is_similar_to : core.
 
-Section FST_BASE.
+Section section_1.
 
 #[local] Notation R1 := R.
 #[local] Notation R2 := R'.
@@ -498,14 +498,14 @@ Section FST_BASE.
 #[local] Notation b2 := skip_r.
 #[local] Notation SIM := (Similarity (itree E R1) (itree E R2)).
 
-Let __local_instance_eqitF (vclo : SIM -> SIM) (sim : SIM) : Similarity (@itreeF (itree E R1) E R1) (@itreeF (itree E R2) E R2) :=
+Let __LocalInstance_eqitF (vclo : SIM -> SIM) (sim : SIM) : Similarity (@itreeF (itree E R1) E R1) (@itreeF (itree E R2) E R2) :=
   @eqitF b1 b2 vclo sim.
 
-#[local] Existing Instance __local_instance_eqitF.
+#[local] Existing Instance __LocalInstance_eqitF.
 
-Lemma t1_eqitF_VisF_X2_e2_k2_elim {vclo : SIM -> SIM} {sim : SIM} (t1 : @itreeF (itree E R1) E R1) (X2 : Type) (e2 : E X2) (k2 : X2 -> itree E R2)
-  (H_eqitF : is_similar_to (Similarity := __local_instance_eqitF vclo sim) t1 (VisF X2 e2 k2))
-  : ⟪ is_VisF : exists k1, t1 = VisF X2 e2 k1 /\ forall x, is_similar_to (Similarity := vclo sim) (k1 x) (k2 x) ⟫ \/ ⟪ is_TauF : b1 = true /\ exists t1', t1 = TauF t1' /\ is_similar_to (Similarity := __local_instance_eqitF vclo sim) (observe t1') (VisF X2 e2 k2) ⟫.
+Lemma eqitF_t1_VisF_X2_e2_k2_elim {vclo : SIM -> SIM} {sim : SIM} (t1 : @itreeF (itree E R1) E R1) (X2 : Type) (e2 : E X2) (k2 : X2 -> itree E R2)
+  (H_eqitF : is_similar_to (Similarity := __LocalInstance_eqitF vclo sim) t1 (VisF X2 e2 k2))
+  : ⟪ is_VisF : exists k1, t1 = VisF X2 e2 k1 /\ forall x, is_similar_to (Similarity := vclo sim) (k1 x) (k2 x) ⟫ \/ ⟪ is_TauF : b1 = true /\ exists t1', t1 = TauF t1' /\ is_similar_to (Similarity := __LocalInstance_eqitF vclo sim) (observe t1') (VisF X2 e2 k2) ⟫.
 Proof with eauto.
   refine (
     match H_eqitF in eqitF _ _ t1 t2 return
@@ -514,15 +514,15 @@ Proof with eauto.
       | _ => True
       end
     with
-    | EqVisF _ _ _ _ _ _ _ => _
-    | EqTauLhsF _ _ _ _ _ _ => _
+    | EqVis _ _ _ _ _ _ _ => _
+    | EqTauL _ _ _ _ _ _ => _
     | _ => I
     end
   )...
   match goal with [ t : @itreeF (itree E R2) E R2 |- _ ] => destruct t end...
 Qed.
 
-End FST_BASE.
+End section_1.
 
 End eqit_defn.
 
