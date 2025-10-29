@@ -475,23 +475,23 @@ Inductive eqitF {skip_l : bool} {skip_r : bool} (vclo : (itree E R -> itree E R'
 
 Context (skip_l : bool) (skip_r : bool).
 
-Lemma eqitF_monotonic lhs rhs vclo vclo' sim sim'
+Lemma eqitF_monotonic (lhs : @itreeF (itree E R) E R) (rhs : @itreeF (itree E R') E R') (vclo : (itree E R -> itree E R' -> Prop) -> itree E R -> itree E R' -> Prop) (vclo' : (itree E R -> itree E R' -> Prop) -> itree E R -> itree E R' -> Prop) (sim : Similarity (itree E R) (itree E R')) (sim' : Similarity (itree E R) (itree E R'))
   (IN : @eqitF skip_l skip_r vclo sim lhs rhs)
-  (Mon_vclo : forall sim, forall sim', subseteq2 sim sim' -> subseteq2 (vclo sim) (vclo sim'))
+  (MON_vclo : forall sim : itree E R -> itree E R' -> Prop, forall sim' : itree E R -> itree E R' -> Prop, subseteq2 sim sim' -> subseteq2 (vclo sim) (vclo sim'))
   (LE_vclo : subseteq3 vclo vclo')
   (LE_sim : subseteq2 sim sim')
   : @eqitF skip_l skip_r vclo' sim' lhs rhs.
 Proof.
   change (is_similar_to (Similarity := @eqitF skip_l skip_r vclo' sim') lhs rhs).
-  induction IN; simpl; eauto. econstructor; i. eapply LE_vclo; eapply Mon_vclo; eauto.
-Defined.
+  induction IN; simpl; eauto. econstructor; i. eapply LE_vclo; eapply MON_vclo; eauto.
+Qed.
 
-Definition eqitF' vclo sim : ensemble (itree E R * itree E R') :=
-  fun '(t, t') => is_similar_to (Similarity := @eqitF skip_l skip_r vclo sim) (observe t) (observe t').
+Definition eqitF' (vclo : Similarity (itree E R) (itree E R') -> Similarity (itree E R) (itree E R')) (sim : Similarity (itree E R) (itree E R')) : ensemble (itree E R * itree E R') :=
+  fun '(lhs, rhs) => is_similar_to (Similarity := @eqitF skip_l skip_r vclo sim) (observe lhs) (observe rhs).
 
 #[local]
 Instance eqit : Similarity (itree E R) (itree E R') :=
-  curry (paco (fun REL => eqitF' id (curry REL)) E.empty).
+  curry (paco (fun REL : ensemble (itree E R * itree E R') => eqitF' id (curry REL)) E.empty).
 
 End eqit_defn.
 
