@@ -17,10 +17,8 @@ Proof.
     | VisF X e k => @existT Type (fun X : Type => (E X * (X -> itree E R)))%type X (e, k)
     end
   ).
-  pose proof (f_equal (view (@existT Type (fun X : Type => (E X * (X -> itree E R)))%type X1 (e1, k1))) VisF_eq_VisF) as H. simpl in H.
-  clear VisF_eq_VisF view. revert H. generalize (e1, k1) as a1. generalize (e2, k2) as a2. intros.
-  set (B := fun X : Type => (E X * (X -> itree E R))%type). change (B X1) in a1. change (B X2) in a2. change (@existT Type B X1 a1 = @existT Type B X2 a2) in H.
-  exact (FUN_FACTS.existT_eq_existT_elim X1 X2 a1 a2 H).
+  pose proof (f_equal (view (@existT Type (fun X : Type => (E X * (X -> itree E R)))%type X1 (e1, k1))) VisF_eq_VisF) as H.
+  exact (FUN_FACTS.existT_eq_existT_elim (B := fun X : Type => (E X * (X -> itree E R))%type) X1 X2 (e1, k1) (e2, k2) H).
 Qed.
 
 Module ItreeBisimulation.
@@ -497,7 +495,7 @@ Lemma eqitF_t1_VisF_X2_e2_k2_elim {vclo : SIM -> SIM} {sim : SIM} (t1 : @itreeF 
   : ⟪ is_VisF : exists k1, t1 = VisF X2 e2 k1 /\ forall x, is_similar_to (Similarity := vclo sim) (k1 x) (k2 x) ⟫ \/ ⟪ is_TauF : b1 = true /\ exists t1', t1 = TauF t1' /\ is_similar_to (Similarity := __LocalInstance_eqitF vclo sim) (observe t1') (VisF X2 e2 k2) ⟫.
 Proof with eauto.
   refine (
-    match H_eqitF in eqitF _ _ t1 t2 return
+    match H_eqitF in @eqitF _ _ _ _ t1 t2 return
       match t2 return Prop with
       | VisF X2 e2 k2 => (exists k1, t1 = VisF X2 e2 k1 /\ forall x, k1 x =~= k2 x) \/ (b1 = true /\ exists t1', t1 = TauF t1' /\ observe t1' =~= VisF X2 e2 k2)
       | _ => True
