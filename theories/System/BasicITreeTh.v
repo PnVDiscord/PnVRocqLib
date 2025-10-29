@@ -193,37 +193,26 @@ Instance itree_isSetoid : isSetoid (itree E R) :=
   ; eqProp_Equivalence := eqITree_Equivalence
   }.
 
-Lemma Ret_eq_Ret_iff (x1 : R) (x2 : R)
-  : Ret x1 == Ret x2 <-> x1 == x2.
-Proof.
-  repeat rewrite eqITree_iff_itreeBisim. split; intros H_EQ.
-  - apply unfold_itreeBisim in H_EQ. now inversion H_EQ; subst.
-  - econstructor. now econstructor 1.
-Qed.
+Definition eqITree_code (t1 : itree E R) (t2 : itree E R) : Prop :=
+  match observe t1, observe t2 with
+  | RetF r1, RetF r2 => r1 == r2
+  | TauF t1, TauF t2 => t1 == t2
+  | VisF X1 e1 k1, VisF X2 e2 k2 => { H : X1 = X2 | @eq_rect Type X1 (fun X : Type => E X) e1 X2 H = e2 /\ @eq_rect Type X1 (fun X : Type => X -> itree E R) k1 X2 H == k2 }
+  | _, _ => False
+  end.
 
-Lemma Tau_eq_Tau_iff (t1 : itree E R) (t2 : itree E R)
-  : Tau t1 == Tau t2 <-> t1 == t2.
+Theorem eqITree_code_iff (lhs : itree E R) (rhs : itree E R)
+  : eqITree_code lhs rhs <-> lhs == rhs.
 Proof.
-  repeat rewrite eqITree_iff_itreeBisim. split; intros H_EQ.
-  - apply unfold_itreeBisim in H_EQ. now inversion H_EQ.
-  - econstructor. now econstructor 2.
-Qed.
-
-Lemma Vis_eq_Vis_iff {projT2_eq : forall B : Type -> Type, forall x : Type, forall y1 : B x, forall y2 : B x, @existT Type B x y1 = @existT Type B x y2 -> y1 = y2} (X : Type) (e : E X) (k1 : X -> itree E R) (k2 : X -> itree E R)
-  : Vis X e k1 == Vis X e k2 <-> k1 == k2.
-Proof.
-  change (eqITree (Vis X e k1) (Vis X e k2) <-> (forall x : X, eqITree (k1 x) (k2 x))). split; intros H_EQ.
-  - rewrite eqITree_iff_itreeBisim in H_EQ. apply unfold_itreeBisim in H_EQ.
-    inversion H_EQ as [ | | X' e' k1' k2' REL]; subst X'.
-    assert (e_eq_e' : e = e').
-    { now eapply projT2_eq with (B := fun X' : Type => E X'). }
-    assert (k1_eq_k1' : k1 = k1').
-    { now eapply projT2_eq with (B := fun X' : Type => X' -> itree E R). }
-    assert (k2_eq_k2' : k2 = k2').
-    { now eapply projT2_eq with (B := fun X' : Type => X' -> itree E R). }
-    subst e' k1' k2'. intros x; rewrite eqITree_iff_itreeBisim; exact (REL x).
-  - rewrite eqITree_iff_itreeBisim. econstructor. econstructor 3.
-    intros x; rewrite <- eqITree_iff_itreeBisim; exact (H_EQ x).
+  split; intros H_EQ.
+  - rewrite -> eqITree_iff_itreeBisim. unfold eqITree_code in H_EQ. econstructor. destruct (observe lhs), (observe rhs); simpl; try tauto.
+    + econstructor; eauto.
+    + econstructor; rewrite <- eqITree_iff_itreeBisim; eauto.
+    + destruct H_EQ as [<- [? ?]]. simpl in *. subst. econstructor. i. rewrite <- eqITree_iff_itreeBisim; eauto.
+  - rewrite -> eqITree_iff_itreeBisim in H_EQ. inv H_EQ. unfold eqITree_code. destruct unfold_itreeBisim0.
+    + eauto.
+    + rewrite -> eqITree_iff_itreeBisim; eauto.
+    + exists eq_refl. simpl; split; eauto. i. rewrite -> eqITree_iff_itreeBisim; eauto.
 Qed.
 
 End SETOID.
