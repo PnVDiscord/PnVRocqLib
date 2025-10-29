@@ -505,22 +505,21 @@ Let __local_instance_eqitF (vclo : SIM -> SIM) (sim : SIM) : Similarity (@itreeF
 
 Lemma t1_eqitF_VisF_X2_e2_k2_elim {vclo : SIM -> SIM} {sim : SIM} (t1 : @itreeF (itree E R1) E R1) (X2 : Type) (e2 : E X2) (k2 : X2 -> itree E R2)
   (H_eqitF : is_similar_to (Similarity := __local_instance_eqitF vclo sim) t1 (VisF X2 e2 k2))
-  : ⟪ is_VisF : exists k1, t1 = VisF X2 e2 k1 /\ forall x : X2, is_similar_to (Similarity := vclo sim) (k1 x) (k2 x) ⟫ \/ ⟪ is_TauF : b1 = true /\ exists t1', t1 = TauF t1' /\ is_similar_to (Similarity := __local_instance_eqitF vclo sim) (observe t1') (VisF X2 e2 k2) ⟫.
-Proof.
-  revert H_eqitF. unnw.
-  refine (fun H =>
-    match H in eqitF _ _ t1 t2 return
+  : ⟪ is_VisF : exists k1, t1 = VisF X2 e2 k1 /\ forall x, is_similar_to (Similarity := vclo sim) (k1 x) (k2 x) ⟫ \/ ⟪ is_TauF : b1 = true /\ exists t1', t1 = TauF t1' /\ is_similar_to (Similarity := __local_instance_eqitF vclo sim) (observe t1') (VisF X2 e2 k2) ⟫.
+Proof with eauto.
+  refine (
+    match H_eqitF in eqitF _ _ t1 t2 return
       match t2 return Prop with
-      | VisF X2 e2 k2 => _
+      | VisF X2 e2 k2 => (exists k1, t1 = VisF X2 e2 k1 /\ forall x, k1 x =~= k2 x) \/ (b1 = true /\ exists t1', t1 = TauF t1' /\ observe t1' =~= VisF X2 e2 k2)
       | _ => True
       end
     with
     | EqVisF _ _ _ _ _ _ _ => _
-    | _ => _
+    | EqTauLhsF _ _ _ _ _ _ => _
+    | _ => I
     end
-  ); try exact I.
-  - left; eauto.
-  - destruct i0; eauto.
+  )...
+  match goal with [ t : @itreeF (itree E R2) E R2 |- _ ] => destruct t end...
 Qed.
 
 End FST_BASE.
