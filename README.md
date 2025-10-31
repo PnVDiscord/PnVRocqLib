@@ -10,14 +10,14 @@ Currently, this library is standalone.
 git clone https://github.com/PnVDiscord/PnVRocqLib.git
 cd PnVRocqLib
 eval `opam env`
-rocq makefile -f _RocqProject -o Makefile
-make -j
+rocq makefile -f _CoqProject -o CoqMakefile
+make -f CoqMakefile -j
 ```
 
 ### `rocq -v`
 
 ```
-The Rocq Prover, version 9.0.0
+The Rocq Prover, version 9.1.0
 compiled with OCaml 5.3.0
 ```
 
