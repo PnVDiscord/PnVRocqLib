@@ -197,10 +197,6 @@ Proof with try first [now right; congruence | now left; congruence].
     + pose proof (constant_symbols_hasEqDec c c') as [? | ?]...
   - clear trms_eq_dec. trms_ind2 ts1 ts2...
     pose proof (trm_eq_dec t t') as [? | ?]; pose proof (IH ts2) as [EQ | NE]...
-    right. intros CONTRA. eapply NE. inv CONTRA.
-    apply @projT2_eq_fromEqDec with (B := fun n : nat => trms L n) in H1.
-    + exact H1.
-    + exact nat_hasEqDec.
 Defined.
 
 #[global]
