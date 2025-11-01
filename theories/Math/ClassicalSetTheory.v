@@ -79,7 +79,11 @@ Qed.
 
 End ClassicalWoset.
 
-Module __wellorderingtheorem.
+Module __fixedpointtheorem1.
+
+End __fixedpointtheorem1.
+
+Module __wellorderingtheorem1.
 
 Section WELL_ORDERING_THEOREM.
 
@@ -192,16 +196,16 @@ Qed.
 
 Section NEXT.
 
-Variable pair_next : pair -> pair.
+Variable next : pair -> pair.
 
-Hypothesis pair_next_extensive : forall s : pair, s =< pair_next s.
+Hypothesis next_extensive : forall s : pair, s =< next s.
 
-Hypothesis pair_next_good : forall s : pair, pair_good s -> pair_good (pair_next s).
+Hypothesis next_good : forall s : pair, pair_good s -> pair_good (next s).
 
-Hypothesis pair_next_exhausted : forall s : pair, (forall x, P s x) \/ (exists x, P (pair_next s) x /\ ~ P s x).
+Hypothesis next_exhausted : forall s : pair, (forall x : X, s.(P) x) \/ (exists x : X, (next s).(P) x /\ ~ s.(P) x).
 
 End NEXT.
 
 End WELL_ORDERING_THEOREM.
 
-End __wellorderingtheorem. 
+End __wellorderingtheorem1. 
