@@ -78,3 +78,130 @@ Proof.
 Qed.
 
 End ClassicalWoset.
+
+Module __wellorderingtheorem.
+
+Section WELL_ORDERING_THEOREM.
+
+Context {X : Type}.
+
+#[projections(primitive)]
+Record pair : Type :=
+  { P : X -> Prop
+  ; R : X -> X -> Prop
+  }.
+
+Variant pair_le (s : pair) (s' : pair) : Prop :=
+  | pair_le_intro
+    (P_incl : forall a, s.(P) a -> s'.(P) a)
+    (R_incl : forall a, forall b, s.(R) a b -> s'.(R) a b)
+    (NO_INSERTION : forall a, forall b, forall IN : s.(P) b, s'.(R) a b <-> s.(R) a b).
+
+#[global]
+Instance pair_le_Reflexive 
+  : Reflexive pair_le.
+Proof.
+  intros s0. econs; eauto.
+Qed.
+
+#[global]
+Instance pair_le_Transitive
+  : Transitive pair_le.
+Proof.
+  intros s0 s1 s2 s0_le_s1 s1_le_s2. destruct s0_le_s1, s1_le_s2; simpl in *; destruct s0, s1, s2; simpl in *.
+  econs; simpl in *; eauto; i. rewrite <- NO_INSERTION; eauto.
+Qed.
+
+#[global]
+Instance pair_le_PreOrder : PreOrder pair_le :=
+  { PreOrder_Reflexive := pair_le_Reflexive
+  ; PreOrder_Transitive := pair_le_Transitive
+  }.
+
+Let pair_isSetoid : isSetoid pair :=
+  mkSetoidFromPreOrder pair_le_PreOrder.
+
+#[local] Existing Instance pair_isSetoid.
+
+#[local]
+Instance pair_isProset : isProset pair :=
+  { leProp := pair_le
+  ; Proset_isSetoid := pair_isSetoid
+  ; leProp_PreOrder := pair_le_PreOrder
+  ; leProp_PartialOrder s1 s2 := conj (fun H : pair_le s1 s2 /\ pair_le s2 s1 => H) (fun H : pair_le s1 s2 /\ pair_le s2 s1 => H)
+  }.
+
+Definition pair_sup (I : Type) (chain : I -> pair) : pair :=
+  {| P x := exists i, P (chain i) x; R x y := exists i, R (chain i) x y; |}.
+
+Lemma pair_sup_isSupremum (I : Type) (chain : I -> pair)
+  (H_chain : forall i1 : I, forall i2 : I, pair_le (chain i1) (chain i2) \/ pair_le (chain i2) (chain i1))
+  : is_supremum_of (pair_sup I chain) (fun s => exists i : I, s = chain i).
+Proof.
+  intros u; split.
+  - intros [? ? ?]. intros x x_in. destruct x_in as [i ->]. econs; i.
+    + eapply P_incl. simpl. exists i; eauto.
+    + eapply R_incl. simpl. exists i; eauto.
+    + rewrite -> NO_INSERTION; simpl; eauto. split.
+      * intros [i' H_R]. pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION0; eauto.
+      * intros H_R. exists i. eauto.
+  - intros u_in. do 2 red in u_in. econs; simpl; i; des.
+    + hexploit (u_in (chain i)).
+      { exists i. reflexivity. }
+      intros [? ? ?]; eauto.
+    + hexploit (u_in (chain i)).
+      { exists i. reflexivity. }
+      intros [? ? ?]; eauto.
+    + hexploit (u_in (chain i)).
+      { exists i. reflexivity. }
+      intros [? ? ?]. rewrite -> NO_INSERTION; eauto. split.
+      * intros H_R. exists i. eauto.
+      * intros [i' H_R]. pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION0; eauto.
+Qed.
+
+Context {SETOID : isSetoid X}.
+
+Variant good (P : X -> Prop) (R : X -> X -> Prop) : Prop :=
+  | good_intro
+    (SOUND : forall a, forall b, forall LT : R a b, P a /\ P b)
+    (COMPLETE : forall a, forall b, forall IN : P a, forall IN' : P b, a == b \/ (R a b \/ R b a))
+    (WELL_FOUNDED : well_founded R).
+
+Definition pair_good (s : pair) : Prop :=
+  good s.(P) s.(R).
+
+Lemma pair_sup_good (I : Type) (chain : I -> pair)
+  (chain_good : forall i, pair_good (chain i))
+  (H_chain : forall i1, forall i2, pair_le (chain i1) (chain i2) \/ pair_le (chain i2) (chain i1))
+  : pair_good (pair_sup I chain).
+Proof.
+  split.
+  - intros a b [i H_R]. pose proof (chain_good i) as [? ? ?]. pose proof (SOUND a b H_R). split; exists i; tauto.
+  - intros a b [i1 H_P1] [i2 H_P2]. pose proof (H_chain i1 i2) as [[? ? ?] | [? ? ?]].
+    + pose proof (chain_good i2) as [? ? ?]. hexploit (COMPLETE _ _ (P_incl _ H_P1) H_P2); eauto.
+      intros [? | [? | ?]]; [left; tauto | right | right]; [left | right]; exists i2; tauto.
+    + pose proof (chain_good i1) as [? ? ?]. hexploit (COMPLETE _ _ H_P1 (P_incl _ H_P2)); eauto.
+      intros [? | [? | ?]]; [left; tauto | right | right]; [left | right]; exists i1; tauto.
+  - intros x1. econs. intros x0 [i H_R]. pose proof (chain_good i) as [? ? ?].
+    assert (H_Acc : Acc (chain i).(R) x0) by eauto.
+    pose proof (SOUND _ _ H_R) as [H_P _]. revert H_P. clear H_R. induction H_Acc as [x0 _ IH]; intros; econs; intros y [i' H_R'].
+    assert (LT : (chain i).(R) y x0).
+    { pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION; eauto. }
+    eapply IH; eauto. pose proof (SOUND _ _ LT) as [? ?]; tauto.
+Qed.
+
+Section NEXT.
+
+Variable pair_next : pair -> pair.
+
+Hypothesis pair_next_extensive : forall s : pair, s =< pair_next s.
+
+Hypothesis pair_next_good : forall s : pair, pair_good s -> pair_good (pair_next s).
+
+Hypothesis pair_next_exhausted : forall s : pair, (forall x, P s x) \/ (exists x, P (pair_next s) x /\ ~ P s x).
+
+End NEXT.
+
+End WELL_ORDERING_THEOREM.
+
+End __wellorderingtheorem. 
