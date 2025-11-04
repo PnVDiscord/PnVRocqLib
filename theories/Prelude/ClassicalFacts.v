@@ -31,3 +31,7 @@ Proof.
   intros m P_m. enough (WTS : ~ m < i) by lia. intros H_lt.
   contradiction CONTRA'. exists m. split; trivial.
 Qed.
+
+Module Type LEM_ModuleAttribute.
+
+End LEM_ModuleAttribute.

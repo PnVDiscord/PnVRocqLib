@@ -1,5 +1,6 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Math.OrderTheory.
+Require Import PnV.Prelude.ConstructiveFacts.
 
 Universe Set_u.
 
@@ -444,36 +445,36 @@ Proof.
   ii; eapply eqTree_intro; ii; rewrite intersection_spec in *; [rewrite <- x_EQ, <- y_EQ | rewrite -> x_EQ, -> y_EQ]; done.
 Qed.
 
-Definition singlton (x : Tree) : Tree :=
+Definition singleton (x : Tree) : Tree :=
   upair x x.
 
-Theorem singlton_spec x
-  : forall z, z \in singlton x <-> z == x.
+Theorem singleton_spec x
+  : forall z, z \in singleton x <-> z == x.
 Proof.
-  intros z. unfold singlton. rewrite upair_spec. done.
+  intros z. unfold singleton. rewrite upair_spec. done.
 Qed.
 
-#[global] Hint Rewrite singlton_spec : simplication_hints.
+#[global] Hint Rewrite singleton_spec : simplication_hints.
 
-Corollary singlton_inj x y
-  (EQ : singlton x == singlton y)
+Corollary singleton_inj x y
+  (EQ : singleton x == singleton y)
   : x == y.
 Proof.
-  assert (IN : x \in singlton x) by now rewrite singlton_spec.
-  rewrite EQ in IN. rewrite singlton_spec in IN. done.
+  assert (IN : x \in singleton x) by now rewrite singleton_spec.
+  rewrite EQ in IN. rewrite singleton_spec in IN. done.
 Qed.
 
 #[global]
-Instance singlton_eqPropCompatible1
-  : eqPropCompatible1 singlton.
+Instance singleton_eqPropCompatible1
+  : eqPropCompatible1 singleton.
 Proof.
   ii. eapply eqTree_intro; ii.
-  - rewrite singlton_spec in *. rewrite <- x_EQ. exact H.
-  - rewrite singlton_spec in *. rewrite -> x_EQ. exact H.
+  - rewrite singleton_spec in *. rewrite <- x_EQ. exact H.
+  - rewrite singleton_spec in *. rewrite -> x_EQ. exact H.
 Qed.
 
 Definition pair (x : Tree) (y : Tree) : Tree :=
-  upair (singlton x) (upair x y).
+  upair (singleton x) (upair x y).
 
 Lemma upair_eq_upair_implies x1 y1 x2 y2
   (EQ : upair x1 y1 == upair x2 y2)
@@ -488,8 +489,8 @@ Proof.
     { rewrite upair_spec. now right. }
     rewrite -> EQ in IN. rewrite upair_spec in IN.
     destruct IN as [H_EQ' | H_EQ'].
-    + rewrite -> H_EQ'. symmetry. rewrite <- singlton_spec.
-      unfold singlton. rewrite -> H_EQ' in EQ. rewrite -> EQ.
+    + rewrite -> H_EQ'. symmetry. rewrite <- singleton_spec.
+      unfold singleton. rewrite -> H_EQ' in EQ. rewrite -> EQ.
       rewrite upair_spec. now right.
     + eauto with *.
   - right. split; trivial. rewrite H_EQ in EQ.
@@ -497,22 +498,22 @@ Proof.
     { rewrite upair_spec. now left. }
     rewrite <- EQ in IN. rewrite upair_spec in IN.
     destruct IN as [H_EQ' | H_EQ'].
-    + rewrite -> H_EQ'. symmetry. rewrite <- singlton_spec.
-      unfold singlton. rewrite -> H_EQ' in EQ. rewrite <- EQ.
+    + rewrite -> H_EQ'. symmetry. rewrite <- singleton_spec.
+      unfold singleton. rewrite -> H_EQ' in EQ. rewrite <- EQ.
       rewrite upair_spec. now right.
     + eauto with *.
 Qed.
 
 Lemma singleton_eq_upair_implies x y z
-  (EQ : singlton x == upair y z)
+  (EQ : singleton x == upair y z)
   : x == y /\ y == z.
 Proof.
-  revert x y z EQ. enough (WTS : forall x, forall y, forall z, singlton x == upair y z -> x == y).
+  revert x y z EQ. enough (WTS : forall x, forall y, forall z, singleton x == upair y z -> x == y).
   { ii. enough (ENOUGH : x == y).
     - split; trivial. rewrite comm in EQ. apply WTS in EQ. rewrite EQ in ENOUGH. done.
     - eapply WTS. exact EQ.
   }
-  intros x y z EQ. unfold singlton in EQ. apply upair_eq_upair_implies in EQ. destruct EQ as [[EQ1 H_EQ] | [EQ1 H_EQ]]; done.
+  intros x y z EQ. unfold singleton in EQ. apply upair_eq_upair_implies in EQ. destruct EQ as [[EQ1 H_EQ] | [EQ1 H_EQ]]; done.
 Qed.
 
 Theorem pair_inv x1 x2 y1 y2
@@ -520,7 +521,7 @@ Theorem pair_inv x1 x2 y1 y2
   : x1 == x2 /\ y1 == y2.
 Proof.
   unfold pair in EQ. apply upair_eq_upair_implies in EQ. destruct EQ as [[EQ1 H_EQ] | [EQ1 H_EQ]].
-  - apply singlton_inj in EQ1. split; trivial. apply upair_eq_upair_implies in H_EQ. destruct H_EQ as [[EQ2 EQ3] | [EQ2 EQ3]]; eauto with *.
+  - apply singleton_inj in EQ1. split; trivial. apply upair_eq_upair_implies in H_EQ. destruct H_EQ as [[EQ2 EQ3] | [EQ2 EQ3]]; eauto with *.
   - apply singleton_eq_upair_implies in H_EQ. apply singleton_eq_upair_implies in EQ1.
     destruct EQ1 as [EQ1 EQ2], H_EQ as [EQ3 EQ4]. rewrite EQ4, EQ3, EQ1, EQ2. rewrite <- EQ4, <- EQ3, <- EQ2. now split.
 Qed.
@@ -533,7 +534,7 @@ Proof.
 Qed.
 
 Definition fst (t : Tree) : Tree :=
-  unions (filter (fun x => singlton x \in t) (unions t)).
+  unions (filter (fun x => singleton x \in t) (unions t)).
 
 #[global]
 Instance fst_eqPropCompatible1
@@ -573,11 +574,11 @@ Proof.
   { eapply eqTree_intro; intros z H_IN.
     - rewrite EQ in H_IN. rewrite unions_spec in H_IN. destruct H_IN as (w & H_in & H_IN).
       unfold pair in H_IN. rewrite upair_spec in H_IN. destruct H_IN as [H_EQ | H_EQ]; rewrite H_EQ in H_in; clear w H_EQ.
-      + rewrite upair_spec. left. rewrite <- singlton_spec. exact H_in.
+      + rewrite upair_spec. left. rewrite <- singleton_spec. exact H_in.
       + exact H_in.
     - rewrite upair_spec in H_IN. rewrite EQ. clear t EQ. destruct H_IN as [EQ | EQ].
-      + rewrite unions_spec. exists (singlton x). split.
-        * rewrite singlton_spec. exact EQ.
+      + rewrite unions_spec. exists (singleton x). split.
+        * rewrite singleton_spec. exact EQ.
         * unfold pair. rewrite upair_spec. now left.
       + rewrite unions_spec. exists (upair x y). split.
         * rewrite upair_spec. now right.
@@ -595,7 +596,7 @@ Proof.
         rewrite upair_spec in H_IN1. destruct H_IN1 as [EQ' | EQ']; rewrite EQ' in H_in, H_IN2; clear w EQ'.
         * exact H_in.
         * rewrite EQ in H_IN2. unfold pair in H_IN2. rewrite upair_spec in H_IN2. destruct H_IN2 as [EQ' | EQ'].
-          { apply singlton_inj in EQ'. rewrite <- EQ'. exact H_in. }
+          { apply singleton_inj in EQ'. rewrite <- EQ'. exact H_in. }
           { apply singleton_eq_upair_implies in EQ'. destruct EQ' as [EQ1 EQ2]. rewrite EQ2. exact H_in. }
       + intros a H_in' b EQ'. rewrite <- EQ'. exact H_in'.
   }
@@ -643,7 +644,7 @@ Proof.
     + intros (SUBSET & x & x_in_X & y & y_in_Y & EQ). done.
     + intros (x & x_in_X & y & y_in_Y & EQ). split.
       * intros a a_in. rewrite power_spec. intros b b_in. unfold pair in EQ. rewrite EQ in a_in. rewrite upair_spec in a_in. destruct a_in as [EQ' | EQ'].
-        { rewrite EQ' in b_in. rewrite singlton_spec in b_in. rewrite b_in. rewrite union_spec. left. exact x_in_X. }
+        { rewrite EQ' in b_in. rewrite singleton_spec in b_in. rewrite b_in. rewrite union_spec. left. exact x_in_X. }
         { rewrite EQ' in b_in. rewrite upair_spec in b_in. destruct b_in as [EQ'' | EQ'']; rewrite EQ''; rewrite union_spec; [left | right]; trivial. }
       * done.
   - intros a (x & x_in & y & y_in & EQ) b a_eq_b. exists x. split; trivial. exists y. split; trivial. rewrite <- a_eq_b; trivial.
@@ -892,6 +893,12 @@ Proof.
     + now rewrite <- EQ2.
 Qed.
 
+Lemma rLt_eqPropCompatible2
+  : eqPropCompatible2 (A_isSetoid := rEq_asSetoid) (B_isSetoid := rEq_asSetoid) rLt.
+Proof.
+  ii. change (rLt x1 y1 <-> rLt x2 y2). now rewrite <- x_EQ, <- y_EQ.
+Qed.
+
 Theorem rLt_wf
   : well_founded rLt.
 Proof.
@@ -961,19 +968,68 @@ Proof.
   rewrite fromAcc_unfold. exists (@exist _ _ x R_x_x'). simpl. eapply fromAcc_pirrel.
 Qed.
 
+Fixpoint fromAcc_isMonotonic (A : Type) (R1 : A -> A -> Prop) (R2 : A -> A -> Prop) (x : A) (INCL : forall x : A, forall x' : A, forall LE : R1 x x', R2 x x') (ACC1 : Acc R1 x) (ACC2 : Acc R2 x) {struct ACC1} : fromAcc x ACC1 ≦ᵣ fromAcc x ACC2.
+Proof.
+  destruct ACC1, ACC2; simpl. econs. simpl. intros [c R1_c_x]; simpl.
+  econs. simpl. exists (@exist _ _ c (INCL c x R1_c_x)). simpl.
+  eapply fromAcc_isMonotonic. exact INCL.
+Qed.
+
 Definition fromWf {A : Type@{Set_u}} (R : A -> A -> Prop) (Wf : well_founded R) (x : A) : Tree :=
   @fromAcc A R x (Wf x).
+
+Lemma fromWf_isMonotonic {A : Type} {R1 : A -> A -> Prop} {R2 : A -> A -> Prop} (x : A)
+  (INCL : forall x : A, forall x' : A, forall LE : R1 x x', R2 x x')
+  (R1_wf : well_founded R1)
+  (R2_wf : well_founded R2)
+  : @fromWf A R1 R1_wf x ≦ᵣ @fromWf A R2 R2_wf x.
+Proof.
+  unfold fromWf. eapply fromAcc_isMonotonic; eauto.
+Qed.
+
+Lemma fromWf_cong {A : Type} {B : Type} (RA : A -> A -> Prop) (RB : B -> B -> Prop) (f : A -> B)
+  (RA_wf : well_founded RA)
+  (RB_wf : well_founded RB)
+  (f_cong : forall x1 : A, forall x2 : A, forall LT : RA x1 x2, RB (f x1) (f x2))
+  : forall x : A, @fromWf A RA RA_wf x ≦ᵣ @fromWf B RB RB_wf (f x).
+Proof.
+  intros x. pose proof (RA_wf x) as H_ACC. induction H_ACC as [x _ IH].
+  eapply rLe_ext. unfold fromWf. intros z LT. destruct LT as [[c LE]]; simpl in *.
+  destruct (RA_wf x) as [H_Acc_inv]; simpl in *. destruct c as [c RA_c_x]; simpl in *.
+  pose proof (IH _ RA_c_x) as H. unfold fromWf in *. econs.
+  destruct (RB_wf (f x)) as [H_Acc_inv']; simpl. exists (@exist _ _ (f c) (f_cong c x RA_c_x)). simpl.
+  rewrite LE. rewrite fromAcc_pirrel with (ACC' := RA_wf c). rewrite H.
+  now rewrite fromAcc_pirrel with (A := B) (ACC := (H_Acc_inv' (f c) (f_cong c x RA_c_x))) (ACC' := RB_wf (f c)).
+Qed.
 
 Definition fromWfSet {A : Type@{Set_u}} (R : A -> A -> Prop) (Wf : well_founded R) : Tree :=
   mkNode A (@fromWf A R Wf).
 
+Lemma fromWfSet_isMonotonic {A : Type} {R1 : A -> A -> Prop} {R2 : A -> A -> Prop}
+  (INCL : forall x : A, forall x' : A, forall LE : R1 x x', R2 x x')
+  (R1_wf : well_founded R1)
+  (R2_wf : well_founded R2)
+  : @fromWfSet A R1 R1_wf ≦ᵣ @fromWfSet A R2 R2_wf.
+Proof.
+  econs. i. econs. exists c. eapply fromWf_isMonotonic; eauto.
+Qed.
+
+Lemma fromWfSet_cong {A : Type} {B : Type} (RA : A -> A -> Prop) (RB : B -> B -> Prop) (f : A -> B)
+  (RA_wf : well_founded RA)
+  (RB_wf : well_founded RB)
+  (f_cong : forall x1 : A, forall x2 : A, forall LT : RA x1 x2, RB (f x1) (f x2))
+  : @fromWfSet A RA RA_wf ≦ᵣ @fromWfSet B RB RB_wf.
+Proof.
+  unfold fromWfSet. econs. intros c. econs. simpl in *. exists (f c). eapply fromWf_cong; eauto.
+Qed.
+
 Definition succ (x : Tree) : Tree :=
-  union x (singlton x).
+  union x (singleton x).
 
 Theorem succ_spec x
   : forall z, z \in succ x <-> (z \in x \/ z == x).
 Proof.
-  unfold succ. intros z. rewrite union_spec. rewrite singlton_spec. reflexivity.
+  unfold succ. intros z. rewrite union_spec. rewrite singleton_spec. reflexivity.
 Qed.
 
 #[global] Hint Rewrite succ_spec : simplication_hints.
@@ -983,6 +1039,34 @@ Instance succ_eqPropCompatible1
   : eqPropCompatible1 succ.
 Proof.
   ii. now eapply eqTree_intro; ii; rewrite succ_spec in *; [rewrite <- x_EQ | rewrite -> x_EQ].
+Qed.
+
+Lemma rEq_succ_iff (alpha : Tree) (beta : Tree)
+  : alpha =ᵣ succ beta <-> (forall z, z <ᵣ alpha <-> z ≦ᵣ beta).
+Proof.
+  split.
+  - intros H_rEq z. split.
+    + intros H_LT. rewrite -> H_rEq in H_LT. clear alpha H_rEq.
+      destruct H_LT as [[c H_rLe]]. simpl in *. destruct c as [[ | ] c]; simpl in *.
+      * rewrite H_rLe. eapply rLt_implies_rLe. eapply member_implies_rLt. now exists c.
+      * destruct c; simpl; trivial.
+    + intros H_rLe. rewrite -> H_rEq. econs. simpl. refine (let c : children (singleton beta) := true in _).
+      exists (@existT bool (fun i : bool => children (if i then beta else singleton beta)) false c); eauto.
+  - intros H_sup. eapply rEq_ext. intros z; split.
+    + intros H_rLt. econs. simpl. refine (let c : children (singleton beta) := true in _).
+      exists (@existT bool (fun i : bool => children (if i then beta else singleton beta)) false c). ss!.
+    + intros [[c H_rLe]]. simpl in *. destruct c as [[ | ] c]; simpl in *.
+      * rewrite -> H_sup. eapply rLt_implies_rLe. eapply rLe_rLt_rLt; eauto. eapply member_implies_rLt. now exists c.
+      * rewrite -> H_sup. destruct c; simpl; trivial.
+Qed.
+
+Lemma succ_rLe_intro alpha beta
+  (H_rLt : alpha <ᵣ beta)
+  : succ alpha ≦ᵣ beta.
+Proof.
+  econs. intros [[ | ] c]; simpl.
+  - transitivity alpha; eauto. eapply member_implies_rLt. exists c. reflexivity.
+  - destruct c as [ | ]; simpl in *; eauto.
 Qed.
 
 Definition isTransitiveSet (x : Tree) : Prop :=
@@ -1055,11 +1139,9 @@ Proof.
   { intros i; specialize (lt_Transitive i). red in lt_Transitive |- *. ss!. }
   intros H1 H2. red in H1, H2 |- *. des; simpl in *.
   pose proof (lt_Transitive cy) as claim1. red in claim1. inv H1; inv H2; simpl in *.
-  - destruct H_cx, x0, x; ss!.
-    + inv H0.
-    + inv H4.
+  - destruct H_cx, x0, x; done!.
   - inv H0.
-  - destruct x; inv H0. apply projT2_eq in H2. subst a. ss!. exists (Some x'); ss!; done!.
+  - destruct x; inv H0. apply projT2_eq in H2. subst a. ss!. exists (Some x'); done!.
   - inv H0. inv H4. inv H2. destruct H_cx; inv H1. apply projT2_eq in H0, H2. subst a y'. destruct LE, LE0; ss!.
     exists (Some x'); ss!; ss!. intros H_contra. apply projT2_eq in H_contra. inv H_contra.
     contradiction (lt_Irreflexive cz x'); ss!.
@@ -1076,11 +1158,11 @@ Proof.
       - econs 2; ss!.
       - intros H_contra. apply projT2_eq in H_contra. inv H_contra. contradiction (well_founded_implies_Irreflexive (R i) (R_wf i) y).
     }
-    eexists (@exist _ _ (@existT _ _ i (Some y)) claim1). simpl. rewrite EQ. rewrite <- fromAcc_pirrel. rewrite IH; eauto. eapply fromAcc_pirrel.
+    exists (@exist _ _ (@existT _ _ i (Some y)) claim1). simpl. rewrite EQ. rewrite <- fromAcc_pirrel. rewrite IH; eauto. eapply fromAcc_pirrel.
   - rewrite fromAcc_unfold in H_IN |- *. destruct H_IN as [[y R_y_x] EQ]; simpl in *. destruct y as [i' x'].
     pose proof (COPY := R_y_x). inv COPY. ss!. inv H. destruct LE.
     + inv H0. apply projT2_eq in H4. subst x'. exists (@exist _ _ x'0 H). simpl. rewrite EQ. symmetry. rewrite <- fromAcc_pirrel. erewrite IH; eauto. eapply fromAcc_pirrel.
-    + subst x'0. contradiction.
+    + done!.
 Qed.
 
 Lemma fromWfSet_toWoset_lt_superset {projT2_eq : forall A : Type, forall B : A -> Type, forall x : A, forall y : B x, forall y' : B x, @existT A B x y = @existT A B x y' -> y = y'} (A : Type) (B : A -> Type) (R : forall i : A, B i -> B i -> Prop) (R_wf : forall i : A, well_founded (R i))

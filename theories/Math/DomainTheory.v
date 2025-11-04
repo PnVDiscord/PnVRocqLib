@@ -94,7 +94,7 @@ Qed.
 Theorem KnasterTarski_3rd (f : D -> D) (W : ensemble D)
   (f_isMonotonic : isMonotonic1 f)
   (W_is_a_set_of_fixed_points_of_f : W \subseteq fixedpointsOf f)
-  : {fix_f : D | is_supremum_in fix_f W (fixedpointsOf f)}.
+  : { fix_f : D | is_supremum_in fix_f W (fixedpointsOf f) }.
 Proof with eauto with *.
   pose proof (supremum_cola W) as [q q_is_lub_of_W].
   pose (fun w : D => q =< w) as W_hat.
@@ -114,14 +114,12 @@ Proof with eauto with *.
   enough (claim3 : fix_f == f fix_f).
   - exists fix_f. split; trivial.
     intros [x x_in]. simpl. split.
-    { intros fix_f_le_x d d_in. transitivity q.
-      - eapply q_is_lub_of_W...
-      - transitivity fix_f...
-    }
-    { intros x_is_upper_bound_of_W. eapply fix_f_isInfimum... split.
-      - eapply eqProp_implies_leProp. now symmetry.
-      - eapply q_is_lub_of_W...
-    }
+    + intros fix_f_le_x d d_in. transitivity q.
+      * eapply q_is_lub_of_W...
+      * transitivity fix_f...
+    + intros x_is_upper_bound_of_W. eapply fix_f_isInfimum... split.
+      * eapply eqProp_implies_leProp. now symmetry.
+      * eapply q_is_lub_of_W...
   - eapply leProp_antisymmetry; trivial.
     eapply fix_f_isInfimum... done!.
   - eapply fix_f_isInfimum. ii; s!. destruct IN as [f_x_le_x q_le_x]...
