@@ -124,10 +124,10 @@ Proof.
 Qed.
 
 Lemma limit_or_succ (alpha : Tree)
-  : ⟪ LIMIT : alpha =ᵣ unions alpha ⟫ \/ ⟪ SUCC : exists beta, alpha =ᵣ succ beta ⟫.
+  : ⟪ LIMIT : alpha =ᵣ unions alpha /\ (forall c1 : children alpha, exists c2 : children alpha, childnodes alpha c1 <ᵣ childnodes alpha c2) ⟫ \/ ⟪ SUCC : exists beta : Tree, alpha =ᵣ succ beta ⟫.
 Proof.
-  unnw. destruct alpha as [cs ts]. pose proof (classic (forall c, exists c', ts c <ᵣ ts c')) as [YES | NO].
-  - left. split.
+  unnw. destruct alpha as [cs ts]; simpl. pose proof (classic (forall c, exists c', ts c <ᵣ ts c')) as [YES | NO].
+  - left. split; eauto. split.
     + econs. simpl; i. econs. simpl. pose proof (YES c) as [c' [[t H_rLe]]].
       exists (@existT cs (fun i => children (ts i)) c' t). exact H_rLe.
     + econs. simpl; i. econs. simpl. exists (projT1 c). eapply rLt_implies_rLe. econs. now exists (projT2 c).
@@ -148,12 +148,9 @@ Theorem transfinite_induction (P : Tree -> Prop)
   (P_lim' : forall o, forall I : Type, ⟪ INHABITED : inhabited I ⟫ -> forall alpha : I -> Tree, ⟪ IH : forall i, P (alpha i) ⟫ -> forall LIMIT : o =ᵣ @indexed_union I alpha, ⟪ OPEN : forall i1 : I, exists i2 : I, alpha i1 <ᵣ alpha i2 ⟫ -> P o)
   : forall o : Tree, P o.
 Proof.
-  intros o. pose proof (rLt_wf o) as H_Acc. induction H_Acc as [o _ IH]. pose proof (limit_or_succ o) as [LIMIT | SUCC]; unnw.
+  intros o. pose proof (rLt_wf o) as H_Acc. induction H_Acc as [o _ IH]. pose proof (limit_or_succ o) as [[LIMIT OPEN] | SUCC]; unnw.
   - pose proof (classic (inhabited (children o))) as [YES | NO].
-    + eapply P_lim' with (I := children o); eauto.
-      * intros i. eapply IH. econs. now exists i.
-      * destruct o; simpl in *. intros c. destruct LIMIT as [LE1 LE2]. unfold unions, indexed_union in *. simpl in *. destruct LE1 as [H_rLt]. simpl in *.
-        pose proof (H_rLt c) as [[c' H_rLe]]. simpl in *. exists (projT1 c'). econs. exists (projT2 c'). exact H_rLe.
+    + eapply P_lim' with (I := children o); eauto. intros i. eapply IH. econs. now exists i.
     + eapply P_zero. split.
       * econs. intros i. contradiction NO. econs. exact i.
       * econs. simpl. intros [].
@@ -611,7 +608,7 @@ Qed.
 
 #[local] Hint Resolve rec_is_join_inhabited : core.
 
-Lemma rec_union o o'
+Lemma rec_union (o : Tree) (o' : Tree)
   : rec (union o o') ≡ dunion (rec o) (rec o').
 Proof.
   assert (INHABITED : inhabited bool).
@@ -654,8 +651,8 @@ Proof.
       * i. eapply dle_trans with (d2 := rec (alpha i)). 1,2,3: eauto. eapply H0. eapply djoin_upperbound with (ds := fun i => rec (alpha i)); eauto.
 Qed.
 
-Lemma rec_unique2 (f : Tree -> D)
-  (FIX : forall cs : Type, forall ts : cs -> Tree, f (mkNode cs ts) ≡ dunion dbase (djoin cs (fun c : cs => next (f (ts c)))))
+Lemma rec_characterisation (f : Tree -> D)
+  (REC : forall cs : Type, forall ts : cs -> Tree, f (mkNode cs ts) ≡ dunion dbase (djoin cs (fun c : cs => next (f (ts c)))))
   (GOOD : forall o : Tree, good (f o))
   : forall t : Tree, f t ≡ rec t.
 Proof.
@@ -680,7 +677,7 @@ Proof.
   { eapply djoin_good; [eapply j_chain | eapply good_j]. }
   split.
   - eapply dle_trans with (d2 := dunion dbase (djoin cs (fun c => next (f (ts c))))). 1,2,3: eauto.
-    + eapply FIX.
+    + eapply REC.
     + eapply djoin_supremum; eauto.
       * intros [ | ] [ | ]; simpl; eauto. destruct BASE; eauto.
       * intros [ | ]; eauto.
@@ -694,7 +691,7 @@ Proof.
         { eapply next_congruence; eauto. }
         { eapply djoin_upperbound with (ds := fun c => next (f (ts c))); eauto. }
       * eapply dunion_r; eauto.
-    + eapply FIX.
+    + eapply REC.
 Qed.
 
 Lemma rec_good (o : Tree)
@@ -815,18 +812,14 @@ End BOURBAKI_WITT_FIXEDPOINT_THEOREM.
 
 Section GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
 
+#[local] Hint Unfold E.In : simplication_hints.
+
 Import ColaDef.
 
 Context {D : Type} {PROSET : isProset D} {COLA : isCola D (PROSET := PROSET)}.
 
-Variable f : `[ D -> D ].
-
-Let mu_f : D :=
-  Ord.rec (D := D) (proj1_sig (supremum_cola E.empty)) (proj1_sig f) (fun I : Type => fun ds : I -> D => proj1_sig (supremum_cola (fun d : D => exists i : I, d = ds i))) (Hartogs D).
-
-#[local] Hint Unfold E.In : simplication_hints.
-
-Theorem generalised_Kleene_fixedpoint_theorem
+Theorem generalised_Kleene_fixedpoint_theorem (f : `[ D -> D ])
+  (mu_f := Ord.rec (D := D) (proj1_sig (supremum_cola E.empty)) (proj1_sig f) (fun I : Type => fun ds : I -> D => proj1_sig (supremum_cola (fun d : D => exists i : I, d = ds i))) (Hartogs D))
   : is_lfpOf mu_f (proj1_sig f).
 Proof.
   split.
