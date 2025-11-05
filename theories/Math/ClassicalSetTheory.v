@@ -160,15 +160,12 @@ Proof.
   - destruct SUCC as [beta SUCC]. eapply P_succ; eauto. eapply IH. rewrite rEq_succ_iff in SUCC. now rewrite -> SUCC.
 Qed.
 
-Section BOURBAKI_WITT.
+Section BOURBAKI_WITT_FIXEDPOINT_THEOREM.
 
 Context {D : Type}.
 
 Variable good : D -> Prop.
 Variable dle : D -> D -> Prop.
-Variable djoin : forall I : Type, (I -> D) -> D.
-Variable dbase : D.
-Variable next : D -> D.
 
 #[local] Infix "⊑" := dle.
 
@@ -213,14 +210,9 @@ Proof.
   red in EQ, EQ'; split; eapply dle_trans with (d2 := d2); eauto; tauto.
 Qed.
 
+Variable djoin : forall I : Type, (I -> D) -> D.
 Hypothesis djoin_good : forall I : Type, forall ds : I -> D, forall CHAIN : forall i1, forall i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1, forall GOODs : forall i, good (ds i), good (djoin I ds).
 Hypothesis djoin_supremum : forall I : Type, forall ds : I -> D, forall CHAIN : forall i1, forall i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1, forall GOODs : forall i, good (ds i), forall d : D, forall GOOD : good d, djoin I ds ⊑ d <-> (forall i, ds i ⊑ d).
-
-Hypothesis dbase_good : good dbase.
-
-Hypothesis next_good : forall d : D, forall GOOD : good d, good (next d).
-Hypothesis next_extensive : forall d : D, forall GOOD : good d, d ⊑ next d.
-Hypothesis next_congruence : forall d : D, forall d' : D, forall GOOD : good d, forall GOOD' : good d', forall EQ : d ≡ d', next d ≡ next d'.
 
 Lemma djoin_upperbound (I : Type) (ds : I -> D)
   (CHAIN : forall i1, forall i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1)
@@ -229,6 +221,14 @@ Lemma djoin_upperbound (I : Type) (ds : I -> D)
 Proof.
   i. eapply djoin_supremum; eauto.
 Qed.
+
+Variable dbase : D.
+Hypothesis dbase_good : good dbase.
+
+Variable next : D -> D.
+Hypothesis next_good : forall d : D, forall GOOD : good d, good (next d).
+Hypothesis next_extensive : forall d : D, forall GOOD : good d, d ⊑ next d.
+Hypothesis next_congruence : forall d : D, forall d' : D, forall GOOD : good d, forall GOOD' : good d', forall EQ : d ≡ d', next d ≡ next d'.
 
 Let rec : Tree -> D :=
   Ord.rec dbase next djoin.
@@ -467,7 +467,7 @@ Proof.
 Qed.
 
 Lemma rec_lim' (o : Tree) (cs : Type) (ts : cs -> Tree)
-  (LIM_ORD : forall c1 : cs, exists c2 : cs, ts c1 <ᵣ ts c2)
+  (OPEN : forall c1 : cs, exists c2 : cs, ts c1 <ᵣ ts c2)
   (INHABITED : inhabited cs)
   (LIM' : o =ᵣ indexed_union cs ts)
   : rec o ≡ djoin cs (fun c : cs => rec (ts c)).
@@ -482,7 +482,7 @@ Proof.
       * eapply djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := projT1 c); eauto.
   - eapply djoin_supremum; eauto. clear c. intros c. eapply dle_trans with (d2 := djoin cs (fun c => rec (ts c))); eauto.
     + eapply djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto.
-    + clear c. eapply djoin_supremum; eauto. intros c1. simpl in *. pose proof (LIM_ORD c1) as [c2 H_rLt].
+    + clear c. eapply djoin_supremum; eauto. intros c1. simpl in *. pose proof (OPEN c1) as [c2 H_rLt].
       destruct H_rLt as [[c H_rLe]]. destruct LIM' as [LE1 LE2]. destruct LE2 as [LE2]; simpl in *.
       pose proof (LE2 (@existT cs (fun i : cs => children (ts i)) c2 c)) as claim1. simpl in *. destruct claim1 as [[c' H_rLe']]. simpl in *.
       eapply dle_trans with (d2 := rec (ts' c')); eauto. eapply dle_trans with (d2 := djoin cs' (fun i : cs' => next (rec (ts' i)))); eauto.
@@ -811,7 +811,59 @@ Proof.
   - eapply next_extensive; eauto.
 Qed.
 
-End BOURBAKI_WITT.
+End BOURBAKI_WITT_FIXEDPOINT_THEOREM.
+
+Section GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
+
+Import ColaDef.
+
+Context {D : Type} {PROSET : isProset D} {COLA : isCola D (PROSET := PROSET)}.
+
+Variable f : `[ D -> D ].
+
+Let mu_f : D :=
+  Ord.rec (D := D) (proj1_sig (supremum_cola E.empty)) (proj1_sig f) (fun I : Type => fun ds : I -> D => proj1_sig (supremum_cola (fun d : D => exists i : I, d = ds i))) (Hartogs D).
+
+#[local] Hint Unfold E.In : simplication_hints.
+
+Theorem generalised_Kleene_fixedpoint_theorem
+  : is_lfpOf mu_f (proj1_sig f).
+Proof.
+  split.
+  - red. red. symmetry.
+    enough (proj1_sig f mu_f =< mu_f /\ mu_f =< proj1_sig f mu_f) as [H1 H2] by now eapply leProp_antisymmetry.
+    eapply BourbakiWittFixedpointTheorem with (good := fun x : D => x =< proj1_sig f x) (dbase := proj1_sig (supremum_cola E.empty)) (djoin := fun I : Type => fun ds : I -> D => proj1_sig (supremum_cola (fun d : D => exists i : I, d = ds i))) (next := proj1_sig f).
+    + ii; reflexivity.
+    + ii; now transitivity d2.
+    + ii. destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. eapply H_sup_X. red. red. intros x x_in. red in x_in. destruct x_in as [i ->].
+      transitivity (proj1_sig f (ds i)); eauto. property f. eapply H_sup_X; eauto with *.
+    + ii. destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. split.
+      * intros H_LE i. eapply H_sup_X; eauto with *.
+      * intros H_upperbound. eapply H_sup_X. done!.
+    + destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. eapply H_sup_X. done!.
+    + ii. now property f.
+    + now ii.
+    + ii; des; split; property f; eauto.
+  - red. red. intros fix_f H_fix_f. do 2 red in H_fix_f.
+    enough (mu_f =< proj1_sig f mu_f /\ mu_f =< fix_f) as [H1 H2] by now exact H2.
+    eapply @rec_good with (D := D) (dle := leProp) (good := fun x : D => x =< proj1_sig f x /\ x =< fix_f) (dbase := proj1_sig (supremum_cola E.empty)) (djoin := fun I : Type => fun ds : I -> D => proj1_sig (supremum_cola (fun d : D => exists i : I, d = ds i))) (next := proj1_sig f).
+    + ii; reflexivity.
+    + ii; now transitivity d2.
+    + ii. destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. split; eapply H_sup_X; do 2 red; intros x x_in; red in x_in; destruct x_in as [i ->].
+      * transitivity (proj1_sig f (ds i)); eauto; [eapply GOODs | property f; eapply H_sup_X]; eauto with *.
+      * eapply GOODs.
+    + ii. destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. split.
+      * intros H_LE i. eapply H_sup_X; eauto with *.
+      * intros H_upperbound. eapply H_sup_X. done!.
+    + destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. split; eapply H_sup_X; done!.
+    + ii; des. split.
+      * now property f.
+      * rewrite -> H_fix_f. now property f.
+    + now ii.
+    + ii; des; split; property f; eauto.
+Qed.
+
+End GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
 
 End THEORY_ON_RANK.
 
