@@ -2,12 +2,11 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Math.OrderTheory.
 Require Import PnV.Data.Aczel.
 Require Import PnV.Prelude.ClassicalFacts.
-Require Import PnV.Prelude.AC.
 Require Import PnV.Math.SetTheory.
 
 Import TypeTheoreticImplementation.
 
-Module InducedOrdinal <: LEM_ModuleAttribute.
+Module InducedOrdinal.
 
 Section THEORY_ON_RANK.
 
@@ -161,11 +160,16 @@ Proof.
   - destruct SUCC as [beta SUCC]. eapply P_succ; eauto. eapply IH. rewrite rEq_succ_iff in SUCC. now rewrite -> SUCC.
 Qed.
 
-Section _REC1.
+Section BOURBAKI_WITT.
 
 Context {D : Type}.
+
 Variable good : D -> Prop.
 Variable dle : D -> D -> Prop.
+Variable djoin : forall I : Type, (I -> D) -> D.
+Variable dbase : D.
+Variable next : D -> D.
+
 #[local] Infix "⊑" := dle.
 
 Hypothesis dle_refl : forall d1 : D, forall GOOD1 : good d1, d1 ⊑ d1.
@@ -209,9 +213,14 @@ Proof.
   red in EQ, EQ'; split; eapply dle_trans with (d2 := d2); eauto; tauto.
 Qed.
 
-Variable djoin : forall I : Type, (I -> D) -> D.
 Hypothesis djoin_good : forall I : Type, forall ds : I -> D, forall CHAIN : forall i1, forall i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1, forall GOODs : forall i, good (ds i), good (djoin I ds).
 Hypothesis djoin_supremum : forall I : Type, forall ds : I -> D, forall CHAIN : forall i1, forall i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1, forall GOODs : forall i, good (ds i), forall d : D, forall GOOD : good d, djoin I ds ⊑ d <-> (forall i, ds i ⊑ d).
+
+Hypothesis dbase_good : good dbase.
+
+Hypothesis next_good : forall d : D, forall GOOD : good d, good (next d).
+Hypothesis next_extensive : forall d : D, forall GOOD : good d, d ⊑ next d.
+Hypothesis next_congruence : forall d : D, forall d' : D, forall GOOD : good d, forall GOOD' : good d', forall EQ : d ≡ d', next d ≡ next d'.
 
 Lemma djoin_upperbound (I : Type) (ds : I -> D)
   (CHAIN : forall i1, forall i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1)
@@ -221,16 +230,8 @@ Proof.
   i. eapply djoin_supremum; eauto.
 Qed.
 
-Variable dnext : D -> D.
-Hypothesis dnext_good : forall d : D, forall GOOD : good d, good (dnext d).
-Hypothesis dnext_extensive : forall d : D, forall GOOD : good d, d ⊑ dnext d.
-Hypothesis dnext_congruence : forall d : D, forall d' : D, forall GOOD : good d, forall GOOD' : good d', forall EQ : d ≡ d', dnext d ≡ dnext d'.
-
-Variable dbase : D.
-Hypothesis dbase_good : good dbase.
-
 Let rec : Tree -> D :=
-  Ord.rec dbase dnext djoin.
+  Ord.rec dbase next djoin.
 
 Let rLe_Reflexive (o : Tree) : o ≦ᵣ o :=
   PreOrder_Reflexive o.
@@ -241,47 +242,47 @@ Let trivial_rLt (cs : Type) (ts : cs -> Tree) (c : cs) : ts c <ᵣ mkNode cs ts 
 #[local] Hint Resolve rLe_Reflexive trivial_rLt : core.
 
 Theorem rec_spec (o : Tree)
-  : ⟪ mono_rec : forall o', o' ≦ᵣ o -> rec o' ⊑ rec o ⟫ /\ ⟪ base_rec : dbase ⊑ rec o ⟫ /\ ⟪ next_rec : forall o', o' <ᵣ o -> dnext (rec o') ⊑ rec o ⟫ /\ ⟪ good_rec : good (rec o) ⟫.
+  : ⟪ mono_rec : forall o', o' ≦ᵣ o -> rec o' ⊑ rec o ⟫ /\ ⟪ base_rec : dbase ⊑ rec o ⟫ /\ ⟪ next_rec : forall o', o' <ᵣ o -> next (rec o') ⊑ rec o ⟫ /\ ⟪ good_rec : good (rec o) ⟫.
 Proof.
   rename o into t. pose proof (rLt_wf t) as H_Acc. induction H_Acc as [t _ IH]. destruct t as [cs ts]; simpl.
-  assert (H_chain : forall cs' : Type, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, forall c1 : cs', forall c2 : cs', dnext (rec (ts' c1)) ⊑ dnext (rec (ts' c2)) \/ dnext (rec (ts' c2)) ⊑ dnext (rec (ts' c1))).
+  assert (H_chain : forall cs' : Type, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, forall c1 : cs', forall c2 : cs', next (rec (ts' c1)) ⊑ next (rec (ts' c2)) \/ next (rec (ts' c2)) ⊑ next (rec (ts' c1))).
   { ii.
     assert (ts' c1 <ᵣ mkNode cs ts /\ ts' c2 <ᵣ mkNode cs ts) as [helper1 helper2].
     { split; econs; eapply LE. }
     pose proof (trichotomy (ts' c1) (ts' c2)) as [EQ | [LT | GT]].
-    - hexploit (dnext_congruence (rec (ts' c1)) (rec (ts' c2))).
+    - hexploit (next_congruence (rec (ts' c1)) (rec (ts' c2))).
       + eapply IH; eauto.
       + eapply IH; eauto.
       + destruct EQ as [LE1 LE2]. split; eapply IH; eauto.
       + intros H_deq. left. exact (proj1 H_deq).
     - left. eapply dle_trans with (d2 := rec (ts' c2)); eauto.
-      + eapply dnext_good. eapply IH; eauto.
+      + eapply next_good. eapply IH; eauto.
       + eapply IH; eauto.
-      + eapply dnext_good. eapply IH; eauto.
+      + eapply next_good. eapply IH; eauto.
       + eapply IH; eauto.
-      + eapply dnext_extensive. eapply IH; eauto.
+      + eapply next_extensive. eapply IH; eauto.
     - right. eapply dle_trans with (d2 := rec (ts' c1)); eauto.
-      + eapply dnext_good. eapply IH; eauto.
+      + eapply next_good. eapply IH; eauto.
       + eapply IH; eauto.
-      + eapply dnext_good. eapply IH; eauto.
+      + eapply next_good. eapply IH; eauto.
       + eapply IH; eauto.
-      + eapply dnext_extensive. eapply IH; eauto.
+      + eapply next_extensive. eapply IH; eauto.
   }
-  assert (H_dnext_good : forall cs' : Type, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, forall c' : cs', good (dnext (rec (ts' c')))).
-  { ii. eapply dnext_good. eapply IH; eauto. econs. eapply LE. }
-  set (fun cs' : Type => fun ts' : cs' -> Tree => fun b : bool => if b then dbase else djoin cs' (fun c' => dnext (rec (ts' c')))) as f.
+  assert (H_next_good : forall cs' : Type, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, forall c' : cs', good (next (rec (ts' c')))).
+  { ii. eapply next_good. eapply IH; eauto. econs. eapply LE. }
+  set (fun cs' : Type => fun ts' : cs' -> Tree => fun b : bool => if b then dbase else djoin cs' (fun c' => next (rec (ts' c')))) as f.
   assert (claim1 : forall b1 : bool, forall b2 : bool, forall cs' : Type, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, f cs' ts' b1 ⊑ f cs' ts' b2 \/ f cs' ts' b2 ⊑ f cs' ts' b1).
   { ii.
     assert (helper1 : forall c' : cs', ts' c' <ᵣ mkNode cs ts).
     { i; econs; eapply LE. }
-    assert (helper2 : dbase ⊑ djoin cs' (fun c' : cs' => dnext (rec (ts' c'))) \/ djoin cs' (fun c' : cs' => dnext (rec (ts' c'))) ⊑ dbase).
+    assert (helper2 : dbase ⊑ djoin cs' (fun c' : cs' => next (rec (ts' c'))) \/ djoin cs' (fun c' : cs' => next (rec (ts' c'))) ⊑ dbase).
     { pose proof (classic (inhabited cs')) as [YES | NO].
-      - destruct YES as [c']. left. eapply dle_trans with (d2 := dnext (rec (ts' c'))); eauto.
+      - destruct YES as [c']. left. eapply dle_trans with (d2 := next (rec (ts' c'))); eauto.
         + eapply dle_trans with (d2 := rec (ts' c')); eauto.
           * eapply IH; eauto.
           * eapply IH; eauto.
-          * eapply dnext_extensive. eapply IH; eauto.
-        + eapply djoin_upperbound with (ds := fun c' : cs' => dnext (rec (ts' c'))); eauto.
+          * eapply next_extensive. eapply IH; eauto.
+        + eapply djoin_upperbound with (ds := fun c' : cs' => next (rec (ts' c'))); eauto.
       - right. eapply djoin_supremum; eauto. intros c'. contradiction NO. econs. exact c'.
     }
     destruct b1, b2; simpl in *; eauto; [tauto | left; eapply dle_refl]. eapply djoin_good; eauto.
@@ -297,40 +298,40 @@ Proof.
   { ii. pose proof (H_rLt c') as [[c H_rLe]]; simpl in *. exists c. exact H_rLe. }
   assert (claim6 : forall o : Tree, forall LE : o ≦ᵣ mkNode cs ts, rec o ⊑ x).
   { intros [cs' ts'] [H_rLt]. simpl in *. unfold Ord.join.
-    change (fun b : bool => if b then dbase else djoin cs' (fun c : cs' => dnext (rec (ts' c)))) with (f cs' ts').
+    change (fun b : bool => if b then dbase else djoin cs' (fun c : cs' => next (rec (ts' c)))) with (f cs' ts').
     rewrite -> djoin_supremum; eauto. destruct i; eauto. simpl. eapply djoin_supremum; i; eauto.
-    unfold x. eapply dle_trans with (d2 := djoin cs' (fun c' => dnext (rec (ts' c')))); eauto.
+    unfold x. eapply dle_trans with (d2 := djoin cs' (fun c' => next (rec (ts' c')))); eauto.
     - eapply djoin_good; eauto.
-    - eapply djoin_upperbound with (ds := fun c' : cs' => dnext (rec (ts' c'))); eauto.
+    - eapply djoin_upperbound with (ds := fun c' : cs' => next (rec (ts' c'))); eauto.
     - eapply djoin_supremum; eauto. intros c'. pose proof (H_rLt c') as [[c H_rLe]]; simpl in *.
       rewrite rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_LT | H_EQ].
-      + eapply dle_trans with (d2 := dnext (rec (ts c))); eauto.
+      + eapply dle_trans with (d2 := next (rec (ts c))); eauto.
         { eapply dle_trans with (d2 := rec (ts c)); eauto.
           - eapply IH; eauto.
           - eapply IH; eauto.
-          - eapply dnext_extensive; eauto. eapply IH; eauto.
+          - eapply next_extensive; eauto. eapply IH; eauto.
         }
-        { unfold f. eapply dle_trans with (d2 := djoin cs (fun i : cs => dnext (rec (ts i)))); eauto.
+        { unfold f. eapply dle_trans with (d2 := djoin cs (fun i : cs => next (rec (ts i)))); eauto.
           - eapply djoin_good; eauto.
-          - eapply djoin_upperbound with (ds := fun c : cs => dnext (rec (ts c))); eauto.
+          - eapply djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto.
           - eapply djoin_upperbound with (ds := f cs ts) (i := false); eauto.
         }
-      + eapply dle_trans with (d2 := dnext (rec (ts c))); eauto.
-        { eapply dnext_congruence.
+      + eapply dle_trans with (d2 := next (rec (ts c))); eauto.
+        { eapply next_congruence.
           - eapply IH; eauto.
           - eapply IH; eauto.
           - destruct H_EQ as [H_LE1 H_LE2]. split; eapply IH; eauto.
         }
-        { unfold f. eapply dle_trans with (d2 := djoin cs (fun i : cs => dnext (rec (ts i)))); eauto.
+        { unfold f. eapply dle_trans with (d2 := djoin cs (fun i : cs => next (rec (ts i)))); eauto.
           - eapply djoin_good; eauto.
-          - eapply djoin_upperbound with (ds := fun c : cs => dnext (rec (ts c))); eauto.
+          - eapply djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto.
           - eapply djoin_upperbound with (ds := f cs ts) (i := false); eauto.
         }
   }
   split; eauto. split; eauto. split; eauto. intros o H_rLt.
   pose proof (classic (exists o' : Tree, o <ᵣ o' /\ o' <ᵣ mkNode cs ts)) as [YES | NO].
   - unfold Ord.join. des. hexploit (IH o'); eauto. i; des. eapply dle_trans with (d2 := rec o'); eauto.
-    + eapply dnext_good. eapply IH; eauto.
+    + eapply next_good. eapply IH; eauto.
     + unfold x, f in claim6. eapply claim6. eapply rLt_implies_rLe; eauto.
   - assert (exists c, ts c =ᵣ o) as [c H_rEq].
     { eapply NNPP. intros H_contra. rewrite rLt_iff_not_rGe in H_rLt. contradiction H_rLt.
@@ -340,16 +341,16 @@ Proof.
     }
     assert (rec o ≡ rec (ts c)) as claim7.
     { destruct H_rEq; split; eapply IH; eauto. }
-    unfold Ord.join. eapply dle_trans with (d2 := dnext (rec (ts c))); eauto.
-    { eapply dnext_good. eapply IH; eauto. }
-    { eapply dnext_congruence.
+    unfold Ord.join. eapply dle_trans with (d2 := next (rec (ts c))); eauto.
+    { eapply next_good. eapply IH; eauto. }
+    { eapply next_congruence.
       - eapply IH; eauto.
       - eapply IH; eauto.
       - eapply deq_sym; eauto.
     }
-    { eapply dle_trans with (d2 := djoin cs (fun i : cs => dnext (rec (ts i)))); eauto.
+    { eapply dle_trans with (d2 := djoin cs (fun i : cs => next (rec (ts i)))); eauto.
       - eapply djoin_good; eauto.
-      - eapply djoin_upperbound with (ds := fun c : cs => dnext (rec (ts c))); eauto.
+      - eapply djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto.
       - eapply djoin_upperbound with (ds := f cs ts) (i := false); eauto.
     }
 Qed.
@@ -370,7 +371,7 @@ Qed.
 
 Lemma lt_rec (t : Tree) (t' : Tree)
   (H_rLt : t <ᵣ t')
-  : dnext (rec t) ⊑ rec t'.
+  : next (rec t) ⊑ rec t'.
 Proof.
   eapply rec_spec; eauto.
 Qed.
@@ -389,13 +390,13 @@ Qed.
 
 #[local] Hint Resolve le_rec lt_rec eq_rec rec_le_base good_rec deq_sym : core.
 
-Lemma rec_dnext_dle (t : Tree) (t' : Tree)
+Lemma rec_next_dle (t : Tree) (t' : Tree)
   (H_rLe : t ≦ᵣ t')
-  : dnext (rec t) ⊑ dnext (rec t').
+  : next (rec t) ⊑ next (rec t').
 Proof.
   rewrite rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_rLt | H_rEq].
   - eapply dle_trans with (d2 := rec t'); eauto.
-  - eapply dnext_congruence; eauto.
+  - eapply next_congruence; eauto.
 Qed.
 
 Lemma rec_chain (t : Tree) (t' : Tree)
@@ -405,28 +406,28 @@ Proof.
 Qed.
 
 Lemma rec_next_chain (t : Tree) (t' : Tree)
-  : dnext (rec t) ⊑ dnext (rec t') \/ dnext (rec t') ⊑ dnext (rec t).
+  : next (rec t) ⊑ next (rec t') \/ next (rec t') ⊑ next (rec t).
 Proof.
-  pose proof (rLe_total t t') as [H | H]; [left | right]; eapply rec_dnext_dle; eauto.
+  pose proof (rLe_total t t') as [H | H]; [left | right]; eapply rec_next_dle; eauto.
 Qed.
 
 Lemma good_next_rec (cs : Type) (ts : cs -> Tree)
-  : forall c : cs, good (dnext (rec (ts c))).
+  : forall c : cs, good (next (rec (ts c))).
 Proof.
   eauto.
 Qed.
 
-#[local] Hint Resolve rec_dnext_dle rec_chain rec_next_chain good_next_rec : core.
+#[local] Hint Resolve rec_next_dle rec_chain rec_next_chain good_next_rec : core.
 
 Let j (cs : Type) (ts : cs -> Tree) (b : bool) : D :=
-  if b then dbase else djoin cs (fun c => dnext (rec (ts c))).
+  if b then dbase else djoin cs (fun c => next (rec (ts c))).
 
 Lemma j_chain (cs : Type) (ts : cs -> Tree) (b : bool) (b' : bool)
   : j cs ts b ⊑ j cs ts b' \/ j cs ts b' ⊑ j cs ts b.
 Proof.
-  assert (dbase ⊑ djoin cs (fun c => dnext (rec (ts c))) \/ djoin cs (fun c => dnext (rec (ts c))) ⊑ dbase) as claim1.
+  assert (dbase ⊑ djoin cs (fun c => next (rec (ts c))) \/ djoin cs (fun c => next (rec (ts c))) ⊑ dbase) as claim1.
   { pose proof (classic (inhabited cs)) as [YES | NO]; [left | right].
-    - destruct YES as [c]. eapply dle_trans with (d2 := dnext (rec (ts c))); eauto. eapply djoin_upperbound with (ds := fun c : cs => dnext (rec (ts c))); eauto.
+    - destruct YES as [c]. eapply dle_trans with (d2 := next (rec (ts c))); eauto. eapply djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto.
     - eapply djoin_supremum; eauto. intros c. contradiction NO. econs. exact c.
   }
   destruct b, b'; simpl; eauto; try tauto.
@@ -452,16 +453,16 @@ Qed.
 
 Lemma rec_succ (o : Tree) (alpha : Tree)
   (SUCC : o =ᵣ succ alpha)
-  : rec o ≡ dnext (rec alpha).
+  : rec o ≡ next (rec alpha).
 Proof.
   eapply deq_trans with (d2 := rec (succ alpha)); eauto. simpl.
-  change (djoin bool (j { b : bool & children (if b then alpha else singleton alpha) } (fun c => childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))) ≡ dnext (rec alpha)). split.
-  - eapply djoin_supremum; eauto. intros [ | ]; eauto. eapply djoin_supremum; eauto. intros [[ | ] c]; simpl; eapply rec_dnext_dle.
+  change (djoin bool (j { b : bool & children (if b then alpha else singleton alpha) } (fun c => childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))) ≡ next (rec alpha)). split.
+  - eapply djoin_supremum; eauto. intros [ | ]; eauto. eapply djoin_supremum; eauto. intros [[ | ] c]; simpl; eapply rec_next_dle.
     + eapply rLt_implies_rLe. econs. exists c. reflexivity.
     + simpl in c. destruct c as [ | ]; reflexivity.
   - refine (let c : { b : bool & children (if b then alpha else singleton alpha) } := @existT _ _ false true in _).
-    eapply dle_trans with (d2 := djoin { b : bool & children (if b then alpha else singleton alpha) } (fun c => dnext (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))))); eauto.
-    + eapply djoin_upperbound with (ds := fun c : {b : bool & children (if b then alpha else singleton alpha)} => dnext (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c)))) (i := c); eauto.
+    eapply dle_trans with (d2 := djoin { b : bool & children (if b then alpha else singleton alpha) } (fun c => next (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))))); eauto.
+    + eapply djoin_upperbound with (ds := fun c : {b : bool & children (if b then alpha else singleton alpha)} => next (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c)))) (i := c); eauto.
     + eapply djoin_upperbound with (ds := j { b : bool & children (if b then alpha else singleton alpha) } (fun c => childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))) (i := false); eauto.
 Qed.
 
@@ -484,8 +485,8 @@ Proof.
     + clear c. eapply djoin_supremum; eauto. intros c1. simpl in *. pose proof (LIM_ORD c1) as [c2 H_rLt].
       destruct H_rLt as [[c H_rLe]]. destruct LIM' as [LE1 LE2]. destruct LE2 as [LE2]; simpl in *.
       pose proof (LE2 (@existT cs (fun i : cs => children (ts i)) c2 c)) as claim1. simpl in *. destruct claim1 as [[c' H_rLe']]. simpl in *.
-      eapply dle_trans with (d2 := rec (ts' c')); eauto. eapply dle_trans with (d2 := djoin cs' (fun i : cs' => dnext (rec (ts' i)))); eauto.
-      * eapply dle_trans with (d2 := dnext (rec (ts' c'))); eauto. eapply djoin_upperbound with (ds := fun i : cs' => dnext (rec (ts' i))) (i := c'); eauto.
+      eapply dle_trans with (d2 := rec (ts' c')); eauto. eapply dle_trans with (d2 := djoin cs' (fun i : cs' => next (rec (ts' i)))); eauto.
+      * eapply dle_trans with (d2 := next (rec (ts' c'))); eauto. eapply djoin_upperbound with (ds := fun i : cs' => next (rec (ts' i))) (i := c'); eauto.
       * eapply djoin_upperbound with (ds := j cs' ts') (i := false); eauto.
 Qed.
 
@@ -550,13 +551,13 @@ Proof.
 Qed.
 
 Lemma BASENEXTJOIN (cs : Type) (ts : cs -> Tree)
-  : dbase ⊑ djoin cs (fun c : cs => dnext (rec (ts c))) \/ djoin cs (fun c : cs => dnext (rec (ts c))) ⊑ dbase.
+  : dbase ⊑ djoin cs (fun c : cs => next (rec (ts c))) \/ djoin cs (fun c : cs => next (rec (ts c))) ⊑ dbase.
 Proof.
   destruct (classic (inhabited cs)) as [YES | NO].
   { destruct YES as [c]. left.
     eapply dle_trans with (d2 := rec (ts c)); eauto.
-    eapply dle_trans with (d2 := dnext (rec (ts c))); eauto.
-    eapply djoin_upperbound with (ds := fun c => dnext (rec (ts c))); eauto.
+    eapply dle_trans with (d2 := next (rec (ts c))); eauto.
+    eapply djoin_upperbound with (ds := fun c => next (rec (ts c))); eauto.
   }
   { right. eapply djoin_supremum; eauto. intros c. contradiction NO. econs; exact c. }
 Qed.
@@ -633,14 +634,14 @@ Qed.
 
 Lemma rec_unique (f : Tree -> D)
   (ZERO : forall o : Tree, o =ᵣ empty -> f o ≡ dbase)
-  (SUCC : forall o : Tree, forall alpha : Tree, o =ᵣ succ alpha -> f o ≡ dnext (f alpha))
+  (SUCC : forall o : Tree, forall alpha : Tree, o =ᵣ succ alpha -> f o ≡ next (f alpha))
   (LIM' : forall o : Tree, forall I : Type, forall alpha : I -> Tree, o =ᵣ indexed_union I alpha -> inhabited I -> (forall i1, exists i2, alpha i1 <ᵣ alpha i2) -> f o ≡ djoin I (fun i : I => f (alpha i)))
   (GOOD : forall o, good (f o))
   : forall o, f o ≡ rec o.
 Proof.
   eapply transfinite_induction.
   - ii. eapply deq_trans with (d2 := dbase); eauto. eapply deq_sym. eapply rec_zero; eauto.
-  - ii. eapply deq_trans with (d2 := dnext (f alpha)); eauto. eapply deq_sym. eapply deq_trans with (d2 := dnext (rec alpha)); eauto. eapply rec_succ; eauto.
+  - ii. eapply deq_trans with (d2 := next (f alpha)); eauto. eapply deq_sym. eapply deq_trans with (d2 := next (rec alpha)); eauto. eapply rec_succ; eauto.
   - ii. des.
     assert (CHAIN : forall i1, forall i2, dle (f (alpha i1)) (f (alpha i2)) \/ dle (f (alpha i2)) (f (alpha i1))).
     { ii. pose proof (rec_chain (alpha i1) (alpha i2)) as [LE | LE].
@@ -654,44 +655,44 @@ Proof.
 Qed.
 
 Lemma rec_unique2 (f : Tree -> D)
-  (FIX : forall cs : Type, forall ts : cs -> Tree, f (mkNode cs ts) ≡ dunion dbase (djoin cs (fun c : cs => dnext (f (ts c)))))
+  (FIX : forall cs : Type, forall ts : cs -> Tree, f (mkNode cs ts) ≡ dunion dbase (djoin cs (fun c : cs => next (f (ts c)))))
   (GOOD : forall o : Tree, good (f o))
   : forall t : Tree, f t ≡ rec t.
 Proof.
   induction t as [cs ts IH]; simpl.
-  assert (NEXTLE : forall c1 : cs, forall c2 : cs, ts c1 ≦ᵣ ts c2 -> dnext (f (ts c1)) ⊑ dnext (f (ts c2))).
-  { ii. eapply dle_trans with (d2 := dnext (rec (ts c1))); eauto.
-    - eapply dnext_congruence; eauto.
-    - eapply dle_trans with (d2 := dnext (rec (ts c2))); eauto. eapply dnext_congruence; eauto.
+  assert (NEXTLE : forall c1 : cs, forall c2 : cs, ts c1 ≦ᵣ ts c2 -> next (f (ts c1)) ⊑ next (f (ts c2))).
+  { ii. eapply dle_trans with (d2 := next (rec (ts c1))); eauto.
+    - eapply next_congruence; eauto.
+    - eapply dle_trans with (d2 := next (rec (ts c2))); eauto. eapply next_congruence; eauto.
   }
-  assert (NEXTCHAIN : forall c1 : cs, forall c2 : cs, dnext (f (ts c1)) ⊑ dnext (f (ts c2)) \/ dnext (f (ts c2)) ⊑ dnext (f (ts c1))).
+  assert (NEXTCHAIN : forall c1 : cs, forall c2 : cs, next (f (ts c1)) ⊑ next (f (ts c2)) \/ next (f (ts c2)) ⊑ next (f (ts c1))).
   { ii. pose proof (rLe_total (ts c1) (ts c2)) as [? | ?]; eauto. }
-  assert (BASE : dbase ⊑ djoin cs (fun c => dnext (f (ts c))) \/ djoin cs (fun c => dnext (f (ts c))) ⊑ dbase).
+  assert (BASE : dbase ⊑ djoin cs (fun c => next (f (ts c))) \/ djoin cs (fun c => next (f (ts c))) ⊑ dbase).
   { ii. destruct (classic (inhabited cs)) as [YES | NO]; [left | right].
     - destruct YES as [c]. eapply dle_trans with (d2 := f (ts c)); eauto.
       + eapply dle_trans with (d2 := rec (ts c)); eauto. eapply IH.
-      + eapply dle_trans with (d2 := dnext (f (ts c))); eauto. eapply djoin_upperbound with (ds := fun c => dnext (f (ts c))); eauto.
+      + eapply dle_trans with (d2 := next (f (ts c))); eauto. eapply djoin_upperbound with (ds := fun c => next (f (ts c))); eauto.
     - eapply djoin_supremum; eauto. intros c. contradiction NO. econs. exact c.
   }
-  assert (H1_good : good (dunion dbase (djoin cs (fun c => dnext (f (ts c)))))).
+  assert (H1_good : good (dunion dbase (djoin cs (fun c => next (f (ts c)))))).
   { eapply dunion_good; eauto. }
-  assert (H2_good : good (dunion dbase (djoin cs (fun c => dnext (rec (ts c)))))).
+  assert (H2_good : good (dunion dbase (djoin cs (fun c => next (rec (ts c)))))).
   { eapply djoin_good; [eapply j_chain | eapply good_j]. }
   split.
-  - eapply dle_trans with (d2 := dunion dbase (djoin cs (fun c => dnext (f (ts c))))). 1,2,3: eauto.
+  - eapply dle_trans with (d2 := dunion dbase (djoin cs (fun c => next (f (ts c))))). 1,2,3: eauto.
     + eapply FIX.
     + eapply djoin_supremum; eauto.
       * intros [ | ] [ | ]; simpl; eauto. destruct BASE; eauto.
       * intros [ | ]; eauto.
-      * intros [ | ]; eauto. eapply dle_trans with (d2 := djoin cs (fun c => dnext (rec (ts c)))); eauto.
-        eapply djoin_supremum; eauto. intros i. eapply dle_trans with (d2 := dnext (rec (ts i))). 1,2,3: eauto.
-        { eapply dnext_congruence; eauto. }
-        { eapply djoin_upperbound with (ds := fun c => dnext (rec (ts c))); eauto. }
-  - eapply dle_trans with (d2 := dunion dbase (djoin cs (fun c => dnext (f (ts c))))). 1,2,3: eauto.
-    + eapply dunion_supremum; eauto. eapply dle_trans with (d2 := djoin cs (fun c => dnext (f (ts c)))). 1,2,3: eauto.
-      * eapply djoin_supremum; eauto. intros i. eapply dle_trans with (d2 := dnext (f (ts i))). 1,2,3: eauto.
-        { eapply dnext_congruence; eauto. }
-        { eapply djoin_upperbound with (ds := fun c => dnext (f (ts c))); eauto. }
+      * intros [ | ]; eauto. eapply dle_trans with (d2 := djoin cs (fun c => next (rec (ts c)))); eauto.
+        eapply djoin_supremum; eauto. intros i. eapply dle_trans with (d2 := next (rec (ts i))). 1,2,3: eauto.
+        { eapply next_congruence; eauto. }
+        { eapply djoin_upperbound with (ds := fun c => next (rec (ts c))); eauto. }
+  - eapply dle_trans with (d2 := dunion dbase (djoin cs (fun c => next (f (ts c))))). 1,2,3: eauto.
+    + eapply dunion_supremum; eauto. eapply dle_trans with (d2 := djoin cs (fun c => next (f (ts c)))). 1,2,3: eauto.
+      * eapply djoin_supremum; eauto. intros i. eapply dle_trans with (d2 := next (f (ts i))). 1,2,3: eauto.
+        { eapply next_congruence; eauto. }
+        { eapply djoin_upperbound with (ds := fun c => next (f (ts c))); eauto. }
       * eapply dunion_r; eauto.
     + eapply FIX.
 Qed.
@@ -703,9 +704,9 @@ Proof.
 Qed.
 
 Lemma rec_next_good (o : Tree)
-  : good (dnext (rec o)).
+  : good (next (rec o)).
 Proof.
-  eapply dnext_good. eapply rec_good; eauto.
+  eapply next_good. eapply rec_good; eauto.
 Qed.
 
 Inductive strictly_increasing : D -> D -> Prop :=
@@ -731,18 +732,18 @@ Definition not_fixed (beta : Tree) : Prop :=
   forall alpha : Tree, forall LT : alpha <ᵣ beta, ~ rec beta ⊑ rec alpha.
 
 Lemma fixed_point_after (alpha : Tree) (beta : Tree)
-  (FIX : dnext (rec alpha) ⊑ rec alpha)
+  (FIX : next (rec alpha) ⊑ rec alpha)
   (LE : alpha ≦ᵣ beta)
   : rec beta ⊑ rec alpha.
 Proof.
   revert alpha FIX LE. induction beta using @transfinite_induction; ii.
   - eapply le_rec; eauto. rewrite ZERO. econs. intros [].
-  - assert (dnext (rec alpha) ≡ rec alpha) as claim1.
+  - assert (next (rec alpha) ≡ rec alpha) as claim1.
     { split; eauto. }
     eapply rLe_iff_rLt_or_rEq in LE. destruct LE as [LT | EQ].
-    + unnw. eapply dle_trans with (d2 := dnext (rec beta2)). 1,2,3: eauto.
+    + unnw. eapply dle_trans with (d2 := next (rec beta2)). 1,2,3: eauto.
       * eapply rec_succ; eauto.
-      * eapply dle_trans with (d2 := dnext (rec alpha)); eauto. eapply dnext_congruence; eauto. rewrite rEq_succ_iff in SUCC. rewrite -> SUCC in LT. split; eauto.
+      * eapply dle_trans with (d2 := next (rec alpha)); eauto. eapply next_congruence; eauto. rewrite rEq_succ_iff in SUCC. rewrite -> SUCC in LT. split; eauto.
     + eapply le_rec; eauto. eapply EQ.
   - hexploit rec_is_join_inhabited; try eassumption. i; des. rename I into cs, alpha into ts, alpha0 into alpha.
     assert (claim1 : forall c1 : cs, forall c2 : cs, rec (ts c1) ⊑ rec (ts c2) \/ rec (ts c2) ⊑ rec (ts c1)).
@@ -785,7 +786,7 @@ Proof.
   econs. eapply member_implies_rLt. unfold fromWf. eapply fromAcc_member_fromAcc_intro. exact claim3.
 Qed.
 
-Lemma hartogs_fixed
+Lemma Hartogs_fixed
   : ~ not_fixed (Hartogs D).
 Proof.
   intros H_contra. apply least_lt_incr_acc in H_contra; eauto.
@@ -794,11 +795,11 @@ Proof.
   - econs. simpl. exists (@B.exist strictly_increasing strictly_increasing_well_founded). reflexivity.
 Qed.
 
-Theorem _fixpoint_theorem_1
-  : dnext (rec (Hartogs D)) ≡ rec (Hartogs D).
+Theorem BourbakiWittFixedpointTheorem
+  : next (rec (Hartogs D)) ≡ rec (Hartogs D).
 Proof.
   split.
-  - eapply NNPP. intros H_contra. eapply hartogs_fixed. eapply end_le_end with (o' := succ (Hartogs D)).
+  - eapply NNPP. intros H_contra. eapply Hartogs_fixed. eapply end_le_end with (o' := succ (Hartogs D)).
     { eapply rLt_implies_rLe. econs. simpl. exists (@existT _ _ false true). simpl. reflexivity. }
     intros o H_rLt H_dle. eapply H_contra. eapply dle_trans with (d2 := rec (succ (Hartogs D))). 1,2,3: eauto.
     + eapply rec_succ. reflexivity.
@@ -807,10 +808,10 @@ Proof.
       * exfalso. eapply rLt_iff_not_rGe; [exact H_rLt | ].
         assert (claim1 : succ (Hartogs D) =ᵣ succ (Hartogs D)) by reflexivity.
         rewrite rEq_succ_iff in claim1. eapply succ_rLe_intro; eauto.
-  - eapply dnext_extensive; eauto.
+  - eapply next_extensive; eauto.
 Qed.
 
-End _REC1.
+End BOURBAKI_WITT.
 
 End THEORY_ON_RANK.
 
@@ -888,133 +889,3 @@ Proof.
 Qed.
 
 End ClassicalWoset.
-
-Module __wellorderingtheorem1 <: LEM_ModuleAttribute <: AC_ModuleAttribute.
-
-Variant good {X : Type} {SETOID : isSetoid X} (P : X -> Prop) (R : X -> X -> Prop) : Prop :=
-  | good_intro
-    (SOUND : forall a : X, forall b : X, forall LT : R a b, P a /\ P b)
-    (COMPLETE : forall a : X, forall b : X, forall IN : P a, forall IN' : P b, a == b \/ (R a b \/ R b a))
-    (WELL_FOUNDED : well_founded R)
-    : good P R.
-
-Section WELL_ORDERING_THEOREM.
-
-Context {X : Type}.
-
-#[projections(primitive)]
-Record pair : Type :=
-  { P (x : X) : Prop
-  ; R (x : X) (y : X) : Prop
-  } as s.
-
-Variant pair_le (s : pair) (s' : pair) : Prop :=
-  | pair_le_intro
-    (P_incl : forall a : X, forall IN : s.(P) a, s'.(P) a)
-    (R_incl : forall a : X, forall b : X, forall LT : s.(R) a b, s'.(R) a b)
-    (NO_INSERTION : forall a : X, forall b : X, forall IN' : s.(P) b, s'.(R) a b <-> s.(R) a b)
-    : pair_le s s'.
-
-#[global]
-Instance pair_le_Reflexive 
-  : Reflexive pair_le.
-Proof.
-  intros s0. econs; eauto.
-Qed.
-
-#[global]
-Instance pair_le_Transitive
-  : Transitive pair_le.
-Proof.
-  intros s0 s1 s2 [? ? ?] [? ? ?]. simpl in *.
-  econs; simpl in *; eauto; i. rewrite <- NO_INSERTION; eauto.
-Qed.
-
-#[global]
-Instance pair_le_PreOrder : PreOrder pair_le :=
-  { PreOrder_Reflexive := pair_le_Reflexive
-  ; PreOrder_Transitive := pair_le_Transitive
-  }.
-
-Let pair_isSetoid : isSetoid pair :=
-  mkSetoidFromPreOrder pair_le_PreOrder.
-
-#[local] Existing Instance pair_isSetoid.
-
-#[local]
-Instance pair_isProset : isProset pair :=
-  { leProp := pair_le
-  ; Proset_isSetoid := pair_isSetoid
-  ; leProp_PreOrder := pair_le_PreOrder
-  ; leProp_PartialOrder := mkSetoidFromPreOrder_good pair_le_PreOrder
-  }.
-
-Definition pair_sup (I : Type) (chain : I -> pair) : pair :=
-  {| P (x : X) := exists i : I, (chain i).(P) x; R (x : X) (y : X) := exists i : I, (chain i).(R) x y; |}.
-
-Lemma pair_sup_isSupremum (I : Type) (chain : I -> pair)
-  (H_chain : forall i1 : I, forall i2 : I, chain i1 =< chain i2 \/ chain i2 =< chain i1)
-  : is_supremum_of (pair_sup I chain) (fun s : pair => exists i : I, s = chain i).
-Proof.
-  intros u; split.
-  - intros [? ? ?]. intros x x_in. destruct x_in as [i ->]. econs; i.
-    + eapply P_incl. simpl. exists i; eauto.
-    + eapply R_incl. simpl. exists i; eauto.
-    + rewrite -> NO_INSERTION; simpl; eauto. split.
-      * intros [i' H_R]. pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION0; eauto.
-      * intros H_R. exists i. eauto.
-  - intros u_in. do 2 red in u_in. econs; simpl; i; des.
-    + hexploit (u_in (chain i)).
-      { exists i. reflexivity. }
-      intros [? ? ?]; eauto.
-    + hexploit (u_in (chain i)).
-      { exists i. reflexivity. }
-      intros [? ? ?]; eauto.
-    + hexploit (u_in (chain i)).
-      { exists i. reflexivity. }
-      intros [? ? ?]. rewrite -> NO_INSERTION; eauto. split.
-      * intros H_R. exists i. eauto.
-      * intros [i' H_R]. pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION0; eauto.
-Qed.
-
-Context {SETOID : isSetoid X}.
-
-#[local] Notation good s := (__wellorderingtheorem1.good (X := X) (SETOID := SETOID) s.(P) s.(R)).
-
-Lemma pair_sup_good (I : Type) (chain : I -> pair)
-  (H_chain : forall i1 : I, forall i2 : I, chain i1 =< chain i2 \/ chain i2 =< chain i1)
-  (chain_good : forall i : I, good (chain i))
-  : good (pair_sup I chain).
-Proof.
-  split.
-  - intros a b [i H_R]. pose proof (chain_good i) as [? ? ?]. pose proof (SOUND a b H_R). split; exists i; tauto.
-  - intros a b [i1 H_P1] [i2 H_P2]. pose proof (H_chain i1 i2) as [[? ? ?] | [? ? ?]].
-    + pose proof (chain_good i2) as [? ? ?]. hexploit (COMPLETE _ _ (P_incl _ H_P1) H_P2); eauto.
-      intros [? | [? | ?]]; [left; tauto | right | right]; [left | right]; exists i2; tauto.
-    + pose proof (chain_good i1) as [? ? ?]. hexploit (COMPLETE _ _ H_P1 (P_incl _ H_P2)); eauto.
-      intros [? | [? | ?]]; [left; tauto | right | right]; [left | right]; exists i1; tauto.
-  - intros x1. econs. intros x0 [i H_R]. pose proof (chain_good i) as [? ? ?].
-    assert (H_Acc : Acc (chain i).(R) x0) by eauto.
-    pose proof (SOUND _ _ H_R) as [H_P _]. clear H_R. induction H_Acc as [x0 _ IH]; intros; econs; intros y [i' H_R'].
-    assert (LT : (chain i).(R) y x0).
-    { pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION; eauto. }
-    eapply IH; eauto. pose proof (SOUND _ _ LT) as [? ?]; tauto.
-Qed.
-
-Section NEXT.
-
-Variable next : pair -> pair.
-
-Hypothesis next_extensive : forall s : pair, s =< next s.
-
-Hypothesis next_good : forall s : pair, good s -> good (next s).
-
-Hypothesis next_exhausted : forall s : pair, (forall x : X, s.(P) x) \/ (exists x : X, (next s).(P) x /\ ~ s.(P) x).
-
-End NEXT.
-
-End WELL_ORDERING_THEOREM.
-
-#[global] Arguments __wellorderingtheorem1.pair : clear implicits.
-
-End __wellorderingtheorem1. 

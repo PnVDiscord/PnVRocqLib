@@ -1,7 +1,24 @@
-Require Import PnV.Prelude.Prelude.
-Require Import Stdlib.Logic.EqdepFacts.
+Require Export PnV.Prelude.Prelude.
+Require Export Stdlib.Logic.ChoiceFacts.
+Require Export Stdlib.Logic.ClassicalChoice.
+Require Export Stdlib.Logic.EqdepFacts.
 
-Parameter Quot : forall X : Type@{U_discourse}, isSetoid X -> Type.
+Module AxiomOfChoice.
+
+Lemma AC {A : Type} {B : A -> Type} (R : forall x : A, forall y : B x, Prop)
+  (EXISTENCE : forall x, exists y, R x y)
+  : exists f : forall x : A, B x, forall x, R x (f x).
+Proof.
+  eapply non_dep_dep_functional_choice; [exact choice | exact EXISTENCE].
+Defined.
+
+End AxiomOfChoice.
+
+Module Quot.
+
+Parameter t : forall X : Type@{U_discourse}, isSetoid X -> Type.
+
+Notation Quot := Quot.t.
 
 Axiom Quot_isQuotient : forall X : Type@{U_discourse}, forall SETOID : isSetoid X, isQuotientOf (Quot X SETOID) X (SETOID := SETOID).
 
@@ -43,3 +60,5 @@ Proof.
 Defined.
 
 End INDUCTION.
+
+End Quot.

@@ -7,6 +7,8 @@ theories/Data/Graph.v                           #
 theories/Data/ITree.v                           #
 theories/Data/NumRepr.v                         #
 theories/Data/Vector.v                          #
+theories/Flower/FlowerAxioms.v                  #
+theories/Flower/FlowerPrelude.v                 #
 theories/Index/Index.v                          #
 theories/Logic/BasicFol.v                       #
 theories/Logic/BasicFol2.v                      #
@@ -25,12 +27,10 @@ theories/Math/DomainTheory.v                    #
 theories/Math/OrderTheory.v                     #
 theories/Math/SetTheory.v                       #
 theories/Math/ThN.v                             #
-theories/Prelude/AC.v                           #
 theories/Prelude/ClassicalFacts.v               #
 theories/Prelude/ConstructiveFacts.v            #
 theories/Prelude/Notations.v                    #
 theories/Prelude/Prelude.v                      #
-theories/Prelude/Quot.v                         #
 theories/Prelude/SfLib.v                        #
 theories/System/BasicITreeTh.v                  #
 theories/System/FolFramework.v                  #
