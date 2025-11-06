@@ -2,7 +2,7 @@
 
 A Rocq library written by members of [PnV Discord Server](https://github.com/PnVDiscord).
 
-Currently, this library is standalone.
+- Currently, this library is standalone.
 
 ## 1. How to build
 
@@ -37,13 +37,13 @@ Our main results are:
 
 - [x] The Bourbaki-Witt fixed-point theorem and geneneralised Kleene's fixed-point theorem (`Theorem BourbakiWittFixedpointTheorem` and `Theorem generalised_Kleene_fixedpoint_theorem`) in [`ClassicalSetTheory.v`](https://github.com/PnVDiscord/PnVRocqLib/blob/main/theories/Math/ClassicalSetTheory.v)
 
-### Control
+### [Control](theories/Control)
 
 - `Category.v` : Basic theory on category
 
 - `Monad.v` : Basic definitions about monad
 
-### Data
+### [Data](theories/Data)
 
 - `Aczel.v` : Aczel's type theoretic interpretation of set theory.
 
@@ -55,17 +55,17 @@ Our main results are:
 
 - `Vector.v` : Replaces `Stdlib.Vectors.VectorDef.t`.
 
-### Flower
+### [Flower](theories/Flower)
 
 - `FlowerAxioms.v` : Axioms for the sublibrary `Flower`.
 
 - `FlowerPrelude.v` : The prelude of the sublibrary `Flower`.
 
-### Index
+### [Index](theories/Index)
 
 - `Index.v` : Accumulates all source files and check their consistency.
 
-### Logic
+### [Logic](theories/Logic)
 
 - `BasicFol.v` : Basic definitions of First-Order Logic.
 
@@ -87,7 +87,7 @@ Our main results are:
 
 - `PropositionalLogic.v` : Contructive meta-theory on the Propositional Logic, Weak Completeness Theorem for PropoistionalLogic.
 
-### Math
+### [Math](theories/Math)
 
 - `BooleanAlgebra.v` : Basic theory on Boolean algebras.
 
@@ -103,7 +103,7 @@ Our main results are:
 
 - `ThN.v` : Basic facts about the natural numbers.
 
-### Prelude
+### [Prelude](theories/Prelude)
 
 - `ClassicalFacts.v` : Facts about `CIC + (classic : forall P, P \/ ~ P)`.
 
@@ -111,11 +111,11 @@ Our main results are:
 
 - `Notations.v` : Reserves all notations to avoid the conflict.
 
-- `SfLib.v` : The copy of `snu-sf/sflib.v`.
+- `SfLib.v` : A copy of `snu-sf/sflib.v`.
 
-- `Prelude.v` : The prelude code.
+- `Prelude.v` : The prelude.
 
-### System
+### [System](theories/System)
 
 - `BasicITreeTh.v` : A basic theory on interaction trees.
 
