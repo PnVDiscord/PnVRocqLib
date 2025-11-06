@@ -1,6 +1,6 @@
 # PnVRocqLib
 
-A Rocq library written by members of PnV Discord Server.
+A Rocq library written by members of [PnV Discord Server](https://github.com/PnVDiscord).
 
 Currently, this library is standalone.
 
@@ -57,9 +57,9 @@ Our main results are:
 
 ### Flower
 
-- `FlowerAxioms.v`
+- `FlowerAxioms.v` : Axioms for the sublibrary `Flower`.
 
-- `FlowerPrelude.v`
+- `FlowerPrelude.v` : The prelude of the sublibrary `Flower`.
 
 ### Index
 
@@ -104,8 +104,6 @@ Our main results are:
 - `ThN.v` : Basic facts about the natural numbers.
 
 ### Prelude
-
-- `AC.v` : Facts about `CIC` + Axiom of Choice.
 
 - `ClassicalFacts.v` : Facts about `CIC + (classic : forall P, P \/ ~ P)`.
 
