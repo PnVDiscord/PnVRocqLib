@@ -154,9 +154,9 @@ Our main results are:
 
 ## 4. Thanks to
 
-- [Soonwon Moon](https://sf.snu.ac.kr/soonwon.moon/)
+- [Soonwon Moon](https://sf.snu.ac.kr/soonwon.moon)
 - [Hanul Jeon](https://hanuljeon95.github.io)
-- [Clare Jang](https://ailrun.github.io/en/publications)
+- [Clare Jang](https://ailrun.github.io)
 
 ## 5. Goals 
 
@@ -165,5 +165,4 @@ Our main results are:
 1. Ordinal Numbers
 1. Regular Language: Regex, ε-NFA, DFA, and Lexer Genrartor
 1. Parser Generator
-1. Generalized Kleene's Fixed-point Theorem
 1. Gödel's Incompleteness Theorem
