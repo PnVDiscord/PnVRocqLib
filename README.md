@@ -35,6 +35,8 @@ Our main results are:
 
 - [x] The weak normalisation property of STLC. (`Corollary Normalisation_by_Evaluation`) in [`STLC.v`](theories/System/STLC.v)
 
+- [x] The Bourbaki-Witt Fixedpoint Theorem and the geneneralised Kleene's Fixedpoint Theorem (`Theorem BourbakiWittFixedpointTheorem` and `Theorem generalised_Kleene_fixedpoint_theorem`) in [ClassicalSetTheory](https://github.com/PnVDiscord/PnVRocqLib/blob/main/theories/Math/ClassicalSetTheory.v)
+
 ### Control
 
 - `Category.v` : Basic theory on category
@@ -148,7 +150,7 @@ Our main results are:
 
 ## 4. Thanks to
 
-- [SoonWon Moon](https://sf.snu.ac.kr/soonwon.moon/)
+- [Soonwon Moon](https://sf.snu.ac.kr/soonwon.moon/)
 - [Hanul Jeon](https://hanuljeon95.github.io)
 - [Clare Jang](https://ailrun.github.io/en/publications)
 
