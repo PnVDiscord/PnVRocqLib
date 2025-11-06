@@ -148,9 +148,9 @@ Our main results are:
 
 ## 4. Thanks to
 
-- [SoonWon Moon](https://github.com/damhiya)
-- [Hanul Jeon](https://github.com/hanuljeon95)
-- [Clare Jang](https://github.com/ailrun)
+- [SoonWon Moon](https://sf.snu.ac.kr/soonwon.moon/)
+- [Hanul Jeon](https://hanuljeon95.github.io)
+- [Clare Jang](https://ailrun.github.io/en/publications)
 
 ## 5. Goals 
 
