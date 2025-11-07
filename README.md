@@ -166,3 +166,4 @@ Our main results are:
 1. Regular Language: Regex, ε-NFA, DFA, and Lexer Genrartor
 1. LALR(1) CFG: Parser Generator
 1. Gödel's Incompleteness Theorem
+1. IPO <=> pointed DCPO

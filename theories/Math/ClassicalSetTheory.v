@@ -816,7 +816,7 @@ Section GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
 
 Context {D : Type} {PROSET : isProset D}.
 
-Notation img ds := (fun d : D => exists i, d = ds i).
+#[local] Notation img ds := (fun d : D => exists i, d = ds i).
 
 Variable ipo_sup : forall I : Type, forall ds : I -> D, D.
 
