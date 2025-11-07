@@ -35,15 +35,15 @@ Our main results are:
 
 - [x] The weak normalisation property of STLC. (`Corollary Normalisation_by_Evaluation`) in [`STLC.v`](theories/System/STLC.v)
 
-- [x] The Bourbaki-Witt fixed-point theorem and geneneralised Kleene's fixed-point theorem (`Theorem BourbakiWittFixedpointTheorem` and `Theorem generalised_Kleene_fixedpoint_theorem`) in [`ClassicalSetTheory.v`](https://github.com/PnVDiscord/PnVRocqLib/blob/main/theories/Math/ClassicalSetTheory.v)
+- [x] The Bourbaki-Witt fixed-point theorem and the geneneralised Kleene fixed-point theorem (`Theorem BourbakiWittFixedpointTheorem` and `Theorem generalised_Kleene_fixedpoint_theorem`) in [`ClassicalSetTheory.v`](https://github.com/PnVDiscord/PnVRocqLib/blob/main/theories/Math/ClassicalSetTheory.v)
 
-### [Control](theories/Control)
+### [theories/Control](theories/Control)
 
-- `Category.v` : Basic theory on category
+- `Category.v` : Basic theory on category.
 
-- `Monad.v` : Basic definitions about monad
+- `Monad.v` : Basic definitions about monad.
 
-### [Data](theories/Data)
+### [theories/Data](theories/Data)
 
 - `Aczel.v` : Aczel's type theoretic interpretation of set theory.
 
@@ -55,17 +55,17 @@ Our main results are:
 
 - `Vector.v` : Replaces `Stdlib.Vectors.VectorDef.t`.
 
-### [Flower](theories/Flower)
+### [theories/Flower](theories/Flower)
 
 - `FlowerAxioms.v` : Axioms for the sublibrary `Flower`.
 
 - `FlowerPrelude.v` : The prelude of the sublibrary `Flower`.
 
-### [Index](theories/Index)
+### [theories/Index](theories/Index)
 
 - `Index.v` : Accumulates all source files and check their consistency.
 
-### [Logic](theories/Logic)
+### [theories/Logic](theories/Logic)
 
 - `BasicFol.v` : Basic definitions of First-Order Logic.
 
@@ -87,7 +87,7 @@ Our main results are:
 
 - `PropositionalLogic.v` : Contructive meta-theory on the Propositional Logic, Weak Completeness Theorem for PropoistionalLogic.
 
-### [Math](theories/Math)
+### [theories/Math](theories/Math)
 
 - `BooleanAlgebra.v` : Basic theory on Boolean algebras.
 
@@ -103,7 +103,7 @@ Our main results are:
 
 - `ThN.v` : Basic facts about the natural numbers.
 
-### [Prelude](theories/Prelude)
+### [theories/Prelude](theories/Prelude)
 
 - `ClassicalFacts.v` : Facts about `CIC + (classic : forall P, P \/ ~ P)`.
 
@@ -115,7 +115,7 @@ Our main results are:
 
 - `Prelude.v` : The prelude.
 
-### [System](theories/System)
+### [theories/System](theories/System)
 
 - `BasicITreeTh.v` : A basic theory on interaction trees.
 
@@ -164,5 +164,5 @@ Our main results are:
 
 1. Ordinal Numbers
 1. Regular Language: Regex, ε-NFA, DFA, and Lexer Genrartor
-1. Parser Generator
+1. LALR(1) CFG: Parser Generator
 1. Gödel's Incompleteness Theorem

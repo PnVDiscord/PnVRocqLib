@@ -814,46 +814,50 @@ Section GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
 
 #[local] Hint Unfold E.In : simplication_hints.
 
-Import ColaDef.
+Context {D : Type} {PROSET : isProset D}.
 
-Context {D : Type} {PROSET : isProset D} {COLA : isCola D (PROSET := PROSET)}.
+Notation img ds := (fun d : D => exists i, d = ds i).
 
-Theorem generalised_Kleene_fixedpoint_theorem (f : `[ D -> D ])
-  (mu_f := Ord.rec (D := D) (proj1_sig (supremum_cola E.empty)) (proj1_sig f) (fun I : Type => fun ds : I -> D => proj1_sig (supremum_cola (fun d : D => exists i : I, d = ds i))) (Hartogs D))
-  : is_lfpOf mu_f (proj1_sig f).
+Variable ipo_sup : forall I : Type, forall ds : I -> D, D.
+
+Hypothesis ipo_sup_is_supremum : forall I : Type, forall ds : I -> D, forall CHAIN : forall i1, forall i2, ds i1 =< ds i2 \/ ds i2 =< ds i1, is_supremum_of (ipo_sup I ds) (img ds).
+
+Theorem generalised_Kleene_fixedpoint_theorem (f : D -> D)
+  (f_isMonotonic : isMonotonic1 f)
+  (mu_f := Ord.rec (D := D) (ipo_sup Empty_set (Empty_set_rect (fun _ : Empty_set => D))) f ipo_sup (Hartogs D))
+  : is_lfpOf mu_f f.
 Proof.
   split.
   - red. red. symmetry.
-    enough (proj1_sig f mu_f =< mu_f /\ mu_f =< proj1_sig f mu_f) as [H1 H2] by now eapply leProp_antisymmetry.
-    eapply BourbakiWittFixedpointTheorem with (good := fun x : D => x =< proj1_sig f x) (dbase := proj1_sig (supremum_cola E.empty)) (djoin := fun I : Type => fun ds : I -> D => proj1_sig (supremum_cola (fun d : D => exists i : I, d = ds i))) (next := proj1_sig f).
+    enough (f mu_f =< mu_f /\ mu_f =< f mu_f) as [H1 H2] by now eapply leProp_antisymmetry.
+    eapply BourbakiWittFixedpointTheorem with (good := fun x : D => x =< f x) (dbase := ipo_sup Empty_set (Empty_set_rect _)) (djoin := ipo_sup) (next := f).
     + ii; reflexivity.
     + ii; now transitivity d2.
-    + ii. destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. eapply H_sup_X. red. red. intros x x_in. red in x_in. destruct x_in as [i ->].
-      transitivity (proj1_sig f (ds i)); eauto. property f. eapply H_sup_X; eauto with *.
-    + ii. destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. split.
-      * intros H_LE i. eapply H_sup_X; eauto with *.
-      * intros H_upperbound. eapply H_sup_X. done!.
-    + destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. eapply H_sup_X. done!.
-    + ii. now property f.
-    + now ii.
-    + ii; des; split; property f; eauto.
+    + ii. eapply ipo_sup_is_supremum; eauto. ii. red in IN. destruct IN as (i & ->). transitivity (f (ds i)); eauto.
+      eapply f_isMonotonic. eapply ipo_sup_is_supremum; done!.
+    + ii. split.
+      * intros H_LE i. eapply ipo_sup_is_supremum; eauto with *.
+      * intros H_upperbound. eapply ipo_sup_is_supremum; done!.
+    + eapply ipo_sup_is_supremum; done!.
+    + ii; done!.
+    + ii; done!.
+    + ii; des; split; done!.
   - red. red. intros fix_f H_fix_f. do 2 red in H_fix_f.
-    enough (mu_f =< proj1_sig f mu_f /\ mu_f =< fix_f) as [H1 H2] by now exact H2.
-    eapply @rec_good with (D := D) (dle := leProp) (good := fun x : D => x =< proj1_sig f x /\ x =< fix_f) (dbase := proj1_sig (supremum_cola E.empty)) (djoin := fun I : Type => fun ds : I -> D => proj1_sig (supremum_cola (fun d : D => exists i : I, d = ds i))) (next := proj1_sig f).
+    enough (mu_f =< f mu_f /\ mu_f =< fix_f) as [H1 H2] by now exact H2.
+    eapply @rec_good with (D := D) (dle := leProp) (good := fun x : D => x =< f x /\ x =< fix_f) (dbase := ipo_sup Empty_set (Empty_set_rect _)) (djoin := ipo_sup) (next := f).
     + ii; reflexivity.
     + ii; now transitivity d2.
-    + ii. destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. split; eapply H_sup_X; do 2 red; intros x x_in; red in x_in; destruct x_in as [i ->].
-      * transitivity (proj1_sig f (ds i)); eauto; [eapply GOODs | property f; eapply H_sup_X]; eauto with *.
-      * eapply GOODs.
-    + ii. destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. split.
-      * intros H_LE i. eapply H_sup_X; eauto with *.
-      * intros H_upperbound. eapply H_sup_X. done!.
-    + destruct (supremum_cola _) as [sup_X H_sup_X] in |- *; simpl. split; eapply H_sup_X; done!.
-    + ii; des. split.
-      * now property f.
-      * rewrite -> H_fix_f. now property f.
-    + now ii.
-    + ii; des; split; property f; eauto.
+    + ii. split; eapply ipo_sup_is_supremum; eauto; try done!. do 2 red. ii. destruct IN as [i ->].
+      transitivity (f (ds i)); eauto; try done!. eapply f_isMonotonic. eapply ipo_sup_is_supremum; eauto; done!.
+    + ii. split.
+      * intros H_LE i. eapply ipo_sup_is_supremum; eauto with *.
+      * intros H_upperbound. eapply ipo_sup_is_supremum; done!.
+    + split; eapply ipo_sup_is_supremum; ii; try done!.
+    + ii; split.
+      * eapply f_isMonotonic; done!.
+      * des. rewrite H_fix_f. eapply f_isMonotonic. done!.
+    + ii; des; done!.
+    + done!.
 Qed.
 
 End GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
