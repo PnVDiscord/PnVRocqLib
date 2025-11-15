@@ -902,3 +902,40 @@ Next Obligation.
 Defined.
 
 End SET_LEVEL_LE.
+
+Section ACKERMANN.
+
+Record AckermannSpec (ack : nat * nat -> nat) : Prop :=
+  { AckermannSpec1 n : ack (0, n) = n + 1
+  ; AckermannSpec2 m : ack (m + 1, 0) = ack (m, 1)
+  ; AckermannSpec3 m n : ack (m + 1, n + 1) = ack (m, ack (m + 1, n))
+  }.
+
+Let aux1 (kont : nat -> nat) : nat -> nat :=
+  fix aux1_fix (n : nat) {struct n} : nat :=
+  match n with
+  | 0 => kont 1
+  | S n' => kont (aux1_fix n')
+  end.
+
+Let aux2 : nat -> nat -> nat :=
+  fix aux2_fix (m : nat) {struct m} : nat -> nat :=
+  match m with
+  | 0 => S
+  | S m' => aux1 (aux2_fix m')
+  end.
+
+Definition ackermann1 (it : nat * nat) : nat :=
+  aux2 (fst it) (snd it).
+
+Theorem AckermannSpec_ackermann1
+  : AckermannSpec ackermann1.
+Proof with lia || eauto.
+  split.
+  - intros n; replace (n + 1) with (S n)...
+  - intros m; replace (m + 1) with (S m)...
+  - intros [ | m']; induction n as [ | n IH]; cbn in *...
+    all: replace (m' + 1) with (S m') in *...
+Qed.
+
+End ACKERMANN.
