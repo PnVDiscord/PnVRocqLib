@@ -191,6 +191,19 @@ Proof.
     + tauto.
 Qed.
 
+Theorem fromWfSet_isOrdinal {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : isOrdinal (@fromWfSet A wltProp wltProp_well_founded).
+Proof.
+  econs.
+  - intros y [cy y_eq] z. simpl in cy. rewrite y_eq. clear y y_eq. simpl. intros z_in.
+    rewrite fromWf_unfold in z_in. destruct z_in as (c & H_LT & z_eq). rewrite z_eq.
+    clear z z_eq. change (c ≺ cy) in H_LT. exists c. simpl. reflexivity.
+  - intros beta [c beta_eq] y. simpl in c. intros y_in z z_in. rewrite -> beta_eq in y_in |- *. simpl in y_in |- *.
+    clear beta beta_eq. rewrite fromWf_unfold in y_in. destruct y_in as (cy & H_LT1 & y_eq). rewrite y_eq in z_in.
+    rewrite fromWf_unfold in z_in. destruct z_in as (cz & H_LT2 & z_eq). rewrite z_eq.
+    rewrite -> fromWf_in_fromWf_iff. red; transitivity cy; eauto.
+Qed.
+
 End ClassicalWoset.
 
 Module InducedOrdinal.
