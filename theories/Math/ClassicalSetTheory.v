@@ -1065,3 +1065,78 @@ End GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
 End THEORY_ON_RANK.
 
 End InducedOrdinal.
+
+Section ORDINAL_1.
+
+#[local] Infix "\in" := member.
+#[local] Infix "\subseteq" := isSubsetOf.
+
+#[local] Hint Resolve isOrdinal_member_isOrdinal : core.
+#[local] Hint Unfold rEq : simplication_hints.
+
+Lemma ord_comparison__aux1 (x : Tree) (alpha : Tree) (beta : Tree)
+  (x_rGe1 : alpha ≦ᵣ x)
+  (x_rGe2 : beta ≦ᵣ x)
+  (H_isOrdinal1 : isOrdinal alpha)
+  (H_isOrdinal2 : isOrdinal beta)
+  : (alpha <ᵣ beta -> alpha \in beta) /\ (alpha =ᵣ beta -> alpha == beta).
+Proof.
+  revert alpha beta x_rGe1 x_rGe2 H_isOrdinal1 H_isOrdinal2. pose proof (rLt_wf x) as H_Acc. induction H_Acc as [x _ IH].
+  destruct alpha as [cs1 ts1], beta as [cs2 ts2]; ii. split; intros H.
+  - destruct H as [[c2 H_rLe]]. simpl in *. exploit (IH (ts2 c2) _ (mkNode cs1 ts1) (ts2 c2)); eauto with *.
+    { eapply rLt_rLe_rLt; eauto with *. }
+    intros (H1 & H2). rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_LT | H_EQ].
+    { specialize (H1 H_LT). inversion H_isOrdinal2. eapply TRANS with (y := ts2 c2); eauto with *. }
+    { specialize (H2 H_EQ). rewrite -> H2; eauto with *. }
+  - eapply extensionality. intros z; split; intros [c z_eq].
+    { simpl in *. change (z == ts1 c) in z_eq. destruct H as [H_rLe1 H_rLe2]. destruct H_rLe1. simpl in H_rLt.
+      pose proof (H_rLt c) as [[c' H_rLe]]. simpl in c', H_rLe. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_LT | H_EQ].
+      - rewrite z_eq. clear z z_eq. exploit (IH (ts2 c') _ (ts1 c) (ts2 c')); eauto with *.
+        { eapply rLt_rLe_rLt; eauto with *. }
+        intros (H1 & H2). specialize (H1 H_LT). inversion H_isOrdinal2. eapply TRANS with (y := ts2 c'); eauto with *.
+      - rewrite z_eq. clear z z_eq. exploit (IH (ts2 c') _ (ts1 c) (ts2 c')); eauto with *.
+        { eapply rLt_rLe_rLt; eauto with *. }
+        { rewrite -> H_EQ; eauto with *. }
+        intros (H1 & H2). specialize (H2 H_EQ). rewrite -> H2; eauto with *.
+    }
+    { simpl in *. change (z == ts2 c) in z_eq. destruct H as [H_rLe1 H_rLe2]. destruct H_rLe2. simpl in H_rLt.
+      pose proof (H_rLt c) as [[c' H_rLe]]. simpl in c', H_rLe. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_LT | H_EQ].
+      - rewrite z_eq. clear z z_eq. exploit (IH (ts1 c') _ (ts2 c) (ts1 c')); eauto with *.
+        { eapply rLt_rLe_rLt; eauto with *. }
+        { intros (H1 & H2). specialize (H1 H_LT). inversion H_isOrdinal1. eapply TRANS with (y := ts1 c'); eauto with *. }
+      - rewrite z_eq. clear z z_eq. exploit (IH (ts1 c') _ (ts2 c) (ts1 c')); eauto with *.
+        { eapply rLt_rLe_rLt; eauto with *. }
+        { rewrite -> H_EQ; eauto with *. }
+        + intros (H1 & H2). specialize (H2 H_EQ). rewrite -> H2; eauto with *.
+    }
+Qed.
+
+Lemma ord_rLt_ord_elim (alpha : Tree) (beta : Tree)
+  (H_isOrdinal1 : isOrdinal alpha)
+  (H_isOrdinal2 : isOrdinal beta)
+  (H_rLt : alpha <ᵣ beta)
+  : alpha \in beta.
+Proof.
+  eapply ord_comparison__aux1 with (x := beta); eauto with *.
+Qed.
+
+Lemma ord_rEq_ord_elim (alpha : Tree) (beta : Tree)
+  (H_isOrdinal1 : isOrdinal alpha)
+  (H_isOrdinal2 : isOrdinal beta)
+  (H_rEq : alpha =ᵣ beta)
+  : alpha == beta.
+Proof.
+  eapply ord_comparison__aux1 with (x := beta); done!.
+Qed.
+
+Lemma ord_rLe_ord_elim (alpha : Tree) (beta : Tree)
+  (H_isOrdinal1 : isOrdinal alpha)
+  (H_isOrdinal2 : isOrdinal beta)
+  (H_rEq : alpha ≦ᵣ beta)
+  : alpha \subseteq beta.
+Proof.
+  intros x x_in. eapply ord_rLt_ord_elim; eauto with *.
+  eapply rLt_rLe_rLt; eauto with *.
+Qed.
+
+End ORDINAL_1.
