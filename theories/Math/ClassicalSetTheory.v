@@ -1066,7 +1066,7 @@ End THEORY_ON_RANK.
 
 End InducedOrdinal.
 
-Section ORDINAL_1.
+Section ORDINAL_ch1.
 
 #[local] Infix "\in" := member.
 #[local] Infix "\subseteq" := isSubsetOf.
@@ -1107,7 +1107,7 @@ Proof.
       - rewrite z_eq. clear z z_eq. exploit (IH (ts1 c') _ (ts2 c) (ts1 c')); eauto with *.
         { eapply rLt_rLe_rLt; eauto with *. }
         { rewrite -> H_EQ; eauto with *. }
-        + intros (H1 & H2). specialize (H2 H_EQ). rewrite -> H2; eauto with *.
+        intros (H1 & H2). specialize (H2 H_EQ). rewrite -> H2; eauto with *.
     }
 Qed.
 
@@ -1139,4 +1139,4 @@ Proof.
   eapply rLt_rLe_rLt; eauto with *.
 Qed.
 
-End ORDINAL_1.
+End ORDINAL_ch1.
