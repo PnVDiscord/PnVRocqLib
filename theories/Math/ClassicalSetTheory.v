@@ -1132,10 +1132,10 @@ Qed.
 Lemma ord_rLe_ord_elim (alpha : Tree) (beta : Tree)
   (H_isOrdinal1 : isOrdinal alpha)
   (H_isOrdinal2 : isOrdinal beta)
-  (H_rEq : alpha ≦ᵣ beta)
+  (H_rLe : alpha ≦ᵣ beta)
   : alpha \subseteq beta.
 Proof.
-  intros x x_in. eapply ord_rLt_ord_elim; eauto with *.
+  intros z z_in. eapply ord_rLt_ord_elim; eauto with *.
   eapply rLt_rLe_rLt; eauto with *.
 Qed.
 
