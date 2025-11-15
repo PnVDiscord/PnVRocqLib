@@ -16,22 +16,19 @@ End AxiomOfChoice.
 
 Module Quot.
 
-Parameter t : forall X : Type@{U_discourse}, isSetoid X -> Type.
+#[universes(polymorphic)]
+Parameter t@{u} : forall X : Type@{u}, isSetoid X -> Type@{u}.
 
-Notation Quot := Quot.t.
+#[local] Notation Quot := Quot.t.
 
-Axiom Quot_isQuotient : forall X : Type@{U_discourse}, forall SETOID : isSetoid X, isQuotientOf (Quot X SETOID) X (SETOID := SETOID).
+Axiom Quotient_always_exists : forall X : Type@{U_discourse}, forall SETOID : isSetoid X, isQuotientOf (Quot X SETOID) X (SETOID := SETOID).
 
-#[global]
-Instance Quotient_always_exists {X : Type@{U_discourse}} (SETOID : isSetoid X) : isQuotientOf (Quot X SETOID) X :=
-  Quot_isQuotient X SETOID.
+#[global] Existing Instance Quotient_always_exists.
 
 Section INDUCTION.
 
 Let subst (A : Type) (B : A -> Type) (a : A) (a' : A) (p : a = a') (b : B a) : B a' :=
-  match p with
-  | eq_refl => b
-  end.
+  @eq_rect A a B b a' p.
 
 Context {X : Type} {SETOID : isSetoid X} {Q : Type} {QUOTIENT : isQuotientOf Q X}.
 
@@ -44,7 +41,7 @@ Proof .
   { eapply rec_unique. intro x. rewrite rec_compute. eapply f_respect. }
   intro q. specialize claim1 with (q := q). rewrite claim1. symmetry.
   exact (rec_unique prj prj_eq (fun q => q) (fun x => eq_refl) q).
-Defined.
+Qed.
 
 Theorem Quot_ind (phi : Q -> Type)
   (f : forall x, phi (prj x))
@@ -55,10 +52,12 @@ Proof.
   assert (f'_cong : forall x1, forall x2, x1 == x2 -> f' x1 = f' x2).
   { intros x1 x2 EQUIV. subst f'. eapply eq_sigT_sig_eq. exists (prj_eq x1 x2 EQUIV). eapply f_cong. }
   pose (g := fun q => projT2 (rec f' f'_cong q)).
-  pose proof (Quot_ind_aux f'(fun x => projT1 x) f'_cong (fun x => eq_refl)) as claim1.
+  pose proof (Quot_ind_aux f' (fun x => projT1 x) f'_cong (fun x => @eq_refl _ (prj x))) as claim1.
   intro q. exact (subst Q phi (projT1 (rec f' f'_cong q)) q (claim1 q) (g q)).
-Defined.
+Qed.
 
 End INDUCTION.
 
 End Quot.
+
+Notation Quot := Quot.t.

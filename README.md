@@ -142,7 +142,7 @@ Our main results are:
 1. [snu-sf/Ordinal](https://github.com/snu-sf/Ordinal)
 1. [Damhiya/Logos](https://github.com/damhiya/Logos)
 1. [Lean Zulip Chat (1)](https://leanprover.zulipchat.com/#narrow/stream/270676-lean4/topic/Bug.20in.20kernel.20level.20normalization/near/306169266)
-1. [Interaction Trees](https://github.com/DeepSpec/InteractionTrees)
+1. [DeepSpec/Interaction Trees](https://github.com/DeepSpec/InteractionTrees)
 
 ### Literature
 
@@ -163,7 +163,7 @@ Our main results are:
 ### Established at 2024-10-16
 
 1. Ordinal Numbers
+1. IPO <=> pointed DCPO
 1. Regular Language: Regex, ε-NFA, DFA, and Lexer Genrartor
 1. LALR(1) CFG: Parser Generator
 1. Gödel's Incompleteness Theorem
-1. IPO <=> pointed DCPO

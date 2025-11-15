@@ -4,7 +4,7 @@ Require Import PnV.Data.Aczel.
 Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Math.SetTheory.
 
-Module __wellorderingtheorem1.
+Module __wellorderingtheorem.
 
 Variant good {X : Type} {SETOID : isSetoid X} (P : X -> Prop) (R : X -> X -> Prop) : Prop :=
   | good_intro
@@ -94,7 +94,7 @@ Qed.
 
 Context {SETOID : isSetoid X}.
 
-#[local] Notation good s := (__wellorderingtheorem1.good (X := X) (SETOID := SETOID) s.(P) s.(R)).
+#[local] Notation good s := (__wellorderingtheorem.good (X := X) (SETOID := SETOID) s.(P) s.(R)).
 
 Lemma pair_sup_good (I : Type) (chain : I -> pair)
   (H_chain : forall i1 : I, forall i2 : I, chain i1 =< chain i2 \/ chain i2 =< chain i1)
@@ -130,6 +130,6 @@ End NEXT.
 
 End WELL_ORDERING_THEOREM.
 
-#[global] Arguments __wellorderingtheorem1.pair : clear implicits.
+#[global] Arguments __wellorderingtheorem.pair : clear implicits.
 
-End __wellorderingtheorem1. 
+End __wellorderingtheorem.

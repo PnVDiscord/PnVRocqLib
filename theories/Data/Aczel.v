@@ -934,6 +934,19 @@ Proof.
   rewrite rEq_iff. split; eapply rLe_ext; now firstorder.
 Qed.
 
+Lemma rLt_eqPropCompatible2_rEq
+  : eqPropCompatible2 (A_isSetoid := rEq_asSetoid) (B_isSetoid := rEq_asSetoid) (C_isSetoid := Prop_isSetoid) rLt.
+Proof.
+  ii. change ((x1 <ᵣ y1) <-> (x2 <ᵣ y2)). now rewrite -> x_EQ, -> y_EQ.
+Qed.
+
+#[global]
+Instance rLt_isWellOrdering : isWoset Tree (SETOID := rEq_asSetoid) :=
+  { Woset_isWellPoset := {| wltProp := rLt; wltProp_Transitive := rLt_StrictOrder.(StrictOrder_Transitive); wltProp_well_founded := rLt_wf; |}
+  ; Woset_eqPropCompatible2 := rLt_eqPropCompatible2_rEq
+  ; Woset_ext_eq := rEq_ext
+  }.
+
 (** End RANK_COMPARISON. *)
 
 Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x) {struct ACC} : Tree :=
@@ -975,8 +988,17 @@ Proof.
   eapply fromAcc_isMonotonic. exact INCL.
 Qed.
 
-Definition fromWf {A : Type@{Set_u}} (R : A -> A -> Prop) (Wf : well_founded R) (x : A) : Tree :=
-  @fromAcc A R x (Wf x).
+Definition fromWf {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R) (x : A) : Tree :=
+  @fromAcc A R x (R_wf x).
+
+Lemma fromWf_unfold {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R) (x : A)
+  : forall z, z \in @fromWf A R R_wf x <-> (exists y : A, R y x /\ z == @fromWf A R R_wf y).
+Proof.
+  intros z; split.
+  - intros z_in. unfold fromWf in z_in. rewrite fromAcc_unfold in z_in. destruct z_in as [[y R_y_x] z_eq]; simpl proj1_sig in z_eq.
+    exists y. split; trivial. rewrite z_eq. eapply fromAcc_pirrel.
+  - intros (y & R_y_x & z_eq). rewrite z_eq. unfold fromWf. eapply fromAcc_member_fromAcc_intro. exact R_y_x.
+Qed.
 
 Lemma fromWf_isMonotonic {A : Type} {R1 : A -> A -> Prop} {R2 : A -> A -> Prop} (x : A)
   (INCL : forall x : A, forall x' : A, forall LE : R1 x x', R2 x x')
@@ -1000,6 +1022,24 @@ Proof.
   destruct (RB_wf (f x)) as [H_Acc_inv']; simpl. exists (@exist _ _ (f c) (f_cong c x RA_c_x)). simpl.
   rewrite LE. rewrite fromAcc_pirrel with (ACC' := RA_wf c). rewrite H.
   now rewrite fromAcc_pirrel with (A := B) (ACC := (H_Acc_inv' (f c) (f_cong c x RA_c_x))) (ACC' := RB_wf (f c)).
+Qed.
+
+Lemma fromWf_eq_fromWf_intro {A : Type} {B : Type} (RA : A -> A -> Prop) (RB : B -> B -> Prop) (f : A -> B)
+  (RA_wf : well_founded RA)
+  (RB_wf : well_founded RB)
+  (f_sim : forall x' : A, forall y : B, (exists x : A, RA x x' /\ y = f x) <-> (exists y' : B, RB y y' /\ y' = f x'))
+  : forall x : A, @fromWf A RA RA_wf x == @fromWf B RB RB_wf (f x).
+Proof.
+  intros x'. eapply extensionality. pose proof (RA_wf x') as H_ACC. induction H_ACC as [x' _ IH].
+  intros z; split; intros z_in.
+  - rewrite fromWf_unfold in z_in. destruct z_in as (x & H_RA & z_eq). rewrite z_eq. clear z z_eq.
+    assert (exists y' : B, RB (f x) y' /\ y' = f x') as (y & H_RB & ->).
+    { rewrite <- f_sim. exists x; split; trivial. }
+    rewrite fromWf_unfold. exists (f x). split; trivial. eapply extensionality. eapply IH. exact H_RA.
+  - rewrite fromWf_unfold in z_in. destruct z_in as (y & H_RB & z_eq). rewrite z_eq. clear z z_eq.
+    assert (exists x : A, RA x x' /\ y = f x) as (x & H_RA & ->).
+    { rewrite -> f_sim. exists (f x'); split; trivial. }
+    rewrite fromWf_unfold. exists x. split; trivial. symmetry. eapply extensionality. eapply IH. exact H_RA.
 Qed.
 
 Definition fromWfSet {A : Type@{Set_u}} (R : A -> A -> Prop) (Wf : well_founded R) : Tree :=
@@ -1103,6 +1143,36 @@ Proof.
   inversion ORDINAL; eauto with *.
 Defined.
 
+#[global]
+Add Parametric Morphism
+  : isOrdinal with signature (eqProp (isSetoid := Tree_isSetoid) ==> iff)
+  as isOrdinal_eqPropCompatible.
+Proof.
+  intros alpha alpha' H; split; intros [? ?]; econs.
+  - rewrite -> H in TRANS; eauto.
+  - ii. eapply TRANS' with (y := y); eauto. rewrite -> H; eauto.
+  - rewrite <- H in TRANS; eauto.
+  - ii. eapply TRANS' with (y := y); eauto. rewrite <- H; eauto.
+Qed.
+
+Lemma fromWf_isOrdinal {A : Type} (R : A -> A -> Prop)
+  (R_wf : well_founded R)
+  (R_trans : Transitive R)
+  : forall x : A, isOrdinal (@fromWf A R R_wf x).
+Proof.
+  econs.
+  - intros y y_in. unfold fromWf in y_in. rewrite fromAcc_unfold in y_in.
+    destruct y_in as [[c R_c_x] y_eq]. simpl proj1_sig in y_eq.
+    rewrite fromAcc_pirrel with (ACC' := R_wf c) in y_eq. change (y == @fromWf A R R_wf c) in y_eq.
+    intros z z_in. rewrite y_eq in z_in. unfold fromWf in z_in |- *. rewrite fromAcc_unfold in z_in |- *.
+    destruct z_in as [[c1 R_c1_c] z_eq]. exists (@exist _ _ c1 (R_trans c1 c x R_c1_c R_c_x)). simpl proj1_sig in z_eq |- *.
+    rewrite z_eq. eapply fromAcc_pirrel.
+  - intros beta H_in y y_in z z_in. rewrite fromWf_unfold in H_in. destruct H_in as (c & R_c_x & beta_eq).
+    rewrite -> beta_eq in y_in |- *. rewrite fromWf_unfold in y_in. destruct y_in as (c1 & R_c1_c & y_eq).
+    rewrite y_eq in z_in. rewrite fromWf_unfold in z_in. destruct z_in as (c2 & R_c2_c1 & z_eq).
+    rewrite z_eq. rewrite fromWf_unfold. exists c2. split; eauto with *.
+Qed.
+
 End ORDINAL_basic1.
 
 Section ToWoSet.
@@ -1186,7 +1256,7 @@ Proof.
       exists b. simpl. rewrite z_in. rewrite <- @fromWf_toWoset_lt; eauto. eapply fromAcc_pirrel. 
 Qed.
 
-Lemma fromWfSet_toWoset_Some_in_fromWfSet_toWoset_Some_iff {projT2_eq : forall A : Type, forall B : A -> Type, forall x : A, forall y : B x, forall y' : B x, @existT A B x y = @existT A B x y' -> y = y'} (A : Type) (B : A -> Type) (R : forall i : A, B i -> B i -> Prop) (R_wf : forall i : A, well_founded (R i)) x y
+Lemma fromWf_toWoset_Some_in_fromWf_toWoset_Some_iff {projT2_eq : forall A : Type, forall B : A -> Type, forall x : A, forall y : B x, forall y' : B x, @existT A B x y = @existT A B x y' -> y = y'} (A : Type) (B : A -> Type) (R : forall i : A, B i -> B i -> Prop) (R_wf : forall i : A, well_founded (R i)) x y
   : fromWf (toWoSet_lt R) (toWoSet_lt_well_founded R R_wf) x \in fromWf (toWoSet_lt R) (toWoSet_lt_well_founded R R_wf) y <-> (exists z, toWoSet_lt R z y /\ fromWf (toWoSet_lt R) (toWoSet_lt_well_founded R R_wf) x == fromWf (toWoSet_lt R) (toWoSet_lt_well_founded R R_wf) z).
 Proof.
   unfold fromWf. split; cycle 1.
@@ -1213,8 +1283,8 @@ Proof.
   intros i. eapply well_founded_implies_Irreflexive. eapply toWoSet_well_founded.
 Qed.
 
-Theorem fromWf_toWoset_rEq {projT2_eq : forall A : Type, forall B : A -> Type, forall x : A, forall y : B x, forall y' : B x, @existT A B x y = @existT A B x y' -> y = y'} (t : Tree)
-  : fromWfSet (projT2 (toWoSet t)) (toWoSet_well_founded t) =ᵣ t.
+Theorem fromWfSet_toWoSet_rEq {projT2_eq : forall A : Type, forall B : A -> Type, forall x : A, forall y : B x, forall y' : B x, @existT A B x y = @existT A B x y' -> y = y'} (t : Tree)
+  : @fromWfSet (projT1 (toWoSet t)) (projT2 (toWoSet t)) (toWoSet_well_founded t) =ᵣ t.
 Proof.
   induction t as [cs ts IH]. simpl. rewrite -> @fromWfSet_toWoset_lt_rEq; eauto. split; econs; intros c; simpl in *; econs; exists c; simpl; rewrite IH; reflexivity.
 Qed.
@@ -1223,7 +1293,7 @@ Lemma fromWf_toWoSet_in_fromWf_toWoSet {projT2_eq : forall A : Type, forall B : 
   (H_lt : projT2 (toWoSet t) x y)
   : fromWf (projT2 (toWoSet t)) (toWoSet_well_founded t) x \in fromWf (projT2 (toWoSet t)) (toWoSet_well_founded t) y.
 Proof.
-  revert t x y H_lt. pose proof (@fromWf_toWoset_lt projT2_eq) as claim1. induction t as [cs ts IH]; simpl; i. rewrite @fromWfSet_toWoset_Some_in_fromWfSet_toWoset_Some_iff; eauto. 
+  revert t x y H_lt. pose proof (@fromWf_toWoset_lt projT2_eq) as claim1. induction t as [cs ts IH]; simpl; i. rewrite @fromWf_toWoset_Some_in_fromWf_toWoset_Some_iff; eauto. 
 Qed.
 
 Theorem fromWf_toWoSet_in_fromWf_toWoSet_iff {projT2_eq : forall A : Type, forall B : A -> Type, forall x : A, forall y : B x, forall y' : B x, @existT A B x y = @existT A B x y' -> y = y'} (t : Tree) (x : projT1 (toWoSet t)) (y : projT1 (toWoSet t))
