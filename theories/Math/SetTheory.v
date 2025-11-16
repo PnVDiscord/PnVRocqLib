@@ -189,30 +189,6 @@ Definition Hartogs (D : Type@{Set_u}) : Ord :=
 
 End HARTOGS.
 
-Section TOTALIFY.
-
-Definition toSet (t : Tree) : Type@{Set_u} :=
-  projT1 (toWoSet t).
-
-Context {A : Type@{Set_u}}.
-
-Variable R : A -> A -> Prop.
-
-Hypothesis R_wf : well_founded R.
-
-Definition toSet_eqProp (lhs : A) (rhs : A) : Prop :=
-  @fromWf A R R_wf lhs =ᵣ @fromWf A R R_wf rhs.
-
-End TOTALIFY.
-
-#[global] Arguments toSet_eqProp {A} R R_wf / lhs rhs.
-
-#[global]
-Instance toSet_isSetoid (t : Tree) : isSetoid (toSet t) :=
-  { eqProp := toSet_eqProp (projT2 (toWoSet t)) (toWoSet_well_founded t)
-  ; eqProp_Equivalence := relation_on_image_liftsEquivalence rEq_Equivalence (@fromWf (projT1 (toWoSet t)) (projT2 (toWoSet t)) (toWoSet_well_founded t))
-  }.
-
 Module Cardinality.
 
 #[projections(primitive)]

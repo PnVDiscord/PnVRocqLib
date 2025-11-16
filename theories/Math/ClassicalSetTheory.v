@@ -6,77 +6,10 @@ Require Import PnV.Math.SetTheory.
 
 Import TypeTheoreticImplementation.
 
-Definition toSet_wlt (t : Tree) (lhs : toSet t) (rhs : toSet t) : Prop :=
-  fromWf (projT2 (toWoSet t)) (toWoSet_well_founded t) lhs <ᵣ fromWf (projT2 (toWoSet t)) (toWoSet_well_founded t) rhs.
-
-#[global] Arguments toSet_wlt t / lhs rhs.
-
 Section ClassicalWoset.
 
 #[local] Infix "\in" := member : type_scope.
 #[local] Infix "\subseteq" := isSubsetOf : type_scope.
-
-Lemma toSet_wlt_Transitive t
-  : Transitive (toSet_wlt t).
-Proof.
-  red. i. eapply (rLt_StrictOrder).(StrictOrder_Transitive); eauto.
-Qed.
-
-Lemma toSet_wlt_well_founded t
-  : well_founded (toSet_wlt t).
-Proof.
-  eapply relation_on_image_liftsWellFounded. eapply rLt_wf.
-Qed.
-
-#[global]
-Instance toSet_isWellPoset (t : Tree) : isWellPoset (toSet t) :=
-  { wltProp := toSet_wlt t
-  ; wltProp_Transitive := toSet_wlt_Transitive t
-  ; wltProp_well_founded := toSet_wlt_well_founded t
-  }.
-
-#[global]
-Instance toSet_wlt_eqPropCompatible2 t
-  : eqPropCompatible2 (toSet_wlt t).
-Proof.
-  red. ii; simpl in *. unfold toSet_wlt. rewrite x_EQ. rewrite y_EQ. reflexivity.
-Qed.
-
-Lemma toSet_wlt_extensional {t : Tree} (x : toSet t) (y : toSet t)
-  (EXT_EQ : forall z : toSet t, wltProp z x <-> wltProp z y)
-  : x == y.
-Proof.
-  simpl in *. eapply rEq_ext. intros z. split; intros H_rLt.
-  - rewrite <- @fromWfSet_toWoSet_rEq with (t := z) in H_rLt; cycle 1.
-    { ii; eapply projT2_eq; eauto. }
-    rewrite <- @fromWfSet_toWoSet_rEq with (t := z); cycle 1.
-    { ii; eapply projT2_eq; eauto. }
-    unfold fromWfSet in *. eapply rLt_rLe_rLt; eauto. clear z H_rLt.
-    unfold fromWf in *. destruct (toWoSet_well_founded t x) as [H_ACC_inv], (toWoSet_well_founded t y) as [H_ACC_inv']. unfold toSet in *.
-    econs. intros [cz z]. simpl in *. rewrite fromAcc_pirrel with (ACC' := toWoSet_well_founded t cz). rewrite <- EXT_EQ with (z := cz).
-    econs. simpl. exists (@exist _ _ cz z). simpl. rewrite fromAcc_pirrel. reflexivity.
-  - rewrite <- @fromWfSet_toWoSet_rEq with (t := z) in H_rLt; cycle 1.
-    { ii; eapply projT2_eq; eauto. }
-    rewrite <- @fromWfSet_toWoSet_rEq with (t := z); cycle 1.
-    { ii; eapply projT2_eq; eauto. }
-    unfold fromWfSet in *. eapply rLt_rLe_rLt; eauto. clear z H_rLt.
-    unfold fromWf in *. destruct (toWoSet_well_founded t x) as [H_ACC_inv], (toWoSet_well_founded t y) as [H_ACC_inv']. unfold toSet in *.
-    econs. intros [cz z]. simpl in *. rewrite fromAcc_pirrel with (ACC' := toWoSet_well_founded t cz). rewrite -> EXT_EQ with (z := cz).
-    econs. simpl. exists (@exist _ _ cz z). simpl. rewrite fromAcc_pirrel. reflexivity.
-Qed.
-
-#[global]
-Instance toSet_isWoset (t : Tree) : isWoset (toSet t) :=
-  { Woset_isWellPoset := toSet_isWellPoset t
-  ; Woset_eqPropCompatible2 := toSet_wlt_eqPropCompatible2 t
-  ; Woset_ext_eq := toSet_wlt_extensional (t := t)
-  }.
-
-Corollary toSet_wlt_trichotomous (t : Tree)
-  : forall x : toSet t, forall y : toSet t, x == y \/ (x ≺ y \/ y ≺ x).
-Proof.
-  eapply @O.wlt_trichotomous. exact classic.
-Qed.
 
 Lemma fromWf_rLt_fromWf_iff {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (x' : A) 
   : @fromWf A wltProp wltProp_well_founded x <ᵣ @fromWf A wltProp wltProp_well_founded x' <-> @fromWf A wltProp wltProp_well_founded x \in @fromWf A wltProp wltProp_well_founded x'.
@@ -191,6 +124,16 @@ Proof.
     + tauto.
 Qed.
 
+Lemma fromWf_rEq_fromWf_iff {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (x' : A)
+  : @fromWf A wltProp wltProp_well_founded x =ᵣ @fromWf A wltProp wltProp_well_founded x' <-> @fromWf A wltProp wltProp_well_founded x == @fromWf A wltProp wltProp_well_founded x'.
+Proof.
+  split.
+  - intros [H_rLe1 H_rLe2]. eapply extensionality. intros z; split; revert z.
+    + change (fromWf wltProp wltProp_well_founded x \subseteq fromWf wltProp wltProp_well_founded x'). now rewrite <- fromWf_rLe_fromWf_iff.
+    + change (fromWf wltProp wltProp_well_founded x' \subseteq fromWf wltProp wltProp_well_founded x). now rewrite <- fromWf_rLe_fromWf_iff.
+  - intros H_EQ. rewrite H_EQ. reflexivity. 
+Qed.
+
 Theorem fromWfSet_isOrdinal {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A}
   : isOrdinal (@fromWfSet A wltProp wltProp_well_founded).
 Proof.
@@ -278,6 +221,15 @@ Proof.
   - exists c. exists (H_ACC_inv c R_c_x). exact EQ.
 Qed.
 
+Fixpoint fromAcc_complete1 (A : Type) (R : A -> A -> Prop) (R_trans : Transitive R) (x : A) (H_Acc : Acc R x) (o : Tree) (LT : o <ᵣ @fromAcc A R x H_Acc) {struct H_Acc} : exists x' : A, exists H_Acc' : Acc R x', o =ᵣ @fromAcc A R x' H_Acc' /\ R x' x.
+Proof.
+  destruct H_Acc as [H_ACC_inv]; simpl in *. destruct LT as [[[c R_c_x] LE]]; simpl in *.
+  rewrite rLe_iff_rLt_or_rEq in LE. destruct LE as [LT | EQ].
+  - pose proof (fromAcc_complete1 A R R_trans _ (H_ACC_inv c R_c_x) o LT) as (x' & H_Acc' & H_EQ & R_c_x').
+    exists x'. exists H_Acc'. split; [exact H_EQ | now transitivity c].
+  - exists c. exists (H_ACC_inv c R_c_x). split; [exact EQ | exact R_c_x].
+Qed.
+
 Lemma fromWf_complete {A : Type} (R : A -> A -> Prop) (R_wf : well_founded R) (x : A) (o : Tree)
   (LT : o <ᵣ @fromWf A R R_wf x)
   : exists x' : A, o =ᵣ @fromWf A R R_wf x'.
@@ -286,7 +238,15 @@ Proof.
   exists x'. rewrite fromAcc_pirrel. exact LT.
 Qed.
 
-Lemma fromWfSet_complete {A : Type} (R : A -> A -> Prop) (R_wf : well_founded R) (x : A) (o : Tree)
+Lemma fromWf_complete1 (A : Type) (R : A -> A -> Prop) (R_wf : well_founded R) (R_trans : Transitive R) (x : A) (o : Tree)
+  (LT : o <ᵣ @fromWf A R R_wf x)
+  : exists x' : A, o =ᵣ @fromWf A R R_wf x' /\ R x' x.
+Proof.
+  unfold fromWf in *. apply fromAcc_complete1 in LT; trivial. des.
+  exists x'. split; trivial. rewrite fromAcc_pirrel. exact LT.
+Qed.
+
+Lemma fromWfSet_complete {A : Type} (R : A -> A -> Prop) (R_wf : well_founded R) (o : Tree)
   (LT : o <ᵣ @fromWfSet A R R_wf)
   : exists x' : A, o =ᵣ @fromWf A R R_wf x'.
 Proof.
@@ -1066,6 +1026,8 @@ End THEORY_ON_RANK.
 
 End InducedOrdinal.
 
+Module Ordinal1.
+
 Section ORDINAL_section1.
 
 #[local] Infix "\in" := member.
@@ -1086,8 +1048,8 @@ Proof with eauto with *.
   - destruct H as [[c2 H_rLe]]. simpl in *. exploit (IH (ts2 c2) _ (mkNode cs1 ts1) (ts2 c2))...
     { eapply rLt_rLe_rLt... }
     intros (H1 & H2). rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_LT | H_EQ].
-    { specialize (H1 H_LT). inversion H_isOrdinal2. eapply TRANS with (y := ts2 c2)... }
-    { specialize (H2 H_EQ). rewrite -> H2... }
+    + specialize (H1 H_LT). inversion H_isOrdinal2. eapply TRANS with (y := ts2 c2)...
+    + specialize (H2 H_EQ). rewrite -> H2...
   - eapply extensionality. intros z; split; intros [c z_eq].
     + simpl in *. change (z == ts1 c) in z_eq. destruct H as [H_rLe1 H_rLe2]. destruct H_rLe1. simpl in H_rLt. pose proof (H_rLt c) as [[c' H_rLe]].
       simpl in c', H_rLe. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. rewrite z_eq. clear z z_eq. destruct H_rLe as [H_LT | H_EQ].
@@ -1138,3 +1100,104 @@ Proof.
 Qed.
 
 End ORDINAL_section1.
+
+Definition toSet (t : Tree) : Type@{Set_u} :=
+  projT1 (toWoSet t).
+
+#[global]
+Instance toSet_isSetoid (t : Tree) : isSetoid (toSet t) :=
+  { eqProp (lhs : toSet t) (rhs : toSet t) := @fromWf (toSet t) (projT2 (toWoSet t)) (toWoSet_well_founded t) lhs =ᵣ @fromWf (toSet t) (projT2 (toWoSet t)) (toWoSet_well_founded t) rhs
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence rEq_Equivalence (@fromWf (projT1 (toWoSet t)) (projT2 (toWoSet t)) (toWoSet_well_founded t))
+  }.
+
+Definition toSet_wlt (t : Tree) (lhs : toSet t) (rhs : toSet t) : Prop :=
+  fromWf (projT2 (toWoSet t)) (toWoSet_well_founded t) lhs <ᵣ fromWf (projT2 (toWoSet t)) (toWoSet_well_founded t) rhs.
+
+#[global] Arguments toSet_wlt t / lhs rhs.
+
+Section RANK.
+
+Lemma toSet_wlt_Transitive t
+  : Transitive (toSet_wlt t).
+Proof.
+  red. i. eapply (rLt_StrictOrder).(StrictOrder_Transitive); eauto.
+Qed.
+
+Lemma toSet_wlt_well_founded t
+  : well_founded (toSet_wlt t).
+Proof.
+  eapply relation_on_image_liftsWellFounded. eapply rLt_wf.
+Qed.
+
+#[global]
+Instance toSet_isWellPoset (t : Tree) : isWellPoset (toSet t) :=
+  { wltProp := toSet_wlt t
+  ; wltProp_Transitive := toSet_wlt_Transitive t
+  ; wltProp_well_founded := toSet_wlt_well_founded t
+  }.
+
+#[global]
+Instance toSet_wlt_eqPropCompatible2 t
+  : eqPropCompatible2 (toSet_wlt t).
+Proof.
+  red. ii; simpl in *. unfold toSet_wlt. rewrite x_EQ. rewrite y_EQ. reflexivity.
+Qed.
+
+Lemma toSet_wlt_extensional {t : Tree} (x : toSet t) (y : toSet t)
+  (EXT_EQ : forall z : toSet t, wltProp z x <-> wltProp z y)
+  : x == y.
+Proof.
+  simpl in *. eapply rEq_ext. intros z. split; intros H_rLt.
+  - rewrite <- @fromWfSet_toWoSet_rEq with (t := z) in H_rLt; cycle 1.
+    { ii; eapply projT2_eq; eauto. }
+    rewrite <- @fromWfSet_toWoSet_rEq with (t := z); cycle 1.
+    { ii; eapply projT2_eq; eauto. }
+    unfold fromWfSet in *. eapply rLt_rLe_rLt; eauto. clear z H_rLt.
+    unfold fromWf in *. destruct (toWoSet_well_founded t x) as [H_ACC_inv], (toWoSet_well_founded t y) as [H_ACC_inv']. unfold toSet in *.
+    econs. intros [cz z]. simpl in *. rewrite fromAcc_pirrel with (ACC' := toWoSet_well_founded t cz). rewrite <- EXT_EQ with (z := cz).
+    econs. simpl. exists (@exist _ _ cz z). simpl. rewrite fromAcc_pirrel. reflexivity.
+  - rewrite <- @fromWfSet_toWoSet_rEq with (t := z) in H_rLt; cycle 1.
+    { ii; eapply projT2_eq; eauto. }
+    rewrite <- @fromWfSet_toWoSet_rEq with (t := z); cycle 1.
+    { ii; eapply projT2_eq; eauto. }
+    unfold fromWfSet in *. eapply rLt_rLe_rLt; eauto. clear z H_rLt.
+    unfold fromWf in *. destruct (toWoSet_well_founded t x) as [H_ACC_inv], (toWoSet_well_founded t y) as [H_ACC_inv']. unfold toSet in *.
+    econs. intros [cz z]. simpl in *. rewrite fromAcc_pirrel with (ACC' := toWoSet_well_founded t cz). rewrite -> EXT_EQ with (z := cz).
+    econs. simpl. exists (@exist _ _ cz z). simpl. rewrite fromAcc_pirrel. reflexivity.
+Qed.
+
+#[global]
+Instance toSet_isWoset (t : Tree) : isWoset (toSet t) :=
+  { Woset_isWellPoset := toSet_isWellPoset t
+  ; Woset_eqPropCompatible2 := toSet_wlt_eqPropCompatible2 t
+  ; Woset_ext_eq := toSet_wlt_extensional (t := t)
+  }.
+
+Corollary toSet_wlt_trichotomous (t : Tree)
+  : forall x : toSet t, forall y : toSet t, x == y \/ (x ≺ y \/ y ≺ x).
+Proof.
+  eapply @O.wlt_trichotomous. exact classic.
+Qed.
+
+Definition rank (t : Tree) : Tree :=
+  @fromWfSet (toSet t) (wlt (WOSET := toSet_isWoset t)) (wltProp_well_founded (isWellPoset := toSet_isWellPoset t)).
+
+Lemma rank_isOrdinal (t : Tree)
+  : isOrdinal (rank t).
+Proof.
+  eapply @fromWfSet_isOrdinal with (A := toSet t) (SETOID := toSet_isSetoid t) (WOSET := toSet_isWoset t).
+Qed.
+
+Lemma rank_rGe (t : Tree)
+  : t ≦ᵣ rank t.
+Proof.
+  unfold rank. transitivity (@fromWfSet (projT1 (toWoSet t)) (projT2 (toWoSet t)) (toWoSet_well_founded t)).
+  - rewrite <- @fromWfSet_toWoSet_rEq with (t := t) at 1; [reflexivity | now ii; eapply projT2_eq].
+  - eapply fromWfSet_isMonotonic. intros x1 x2 H_LT.
+    change (fromWf (projT2 (toWoSet t)) (toWoSet_well_founded t) x1 <ᵣ fromWf (projT2 (toWoSet t)) (toWoSet_well_founded t) x2).
+    eapply member_implies_rLt. eapply @fromWf_toWoSet_in_fromWf_toWoSet; [now ii; eapply projT2_eq | exact H_LT].
+Qed.
+
+End RANK.
+
+End Ordinal1.
