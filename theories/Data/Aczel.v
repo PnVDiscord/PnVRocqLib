@@ -1042,8 +1042,8 @@ Proof.
     rewrite fromWf_unfold. exists x. split; trivial. symmetry. eapply extensionality. eapply IH. exact H_RA.
 Qed.
 
-Definition fromWfSet {A : Type@{Set_u}} (R : A -> A -> Prop) (Wf : well_founded R) : Tree :=
-  mkNode A (@fromWf A R Wf).
+Definition fromWfSet {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R) : Tree :=
+  mkNode A (@fromWf A R R_wf).
 
 Lemma fromWfSet_isMonotonic {A : Type} {R1 : A -> A -> Prop} {R2 : A -> A -> Prop}
   (INCL : forall x : A, forall x' : A, forall LE : R1 x x', R2 x x')
