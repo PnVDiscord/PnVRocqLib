@@ -1101,14 +1101,6 @@ Qed.
 
 End ORDINAL_section1.
 
-Definition toSet (t : Tree) : Type@{Set_u} :=
-  projT1 (toWoSet t).
-
-Definition toSet_wlt (t : Tree) : forall lhs : toSet t, forall rhs : toSet t, Prop :=
-  projT2 (toWoSet t).
-
-#[global] Arguments toSet_wlt t / lhs rhs.
-
 Section RANK.
 
 Lemma toSet_wlt_Transitive t
@@ -1116,15 +1108,6 @@ Lemma toSet_wlt_Transitive t
 Proof.
   red. i. eapply @toWoSet_Transitive; eauto. now ii; eapply projT2_eq.
 Defined.
-
-Lemma toSet_wlt_well_founded t
-  : well_founded (toSet_wlt t).
-Proof.
-  eapply @toWoSet_well_founded; eauto.
-Defined.
-
-Definition rank (t : Tree) : Tree :=
-  @fromWfSet (toSet t) (toSet_wlt t) (toSet_wlt_well_founded t).
 
 Lemma rank_isOrdinal (t : Tree)
   : isOrdinal (rank t).
