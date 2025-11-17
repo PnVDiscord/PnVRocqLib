@@ -197,10 +197,10 @@ Definition toSet_wlt (t : Tree) : forall lhs : toSet t, forall rhs : toSet t, Pr
 
 #[global] Arguments toSet_wlt t / lhs rhs.
 
-Lemma toSet_wlt_well_founded t
+Lemma toSet_wlt_well_founded (t : Tree)
   : well_founded (toSet_wlt t).
 Proof.
-  eapply @toWoSet_well_founded; eauto.
+  eapply toWoSet_well_founded.
 Defined.
 
 Definition rank (t : Tree) : Tree :=

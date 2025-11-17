@@ -1103,7 +1103,10 @@ End ORDINAL_section1.
 
 Section RANK.
 
-Lemma toSet_wlt_Transitive t
+#[local] Infix "\in" := member.
+#[local] Infix "\subseteq" := isSubsetOf.
+
+Lemma toSet_wlt_Transitive (t : Tree)
   : Transitive (toSet_wlt t).
 Proof.
   red. i. eapply @toWoSet_Transitive; eauto. now ii; eapply projT2_eq.
@@ -1125,7 +1128,7 @@ Qed.
 Lemma rank_rEq (t : Tree)
   : rank t =ᵣ t.
 Proof.
-  unfold rank. unfold toWoSet, toSet_wlt_well_founded. rewrite -> @fromWfSet_toWoSet_rEq with (t := t) at 1; [reflexivity | now ii; eapply projT2_eq].
+  unfold rank. unfold toWoSet, toSet_wlt_well_founded. rewrite -> @fromWfSet_toWoSet_rEq with (t := t); [reflexivity | now ii; eapply projT2_eq].
 Qed.
 
 End RANK.
