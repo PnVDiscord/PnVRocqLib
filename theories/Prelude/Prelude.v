@@ -2115,5 +2115,112 @@ Defined.
 
 End Equipotent_instances.
 
-Class equipotent (A : Type) (B : Type) : Prop :=
-  equipotent_proof : inhabited (Equipotent A B).
+Declare Custom Entry math_mode.
+Declare Scope math_scope.
+Delimit Scope math_scope with M.
+
+Reserved Notation "\( EXPR \)" (EXPR custom math_mode at level 10, at level 0, format "'\('  EXPR  '\)'").
+Notation "x" := x (x constr, in custom math_mode at level 0).
+
+Module M.
+
+Universe Math_U.
+
+Definition MathObjOf (A : Type@{Math_U}) : Type :=
+  A.
+
+Notation "\( EXPR \)" := EXPR : math_scope.
+Notation "\( EXPR \)" := (EXPR : MathObjOf _).
+
+Bind Scope math_scope with MathObjOf.
+#[local] Open Scope math_scope.
+
+Notation "x = y" := (eqProp x y) : math_scope.
+Notation "x ≠ y" := (~ eqProp x y) : math_scope. 
+
+Class equipotent (A : Type@{Math_U}) (B : Type@{Math_U}) : Prop :=
+  equipotence_proof : inhabited (Equipotent A B).
+
+Class hasPlus (A : Type@{Math_U}) : Type@{Math_U} :=
+  plus (x : A) (y : A) : A.
+
+Notation "x + y" := (M.plus x y) : math_scope.
+
+Class hasZero (A : Type@{Math_U}) : Type@{Math_U} :=
+  zero : A.
+
+Notation "0" := (M.zero) : math_scope.
+
+Class hasNegate (A : Type@{Math_U}) : Type@{Math_U} :=
+  neg (x : A) : A.
+
+Notation "- x" := (M.neg x) : math_scope.
+
+Class hasMult (A : Type@{Math_U}) : Type@{Math_U} :=
+  mult (x : A) (y : A) : A.
+
+Notation "x * y" := (M.mult x y) : math_scope.
+
+Class hasUnity (A : Type@{Math_U}) : Type@{Math_U} :=
+  unity : A.
+
+Notation "1" := (M.unity) : math_scope.
+
+Definition nonzero {A : Type@{Math_U}} {SETOID : isSetoid A} {HAS_ZERO : hasZero A} (x : A) : Prop :=
+  \( x ≠ 0 \).
+
+#[projections(primitive)]
+Class isMonoid (M : Type) {SETOID : isSetoid M} : Type :=
+  { Monoid_hasAddition :: hasPlus M
+  ; Monoid_hasZero :: hasZero M
+  ; plus_eqCompatible2 :: eqPropCompatible2 plus
+  ; plus_assoc :: isAssociative plus
+  ; zero_plus_id :: isIdentityElementOf zero plus
+  }.
+
+#[projections(primitive)]
+Class isGroup (G : Type) {SETOID : isSetoid G} : Type :=
+  { Group_isMonoid :: isMonoid G
+  ; Group_hasNegate :: hasNegate G
+  ; neg_eqCompatible1 :: eqPropCompatible1 neg
+  ; neg_plus_inv :: isInverseOperatorOf neg plus
+  }.
+
+Definition isAbelianGroup {G : Type} {SETOID : isSetoid G} (GROUP : isGroup G) : Prop :=
+  isCommutative plus.
+
+#[projections(primitive)]
+Class isRng (R : Type) {SETOID : isSetoid R} : Type :=
+  { Rng_hasAdditiveGroup :: isGroup R
+  ; Rng_hasAdditiveAbelianGroup : isAbelianGroup Rng_hasAdditiveGroup
+  ; Rng_hasMultiplication :: hasMult R
+  ; mult_eqCompatible2 :: eqPropCompatible2 mult
+  ; mult_assoc :: isAssociative mult
+  ; mult_distr_plus :: distributesOver mult plus
+  }.
+
+#[projections(primitive)]
+Class isRing (R : Type) {SETOID : isSetoid R} : Type :=
+  { Ring_isRng :: isRng R
+  ; Ring_hasUnity :: hasUnity R
+  ; one_mult_id :: isIdentityElementOf unity mult
+  }.
+
+Class has_reciprocal (R : Type) {SETOID : isSetoid R} {HAS_ZERO : hasZero R} : Type :=
+  reciprocal (a : R) (NONZERO : nonzero a) : R.
+
+#[projections(primitive)]
+Class isField (K : Type) {SETOID : isSetoid K} : Type :=
+  { Field_isRing :: isRing K
+  ; Field_isCommutativeRing :: isCommutative mult
+  ; Field_has_reciprocal :: has_reciprocal K
+  ; reciprocal_cong (a : K) (a' : K) (NONZERO : nonzero a) (NONZERO' : nonzero a')
+    (a_eq_a' : \( a = a' \))
+    : \( reciprocal a NONZERO = reciprocal a' NONZERO' \)
+  ; reciprocal_mult_left_inv (a : K) (NONZERO : nonzero a)
+    : \( reciprocal a NONZERO * a = 1 \)
+  ; reciprocal_mult_right_inv (a : K) (NONZERO : nonzero a)
+    : \( a * reciprocal a NONZERO = 1 \)
+  }.
+
+End M.

@@ -21,7 +21,7 @@ Parameter t@{u} : forall X : Type@{u}, isSetoid X -> Type@{u}.
 
 #[local] Notation Quot := Quot.t.
 
-Axiom Quotient_always_exists : forall X : Type@{U_discourse}, forall SETOID : isSetoid X, isQuotientOf (Quot X SETOID) X (SETOID := SETOID).
+Axiom Quotient_always_exists : forall X : Type, forall SETOID : isSetoid X, isQuotientOf (Quot X SETOID) X (SETOID := SETOID).
 
 #[global] Existing Instance Quotient_always_exists.
 
