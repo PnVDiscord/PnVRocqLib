@@ -16,15 +16,6 @@ End AxiomOfChoice.
 
 Module Quot.
 
-#[universes(polymorphic)]
-Parameter t@{u} : forall X : Type@{u}, isSetoid X -> Type@{u}.
-
-#[local] Notation Quot := Quot.t.
-
-Axiom Quotient_always_exists : forall X : Type, forall SETOID : isSetoid X, isQuotientOf (Quot X SETOID) X (SETOID := SETOID).
-
-#[global] Existing Instance Quotient_always_exists.
-
 Section INDUCTION.
 
 Let subst (A : Type) (B : A -> Type) (a : A) (a' : A) (p : a = a') (b : B a) : B a' :=
@@ -57,6 +48,13 @@ Proof.
 Qed.
 
 End INDUCTION.
+
+#[universes(polymorphic)]
+Parameter t@{u} : forall X : Type@{u}, isSetoid X -> Type@{u}.
+
+Axiom Quotient_always_exists : forall X : Type, forall SETOID : isSetoid X, isQuotientOf (Quot.t X SETOID) X (SETOID := SETOID).
+
+#[global] Existing Instance Quotient_always_exists.
 
 End Quot.
 
