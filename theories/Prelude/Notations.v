@@ -73,3 +73,12 @@ Reserved Notation "Gamma '⊢' M '~>η*' N '⦂' A" (at level 70, no associativi
 Reserved Infix "⟿[  labels  ]" (at level 70, no associativity).
 Reserved Infix "⟿⁺[  labels  ]" (at level 70, no associativity).
 Reserved Infix "⟿*[  labels  ]" (at level 70, no associativity).
+
+Declare Custom Entry math_mode.
+Declare Scope math_scope.
+Delimit Scope math_scope with math.
+
+Reserved Notation "\( EXPR \)" (EXPR custom math_mode at level 10, at level 0, format "'\('  EXPR  '\)'").
+Notation "e" := e (e constr, in custom math_mode at level 0).
+
+Notation "\( EXPR \)" := EXPR : math_scope.

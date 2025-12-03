@@ -2115,59 +2115,50 @@ Defined.
 
 End Equipotent_instances.
 
-Declare Custom Entry math_mode.
-Declare Scope math_scope.
-Delimit Scope math_scope with M.
+#[universes(polymorphic=yes)]
+Class equipotent@{u} (A : Type@{u}) (B : Type@{u}) : Prop :=
+  equipotence : inhabited (Equipotent A B).
 
-Reserved Notation "\( EXPR \)" (EXPR custom math_mode at level 10, at level 0, format "'\('  EXPR  '\)'").
-Notation "x" := x (x constr, in custom math_mode at level 0).
+Module A.
 
-Module M.
-
-Universe Math_U.
-
-Definition MathObjOf (A : Type@{Math_U}) : Type :=
-  A.
-
-Notation "\( EXPR \)" := EXPR : math_scope.
-Notation "\( EXPR \)" := (EXPR : MathObjOf _).
-
-Bind Scope math_scope with MathObjOf.
 #[local] Open Scope math_scope.
 
 Notation "x = y" := (eqProp x y) : math_scope.
 Notation "x ≠ y" := (~ eqProp x y) : math_scope. 
 
-Class equipotent (A : Type@{Math_U}) (B : Type@{Math_U}) : Prop :=
-  equipotence_proof : inhabited (Equipotent A B).
-
-Class hasPlus (A : Type@{Math_U}) : Type@{Math_U} :=
+#[universes(polymorphic=yes)]
+Class hasPlus@{u} (A : Type@{u}) : Type@{u} :=
   plus (x : A) (y : A) : A.
 
-Notation "x + y" := (M.plus x y) : math_scope.
+Notation "x + y" := (plus x y) : math_scope.
 
-Class hasZero (A : Type@{Math_U}) : Type@{Math_U} :=
+#[universes(polymorphic=yes)]
+Class hasZero@{u} (A : Type@{u}) : Type@{u} :=
   zero : A.
 
-Notation "0" := (M.zero) : math_scope.
+Notation "0" := (zero) : math_scope.
 
-Class hasNegate (A : Type@{Math_U}) : Type@{Math_U} :=
+#[universes(polymorphic=yes)]
+Class hasNegate@{u} (A : Type@{u}) : Type@{u} :=
   neg (x : A) : A.
 
-Notation "- x" := (M.neg x) : math_scope.
+Notation "- x" := (neg x) : math_scope.
 
-Class hasMult (A : Type@{Math_U}) : Type@{Math_U} :=
+#[universes(polymorphic=yes)]
+Class hasMult@{u} (A : Type@{u}) : Type@{u} :=
   mult (x : A) (y : A) : A.
 
-Notation "x * y" := (M.mult x y) : math_scope.
+Notation "x * y" := (mult x y) : math_scope.
 
-Class hasUnity (A : Type@{Math_U}) : Type@{Math_U} :=
+#[universes(polymorphic=yes)]
+Class hasUnity@{u} (A : Type@{u}) : Type@{u} :=
   unity : A.
 
-Notation "1" := (M.unity) : math_scope.
+Notation "1" := (unity) : math_scope.
 
-Definition nonzero {A : Type@{Math_U}} {SETOID : isSetoid A} {HAS_ZERO : hasZero A} (x : A) : Prop :=
-  \( x ≠ 0 \).
+#[universes(polymorphic=yes)]
+Definition nonzero@{u} {A : Type@{u}} {SETOID : isSetoid A} {HAS_ZERO : hasZero@{u} A} (a : A) : Prop :=
+  \( a ≠ 0 \).
 
 #[projections(primitive)]
 Class isMonoid (M : Type) {SETOID : isSetoid M} : Type :=
@@ -2206,7 +2197,8 @@ Class isRing (R : Type) {SETOID : isSetoid R} : Type :=
   ; one_mult_id :: isIdentityElementOf unity mult
   }.
 
-Class has_reciprocal (R : Type) {SETOID : isSetoid R} {HAS_ZERO : hasZero R} : Type :=
+#[universes(polymorphic=yes)]
+Class has_reciprocal@{u} (R : Type@{u}) {SETOID : isSetoid R} {HAS_ZERO : hasZero@{u} R} : Type@{u} :=
   reciprocal (a : R) (NONZERO : nonzero a) : R.
 
 #[projections(primitive)]
@@ -2223,4 +2215,4 @@ Class isField (K : Type) {SETOID : isSetoid K} : Type :=
     : \( a * reciprocal a NONZERO = 1 \)
   }.
 
-End M.
+End A.
