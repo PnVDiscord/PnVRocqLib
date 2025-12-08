@@ -1206,6 +1206,30 @@ Proof.
   - eapply Totalify.fromWfSet_rEq.
 Qed.
 
+Lemma ToOrderType_wlt_iff (x : ToOrderType alpha) (y : ToOrderType alpha)
+  : x ≺ y <-> (exists z : ToOrderType alpha, x == z /\ toSet_wlt alpha z y).
+Proof.
+  transitivity (@fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) x <ᵣ @fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) y).
+  { reflexivity. }
+  transitivity (@fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) x \in @fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) y).
+  { split.
+    - intros H_rLt. eapply Ordinal_rLt_Ordinal_elim.
+      + eapply fromWf_isOrdinal. eapply toSet_wlt_Transitive.
+      + eapply fromWf_isOrdinal. eapply toSet_wlt_Transitive.
+      + exact H_rLt.
+    - intros H_in. eapply member_implies_rLt. exact H_in.
+  }
+  transitivity (fromWf (projT2 (toWellPoset alpha)) (toWellPoset_well_founded alpha) x \in fromWf (projT2 (toWellPoset alpha)) (toWellPoset_well_founded alpha) y).
+  { reflexivity. }
+  rewrite @fromWf_toWellPoset_in_fromWf_toWellPoset_iff; cycle 1.
+  { now ii; eapply projT2_eq. }
+  split; intros (z & H_R & H_EQ); exists z; split; try eassumption.
+  - do 3 red. now rewrite H_EQ.
+  - do 3 red in H_EQ. eapply Ordinal_rEq_Ordinal_elim; try eassumption.
+    + eapply fromWf_isOrdinal. eapply toSet_wlt_Transitive.
+    + eapply fromWf_isOrdinal. eapply toSet_wlt_Transitive.
+Qed.
+
 End ToOrderType.
 
 #[global] Typeclasses Opaque ToOrderType.
