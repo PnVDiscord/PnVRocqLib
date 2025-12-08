@@ -1193,8 +1193,7 @@ Section well_founded_to_Woset.
 
 Context {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R).
 
-Let hash : A -> Tree :=
-  @fromWf A R R_wf.
+#[local] Notation hash := (@fromWf A R R_wf).
 
 #[local]
 Instance mkSetoid_from_wellfounded : isSetoid A :=
@@ -1225,7 +1224,7 @@ Lemma hash_preserves (x : A) (y : A)
   (H_R : R x y)
   : hash_rLt x y.
 Proof.
-  red. unfold hash. eapply member_implies_rLt.
+  red. eapply member_implies_rLt.
   unfold fromWf. now eapply fromAcc_member_fromAcc_intro.
 Qed.
 
@@ -1236,13 +1235,13 @@ Proof.
   eapply rEq_ext. intros z.
   unfold hash_rLt in EXT_EQ.
   split; intros H_rLt.
-  - unfold hash in H_rLt. unfold fromWf in H_rLt.
+  - unfold fromWf in H_rLt.
     destruct (R_wf x) as [ACC_INV]; simpl in H_rLt.
     destruct H_rLt as [[[c R_c_x] H_rLe]]; simpl in *.
     pose proof (hash_preserves c x R_c_x) as claim1. red in claim1.
     eapply rLe_rLt_rLt; eauto.
     rewrite -> EXT_EQ in claim1. erewrite fromAcc_pirrel. exact claim1.
-  - unfold hash in H_rLt. unfold fromWf in H_rLt.
+  - unfold fromWf in H_rLt.
     destruct (R_wf y) as [ACC_INV]; simpl in H_rLt.
     destruct H_rLt as [[[c R_c_y] H_rLe]]; simpl in *.
     pose proof (hash_preserves c y R_c_y) as claim1. red in claim1.
@@ -1270,7 +1269,7 @@ Qed.
 Lemma fromWfSet_rEq
   : @fromWfSet A R R_wf =ᵣ @fromWfSet A wltProp wltProp_well_founded.
 Proof.
-  split; simpl; econs; simpl; intros c; econs; simpl; exists c; now rewrite fromWf_rEq.
+  now split; simpl; econs; simpl; intros c; econs; simpl; exists c; rewrite fromWf_rEq.
 Qed.
 
 End well_founded_to_Woset.

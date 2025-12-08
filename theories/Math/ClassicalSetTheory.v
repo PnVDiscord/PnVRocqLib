@@ -147,6 +147,18 @@ Proof.
     rewrite -> fromWf_in_fromWf_iff. red; transitivity cy; eauto.
 Qed.
 
+Definition FromOrderType (A : Type@{Set_u}) {SETOID : isSetoid A} {WOSET : isWoset A} : Tree :=
+  @fromWfSet A wlt wltProp_well_founded.
+
+Lemma FromOrderType_isOrdinal {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : isOrdinal (FromOrderType A).
+Proof.
+  exact (@fromWfSet_isOrdinal A SETOID WOSET).
+Qed.
+
+Definition fromOrderType (A : Type@{Set_u}) {SETOID : isSetoid A} {WOSET : isWoset A} : A -> Tree :=
+  @fromWf A wlt wltProp_well_founded.
+
 End ClassicalWoset.
 
 Module InducedOrdinal.
@@ -1143,5 +1155,60 @@ Proof.
 Qed.
 
 End RANK.
+
+Section toOrderType.
+
+#[local] Infix "\in" := member.
+#[local] Infix "\subseteq" := isSubsetOf.
+
+Variable alpha : Tree.
+
+Definition toOrderType : Type@{Set_u} :=
+  toSet alpha.
+
+#[global]
+Instance toOrderType_isSetoid : isSetoid toOrderType :=
+  MkWoset.mkSetoid_from_wellfounded (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
+
+#[global]
+Instance toOrderType_isWoset : isWoset toOrderType :=
+  @MkWoset.mkWoset_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
+
+Lemma FromOrderType_toOrderType_rEq
+  : FromOrderType toOrderType =ᵣ alpha.
+Proof.
+  symmetry. etransitivity.
+  - symmetry. eapply rank_rEq.
+  - eapply MkWoset.fromWfSet_rEq.
+Qed.
+
+Definition toOrderTypeInv : toOrderType -> Tree :=
+  fromOrderType (toSet alpha).
+
+Lemma toOrderTypeInv_in_toOrderTypeInv_iff (x : toOrderType) (y : toOrderType)
+  : toOrderTypeInv x \in toOrderTypeInv y <-> x ≺ y.
+Proof.
+  unfold toOrderTypeInv, fromOrderType. split.
+  - intros H_in. cbn. unfold MkWoset.hash_rLt.
+    rewrite -> MkWoset.fromWf_rEq with (x := x). rewrite -> MkWoset.fromWf_rEq with (x := y).
+    eapply member_implies_rLt. exact H_in.
+  - intros H_lt. eapply fromWf_in_fromWf_iff. exact H_lt.
+Qed.
+
+Lemma toOrderTypeInv_eq_toOrderTypeInv_iff (x : toOrderType) (y : toOrderType)
+  : toOrderTypeInv x == toOrderTypeInv y <-> x == y.
+Proof.
+  split; intros H_eq.
+  - eapply Woset_ext_eq. intros z. change (z ≺ x <-> z ≺ y).
+    do 2 rewrite <- toOrderTypeInv_in_toOrderTypeInv_iff. now rewrite -> H_eq.
+  - simpl in H_eq. unfold toOrderTypeInv. eapply Ordinal_rEq_Ordinal_elim.
+    + eapply fromWf_isOrdinal. exact wltProp_Transitive.
+    + eapply fromWf_isOrdinal. exact wltProp_Transitive.
+    + rewrite -> MkWoset.fromWf_rEq with (x := x) in H_eq. rewrite -> MkWoset.fromWf_rEq with (x := y) in H_eq. exact H_eq.
+Qed.
+
+End toOrderType.
+
+#[global] Typeclasses Opaque toOrderType.
 
 End Ordinal1.
