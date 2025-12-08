@@ -1187,7 +1187,7 @@ Qed.
 
 End ORDINAL_basic1.
 
-Module MkWoset.
+Module Totalify.
 
 Section well_founded_to_Woset.
 
@@ -1274,7 +1274,7 @@ Qed.
 
 End well_founded_to_Woset.
 
-End MkWoset.
+End Totalify.
 
 Section toWellPoset.
 

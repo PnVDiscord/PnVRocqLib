@@ -150,19 +150,19 @@ Qed.
 Definition fromOrderType (A : Type@{Set_u}) {SETOID : isSetoid A} {WOSET : isWoset A} : A -> Tree :=
   @fromWf A wlt wltProp_well_founded.
 
-Lemma fromOrderType_in_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} x y
+Lemma fromOrderType_in_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A)
   : fromOrderType A x \in fromOrderType A y <-> x ≺ y.
 Proof.
   now rewrite <- fromWf_in_fromWf_iff.
 Qed.
 
-Lemma fromOrderType_subseteq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} x y
+Lemma fromOrderType_subseteq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A)
   : fromOrderType A x \subseteq fromOrderType A y <-> (x ≺ y \/ x == y).
 Proof.
   rewrite <- fromWf_wlt_rLe_fromWf_wlt_iff. now rewrite -> fromWf_rLe_fromWf_iff.
 Qed.
 
-Lemma fromOrderType_eq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} x y
+Lemma fromOrderType_eq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A)
   : fromOrderType A x == fromOrderType A y <-> x == y.
 Proof.
   rewrite <- fromWf_wlt_rEq_fromWf_wlt_iff. now rewrite -> fromWf_rEq_fromWf_iff.
@@ -1180,34 +1180,32 @@ Qed.
 
 End RANK.
 
-Section toOrderType.
+Section ToOrderType.
 
 #[local] Infix "\in" := member.
 #[local] Infix "\subseteq" := isSubsetOf.
 
-Variable alpha : Tree.
-
-Definition toOrderType : Type@{Set_u} :=
+Definition ToOrderType (alpha : Tree) : Type@{Set_u} :=
   toSet alpha.
 
-#[global]
-Instance toOrderType_isSetoid : isSetoid toOrderType :=
-  MkWoset.mkSetoid_from_wellfounded (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
+Variable alpha : Tree.
 
 #[global]
-Instance toOrderType_isWoset : isWoset toOrderType :=
-  @MkWoset.mkWoset_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
+Instance ToOrderType_isSetoid : isSetoid (ToOrderType alpha) :=
+  @Totalify.mkSetoid_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
 
-Lemma FromOrderType_toOrderType_rEq
-  : FromOrderType toOrderType =ᵣ alpha.
+#[global]
+Instance ToOrderType_isWoset : isWoset (ToOrderType alpha) :=
+  @Totalify.mkWoset_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
+
+Lemma FromOrderType_ToOrderType_rEq
+  : FromOrderType (ToOrderType alpha) =ᵣ alpha.
 Proof.
   symmetry. etransitivity.
   - symmetry. eapply rank_rEq.
-  - eapply MkWoset.fromWfSet_rEq.
+  - eapply Totalify.fromWfSet_rEq.
 Qed.
 
-End toOrderType.
-
-#[global] Typeclasses Opaque toOrderType.
+End ToOrderType.
 
 End Ordinal1.
