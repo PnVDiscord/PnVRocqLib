@@ -1206,7 +1206,11 @@ Proof.
   - eapply Totalify.fromWfSet_rEq.
 Qed.
 
-Lemma FromOrderType_ToOrderType_id
+End ToOrderType.
+
+#[global] Typeclasses Opaque ToOrderType.
+
+Lemma FromOrderType_ToOrderType_id (alpha : Tree)
   (ORDINAL : isOrdinal alpha)
   : FromOrderType (ToOrderType alpha) == alpha.
 Proof.
@@ -1215,9 +1219,5 @@ Proof.
   - exact ORDINAL.
   - eapply FromOrderType_ToOrderType_rEq.
 Qed.
-
-End ToOrderType.
-
-#[global] Typeclasses Opaque ToOrderType.
 
 End Ordinal1.
