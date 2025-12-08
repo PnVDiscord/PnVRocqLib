@@ -159,6 +159,24 @@ Qed.
 Definition fromOrderType (A : Type@{Set_u}) {SETOID : isSetoid A} {WOSET : isWoset A} : A -> Tree :=
   @fromWf A wlt wltProp_well_founded.
 
+Lemma fromOrderType_in_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} x y
+  : fromOrderType A x \in fromOrderType A y <-> x ≺ y.
+Proof.
+  now rewrite <- fromWf_in_fromWf_iff.
+Qed.
+
+Lemma fromOrderType_subseteq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} x y
+  : fromOrderType A x \subseteq fromOrderType A y <-> (x ≺ y \/ x == y).
+Proof.
+  rewrite <- fromWf_wlt_rLe_fromWf_wlt_iff. now rewrite -> fromWf_rLe_fromWf_iff.
+Qed.
+
+Lemma fromOrderType_eq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} x y
+  : fromOrderType A x == fromOrderType A y <-> x == y.
+Proof.
+  rewrite <- fromWf_wlt_rEq_fromWf_wlt_iff. now rewrite -> fromWf_rEq_fromWf_iff.
+Qed.
+
 End ClassicalWoset.
 
 Module InducedOrdinal.
