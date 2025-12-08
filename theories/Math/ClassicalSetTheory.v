@@ -1208,6 +1208,6 @@ Qed.
 
 End ToOrderType.
 
-#[global] Typeclasses Opaque toOrderType.
+#[global] Typeclasses Opaque ToOrderType.
 
 End Ordinal1.
