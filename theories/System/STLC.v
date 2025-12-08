@@ -424,9 +424,9 @@ Proof.
 Defined.
 
 Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
-  | wnStep_refl M ty
-    (TYPING : Typing Gamma M ty)
-    : wnStep Gamma M M ty
+  | wnStep_Var x ty
+    (LOOKUP : Lookup x ty Gamma)
+    : wnStep Gamma (Var_trm x) (Var_trm x) ty
   | wnStep_App M M' N N' ty ty'
     (H_M : wnStep Gamma M M' (ty -> ty')%typ)
     (H_N : wnStep Gamma N N' ty)
@@ -434,6 +434,8 @@ Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
   | wnStep_Lam x M M' ty ty'
     (H_M : wnStep ((x, ty) :: Gamma) M M' ty')
     : wnStep Gamma (Lam_trm x ty M) (Lam_trm x ty M') (ty -> ty')%typ
+  | wnStep_Con c
+    : wnStep Gamma (Con_trm c) (Con_trm c) (typ_of_constant c)
   | wnStep_whBetaReduce v v' e ty
     (H_M : wnStep Gamma v' e ty)
     (WHBETA : v ~>β v')
@@ -456,7 +458,7 @@ with wnNf_wnStep_typNf (Gamma : ctx L) v ty
 Proof.
   - destruct u_wnNe.
     + exists (Var_trm x). split.
-      * eapply wnStep_refl. econs 1. eapply LOOKUP.
+      * eapply wnStep_Var. eapply LOOKUP.
       * econs 1. exact LOOKUP.
     + pose proof (wnNe_wnStep_typNe Gamma u (ty -> ty')%typ u_wnNe) as H_M.
       pose proof (wnNf_wnStep_typNf Gamma v ty v_wnNf) as H_N.
@@ -464,7 +466,7 @@ Proof.
       * eapply wnStep_App; [exact (proj1 H_M.(B.proj2_sig)) | exact (proj1 H_N.(B.proj2_sig))].
       * econs 2; [exact (proj2 H_M.(B.proj2_sig)) | exact (proj2 H_N.(B.proj2_sig))].
     + exists (Con_trm c). split.
-      * eapply wnStep_refl. subst ty. econs 4.
+      * subst ty. eapply wnStep_Con.
       * econs 3. exact ty_EQ.
   - destruct v_wnNf.
     + pose proof (wnNe_wnStep_typNe Gamma u ty u_wnNe) as H_e.

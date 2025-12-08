@@ -147,6 +147,42 @@ Proof.
     rewrite -> fromWf_in_fromWf_iff. red; transitivity cy; eauto.
 Qed.
 
+Definition fromOrderType (A : Type@{Set_u}) {SETOID : isSetoid A} {WOSET : isWoset A} : A -> Tree :=
+  @fromWf A wlt wltProp_well_founded.
+
+Lemma fromOrderType_in_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} x y
+  : fromOrderType A x \in fromOrderType A y <-> x ≺ y.
+Proof.
+  now rewrite <- fromWf_in_fromWf_iff.
+Qed.
+
+Lemma fromOrderType_subseteq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} x y
+  : fromOrderType A x \subseteq fromOrderType A y <-> (x ≺ y \/ x == y).
+Proof.
+  rewrite <- fromWf_wlt_rLe_fromWf_wlt_iff. now rewrite -> fromWf_rLe_fromWf_iff.
+Qed.
+
+Lemma fromOrderType_eq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} x y
+  : fromOrderType A x == fromOrderType A y <-> x == y.
+Proof.
+  rewrite <- fromWf_wlt_rEq_fromWf_wlt_iff. now rewrite -> fromWf_rEq_fromWf_iff.
+Qed.
+
+Definition FromOrderType (A : Type@{Set_u}) {SETOID : isSetoid A} {WOSET : isWoset A} : Tree :=
+  @fromWfSet A wlt wltProp_well_founded.
+
+Lemma FromOrderType_isOrdinal {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : isOrdinal (FromOrderType A).
+Proof.
+  exact (@fromWfSet_isOrdinal A SETOID WOSET).
+Qed.
+
+Lemma FromOrderType_spec {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : forall z, z \in FromOrderType A <-> (exists c, z == fromOrderType A c).
+Proof.
+  now i.
+Qed.
+
 End ClassicalWoset.
 
 Module InducedOrdinal.
@@ -1113,8 +1149,15 @@ Section RANK.
 Lemma toSet_wlt_Transitive (t : Tree)
   : Transitive (toSet_wlt t).
 Proof.
-  red. i. eapply @toWoSet_Transitive; eauto. now ii; eapply projT2_eq.
+  red. i. eapply @toWellPoset_Transitive; eauto. now ii; eapply projT2_eq.
 Defined.
+
+#[global]
+Instance toWellPoset_isWellPoset (t : Tree) : isWellPoset (toSet t) :=
+  { wltProp := toSet_wlt t
+  ; wltProp_well_founded := toSet_wlt_well_founded t
+  ; wltProp_Transitive := toSet_wlt_Transitive t
+  }.
 
 Lemma rank_isOrdinal (t : Tree)
   : isOrdinal (rank t).
@@ -1132,9 +1175,39 @@ Qed.
 Lemma rank_rEq (t : Tree)
   : rank t =ᵣ t.
 Proof.
-  unfold rank. unfold toWoSet, toSet_wlt_well_founded. rewrite -> @fromWfSet_toWoSet_rEq with (t := t); [reflexivity | now ii; eapply projT2_eq].
+  unfold rank. unfold toWellPoset, toSet_wlt_well_founded. rewrite -> @fromWfSet_toWellPoset_rEq with (t := t); [reflexivity | now ii; eapply projT2_eq].
 Qed.
 
 End RANK.
+
+Section toOrderType.
+
+#[local] Infix "\in" := member.
+#[local] Infix "\subseteq" := isSubsetOf.
+
+Variable alpha : Tree.
+
+Definition toOrderType : Type@{Set_u} :=
+  toSet alpha.
+
+#[global]
+Instance toOrderType_isSetoid : isSetoid toOrderType :=
+  MkWoset.mkSetoid_from_wellfounded (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
+
+#[global]
+Instance toOrderType_isWoset : isWoset toOrderType :=
+  @MkWoset.mkWoset_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
+
+Lemma FromOrderType_toOrderType_rEq
+  : FromOrderType toOrderType =ᵣ alpha.
+Proof.
+  symmetry. etransitivity.
+  - symmetry. eapply rank_rEq.
+  - eapply MkWoset.fromWfSet_rEq.
+Qed.
+
+End toOrderType.
+
+#[global] Typeclasses Opaque toOrderType.
 
 End Ordinal1.
