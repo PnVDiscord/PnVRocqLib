@@ -177,8 +177,8 @@ Proof.
   exact (@fromWfSet_isOrdinal A SETOID WOSET).
 Qed.
 
-Lemma FromOrderType_spec {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A}
-  : forall z, z \in FromOrderType A <-> (exists c, z == fromOrderType A c).
+Theorem FromOrderType_spec {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : forall z : Tree, z \in FromOrderType A <-> (exists x : A, z == fromOrderType A x).
 Proof.
   now i.
 Qed.
@@ -1204,6 +1204,16 @@ Proof.
   symmetry. etransitivity.
   - symmetry. eapply rank_rEq.
   - eapply Totalify.fromWfSet_rEq.
+Qed.
+
+Lemma FromOrderType_ToOrderType_id
+  (ORDINAL : isOrdinal alpha)
+  : FromOrderType (ToOrderType alpha) == alpha.
+Proof.
+  eapply Ordinal_rEq_Ordinal_elim.
+  - eapply FromOrderType_isOrdinal.
+  - exact ORDINAL.
+  - eapply FromOrderType_ToOrderType_rEq.
 Qed.
 
 End ToOrderType.

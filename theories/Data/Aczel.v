@@ -945,6 +945,18 @@ Instance rLt_isWellOrdering : isWoset Tree (SETOID := rEq_asSetoid) :=
   ; Woset_ext_eq := rEq_ext
   }.
 
+Lemma mkNode_rEq (t : Tree) (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : mkNode cs ts =ᵣ t <-> (forall u, t ≦ᵣ u <-> (forall c, ts c <ᵣ u)).
+Proof.
+  split.
+  - intros H_EQ u. rewrite <- H_EQ. split.
+    + intros [H_rLt]. exact H_rLt.
+    + intros H_rLt. econs. exact H_rLt.
+  - intros H_EQ. split.
+    + econs. simpl. rewrite <- H_EQ. reflexivity.
+    + rewrite -> H_EQ. intros c. econs. exists c. reflexivity.
+Qed.
+
 (** End RANK_COMPARISON. *)
 
 Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x) {struct ACC} : Tree :=
