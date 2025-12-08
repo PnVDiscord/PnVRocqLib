@@ -1113,8 +1113,15 @@ Section RANK.
 Lemma toSet_wlt_Transitive (t : Tree)
   : Transitive (toSet_wlt t).
 Proof.
-  red. i. eapply @toWoSet_Transitive; eauto. now ii; eapply projT2_eq.
+  red. i. eapply @toWellPoset_Transitive; eauto. now ii; eapply projT2_eq.
 Defined.
+
+#[global]
+Instance toWellPoset_isWellPoset (t : Tree) : isWellPoset (toSet t) :=
+  { wltProp := toSet_wlt t
+  ; wltProp_well_founded := toSet_wlt_well_founded t
+  ; wltProp_Transitive := toSet_wlt_Transitive t
+  }.
 
 Lemma rank_isOrdinal (t : Tree)
   : isOrdinal (rank t).
@@ -1132,7 +1139,7 @@ Qed.
 Lemma rank_rEq (t : Tree)
   : rank t =ᵣ t.
 Proof.
-  unfold rank. unfold toWoSet, toSet_wlt_well_founded. rewrite -> @fromWfSet_toWoSet_rEq with (t := t); [reflexivity | now ii; eapply projT2_eq].
+  unfold rank. unfold toWellPoset, toSet_wlt_well_founded. rewrite -> @fromWfSet_toWellPoset_rEq with (t := t); [reflexivity | now ii; eapply projT2_eq].
 Qed.
 
 End RANK.

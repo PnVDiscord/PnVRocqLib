@@ -911,17 +911,17 @@ Record AckermannSpec (ack : nat * nat -> nat) : Prop :=
   ; AckermannSpec3 m n : ack (m + 1, n + 1) = ack (m, ack (m + 1, n))
   }.
 
-Let aux1 (kont : nat -> nat) : nat -> nat :=
+Let aux1 (k : nat -> nat) : nat -> nat :=
   fix aux1_fix (n : nat) {struct n} : nat :=
   match n with
-  | 0 => kont 1
-  | S n' => kont (aux1_fix n')
+  | O => k 1
+  | S n' => k (aux1_fix n')
   end.
 
 Let aux2 : nat -> nat -> nat :=
   fix aux2_fix (m : nat) {struct m} : nat -> nat :=
   match m with
-  | 0 => S
+  | O => S
   | S m' => aux1 (aux2_fix m')
   end.
 

@@ -190,17 +190,17 @@ Definition Hartogs (D : Type@{Set_u}) : Ord :=
 End HARTOGS.
 
 Definition toSet (t : Tree) : Type@{Set_u} :=
-  projT1 (toWoSet t).
+  projT1 (toWellPoset t).
 
 Definition toSet_wlt (t : Tree) : forall lhs : toSet t, forall rhs : toSet t, Prop :=
-  projT2 (toWoSet t).
+  projT2 (toWellPoset t).
 
 #[global] Arguments toSet_wlt t / lhs rhs.
 
 Lemma toSet_wlt_well_founded (t : Tree)
   : well_founded (toSet_wlt t).
 Proof.
-  eapply toWoSet_well_founded.
+  eapply toWellPoset_well_founded.
 Defined.
 
 Definition rank (t : Tree) : Tree :=
