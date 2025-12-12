@@ -477,7 +477,7 @@ Proof.
 Qed.
 
 #[global]
-Add Parametric Morphism {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A (SETOID := SETOID)}
+Add Parametric Morphism {A : Type} {SETOID : isSetoid A} {WOSET : @isWoset A SETOID}
   : (@wlt A SETOID WOSET) with signature (eqProp ==> eqProp ==> iff)
   as Woset_wlt_eqProp.
 Proof.
@@ -584,12 +584,12 @@ Qed.
 Instance subWoset {A : Type} {SETOID : isSetoid A} (WOSET : isWoset A (SETOID := SETOID)) (P : A -> Prop)
   : isWoset (@sig A P) (SETOID := subSetoid (SETOID := SETOID) P).
 Proof.
-  pose (@WellfoundedToset_isWoset (@sig A P) (@subSetoid A SETOID P) (subWwellPoset WOSET.(Woset_isWellPoset))) as THIS. eapply THIS; clear THIS.
+  pose (@WellfoundedToset_isWoset (@sig A P) (@subSetoid A SETOID P) (subWwellPoset WOSET.(Woset_isWellPoset))) as THIS; eapply THIS; clear THIS.
   - red. intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]; simpl. unfold binary_relation_on_image. simpl. eapply Woset_eqPropCompatible2.
   - intros [a H_a] [b H_b]; simpl. unfold binary_relation_on_image. simpl. eapply wlt_trichotomous.
 Defined.
 
-Lemma subWoset_wlt_unfold {A : Type} {SETOID : isSetoid A} (WOSET : isWoset A (SETOID := SETOID)) (P : A -> Prop) (a : @sig A P) (b : @sig A P)
+Lemma subWoset_wlt_unfold {A : Type} {SETOID : isSetoid A} (WOSET : @isWoset A SETOID) (P : A -> Prop) (a : @sig A P) (b : @sig A P)
   : @wlt (@sig A P) (@subSetoid A SETOID P) (@subWoset A SETOID WOSET P) a b = @wlt A SETOID WOSET (@proj1_sig A P a) (@proj1_sig A P b).
 Proof.
   reflexivity.
