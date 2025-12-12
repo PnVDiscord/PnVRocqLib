@@ -569,15 +569,14 @@ Next Obligation.
   intros a. pose proof (wltProp_well_founded a) as H_Acc_a. induction H_Acc_a as [a _ IH_a].
   intros b. pose proof (wltProp_well_founded b) as H_Acc_b. induction H_Acc_b as [b _ IH_b].
   intros EXT_EQ. eapply NNPP. intros CONTRA.
-  assert (not_balanced : exists c : A, (wltProp c a /\ ~ wltProp c b) \/ (wltProp c b /\ ~ wltProp c a)).
-  { eapply NNPP. intros CONTRA'.
-    pose proof (classic (wltProp a b)) as [LT1 | NLT1].
-    { contradiction CONTRA'. exists a. right. split; eauto. }
-    pose proof (classic (wltProp b a)) as [LT2 | NLT2].
-    { contradiction CONTRA'. exists b. left. split; eauto. }
-    pose proof (wltProp_trichotomous a b). tauto.
-  }
-  destruct not_balanced as [c [[? ?] | [? ?]]]; ss!.
+  enough (not_balanced : exists c : A, (wltProp c a /\ ~ wltProp c b) \/ (wltProp c b /\ ~ wltProp c a)).
+  { destruct not_balanced as [c [[? ?] | [? ?]]]; ss!. }
+  eapply NNPP. intros CONTRA'.
+  pose proof (classic (wltProp a b)) as [LT1 | NLT1].
+  { contradiction CONTRA'. exists a. right. split; eauto. }
+  pose proof (classic (wltProp b a)) as [LT2 | NLT2].
+  { contradiction CONTRA'. exists b. left. split; eauto. }
+  pose proof (wltProp_trichotomous a b). tauto.
 Qed.
 
 #[global]
