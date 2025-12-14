@@ -766,16 +766,16 @@ Section SN.
 
 Inductive fullBetaOnce : trm -> trm -> Prop :=
   | fullBetaOnce_beta x ty M N
-    : fullBetaOnce (App_trm (Lam_trm x ty M) N) (subst_trm (one_subst x N) M)
+    : App_trm (Lam_trm x ty M) N ~>β subst_trm (one_subst x N) M
   | fullBetaOnce_appl M M' N
-    (BETA' : fullBetaOnce M M')
-    : fullBetaOnce (App_trm M N) (App_trm M' N)
+    (BETA' : M ~>β M')
+    : App_trm M N ~>β App_trm M' N
   | fullBetaOnce_appr M N N'
-    (BETA' : fullBetaOnce N N')
-    : fullBetaOnce (App_trm M N) (App_trm M N')
+    (BETA' : N ~>β N')
+    : App_trm M N ~>β App_trm M N'
   | fullBetaOnce_lam x ty M M'
-    (BETA' : fullBetaOnce M M')
-    : fullBetaOnce (Lam_trm x ty M) (Lam_trm x ty M')
+    (BETA' : M ~>β M')
+    : Lam_trm x ty M ~>β Lam_trm x ty M'
   where "M ~>β N" := (fullBetaOnce M N).
 
 Inductive fullBetaMany (N : trm) : trm -> Prop :=

@@ -464,7 +464,7 @@ Class isWoset (A : Type) {SETOID : isSetoid A} : Type :=
 Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
   wltProp (isWellPoset := @Woset_isWellPoset A SETOID WOSET) x y.
 
-Infix "≺" := wlt.
+#[global] Infix "≺" := wlt.
 
 Lemma Woset_extensional {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A)
   : x == y <-> (forall z, wlt z x <-> wlt z y).
@@ -474,6 +474,16 @@ Proof.
     + eapply Woset_eqPropCompatible2; cycle -1; eauto with *.
     + eapply Woset_eqPropCompatible2; cycle -1; eauto with *.
   - eapply Woset_ext_eq. exact EQ.
+Qed.
+
+#[global]
+Add Parametric Morphism {A : Type} {SETOID : isSetoid A} {WOSET : @isWoset A SETOID}
+  : (@wlt A SETOID WOSET) with signature (eqProp ==> eqProp ==> iff)
+  as Woset_wlt_eqProp.
+Proof.
+  intros a1 b1 EQ1 a2 b2 EQ2. split; intros H_lt.
+  - eapply Woset_eqPropCompatible2; eauto; symmetry; eauto.
+  - eapply Woset_eqPropCompatible2; eauto.
 Qed.
 
 Module O.
@@ -490,7 +500,7 @@ Record Ord : Type :=
 #[global] Existing Instance carrier_isWoset.
 
 Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
-  (DESCENT : forall n, P n -> exists m, wltProp m n /\ P m)
+  (DESCENT : forall n, P n -> exists m, m ⪵ n /\ P m)
   : forall n, ~ P n.
 Proof.
   intros n. induction (wltProp_well_founded n) as [n _ IH]. intros P_n.
@@ -502,22 +512,12 @@ Qed.
 Instance wlt_StrictOrder {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} : StrictOrder wlt :=
   wltProp_StrictOrder (WPOSET := @Woset_isWellPoset A SETOID WOSET).
 
-#[global]
-Add Parametric Morphism {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A (SETOID := SETOID)}
-  : (@wlt A SETOID WOSET) with signature (eqProp ==> eqProp ==> iff)
-  as Woset_wlt_eqProp.
-Proof.
-  intros a1 b1 EQ1 a2 b2 EQ2. split; intros H_lt.
-  - eapply Woset_eqPropCompatible2; eauto; symmetry; eauto.
-  - eapply Woset_eqPropCompatible2; eauto.
-Qed.
-
 Section CLASSICAL_WELLORDERING.
 
 Context {classic : forall P : Prop, P \/ ~ P}.
 
 Theorem wlt_trichotomous {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (a : A) (b : A)
-  : (a == b) \/ (wlt a b \/ wlt b a).
+  : (a == b) \/ (a ≺ b \/ b ≺ a).
 Proof.
   revert b. pose proof (wltProp_well_founded a) as H_Acc_a. induction H_Acc_a as [a _ IH_a].
   intros b. pose proof (wltProp_well_founded b) as H_Acc_b. induction H_Acc_b as [b _ IH_b].
@@ -544,7 +544,7 @@ Qed.
 
 Theorem minimisation_lemma {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (P : A -> Prop)
   (EXISTENCE : exists n, P n)
-  : exists n, P n /\ ⟪ MIN : forall m, P m -> (wlt n m \/ n == m) ⟫.
+  : exists n, P n /\ ⟪ MIN : forall m, P m -> (n ≺ m \/ n == m) ⟫.
 Proof.
   assert (NNPP : forall phi : Prop, ⟪ NNP : ~ (~ phi) ⟫ -> phi).
   { intros phi NNP; unnw. pose proof (classic phi) as [YES | NO]; tauto. }
@@ -557,7 +557,7 @@ Proof.
 Qed.
 
 #[local, program]
-Instance WellfoundedToset_isWoset {A : Type} {SETOID : isSetoid A} {WPOSET : isWellPoset A} {wltProp_eqPropCompatible2 : eqPropCompatible2 wltProp} (wltProp_trichotomous : forall a : A, forall b : A, (a == b) \/ (wltProp a b \/ wltProp b a)) : isWoset A (SETOID := SETOID) :=
+Instance WellfoundedToset_isWoset {A : Type} {SETOID : isSetoid A} {WPOSET : isWellPoset A} {wltProp_eqPropCompatible2 : eqPropCompatible2 wltProp} (wltProp_trichotomous : forall a : A, forall b : A, (a == b) \/ (a ⪵ b \/ b ⪵ a)) : isWoset A (SETOID := SETOID) :=
   { Woset_isWellPoset := WPOSET
   ; Woset_eqPropCompatible2 := wltProp_eqPropCompatible2
   }.
@@ -569,24 +569,29 @@ Next Obligation.
   intros a. pose proof (wltProp_well_founded a) as H_Acc_a. induction H_Acc_a as [a _ IH_a].
   intros b. pose proof (wltProp_well_founded b) as H_Acc_b. induction H_Acc_b as [b _ IH_b].
   intros EXT_EQ. eapply NNPP. intros CONTRA.
-  assert (not_balanced : exists c : A, (wltProp c a /\ ~ wltProp c b) \/ (wltProp c b /\ ~ wltProp c a)).
-  { eapply NNPP. intros CONTRA'.
-    pose proof (classic (wltProp a b)) as [LT1 | NLT1].
-    { contradiction CONTRA'. exists a. right. split; eauto. }
-    pose proof (classic (wltProp b a)) as [LT2 | NLT2].
-    { contradiction CONTRA'. exists b. left. split; eauto. }
-    pose proof (wltProp_trichotomous a b). tauto.
-  }
-  destruct not_balanced as [c [[? ?] | [? ?]]]; ss!.
+  enough (not_balanced : exists c : A, (wltProp c a /\ ~ wltProp c b) \/ (wltProp c b /\ ~ wltProp c a)).
+  { destruct not_balanced as [c [[? ?] | [? ?]]]; ss!. }
+  eapply NNPP. intros CONTRA'.
+  pose proof (classic (wltProp a b)) as [LT1 | NLT1].
+  { contradiction CONTRA'. exists a. right. split; eauto. }
+  pose proof (classic (wltProp b a)) as [LT2 | NLT2].
+  { contradiction CONTRA'. exists b. left. split; eauto. }
+  pose proof (wltProp_trichotomous a b). tauto.
 Qed.
 
 #[global]
 Instance subWoset {A : Type} {SETOID : isSetoid A} (WOSET : isWoset A (SETOID := SETOID)) (P : A -> Prop)
   : isWoset (@sig A P) (SETOID := subSetoid (SETOID := SETOID) P).
 Proof.
-  pose (@WellfoundedToset_isWoset (@sig A P) (@subSetoid A SETOID P) (subWwellPoset WOSET.(Woset_isWellPoset))) as THIS. eapply THIS; clear THIS.
+  pose (@WellfoundedToset_isWoset (@sig A P) (@subSetoid A SETOID P) (subWwellPoset WOSET.(Woset_isWellPoset))) as THIS; eapply THIS; clear THIS.
   - red. intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]; simpl. unfold binary_relation_on_image. simpl. eapply Woset_eqPropCompatible2.
   - intros [a H_a] [b H_b]; simpl. unfold binary_relation_on_image. simpl. eapply wlt_trichotomous.
+Defined.
+
+Lemma subWoset_wlt_unfold {A : Type} {SETOID : isSetoid A} (WOSET : @isWoset A SETOID) (P : A -> Prop) (a : @sig A P) (b : @sig A P)
+  : @wlt (@sig A P) (@subSetoid A SETOID P) (@subWoset A SETOID WOSET P) a b = @wlt A SETOID WOSET (@proj1_sig A P a) (@proj1_sig A P b).
+Proof.
+  reflexivity.
 Defined.
 
 End CLASSICAL_WELLORDERING.

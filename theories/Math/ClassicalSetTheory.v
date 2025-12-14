@@ -1185,20 +1185,7 @@ Section ToOrderType.
 #[local] Infix "\in" := member.
 #[local] Infix "\subseteq" := isSubsetOf.
 
-Definition ToOrderType (alpha : Tree) : Type@{Set_u} :=
-  toSet alpha.
-
-Variable alpha : Tree.
-
-#[global]
-Instance ToOrderType_isSetoid : isSetoid (ToOrderType alpha) :=
-  @Totalify.mkSetoid_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
-
-#[global]
-Instance ToOrderType_isWoset : isWoset (ToOrderType alpha) :=
-  @Totalify.mkWoset_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
-
-Lemma FromOrderType_ToOrderType_rEq
+Lemma FromOrderType_ToOrderType_rEq (alpha : Tree)
   : FromOrderType (ToOrderType alpha) =ᵣ alpha.
 Proof.
   symmetry. etransitivity.
@@ -1206,17 +1193,14 @@ Proof.
   - eapply Totalify.fromWfSet_rEq.
 Qed.
 
-Lemma ToOrderType_wlt_iff (x : ToOrderType alpha) (y : ToOrderType alpha)
+Lemma ToOrderType_wlt_iff (alpha : Tree) (x : ToOrderType alpha) (y : ToOrderType alpha)
   : x ≺ y <-> (exists z : ToOrderType alpha, x == z /\ toSet_wlt alpha z y).
 Proof.
   transitivity (@fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) x <ᵣ @fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) y).
   { reflexivity. }
   transitivity (@fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) x \in @fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) y).
   { split.
-    - intros H_rLt. eapply Ordinal_rLt_Ordinal_elim.
-      + eapply fromWf_isOrdinal. eapply toSet_wlt_Transitive.
-      + eapply fromWf_isOrdinal. eapply toSet_wlt_Transitive.
-      + exact H_rLt.
+    - intros H_rLt. eapply Ordinal_rLt_Ordinal_elim; try eassumption; eapply fromWf_isOrdinal; eapply toSet_wlt_Transitive.
     - intros H_in. eapply member_implies_rLt. exact H_in.
   }
   transitivity (fromWf (projT2 (toWellPoset alpha)) (toWellPoset_well_founded alpha) x \in fromWf (projT2 (toWellPoset alpha)) (toWellPoset_well_founded alpha) y).
@@ -1225,14 +1209,8 @@ Proof.
   { now ii; eapply projT2_eq. }
   split; intros (z & H_R & H_EQ); exists z; split; try eassumption.
   - do 3 red. now rewrite H_EQ.
-  - do 3 red in H_EQ. eapply Ordinal_rEq_Ordinal_elim; try eassumption.
-    + eapply fromWf_isOrdinal. eapply toSet_wlt_Transitive.
-    + eapply fromWf_isOrdinal. eapply toSet_wlt_Transitive.
+  - do 3 red in H_EQ. eapply Ordinal_rEq_Ordinal_elim; try eassumption; eapply fromWf_isOrdinal; eapply toSet_wlt_Transitive.
 Qed.
-
-End ToOrderType.
-
-#[global] Typeclasses Opaque ToOrderType.
 
 Lemma FromOrderType_ToOrderType_id (alpha : Tree)
   (ORDINAL : isOrdinal alpha)
@@ -1243,5 +1221,7 @@ Proof.
   - exact ORDINAL.
   - eapply FromOrderType_ToOrderType_rEq.
 Qed.
+
+End ToOrderType.
 
 End Ordinal1.

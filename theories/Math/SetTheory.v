@@ -206,6 +206,25 @@ Defined.
 Definition rank (t : Tree) : Tree :=
   @fromWfSet (toSet t) (toSet_wlt t) (toSet_wlt_well_founded t).
 
+Section ToOrderType.
+
+Definition ToOrderType : Tree -> Type@{Set_u} :=
+  toSet.
+
+Variable alpha : Tree.
+
+#[global]
+Instance ToOrderType_isSetoid : isSetoid (ToOrderType alpha) :=
+  @Totalify.mkSetoid_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
+
+#[global]
+Instance ToOrderType_isWoset : isWoset (ToOrderType alpha) :=
+  @Totalify.mkWoset_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
+
+End ToOrderType.
+
+#[global] Typeclasses Opaque ToOrderType.
+
 Module Cardinality.
 
 #[projections(primitive)]
