@@ -596,7 +596,167 @@ Defined.
 
 End CLASSICAL_WELLORDERING.
 
+Definition wle {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
+  x ≺ y \/ x == y.
+
+#[global]
+Instance wlt_Transitive {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : Transitive wlt.
+Proof.
+  eapply wltProp_Transitive.
+Defined.
+
+#[global]
+Instance wlt_Irreflexive {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : Irreflexive wlt.
+Proof.
+  eapply StrictOrder_Irreflexive.
+Defined.
+
+#[global]
+Instance wle_Reflexive {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : Reflexive wle.
+Proof.
+  ii. right. reflexivity.
+Qed.
+
+#[global]
+Instance wle_Transitive {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : Transitive wle.
+Proof.
+  intros ? ? ? [? | ?] [? | ?].
+  - left. etransitivity; eauto.
+  - left. now rewrite <- H0.
+  - left. now rewrite -> H.
+  - right. etransitivity; eauto.
+Qed.
+
+#[global]
+Instance wle_Antisymmetric {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : @Antisymmetric A eqProp eqProp_Equivalence wle.
+Proof.
+  intros x y [? | ?] [? | ?].
+  - contradiction (wlt_Irreflexive x). now transitivity y.
+  - contradiction (wlt_Irreflexive x). now rewrite <- H0 at 2.
+  - contradiction (wlt_Irreflexive x). now rewrite -> H at 1.
+  - exact H.
+Qed.
+
+#[global]
+Add Parametric Morphism {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+  : wle with signature (eqProp ==> eqProp ==> iff)
+  as wle_eqProp_eqProp_iff.
+Proof.
+  unfold wle. ii. now rewrite H, H0.
+Qed.
+
+Section pair_lex.
+
+Context {A : Type} {B : Type} {A_isSetoid : isSetoid A} {B_isSetoid : isSetoid B} {A_isWoset : isWoset A} {B_isWoset : isWoset B}.
+
+Inductive prod_wlt (p1 : A * B) (p2 : A * B) : Prop :=
+  | prod_wlt_fst_lt
+    (fst_lt : fst p1 ≺ fst p2)
+  | prod_wlt_fst_eq_snd_eq
+    (fst_eq : fst p1 == fst p2)
+    (snd_lt : snd p1 ≺ snd p2).
+
+#[global]
+Instance prod_wlt_Transitive
+  : Transitive prod_wlt.
+Proof.
+  intros x y z [? | ? ?] [? | ? ?].
+  - econs 1. now transitivity (fst y).
+  - econs 1. now rewrite <- fst_eq.
+  - econs 1. now rewrite -> fst_eq.
+  - econs 2; [now transitivity (fst y) | now transitivity (snd y)].
+Qed.
+
+Lemma prod_wlt_well_founded (p : A * B)
+  : Acc prod_wlt p.
+Proof.
+  destruct p as [x y]. revert y.
+  enough (forall x0 : A, x == x0 -> forall y : B, Acc prod_wlt (x0, y)) as ETS by now eapply ETS.
+  pose proof (wltProp_well_founded x) as H_Acc_x. induction H_Acc_x as [x _ IHx].
+  intros x0 x_eq_x0 y.
+  pose proof (wltProp_well_founded y) as H_Acc_y. revert x0 x_eq_x0. induction H_Acc_y as [y _ IHy].
+  change (forall x' : A, x' ≺ x -> forall x0 : A, x' == x0 -> forall y' : B, Acc prod_wlt (x0, y')) in IHx.
+  change (forall y' : B, y' ≺ y -> forall x0 : A, x == x0 -> Acc prod_wlt (x0, y')) in IHy.
+  econs. intros [x' y'] [fst_lt | fst_eq snd_lt]; simpl in *.
+  - eapply IHx with (x' := x'); eauto with *. now rewrite -> x_eq_x0.
+  - eapply IHy; eauto with *.
+Qed.
+
+#[global]
+Instance pair_isWellPoset : isWellPoset (A * B) :=
+  { wltProp := prod_wlt
+  ; wltProp_Transitive := prod_wlt_Transitive
+  ; wltProp_well_founded := prod_wlt_well_founded
+  }.
+
+Let prod_isSetoid : isSetoid (A * B) :=
+  @prod_isSetoid A B A_isSetoid B_isSetoid.
+
+#[local] Existing Instance prod_isSetoid.
+
+#[global]
+Instance prod_wlt_eqPropCompatible2
+  : eqPropCompatible2 prod_wlt.
+Proof.
+  ii. simpl in *. destruct x_EQ as [x_fst_EQ x_snd_EQ], y_EQ as [y_fst_EQ y_snd_EQ]; simpl in *.
+  change (fst x1 == fst x2) in x_fst_EQ. change (snd x1 == snd x2) in x_snd_EQ.
+  change (fst y1 == fst y2) in y_fst_EQ. change (snd y1 == snd y2) in y_snd_EQ.
+  split; (intros [? | ? ?]; [econs 1 | econs 2]); eauto with *.
+  - now rewrite <- x_fst_EQ, <- y_fst_EQ.
+  - now rewrite <- x_snd_EQ, <- y_snd_EQ.
+  - now rewrite -> x_fst_EQ, -> y_fst_EQ.
+  - now rewrite -> x_snd_EQ, -> y_snd_EQ.
+Qed.
+
+Lemma prod_wlt_extensionality (p1 : A * B) (p2 : A * B)
+  (EXT : forall p : A * B, prod_wlt p p1 <-> prod_wlt p p2)
+  : p1 == p2.
+Proof.
+  assert (fst p1 == fst p2) as FST_EQ.
+  { eapply Woset_ext_eq. intros x; split; intros fst_lt.
+    - assert (claim : prod_wlt (x, snd p2) (fst p1, snd p1)).
+      { econs 1. exact fst_lt. }
+      replace (fst p1, snd p1) with p1 in claim by now destruct p1.
+      rewrite -> EXT in claim. destruct claim; simpl in *; eauto.
+      contradiction (O.wlt_Irreflexive (snd p2)).
+    - assert (claim : prod_wlt (x, snd p1) (fst p2, snd p2)).
+      { econs 1. exact fst_lt. }
+      replace (fst p2, snd p2) with p2 in claim by now destruct p2.
+      rewrite <- EXT in claim. destruct claim; simpl in *; eauto.
+      contradiction (O.wlt_Irreflexive (snd p1)).
+  }
+  split.
+  - exact FST_EQ.
+  - change (snd p1 == snd p2). eapply Woset_ext_eq. intros x; split; intros fst_lt.
+    + assert (claim : prod_wlt (fst p1, x) (fst p1, snd p1)).
+      { econs 2; simpl; eauto with *. }
+      replace (fst p1, snd p1) with p1 in claim by now destruct p1.
+      rewrite -> EXT in claim. destruct claim; simpl in *; eauto.
+      contradiction (O.wlt_Irreflexive (fst p2)). now rewrite <- FST_EQ at 1.
+    + assert (claim : prod_wlt (fst p2, x) (fst p2, snd p2)).
+      { econs 2; simpl; eauto with *. }
+      replace (fst p2, snd p2) with p2 in claim by now destruct p2.
+      rewrite <- EXT in claim. destruct claim; simpl in *; eauto.
+      contradiction (O.wlt_Irreflexive (fst p1)). now rewrite -> FST_EQ at 1.
+Qed.
+
+#[global]
+Instance pair_lex_isWoset : isWoset (A * B) :=
+  { Woset_isWellPoset := pair_isWellPoset
+  ; Woset_eqPropCompatible2 := prod_wlt_eqPropCompatible2
+  ; Woset_ext_eq := prod_wlt_extensionality
+  }.
+
+End pair_lex.
+
 End O.
+
+Infix "≼" := O.wle : type_scope.
 
 #[universes(template)]
 Class isUpperSemilattice (D : Type) {PROSET : isProset D} : Type :=

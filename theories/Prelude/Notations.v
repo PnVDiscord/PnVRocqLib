@@ -11,6 +11,7 @@ Reserved Infix "⪵" (no associativity, at level 70).
 Reserved Infix "≦" (no associativity, at level 70).
 Reserved Infix "≨" (no associativity, at level 70).
 Reserved Infix "≺" (no associativity, at level 70).
+Reserved Infix "≼" (no associativity, at level 70).
 
 Reserved Infix "≈ₜ" (no associativity, at level 70).
 Reserved Infix "≳ₜ" (no associativity, at level 70).
