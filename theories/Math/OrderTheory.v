@@ -730,23 +730,24 @@ Proof.
       rewrite <- EXT in claim. destruct claim; simpl in *; eauto.
       contradiction (O.wlt_Irreflexive (snd p1)).
   }
-  split.
-  - exact FST_EQ.
-  - change (snd p1 == snd p2). eapply Woset_ext_eq. intros x; split; intros fst_lt.
-    + assert (claim : prod_wlt (fst p1, x) (fst p1, snd p1)).
+  assert (snd p1 == snd p2) as SND_EQ.
+  { eapply Woset_ext_eq. intros x; split; intros fst_lt.
+    - assert (claim : prod_wlt (fst p1, x) (fst p1, snd p1)).
       { econs 2; simpl; eauto with *. }
       replace (fst p1, snd p1) with p1 in claim by now destruct p1.
       rewrite -> EXT in claim. destruct claim; simpl in *; eauto.
       contradiction (O.wlt_Irreflexive (fst p2)). now rewrite <- FST_EQ at 1.
-    + assert (claim : prod_wlt (fst p2, x) (fst p2, snd p2)).
+    - assert (claim : prod_wlt (fst p2, x) (fst p2, snd p2)).
       { econs 2; simpl; eauto with *. }
       replace (fst p2, snd p2) with p2 in claim by now destruct p2.
       rewrite <- EXT in claim. destruct claim; simpl in *; eauto.
       contradiction (O.wlt_Irreflexive (fst p1)). now rewrite -> FST_EQ at 1.
+  }
+  split; [exact FST_EQ | exact SND_EQ].
 Qed.
 
 #[global]
-Instance pair_lex_isWoset : isWoset (A * B) :=
+Instance pair_isWoset : isWoset (A * B) :=
   { Woset_isWellPoset := pair_isWellPoset
   ; Woset_eqPropCompatible2 := prod_wlt_eqPropCompatible2
   ; Woset_ext_eq := prod_wlt_extensionality
