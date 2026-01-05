@@ -44,11 +44,13 @@ Instance mkProsetFrom_ltProp_isPoset {A : Type} {ltProp : A -> A -> Prop} (ltPro
   ; Poset_eqProp_spec x y := conj (fun H : x = y => H) (fun H : x = y => H)
   }.
 
-Class has_ltProp (A : Type) : Type :=
+#[universes(polymorphic=yes)]
+Class has_ltProp@{u} (A : Type@{u}) : Type@{u} :=
   ltProp (lhs : A) (rhs : A) : Prop.
 
 Infix "≨" := ltProp : type_scope.
 
+#[universes(template)]
 Class hasStrictOrder (A : Type) : Type :=
   { lt :: has_ltProp A
   ; lt_StrictOrder :: StrictOrder lt
@@ -133,7 +135,7 @@ Proof.
 Qed.
 
 Definition isChain {D : Type} `{PROSET : isProset D} (X : ensemble D) : Prop :=
-  forall x1, forall x2, x1 \in X -> x2 \in X -> (x1 =< x2 \/ x2 =< x1).
+  forall x1, forall x2, x1 \in X -> x2 \in X -> (x1 =< x2 \/ x1 >= x2).
 
 Definition prefixedpointsOf {D : Type} `{PROSET : isProset D} (f : D -> D) : ensemble D :=
   fun x => x >= f x.
@@ -144,7 +146,7 @@ Definition postfixedpointsOf {D : Type} `{PROSET : isProset D} (f : D -> D) : en
 Definition upperboundsOf {D : Type} `{PROSET : isProset D} (X : ensemble D) : ensemble D :=
   fun u => forall x : D, forall IN : x \in X, x =< u.
 
-Definition lowerboundsOf {D : Type} `{PROSET : isProset D} (X: ensemble D) : ensemble D :=
+Definition lowerboundsOf {D : Type} `{PROSET : isProset D} (X : ensemble D) : ensemble D :=
   fun l => forall x : D, forall IN : x \in X, x >= l.
 
 Definition is_supremum_of {D : Type} `{PROSET : isProset D} (sup_X : D) (X : ensemble D) : Prop :=
@@ -452,12 +454,12 @@ Qed.
 
 End BASIC1.
 
-#[projections(primitive)]
+#[projections(primitive), universes(template)]
 Class isWoset (A : Type) {SETOID : isSetoid A} : Type :=
   { Woset_isWellPoset :: isWellPoset A
   ; Woset_eqPropCompatible2 :: eqPropCompatible2 wltProp
   ; Woset_ext_eq (x : A) (y : A)
-    (EXT_EQ : forall z, wltProp z x <-> wltProp z y)
+    (EXT_EQ : forall z : A, wltProp z x <-> wltProp z y)
     : x == y
   }.
 
@@ -591,37 +593,41 @@ Defined.
 Lemma subWoset_wlt_unfold {A : Type} {SETOID : isSetoid A} (WOSET : @isWoset A SETOID) (P : A -> Prop) (a : @sig A P) (b : @sig A P)
   : @wlt (@sig A P) (@subSetoid A SETOID P) (@subWoset A SETOID WOSET P) a b = @wlt A SETOID WOSET (@proj1_sig A P a) (@proj1_sig A P b).
 Proof.
-  reflexivity.
+  exact eq_refl.
 Defined.
 
 End CLASSICAL_WELLORDERING.
 
-Definition wle {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
+Section AUX1.
+
+Context {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}.
+
+Definition wle (x : A) (y : A) : Prop :=
   x ≺ y \/ x == y.
 
 #[global]
-Instance wlt_Transitive {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+Instance wlt_Transitive
   : Transitive wlt.
 Proof.
   eapply wltProp_Transitive.
 Defined.
 
 #[global]
-Instance wlt_Irreflexive {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+Instance wlt_Irreflexive
   : Irreflexive wlt.
 Proof.
   eapply StrictOrder_Irreflexive.
 Defined.
 
 #[global]
-Instance wle_Reflexive {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+Instance wle_Reflexive
   : Reflexive wle.
 Proof.
   ii. right. reflexivity.
 Qed.
 
 #[global]
-Instance wle_Transitive {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+Instance wle_Transitive
   : Transitive wle.
 Proof.
   intros ? ? ? [? | ?] [? | ?].
@@ -632,7 +638,7 @@ Proof.
 Qed.
 
 #[global]
-Instance wle_Antisymmetric {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+Instance wle_Antisymmetric
   : @Antisymmetric A eqProp eqProp_Equivalence wle.
 Proof.
   intros x y [? | ?] [? | ?].
@@ -643,12 +649,34 @@ Proof.
 Qed.
 
 #[global]
-Add Parametric Morphism {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A}
+Add Parametric Morphism
   : wle with signature (eqProp ==> eqProp ==> iff)
   as wle_eqProp_eqProp_iff.
 Proof.
   unfold wle. ii. now rewrite H, H0.
 Qed.
+
+Lemma wle_wlt_wlt x y z
+  (H_wle : wle x y)
+  (H_wlt : wlt y z)
+  : wlt x z.
+Proof.
+  destruct H_wle as [H_LT | H_EQ].
+  - now transitivity y.
+  - now rewrite -> H_EQ.
+Qed.
+
+Lemma wlt_wle_wlt x y z
+  (H_wlt : wlt x y)
+  (H_wle : wle y z)
+  : wlt x z.
+Proof.
+  destruct H_wle as [H_LT | H_EQ].
+  - now transitivity y.
+  - now rewrite <- H_EQ.
+Qed.
+
+End AUX1.
 
 Section pair_lex.
 
@@ -694,10 +722,10 @@ Instance pair_isWellPoset : isWellPoset (A * B) :=
   ; wltProp_well_founded := prod_wlt_well_founded
   }.
 
-Let prod_isSetoid : isSetoid (A * B) :=
+Let pair_isSetoid : isSetoid (A * B) :=
   @prod_isSetoid A B A_isSetoid B_isSetoid.
 
-#[local] Existing Instance prod_isSetoid.
+#[local] Existing Instance pair_isSetoid.
 
 #[global]
 Instance prod_wlt_eqPropCompatible2
@@ -730,23 +758,24 @@ Proof.
       rewrite <- EXT in claim. destruct claim; simpl in *; eauto.
       contradiction (O.wlt_Irreflexive (snd p1)).
   }
-  split.
-  - exact FST_EQ.
-  - change (snd p1 == snd p2). eapply Woset_ext_eq. intros x; split; intros fst_lt.
-    + assert (claim : prod_wlt (fst p1, x) (fst p1, snd p1)).
+  assert (snd p1 == snd p2) as SND_EQ.
+  { eapply Woset_ext_eq. intros x; split; intros fst_lt.
+    - assert (claim : prod_wlt (fst p1, x) (fst p1, snd p1)).
       { econs 2; simpl; eauto with *. }
       replace (fst p1, snd p1) with p1 in claim by now destruct p1.
       rewrite -> EXT in claim. destruct claim; simpl in *; eauto.
       contradiction (O.wlt_Irreflexive (fst p2)). now rewrite <- FST_EQ at 1.
-    + assert (claim : prod_wlt (fst p2, x) (fst p2, snd p2)).
+    - assert (claim : prod_wlt (fst p2, x) (fst p2, snd p2)).
       { econs 2; simpl; eauto with *. }
       replace (fst p2, snd p2) with p2 in claim by now destruct p2.
       rewrite <- EXT in claim. destruct claim; simpl in *; eauto.
       contradiction (O.wlt_Irreflexive (fst p1)). now rewrite -> FST_EQ at 1.
+  }
+  split; [exact FST_EQ | exact SND_EQ].
 Qed.
 
 #[global]
-Instance pair_lex_isWoset : isWoset (A * B) :=
+Instance pair_isWoset : isWoset (A * B) :=
   { Woset_isWellPoset := pair_isWellPoset
   ; Woset_eqPropCompatible2 := prod_wlt_eqPropCompatible2
   ; Woset_ext_eq := prod_wlt_extensionality

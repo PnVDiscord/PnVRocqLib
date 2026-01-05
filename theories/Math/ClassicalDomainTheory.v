@@ -813,7 +813,8 @@ Fixpoint iterS (n : nat) (f : D -> D) (x : D) {struct n} : D :=
   end.
 
 Variant IterS (f : D -> D) (x : D) : ensemble D :=
-  | In_IterS (n : nat) : iterS n f x \in IterS f x.
+  | In_IterS (n : nat)
+    : iterS n f x \in IterS f x.
 
 #[local] Hint Constructors IterS : core.
 

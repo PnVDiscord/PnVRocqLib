@@ -50,17 +50,26 @@ Class MonadIterSpec (M : Type -> Type) {MONAD : isMonad M} {MONADITER : isMonadI
   monad_iter_unfold (I : Type) (R : Type) (step : I -> M (I + R)%type)
   : monad_iter step == step >=> B.either (monad_iter step) pure.
 
+Lemma MonadIterSpec_unfold (M : Type -> Type) (MONAD : isMonad M) (MONADITER : isMonadIter M) (SETOID1 : isSetoid1 M) :
+  MonadIterSpec M (MONAD := MONAD) (MONADITER := MONADITER) (SETOID1 := SETOID1) =
+  (forall I : Type, forall R : Type, forall k : I -> M (I + R)%type, forall x : I, monad_iter k x == bind (k x) (fun y : I + R => match y with inl x' => monad_iter k x' | inr y' => pure y' end)).
+Proof.
+  reflexivity.
+Defined.
+
 Section STATE_MONAD.
 
 #[local] Existing Instance B.stateT_isSetoid1.
 
+Context {S : Type}.
+
 #[global]
-Instance stateT_isMonadIter {S : Type} {M : Type -> Type} {MONAD : isMonad M} {MONADITER : isMonadIter M} : isMonadIter (B.stateT S M) :=
+Instance stateT_isMonadIter {M : Type -> Type} {MONAD : isMonad M} {MONADITER : isMonadIter M} : isMonadIter (B.stateT S M) :=
   fun I : Type => fun R : Type => fun step : I -> B.stateT S M (I + R) =>
   B.StateT ∘ curry (monad_iter (uncurry (B.runStateT ∘ step) >=> uncurry (B.either (curry (pure ∘ inl)) (curry (pure ∘ inr))))).
 
 #[global]
-Instance stateT_MonadIterSpec {S : Type} {M : Type -> Type} {MONAD : isMonad M} {MONADITER : isMonadIter M} {SETOID1 : isSetoid1 M}
+Instance stateT_MonadIterSpec {M : Type -> Type} {MONAD : isMonad M} {MONADITER : isMonadIter M} {SETOID1 : isSetoid1 M}
   (MONADLAW : MonadLaws M)
   (MONADITERSPEC : MonadIterSpec M)
   : MonadIterSpec (B.stateT S M).
@@ -70,10 +79,10 @@ Proof.
   cbn. rewrite <- bind_assoc. eapply bind_compatWith_eqProp_r. now intros [[x' | i'] s']; simpl; rewrite bind_pure_l.
 Qed.
 
-Definition get {S : Type} {M : Type -> Type} {MONAD : isMonad M} : B.stateT S M S :=
+Definition get {M : Type -> Type} {MONAD : isMonad M} : B.stateT S M S :=
   B.StateT $ fun s => pure (s, s).
 
-Definition put {S : Type} {M : Type -> Type} {MONAD : isMonad M} : S -> B.stateT S M unit :=
+Definition put {M : Type -> Type} {MONAD : isMonad M} : S -> B.stateT S M unit :=
   fun s => B.StateT $ fun _ => pure (tt, s).
 
 End STATE_MONAD.

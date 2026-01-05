@@ -148,6 +148,8 @@ End Ord.
 Definition Ord : Type@{Set_V} :=
   Ord.t.
 
+#[global] Typeclasses Opaque Ord.
+
 Definition _Ord_eq : Ord -> Ord -> Prop :=
   @rEq.
 
@@ -158,13 +160,13 @@ Definition _Ord_le : Ord -> Ord -> Prop :=
   @rLe.
 
 Definition _zer : Ord :=
-  Ord.zer.
+  @Ord.zer.
 
 Definition _suc : Ord -> Ord :=
-  Ord.suc.
+  @Ord.suc.
 
 Definition _sup : forall A : Type@{Set_u}, (A -> Ord) -> Ord :=
-  Ord.sup.
+  @Ord.sup.
 
 #[global]
 Instance Ord_isWellPoset : isWellPoset Ord :=
@@ -269,6 +271,8 @@ End Cardinality.
 
 Definition Card : Type@{Set_V} :=
   Cardinality.t.
+
+#[global] Typeclasses Opaque Card.
 
 Definition _Card_eq : Card -> Card -> Prop :=
   Cardinality.eq.
