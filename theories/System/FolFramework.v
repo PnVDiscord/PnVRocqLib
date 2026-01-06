@@ -51,10 +51,6 @@ Variant fol_symbols : Set :=
   | UniversalQuantifier_symbol
   | ExistentialQuantifier_symbol.
 
-#[local] Notation typ := (typ mk_fol).
-#[local] Notation ctx := (ctx mk_fol).
-#[local] Notation bty := (bty mk_fol).
-
 End HOAS.
 
 End ExternalSyntax.
