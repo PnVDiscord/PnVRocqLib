@@ -9,18 +9,25 @@ Delimit Scope typ_scope with typ.
 
 Module StlcLang.
 
+Inductive typ (basic_types : Set) : Set :=
+  | bty (B : basic_types)
+  | arr (D : typ basic_types) (C : typ basic_types).
+
+#[global]
+Instance typ_hasEqDec (basic_types : Set)
+  (bty_hasEqDec : hasEqDec basic_types)
+  : hasEqDec (typ basic_types).
+Proof.
+  red in bty_hasEqDec |- *. decide equality.
+Defined.
+
 #[projections(primitive)]
 Class language : Type :=
   { basic_types : Set
   ; constants : Set
+  ; signature (c : constants) : typ basic_types
+  ; basic_types_hasEqDec :: hasEqDec basic_types
   }.
-
-Inductive typ (L : language) : Set :=
-  | bty (B : L.(basic_types)) : typ L
-  | arr (D : typ L) (C : typ L) : typ L.
-
-Class signature (L : language) : Set :=
-  typ_of_constant (c : L.(constants)) : typ L.
 
 End StlcLang.
 
@@ -33,14 +40,6 @@ Include StlcLang.
 
 #[local] Open Scope name_scope.
 
-#[global]
-Instance typ_hasEqDec (L : language)
-  (bty_hasEqDec : hasEqDec L.(basic_types))
-  : hasEqDec (typ L).
-Proof.
-  red in bty_hasEqDec |- *. decide equality.
-Defined.
-
 Section STLC.
 
 #[local] Hint Resolve Name.ne_pirrel : core.
@@ -49,7 +48,7 @@ Section STLC.
 
 Context `{L : !language}.
 
-#[local] Notation typ := (typ L).
+#[local] Notation typ := (typ L.(basic_types)).
 
 Inductive trm : Set :=
   | Var_trm (x : name)
@@ -468,8 +467,6 @@ Proof.
   - eauto.
 Qed.
 
-Context {bty_hasEqDec : hasEqDec L.(basic_types)}.
-
 Lemma LookupProp_pirrel x ty Gamma
   (LOOKUP : LookupProp x ty Gamma)
   (LOOKUP' : LookupProp x ty Gamma)
@@ -506,8 +503,6 @@ Qed.
 
 End LOOKUP.
 
-Context `{Sigma : !signature L}.
-
 Inductive Typing (Gamma : ctx) : trm -> typ -> Set :=
   | Var_typ (x : name) (ty : typ)
     (LOOKUP : Lookup x ty Gamma)
@@ -520,7 +515,7 @@ Inductive Typing (Gamma : ctx) : trm -> typ -> Set :=
     (TYPING1 : (y, ty1) :: Gamma ⊢ e1 ⦂ ty2)
     : Gamma ⊢ Lam_trm y ty1 e1 ⦂ (ty1 -> ty2)%typ
   | Con_typ (c : L.(constants))
-    : Gamma ⊢ Con_trm c ⦂ typ_of_constant (signature := Sigma) c
+    : Gamma ⊢ Con_trm c ⦂ signature c
   where "Gamma '⊢' M '⦂' A" := (Typing Gamma M A) : type_scope.
 
 Definition Typing_code (Gamma : ctx) (e : trm) (ty : typ) : Set :=
@@ -528,7 +523,7 @@ Definition Typing_code (Gamma : ctx) (e : trm) (ty : typ) : Set :=
   | Var_trm x => Lookup x ty Gamma
   | App_trm e1 e2 => { ty1 : typ & (Typing Gamma e1 (ty1 -> ty)%typ * Typing Gamma e2 ty1)%type }
   | Lam_trm y ty1 e1 => { ty2 : typ & (Typing ((y, ty1) :: Gamma) e1 ty2 * B.Prop_to_Set (ty = (ty1 -> ty2)%typ))%type }
-  | Con_trm c => B.Prop_to_Set (ty = typ_of_constant c)
+  | Con_trm c => B.Prop_to_Set (ty = signature c)
   end.
 
 Definition Typing_encode {Gamma} {e} {ty} (TYPING : Typing Gamma e ty) : Typing_code Gamma e ty :=
@@ -635,7 +630,7 @@ Fixpoint TypeInfer {bty_hasEqDec : hasEqDec L.(basic_types)} (Gamma : ctx) (e : 
     | Some ty2 => Some (ty1 -> ty2)%typ
     | _ => None
     end
-  | Con_trm c => Some (typ_of_constant c)
+  | Con_trm c => Some (signature c)
   end.
 
 Lemma TypeInfer_eq_Some_intro {bty_hasEqDec : hasEqDec L.(basic_types)} Gamma e ty
@@ -732,8 +727,6 @@ Fixpoint typ_height (ty : typ) : nat :=
 Definition le_ctx (Gamma : ctx) (Delta : ctx) : Set :=
   forall x, forall ty, Lookup x ty Gamma -> Lookup x ty Delta.
 
-Context `{Sigma : !signature L}.
-
 Lemma Typing_weakening {Gamma : ctx} {Delta : ctx} {e : trm} {ty : typ}
   (TYPING : Typing Gamma e ty)
   (LE : le_ctx Gamma Delta)
@@ -757,8 +750,6 @@ Definition alpha_equiv (M : trm) (N : trm) : Prop :=
 End AUX1.
 
 Section BASIC_THEORY2_ON_SYNTAX.
-
-Context `{Sigma : !signature L}.
 
 End BASIC_THEORY2_ON_SYNTAX.
 
@@ -871,6 +862,5 @@ End STLC.
 #[global] Arguments trm : clear implicits.
 #[global] Arguments ctx : clear implicits.
 #[global] Arguments subst : clear implicits.
-#[global] Coercion bty : basic_types >-> typ.
 
 End ChurchStyleStlc.

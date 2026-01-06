@@ -14,6 +14,8 @@ Notation "Gamma '⊢' M '=' N '⦂' A" := (equality Gamma M N A) : type_scope.
 
 Section AUX1.
 
+#[local] Notation typ L := (typ L.(basic_types)).
+
 Context {L : language}.
 
 Definition is_lambda (e : trm L) : Prop :=
@@ -28,8 +30,6 @@ Fixpoint typ_ord (ty : typ L) : nat :=
   | (ty1 -> ty2)%typ => Nat.max (1 + typ_ord ty1) (typ_ord ty2)
   end.
 
-Context `{Sigma : !signature L}.
-
 Inductive typNe (Gamma : ctx L) : trm L -> typ L -> Prop :=
   | typNe_Var x ty
     (LOOKUP : Lookup x ty Gamma)
@@ -39,7 +39,7 @@ Inductive typNe (Gamma : ctx L) : trm L -> typ L -> Prop :=
     (v_typNf : typNf Gamma v ty)
     : typNe Gamma (App_trm u v) ty'
   | typNe_Con c ty
-    (ty_eq : ty = Sigma c)
+    (ty_eq : ty = signature c)
     : typNe Gamma (Con_trm c) ty
   where "Gamma '⊢' M '⇉' A" := (typNe Gamma M A)
 with typNf (Gamma : ctx L) : trm L -> typ L -> Prop :=
@@ -117,9 +117,43 @@ Proof.
       * intros. econs 2; try eassumption. eapply LE; eassumption.
 Defined.
 
+Inductive TypingProp (Gamma : ctx L) : trm L -> typ L -> Prop :=
+  | TypingProp_Var x ty
+    (LOOKUP : Gamma ∋ x ⦂ ty)
+    : Gamma ⊢ Var_trm x ⦂ ty
+  | TypingProp_App M N ty1 ty2
+    (TYPING1 : Gamma ⊢ M ⦂ (ty1 -> ty2))
+    (TYPING2 : Gamma ⊢ N ⦂ ty1)
+    : Gamma ⊢ App_trm M N ⦂ ty2
+  | TypingProp_Lam y M ty1 ty2
+    (TYPING : (y, ty1) :: Gamma ⊢ M ⦂ ty2)
+    : Gamma ⊢ Lam_trm y ty1 M ⦂ (ty1 -> ty2)
+  | TypingProp_Con c
+    : Gamma ⊢ Con_trm c ⦂ signature c
+  where "Gamma '⊢' M '⦂' A" := (TypingProp Gamma M A).
+
+#[local] Hint Constructors TypingProp : core.
+
+Lemma TypingProp_iff Gamma e ty
+  : Gamma ⊢ e ⦂ ty <-> inhabited (Typing Gamma e ty).
+Proof.
+  split; intros TYPING.
+  - induction TYPING; simpl.
+    + econs. econs 1; eassumption.
+    + destruct IHTYPING1, IHTYPING2. econs. econs 2; eassumption.
+    + destruct IHTYPING. econs. econs 3; eassumption.
+    + econs. econs 4.
+  - destruct TYPING as [TYPING]. induction TYPING; simpl; eauto.
+Qed.
+
 End AUX1.
 
 Section STLC_META.
+
+#[local] Notation typ L := (typ L.(basic_types)).
+
+Let power (A : Set) : Type :=
+  A -> Set.
 
 Context {L : language}.
 
@@ -183,40 +217,9 @@ Proof.
   contradiction claim1. right. exact H_contra.
 Defined.
 
-Context {Sigma : signature L}.
-
-Inductive TypingProp (Gamma : ctx L) : trm L -> typ L -> Prop :=
-  | TypingProp_Var x ty
-    (LOOKUP : Gamma ∋ x ⦂ ty)
-    : Gamma ⊢ Var_trm x ⦂ ty
-  | TypingProp_App M N ty1 ty2
-    (TYPING1 : Gamma ⊢ M ⦂ (ty1 -> ty2))
-    (TYPING2 : Gamma ⊢ N ⦂ ty1)
-    : Gamma ⊢ App_trm M N ⦂ ty2
-  | TypingProp_Lam y M ty1 ty2
-    (TYPING : (y, ty1) :: Gamma ⊢ M ⦂ ty2)
-    : Gamma ⊢ Lam_trm y ty1 M ⦂ (ty1 -> ty2)
-  | TypingProp_Con c
-    : Gamma ⊢ Con_trm c ⦂ typ_of_constant c
-  where "Gamma '⊢' M '⦂' A" := (TypingProp Gamma M A).
-
-#[local] Hint Constructors TypingProp : core.
-
-Lemma TypingProp_iff Gamma e ty
-  : Gamma ⊢ e ⦂ ty <-> inhabited (Typing Gamma e ty).
-Proof.
-  split; intros TYPING.
-  - induction TYPING; simpl.
-    + econs. econs 1; eassumption.
-    + destruct IHTYPING1, IHTYPING2. econs. econs 2; eassumption.
-    + destruct IHTYPING. econs. econs 3; eassumption.
-    + econs. econs 4.
-  - destruct TYPING as [TYPING]. induction TYPING; simpl; eauto.
-Qed.
-
 Section WEAK_NORMALISATION.
 
-Inductive wnNe (Gamma : ctx L) : typ L -> trm L -> Set :=
+Inductive wnNe (Gamma : ctx L) : typ L -> power (trm L) :=
   | wnNe_Var x ty
     (LOOKUP : Gamma ∋ x ⦂ ty)
     : Gamma ⊢ Var_trm x ⇉ ty
@@ -225,10 +228,10 @@ Inductive wnNe (Gamma : ctx L) : typ L -> trm L -> Set :=
     (v_wnNf : Gamma ⊢ v ⇇ ty)
     : Gamma ⊢ App_trm u v ⇉ ty'
   | wnNe_Con c ty
-    (ty_EQ : ty = Sigma c)
+    (ty_EQ : ty = signature c)
     : Gamma ⊢ Con_trm c ⇉ ty
   where "Gamma '⊢' M '⇉' A" := (wnNe Gamma A M)
-with wnNf (Gamma : ctx L) : typ L -> trm L -> Set :=
+with wnNf (Gamma : ctx L) : typ L -> power (trm L) :=
   | wnNf_of_wnNe u ty
     (u_wnNe : Gamma ⊢ u ⇉ ty)
     (ty_basic : typ_ord ty = 0)
@@ -301,7 +304,7 @@ Proof.
   - econs 2. fold y. exact v_wnNf.
 Defined.
 
-Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : trm L -> Set :=
+Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : power (trm L) :=
   match ty with
   | bty _ b => fun M => B.sigT (trm L) (fun N => (Gamma ⊢ N ⇉ bty _ b) * (M ~>β* N))%type
   | (ty1 -> ty2)%typ => fun M => forall Gamma', le_ctx Gamma Gamma' -> forall N, eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
@@ -367,7 +370,7 @@ Proof.
     + eapply H_M; eassumption.
 Defined.
 
-Definition eval_ctx (Gamma : ctx L) (Delta : ctx L) : subst L -> Set :=
+Definition eval_ctx (Gamma : ctx L) (Delta : ctx L) : power (subst L) :=
   fun gamma => forall x, forall ty, Lookup x ty Delta -> eval_typ Gamma ty (gamma x).
 
 Lemma eval_ctx_nil_subst {Gamma : ctx L}
@@ -403,9 +406,12 @@ Defined.
 Definition semanticTyping (Gamma : ctx L) (e : trm L) (ty : typ L) : Set :=
   forall Delta, forall gamma, eval_ctx Delta Gamma gamma -> eval_typ Delta ty (subst_trm gamma e).
 
+#[local] Notation "Gamma ⊢ M ⦂ A" := (Typing Gamma M A) : type_scope.
+#[local] Notation "Gamma ⊧ M ⦂ A" := (semanticTyping Gamma M A) : type_scope.
+
 Theorem semanticTyping_sound Gamma e ty
-  (TYPING : Typing Gamma e ty)
-  : semanticTyping Gamma e ty.
+  (TYPING : Gamma ⊢ e ⦂ ty)
+  : Gamma ⊧ e ⦂ ty.
 Proof.
   red; induction TYPING; simpl in *; intros Delta gamma rho.
   - eapply rho. exact LOOKUP.
@@ -423,36 +429,39 @@ Proof.
   - eapply reflect. econs 3. reflexivity.
 Defined.
 
+#[local] Infix "≡" := alpha_equiv : type_scope.
+
 Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
   | wnStep_Var x ty
-    (LOOKUP : Lookup x ty Gamma)
-    : wnStep Gamma (Var_trm x) (Var_trm x) ty
+    (LOOKUP : Gamma ∋ x ⦂ ty)
+    : Gamma ⊢ Var_trm x ~~> Var_trm x ⦂ ty
   | wnStep_App M M' N N' ty ty'
-    (H_M : wnStep Gamma M M' (ty -> ty')%typ)
-    (H_N : wnStep Gamma N N' ty)
-    : wnStep Gamma (App_trm M N) (App_trm M' N') ty'
+    (H_M : Gamma ⊢ M ~~> M' ⦂ (ty -> ty')%typ)
+    (H_N : Gamma ⊢ N ~~> N' ⦂ ty)
+    : Gamma ⊢ App_trm M N ~~> App_trm M' N' ⦂ ty'
   | wnStep_Lam x M M' ty ty'
-    (H_M : wnStep ((x, ty) :: Gamma) M M' ty')
-    : wnStep Gamma (Lam_trm x ty M) (Lam_trm x ty M') (ty -> ty')%typ
+    (H_M : (x, ty) :: Gamma ⊢ M ~~> M' ⦂ ty')
+    : Gamma ⊢ Lam_trm x ty M ~~> Lam_trm x ty M' ⦂ (ty -> ty')%typ
   | wnStep_Con c
-    : wnStep Gamma (Con_trm c) (Con_trm c) (typ_of_constant c)
+    : Gamma ⊢ Con_trm c ~~> Con_trm c ⦂ signature c
   | wnStep_whBetaReduce v v' e ty
-    (H_M : wnStep Gamma v' e ty)
+    (H_M : Gamma ⊢ v' ~~> e ⦂ ty)
     (WHBETA : v ~>β v')
-    : wnStep Gamma v e ty
+    : Gamma ⊢ v ~~> e ⦂ ty
   | wnStep_whEtaExpand v v' e ty
-    (H_M : wnStep Gamma v' e ty)
+    (H_M : Gamma ⊢ v' ~~> e ⦂ ty)
     (WHETA : v' ~>η v)
-    : wnStep Gamma v e ty
+    : Gamma ⊢ v ~~> e ⦂ ty
   | wnStep_alpha v v' e ty
-    (H_M : wnStep Gamma v' e ty)
-    (ALPHA : alpha_equiv v v')
-    : wnStep Gamma v e ty.
+    (H_M : Gamma ⊢ v' ~~> e ⦂ ty)
+    (ALPHA : v ≡ v')
+    : Gamma ⊢ v ~~> e ⦂ ty
+  where "Gamma ⊢ M ~~> N ⦂ A" := (wnStep Gamma M N A).
 
-Theorem wnNe_wnStep_typNe (Gamma : ctx L) u ty
+Theorem wnNe_wnStep_typNe Gamma u ty
   (u_wnNe : Gamma ⊢ u ⇉ ty)
   : B.sig (trm L) (fun e => wnStep Gamma u e ty /\ typNe Gamma e ty)
-with wnNf_wnStep_typNf (Gamma : ctx L) v ty
+with wnNf_wnStep_typNf Gamma v ty
   (v_wnNf : Gamma ⊢ v ⇇ ty)
   : B.sig (trm L) (fun e => wnStep Gamma v e ty /\ typNf Gamma e ty).
 Proof.
@@ -492,23 +501,27 @@ Proof.
 Defined.
 
 Corollary Normalisation_by_Evaluation (Gamma : ctx L) (M : trm L) (ty : typ L)
-  (TYPING : Typing Gamma M ty)
+  (TYPING : Gamma ⊢ M ⦂ ty)
   : B.sig (trm L) (fun e => wnStep Gamma (subst_trm nil_subst M) e ty /\ typNf Gamma e ty).
 Proof.
   exact (wnNf_wnStep_typNf Gamma (subst_trm nil_subst M) ty (reify Gamma ty (subst_trm nil_subst M) (semanticTyping_sound Gamma M ty TYPING Gamma nil_subst eval_ctx_nil_subst))).
 Defined.
 
-Definition NbE {Gamma} {M} {ty} (TYPING : Typing Gamma M ty) : trm L :=
+Definition NbE {Gamma} {ty} (M : trm L) (TYPING : Typing Gamma M ty) : trm L :=
   (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj1_sig).
 
-Lemma NbE_wnStep (Gamma : ctx L) (M : trm L) (ty : typ L) (TYPING : Typing Gamma M ty)
-  : wnStep Gamma (subst_trm nil_subst M) (NbE TYPING) ty.
+Lemma NbE_wnStep (Gamma : ctx L) (M : trm L) (ty : typ L)
+  (TYPING : Gamma ⊢ M ⦂ ty)
+  : Gamma ⊢ M ~~> NbE M TYPING ⦂ ty.
 Proof.
-  exact (proj1 (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj2_sig)).
+  eapply wnStep_alpha.
+  - exact (proj1 (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj2_sig)).
+  - red. rewrite <- subst_compose_spec. eapply equiv_subst_implies_subst_same. ii. reflexivity.
 Qed.
 
-Lemma NbE_typNf (Gamma : ctx L) (M : trm L) (ty : typ L) (TYPING : Typing Gamma M ty)
-  : typNf Gamma (NbE TYPING) ty.
+Lemma NbE_typNf (Gamma : ctx L) (M : trm L) (ty : typ L)
+  (TYPING : Gamma ⊢ M ⦂ ty)
+  : typNf Gamma (NbE M TYPING) ty.
 Proof.
   exact (proj2 (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj2_sig)).
 Qed.

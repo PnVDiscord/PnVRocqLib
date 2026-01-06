@@ -157,9 +157,9 @@ Proof.
 Qed.
 
 Lemma fromOrderType_subseteq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A)
-  : fromOrderType A x \subseteq fromOrderType A y <-> (x ≺ y \/ x == y).
+  : fromOrderType A x \subseteq fromOrderType A y <-> x ≼ y.
 Proof.
-  rewrite <- fromWf_wlt_rLe_fromWf_wlt_iff. now rewrite -> fromWf_rLe_fromWf_iff.
+  unfold O.wle. rewrite <- fromWf_wlt_rLe_fromWf_wlt_iff. now rewrite -> fromWf_rLe_fromWf_iff.
 Qed.
 
 Lemma fromOrderType_eq_fromOrderType_iff {A : Type@{Set_u}} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A)
@@ -751,12 +751,11 @@ Lemma BASENEXTJOIN (cs : Type) (ts : cs -> Tree)
   : dbase ⊑ djoin cs (fun c : cs => next (rec (ts c))) \/ djoin cs (fun c : cs => next (rec (ts c))) ⊑ dbase.
 Proof.
   destruct (classic (inhabited cs)) as [YES | NO].
-  { destruct YES as [c]. left.
+  - destruct YES as [c]. left.
     eapply dle_trans with (d2 := rec (ts c)); eauto.
     eapply dle_trans with (d2 := next (rec (ts c))); eauto.
     eapply djoin_upperbound with (ds := fun c => next (rec (ts c))); eauto.
-  }
-  { right. eapply djoin_supremum; eauto. intros c. contradiction NO. econs; exact c. }
+  - right. eapply djoin_supremum; eauto. intros c. contradiction NO. econs; exact c.
 Qed.
 
 #[local] Hint Resolve BASEJOIN BASENEXTJOIN : core.
@@ -772,7 +771,7 @@ Proof.
     + eapply lt_rec. econs. exists i; eauto.
     + eapply dle_trans with (d2 := djoin _ (fun c => rec (ts c))); eauto.
       eapply djoin_upperbound with (ds := fun c => rec (ts c)); eauto.
-  - change (dunion dbase (djoin cs (fun i : cs => rec (ts i)))  ⊑ rec (indexed_union cs ts)). eapply dunion_supremum; eauto.
+  - change (dunion dbase (djoin cs (fun i : cs => rec (ts i))) ⊑ rec (indexed_union cs ts)). eapply dunion_supremum; eauto.
     eapply djoin_supremum; eauto. intros c. eapply le_rec. econs. intros i. econs. simpl. exists (@existT _ _ c i); eauto.
 Qed.
 
