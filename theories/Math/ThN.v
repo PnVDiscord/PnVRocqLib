@@ -906,9 +906,12 @@ End SET_LEVEL_LE.
 Section ACKERMANN.
 
 Record AckermannSpec (ack : nat * nat -> nat) : Prop :=
-  { AckermannSpec1 n : ack (0, n) = n + 1
-  ; AckermannSpec2 m : ack (m + 1, 0) = ack (m, 1)
-  ; AckermannSpec3 m n : ack (m + 1, n + 1) = ack (m, ack (m + 1, n))
+  { AckermannSpec1 (n : nat)
+    : ack (0, n) = n + 1
+  ; AckermannSpec2 (m : nat)
+    : ack (m + 1, 0) = ack (m, 1)
+  ; AckermannSpec3 (m : nat) (n : nat)
+    : ack (m + 1, n + 1) = ack (m, ack (m + 1, n))
   }.
 
 Let aux1 (k : nat -> nat) : nat -> nat :=
