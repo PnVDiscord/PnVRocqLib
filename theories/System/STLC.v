@@ -522,6 +522,13 @@ Proof.
   exact (proj2 (Normalisation_by_Evaluation Gamma M ty TYPING).(B.proj2_sig)).
 Qed.
 
+Lemma NbE_preservesTyping (Gamma : ctx L) (M : trm L) (ty : typ L)
+  (TYPING : Gamma ⊢ M ⦂ ty)
+  : Gamma ⊢ NbE M TYPING ⦂ ty.
+Proof.
+  eapply Typing_retraction. eapply typNf_Typing. eapply NbE_typNf.
+Qed.
+
 End WEAK_NORMALISATION.
 
 End STLC_META.

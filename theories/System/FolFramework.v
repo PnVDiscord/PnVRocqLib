@@ -29,9 +29,9 @@ Export ChurchStyleStlc.
 Section HOAS.
 
 Variant fol_basic_types : Set :=
-  | trm_bty : fol_basic_types
-  | trms_bty (arity : nat) : fol_basic_types
-  | frm_bty : fol_basic_types.
+  | trm_bty
+  | trms_bty (arity : nat)
+  | frm_bty.
 
 Context {L : InternalSyntax.language}.
 
@@ -40,7 +40,7 @@ Variant fol_symbols : Set :=
   | Constant_symbol (c : L.(constant_symbols))
   | Relation_symbol (R : L.(relation_symbols))
   | Nil_symbol
-  | Cons_symbol (arity : nat)
+  | Cons_symbol (n : nat)
   | Equality_symbol
   | Contradiction_symbol
   | Negation_symbol

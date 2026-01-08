@@ -9,12 +9,13 @@ Delimit Scope typ_scope with typ.
 
 Module StlcLang.
 
-Inductive typ (basic_types : Set) : Set :=
+#[universes(template)]
+Inductive typ (basic_types : Type) : Type :=
   | bty (B : basic_types)
   | arr (D : typ basic_types) (C : typ basic_types).
 
 #[global]
-Instance typ_hasEqDec (basic_types : Set)
+Instance typ_hasEqDec (basic_types : Type)
   (bty_hasEqDec : hasEqDec basic_types)
   : hasEqDec (typ basic_types).
 Proof.
@@ -46,6 +47,9 @@ Definition typ (L : language) : Set :=
   StlcLang.typ L.(basic_types).
 
 #[global] Bind Scope typ_scope with typ.
+
+Definition mk_bty `{L : !language} : L.(basic_types) -> typ L :=
+  bty L.(basic_types).
 
 #[local] Open Scope name_scope.
 
@@ -862,5 +866,7 @@ End STLC.
 #[global] Arguments trm : clear implicits.
 #[global] Arguments ctx : clear implicits.
 #[global] Arguments subst : clear implicits.
+
+#[global] Coercion ChurchStyleStlc.mk_bty : StlcLang.basic_types >-> ChurchStyleStlc.typ.
 
 End ChurchStyleStlc.
