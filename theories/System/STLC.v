@@ -14,8 +14,6 @@ Notation "Gamma '⊢' M '=' N '⦂' A" := (equality Gamma M N A) : type_scope.
 
 Section AUX1.
 
-#[local] Notation typ L := (typ L.(basic_types)).
-
 Context {L : language}.
 
 Definition is_lambda (e : trm L) : Prop :=
@@ -122,12 +120,12 @@ Inductive TypingProp (Gamma : ctx L) : trm L -> typ L -> Prop :=
     (LOOKUP : Gamma ∋ x ⦂ ty)
     : Gamma ⊢ Var_trm x ⦂ ty
   | TypingProp_App M N ty1 ty2
-    (TYPING1 : Gamma ⊢ M ⦂ (ty1 -> ty2))
+    (TYPING1 : Gamma ⊢ M ⦂ (ty1 -> ty2)%typ)
     (TYPING2 : Gamma ⊢ N ⦂ ty1)
     : Gamma ⊢ App_trm M N ⦂ ty2
   | TypingProp_Lam y M ty1 ty2
     (TYPING : (y, ty1) :: Gamma ⊢ M ⦂ ty2)
-    : Gamma ⊢ Lam_trm y ty1 M ⦂ (ty1 -> ty2)
+    : Gamma ⊢ Lam_trm y ty1 M ⦂ (ty1 -> ty2)%typ
   | TypingProp_Con c
     : Gamma ⊢ Con_trm c ⦂ signature c
   where "Gamma '⊢' M '⦂' A" := (TypingProp Gamma M A).
@@ -150,9 +148,7 @@ End AUX1.
 
 Section STLC_META.
 
-#[local] Notation typ L := (typ L.(basic_types)).
-
-Let power (A : Set) : Type :=
+Let powerset (A : Set) : Type :=
   A -> Set.
 
 Context {L : language}.
@@ -219,7 +215,7 @@ Defined.
 
 Section WEAK_NORMALISATION.
 
-Inductive wnNe (Gamma : ctx L) : typ L -> power (trm L) :=
+Inductive wnNe (Gamma : ctx L) : typ L -> powerset (trm L) :=
   | wnNe_Var x ty
     (LOOKUP : Gamma ∋ x ⦂ ty)
     : Gamma ⊢ Var_trm x ⇉ ty
@@ -231,7 +227,7 @@ Inductive wnNe (Gamma : ctx L) : typ L -> power (trm L) :=
     (ty_EQ : ty = signature c)
     : Gamma ⊢ Con_trm c ⇉ ty
   where "Gamma '⊢' M '⇉' A" := (wnNe Gamma A M)
-with wnNf (Gamma : ctx L) : typ L -> power (trm L) :=
+with wnNf (Gamma : ctx L) : typ L -> powerset (trm L) :=
   | wnNf_of_wnNe u ty
     (u_wnNe : Gamma ⊢ u ⇉ ty)
     (ty_basic : typ_ord ty = 0)
@@ -304,7 +300,7 @@ Proof.
   - econs 2. fold y. exact v_wnNf.
 Defined.
 
-Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : power (trm L) :=
+Fixpoint eval_typ (Gamma : ctx L) (ty : typ L) {struct ty} : powerset (trm L) :=
   match ty with
   | bty _ b => fun M => B.sigT (trm L) (fun N => (Gamma ⊢ N ⇉ bty _ b) * (M ~>β* N))%type
   | (ty1 -> ty2)%typ => fun M => forall Gamma', le_ctx Gamma Gamma' -> forall N, eval_typ Gamma' ty1 N -> eval_typ Gamma' ty2 (App_trm M N)
@@ -370,7 +366,7 @@ Proof.
     + eapply H_M; eassumption.
 Defined.
 
-Definition eval_ctx (Gamma : ctx L) (Delta : ctx L) : power (subst L) :=
+Definition eval_ctx (Gamma : ctx L) (Delta : ctx L) : powerset (subst L) :=
   fun gamma => forall x, forall ty, Lookup x ty Delta -> eval_typ Gamma ty (gamma x).
 
 Lemma eval_ctx_nil_subst {Gamma : ctx L}

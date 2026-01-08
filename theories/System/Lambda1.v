@@ -36,7 +36,16 @@ End StlcLang.
 
 Module ChurchStyleStlc.
 
-Include StlcLang.
+Notation language := StlcLang.language.
+Notation basic_types := StlcLang.basic_types.
+Notation constants := StlcLang.constants.
+Notation signature := StlcLang.signature.
+Notation bty := StlcLang.bty.
+
+Definition typ (L : language) : Set :=
+  StlcLang.typ L.(basic_types).
+
+#[global] Bind Scope typ_scope with typ.
 
 #[local] Open Scope name_scope.
 
@@ -44,11 +53,18 @@ Section STLC.
 
 #[local] Hint Resolve Name.ne_pirrel : core.
 
-#[local] Notation bty := (bty _).
+#[local] Notation bty := (StlcLang.bty _).
 
 Context `{L : !language}.
 
-#[local] Notation typ := (typ L.(basic_types)).
+#[local] Notation typ := (typ L).
+
+#[global]
+Instance typ_hasEqDec
+  : hasEqDec typ.
+Proof.
+  exact (StlcLang.typ_hasEqDec L.(basic_types) StlcLang.basic_types_hasEqDec).
+Defined.
 
 Inductive trm : Set :=
   | Var_trm (x : name)
@@ -334,22 +350,6 @@ Proof.
     pose proof (claim2 z claim1) as claim3. ss!.
 Qed.
 
-Inductive alphaEquiv : trm -> trm -> Set :=
-  | alphaEquiv_Var x x'
-    (x_EQ : x = x')
-    : alphaEquiv (Var_trm x) (Var_trm x')
-  | alphaEquiv_App M M' N N'
-    (ALPHA1 : alphaEquiv M M')
-    (ALPHA2 : alphaEquiv N N')
-    : alphaEquiv (App_trm M N) (App_trm M' N')
-  | alphaEquiv_Lam x'' x x' ty M M'
-    (FRESH1 : is_free_in x'' (Lam_trm x ty M) = false)
-    (FRESH2 : is_free_in x'' (Lam_trm x' ty M') = false)
-    (ALPHA1 : alphaEquiv (subst_trm (one_subst x (Var_trm x'')) M) (subst_trm (one_subst x' (Var_trm x'')) M'))
-    : alphaEquiv (Lam_trm x ty M) (Lam_trm x' ty M')
-  | alphaEquiv_con c
-    : alphaEquiv (Con_trm c) (Con_trm c).
-
 End BASIC_THEORY1_ON_SYNTAX.
 
 Section TypingRule.
@@ -581,7 +581,7 @@ Proof.
   - intros TYPING'. inversion TYPING'. congruence.
 Qed.
 
-Lemma Typing_proof_unique {bty_hasEqDec : hasEqDec L.(basic_types)} Gamma e ty
+Lemma Typing_proof_unique Gamma e ty
   (TYPING : Typing Gamma e ty)
   (TYPING' : Typing Gamma e ty)
   : TYPING = TYPING'.
@@ -617,7 +617,7 @@ Proof.
     reflexivity.
 Qed.
 
-Fixpoint TypeInfer {bty_hasEqDec : hasEqDec L.(basic_types)} (Gamma : ctx) (e : trm) {struct e} : option typ :=
+Fixpoint TypeInfer (Gamma : ctx) (e : trm) {struct e} : option typ :=
   match e with
   | Var_trm x => L.lookup x Gamma
   | App_trm e1 e2 =>
@@ -633,7 +633,7 @@ Fixpoint TypeInfer {bty_hasEqDec : hasEqDec L.(basic_types)} (Gamma : ctx) (e : 
   | Con_trm c => Some (signature c)
   end.
 
-Lemma TypeInfer_eq_Some_intro {bty_hasEqDec : hasEqDec L.(basic_types)} Gamma e ty
+Lemma TypeInfer_eq_Some_intro Gamma e ty
   (TYPING : Typing Gamma e ty)
   : TypeInfer Gamma e = Some ty.
 Proof.
@@ -644,7 +644,7 @@ Proof.
   - reflexivity.
 Defined.
 
-Lemma TypeInfer_eq_Some_elim {bty_hasEqDec : hasEqDec L.(basic_types)}
+Lemma TypeInfer_eq_Some_elim
   : forall e, forall Gamma, forall ty, Some ty = TypeInfer Gamma e -> Typing Gamma e ty.
 Proof.
   fix IH 1. intros e. destruct e as [x | e1 e2 | y ty1 e1 | c]; simpl; intros Gamma ty E.
@@ -660,7 +660,7 @@ Proof.
     eapply Con_typ.
 Defined.
 
-Lemma Typing_retraction {bty_hasEqDec : hasEqDec L.(basic_types)} Gamma e ty
+Lemma Typing_retraction Gamma e ty
   (TYPING : inhabited (Typing Gamma e ty))
   : Typing Gamma e ty.
 Proof.
@@ -668,9 +668,9 @@ Proof.
 Defined.
 
 #[global, program]
-Instance Typing_retracts {bty_hasEqDec : hasEqDec L.(basic_types)} Gamma e ty : B.retracts (Typing Gamma e ty) (inhabited (Typing Gamma e ty)) :=
+Instance Typing_retracts Gamma e ty : B.retracts (Typing Gamma e ty) (inhabited (Typing Gamma e ty)) :=
   { section := @inhabits (Typing Gamma e ty)
-  ; retraction := Typing_retraction (bty_hasEqDec := bty_hasEqDec) Gamma e ty
+  ; retraction := Typing_retraction Gamma e ty
   }.
 Next Obligation.
   eapply Typing_proof_unique.

@@ -553,14 +553,14 @@ Qed.
 
 Inductive unions@{u} {A : Type@{u}} (Xs : E.t@{u} (E.t@{u} A)) (x : A) : Prop :=
   | In_unions (X : E.t@{u} A)
-    (H_in : x \in X)
-    (H_IN : X \in Xs)
-    : E.In@{u} x (unions Xs).
+    (H_in : @E.In@{u} A x X)
+    (H_IN : @E.In@{u} (E.t@{u} A) X Xs)
+    : @E.In@{u} A x (unions Xs).
 
 #[local] Hint Constructors unions : core.
 
-Lemma in_unions_iff (A : Type) Xs
-  : forall z, z \in @unions A Xs <-> (exists X, z \in X /\ X \in Xs).
+Lemma in_unions_iff (A : Type) (Xs : E.t (E.t A))
+  : forall z : A, z \in @unions A Xs <-> (exists X, z \in X /\ X \in Xs).
 Proof.
   intros z; split; [intros [? ? ?] | intros [? [? ?]]]; eauto.
 Qed.
@@ -576,16 +576,16 @@ Qed.
 
 Inductive union@{u} {A : Type@{u}} (X1 : E.t@{u} A) (X2 : E.t@{u} A) (x : A) : Prop :=
   | In_union_l
-    (H_inl : x \in X1)
-    : E.In@{u} x (union X1 X2)
+    (H_inl : @E.In@{u} A x X1)
+    : @E.In@{u} A x (union X1 X2)
   | In_union_r
-    (H_inr : x \in X2)
-    : E.In@{u} x (union X1 X2).
+    (H_inr : @E.In@{u} A x X2)
+    : @E.In@{u} A x (union X1 X2).
 
 #[local] Hint Constructors union : core.
 
-Lemma in_union_iff (A : Type) X1 X2
-  : forall z, z \in @union A X1 X2 <-> (z \in X1 \/ z \in X2).
+Lemma in_union_iff (A : Type) (X1 : E.t A) (X2 : E.t A)
+  : forall z : A, z \in @union A X1 X2 <-> (z \in X1 \/ z \in X2).
 Proof.
   intros z; split; [intros [? | ?] | intros [? | ?]]; eauto.
 Qed.
@@ -604,7 +604,7 @@ Inductive empty@{u} {A : Type@{u}} : E.t@{u} A :=.
 #[local] Hint Constructors empty : core.
 
 Lemma in_empty_iff (A : Type)
-  : forall z, z \in @empty A <-> False.
+  : forall z : A, z \in @empty A <-> False.
 Proof.
   intros z; split; [intros [] | intros []]; eauto.
 Qed.
@@ -613,14 +613,14 @@ Qed.
 
 Inductive intersection@{u} {A : Type@{u}} (X1 : E.t@{u} A) (X2 : E.t@{u} A) (x : A) : Prop :=
   | In_intersection
-    (H_IN1 : x \in X1)
-    (H_IN2 : x \in X2)
-    : E.In@{u} x (intersection X1 X2).
+    (H_IN1 : @E.In@{u} A x X1)
+    (H_IN2 : @E.In@{u} A x X2)
+    : @E.In@{u} A x (intersection X1 X2).
 
 #[local] Hint Constructors intersection : core.
 
-Lemma in_intersection_iff (A : Type) X1 X2
-  : forall z, z \in @intersection A X1 X2 <-> (z \in X1 /\ z \in X2).
+Lemma in_intersection_iff (A : Type) (X1 : E.t A) (X2 : E.t A)
+  : forall z : A, z \in @intersection A X1 X2 <-> (z \in X1 /\ z \in X2).
 Proof.
   intros z; split; [intros [? ?] | intros [? ?]]; eauto.
 Qed.
@@ -636,12 +636,12 @@ Qed.
 
 Inductive singleton@{u} {A : Type@{u}} (x : A) : E.t@{u} A :=
   | In_singleton
-    : E.In@{u} x (singleton x).
+    : @E.In@{u} A x (singleton x).
 
 #[local] Hint Constructors singleton : core.
 
-Lemma in_singleton_iff (A : Type) x
-  : forall z, z \in @singleton A x <-> (z = x).
+Lemma in_singleton_iff (A : Type) (x : A)
+  : forall z : A, z \in @singleton A x <-> (z = x).
 Proof.
   intros z; split; [intros [] | intros ->]; eauto.
 Qed.
@@ -651,13 +651,13 @@ Qed.
 Inductive image@{u v} {A : Type@{u}} {B : Type@{v}} (f : A -> B) (X : E.t@{u} A) (y : B) : Prop :=
   | In_image x
     (IMAGE : y = f x)
-    (H_IN : x \in X)
-    : E.In@{v} y (image f X).
+    (H_IN : @E.In@{u} A x X)
+    : @E.In@{v} B y (image f X).
 
 #[local] Hint Constructors image : core.
 
-Lemma in_image_iff (A : Type) (B : Type) f X
-  : forall z, z \in @image A B f X <-> (exists x, z = f x /\ x \in X).
+Lemma in_image_iff (A : Type) (B : Type) (f : A -> B) (X : E.t A)
+  : forall z : B, z \in @image A B f X <-> (exists x, z = f x /\ x \in X).
 Proof.
   intros z; split; [intros [? ? ?] | intros [? [-> ?]]]; eauto.
 Qed.
@@ -676,13 +676,13 @@ Qed.
 Inductive preimage@{u v} {A : Type@{u}} {B : Type@{v}} (f : A -> B) (Y : E.t@{v} B) (x : A) : Prop :=
   | In_preimage y
     (IMAGE : y = f x)
-    (H_IN : y \in Y)
-    : E.In@{u} x (preimage f Y).
+    (H_IN : @E.In@{v} B y Y)
+    : @E.In@{u} A x (preimage f Y).
 
 #[local] Hint Constructors preimage : core.
 
-Lemma in_preimage_iff (A : Type) (B : Type) f Y
-  : forall z, z \in @preimage A B f Y <-> (exists y, y = f z /\ y \in Y).
+Lemma in_preimage_iff (A : Type) (B : Type) (f : A -> B) (Y : E.t B)
+  : forall z : A, z \in @preimage A B f Y <-> (exists y, y = f z /\ y \in Y).
 Proof.
   intros z; split; [intros [? ? ?] | intros [? [-> ?]]]; eauto.
 Qed.
@@ -700,12 +700,12 @@ Qed.
 
 Inductive full@{u} {A : Type@{u}} (x : A) : Prop :=
   | in_full
-    : E.In@{u} x (full).
+    : @E.In@{u} A x (full).
 
 #[local] Hint Constructors full : core.
 
 Lemma in_full_iff (A : Type)
-  : forall z, z \in @full A <-> True.
+  : forall z : A, z \in @full A <-> True.
 Proof.
   intros z; eauto.
 Qed.
@@ -718,14 +718,22 @@ Definition fromList@{u} {A : Type@{u}} (xs : list A) : E.t@{u} A :=
 
 #[global] Hint Unfold fromList : simplication_hints.
 
+Lemma in_fromList_iff (A : Type) (xs : list A)
+  : forall z : A, z \in @fromList A xs <-> List.In z xs.
+Proof.
+  reflexivity.
+Qed.
+
+#[global] Hint Rewrite in_fromList_iff : simplication_hints.
+
 #[universes(polymorphic=yes)]
 Definition insert@{u} {A : Type@{u}} (x1 : A) (X2 : E.t@{u} A) : E.t@{u} A :=
   fun x => x = x1 \/ x \in X2.
 
 #[global] Hint Unfold insert : simplication_hints.
 
-Lemma in_insert_iff (A : Type) x1 X2
-  : forall z, z \in @insert A x1 X2 <-> (z = x1 \/ z \in X2).
+Lemma in_insert_iff (A : Type) (x1 : A) (X2 : E.t A)
+  : forall z : A, z \in @insert A x1 X2 <-> (z = x1 \/ z \in X2).
 Proof.
   reflexivity.
 Qed.
@@ -746,8 +754,8 @@ Definition complement@{u} {A : Type@{u}} (X : E.t@{u} A) : E.t@{u} A :=
 
 #[global] Hint Unfold complement : simplication_hints.
 
-Lemma in_complement_iff (A : Type) X
-  : forall z, z \in @complement A X <-> (~ z \in X).
+Lemma in_complement_iff (A : Type) (X : E.t A)
+  : forall z : A, z \in @complement A X <-> (~ z \in X).
 Proof.
   reflexivity.
 Qed.
@@ -768,7 +776,7 @@ Definition delete@{u} {A : Type@{u}} (x1 : A) (X2 : E.t@{u} A) : E.t@{u} A :=
 
 #[global] Hint Unfold delete : simplication_hints.
 
-Lemma in_delete_iff (A : Type) x1 X2
+Lemma in_delete_iff (A : Type) (x1 : A) (X2 : E.t A)
   : forall z, z \in @delete A x1 X2 <-> (z <> x1 /\ z \in X2).
 Proof.
   reflexivity.
@@ -790,8 +798,8 @@ Definition intersections@{u} {A : Type@{u}} (Xs : E.t@{u} (E.t@{u} A)) : E.t@{u}
 
 #[global] Hint Unfold intersections : simplication_hints.
 
-Lemma in_intersections_iff (A : Type) Xs
-  : forall z, z \in @intersections A Xs <-> (forall X, X \in Xs -> z \in X).
+Lemma in_intersections_iff (A : Type) (Xs : E.t (E.t A))
+  : forall z : A, z \in @intersections A Xs <-> (forall X, X \in Xs -> z \in X).
 Proof.
   reflexivity.
 Qed.
