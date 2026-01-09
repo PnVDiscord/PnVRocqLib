@@ -461,7 +461,6 @@ Proof.
         pose proof (MuRecInterpreter (S (S n)) f2 (a :: acc :: xs) claim2) as [z z_spec].
         exists z. econs 6. exact acc_spec. exact z_spec.
     + pose (COUNTABLE := {| encode := id; decode := @Some nat; decode_encode (x : nat) := eq_refl |}). set (P := MuRecSpec n (MR_mu f) xs).
-      pose proof (@initial_step nat COUNTABLE P EXISTENCE) as ACC.
       assert (SEARCH : exists z, MuRecSpec n (MR_mu f) xs z /\ (forall x, x < z -> search_step P x (S x))).
       { destruct EXISTENCE as [z z_spec]. exists z. split. exact z_spec.
         rewrite <- MuRecGraph_correct in z_spec. simpl in z_spec.
@@ -472,9 +471,9 @@ Proof.
         - rewrite <- MuRecGraph_correct. exact y_spec.
       }
       clear EXISTENCE. unfold P. set (F := fun x : nat => fun y : nat => MuRecSpec (S n) f (x :: xs) y).
-      assert (claim1 : forall x y1 y2 : nat, F x y1 -> F x y2 -> y1 = y2).
+      assert (claim1 : forall x : nat, forall y1 : nat, forall y2 : nat, F x y1 -> F x y2 -> y1 = y2).
       { intros x y1 y2. unfold F. intros SPEC1 SPEC2. eapply MuRec_isPartialFunction. eapply SPEC1. eapply SPEC2. }
-      assert (claim2 : forall x : nat, (exists y : nat, F x y) -> {y : nat | F x y}).
+      assert (claim2 : forall x : nat, (exists y : nat, F x y) -> { y : nat | F x y }).
       { unfold F. intros x EXISTENCE. exact (MuRecInterpreter (S n) f (x :: xs) EXISTENCE). }
       assert (claim3 : exists x : nat, umin' F x).
       { destruct SEARCH as [z [SEARCH STEP]]. exists z. red. unfold F. rewrite <- MuRecGraph_correct in SEARCH. simpl in SEARCH.

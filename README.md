@@ -37,13 +37,13 @@ Our main results are:
 
 - [x] The Bourbaki-Witt fixed-point theorem and the geneneralised Kleene fixed-point theorem (`Theorem BourbakiWittFixedpointTheorem` and `Theorem generalised_Kleene_fixedpoint_theorem`) in [`ClassicalSetTheory.v`](https://github.com/PnVDiscord/PnVRocqLib/blob/main/theories/Math/ClassicalSetTheory.v)
 
-### [theories/Control](theories/Control)
+### [theories/Control/](theories/Control)
 
 - `Category.v` : Basic theory on category.
 
 - `Monad.v` : Basic definitions about monad.
 
-### [theories/Data](theories/Data)
+### [theories/Data/](theories/Data)
 
 - `Aczel.v` : Aczel's type theoretic interpretation of set theory.
 
@@ -55,17 +55,17 @@ Our main results are:
 
 - `Vector.v` : Replaces `Stdlib.Vectors.VectorDef.t`.
 
-### [theories/Flower](theories/Flower)
+### [theories/Flower/](theories/Flower)
 
 - `FlowerAxioms.v` : Axioms for the sublibrary `Flower`.
 
 - `FlowerPrelude.v` : The prelude of the sublibrary `Flower`.
 
-### [theories/Index](theories/Index)
+### [theories/Index/](theories/Index)
 
 - `Index.v` : Accumulates all source files and check their consistency.
 
-### [theories/Logic](theories/Logic)
+### [theories/Logic/](theories/Logic)
 
 - `BasicFol.v` : Basic definitions of First-Order Logic.
 
@@ -87,7 +87,7 @@ Our main results are:
 
 - `PropositionalLogic.v` : Contructive meta-theory on the Propositional Logic, Weak Completeness Theorem for PropoistionalLogic.
 
-### [theories/Math](theories/Math)
+### [theories/Math/](theories/Math)
 
 - `BooleanAlgebra.v` : Basic theory on Boolean algebras.
 
@@ -103,7 +103,7 @@ Our main results are:
 
 - `ThN.v` : Basic facts about the natural numbers.
 
-### [theories/Prelude](theories/Prelude)
+### [theories/Prelude/](theories/Prelude)
 
 - `ClassicalFacts.v` : Facts about `CIC + (classic : forall P, P \/ ~ P)`.
 
@@ -115,7 +115,7 @@ Our main results are:
 
 - `Prelude.v` : The prelude.
 
-### [theories/System](theories/System)
+### [theories/System/](theories/System)
 
 - `BasicITreeTh.v` : A basic theory on interaction trees.
 

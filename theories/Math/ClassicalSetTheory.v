@@ -1015,11 +1015,11 @@ Section GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
 
 Context {D : Type} {PROSET : isProset D}.
 
-#[local] Notation img ds := (fun d : D => exists i, d = ds i).
+#[local] Notation range ds := (fun d : D => exists i, d = ds i).
 
 Variable ipo_sup : forall I : Type, forall ds : I -> D, D.
 
-Hypothesis ipo_sup_is_supremum : forall I : Type, forall ds : I -> D, forall CHAIN : forall i1, forall i2, ds i1 =< ds i2 \/ ds i2 =< ds i1, is_supremum_of (ipo_sup I ds) (img ds).
+Hypothesis ipo_sup_is_supremum : forall I : Type, forall ds : I -> D, forall CHAIN : forall i1, forall i2, ds i1 =< ds i2 \/ ds i2 =< ds i1, is_supremum_of (ipo_sup I ds) (range ds).
 
 Theorem generalised_Kleene_fixedpoint_theorem (f : D -> D)
   (f_isMonotonic : isMonotonic1 f)
