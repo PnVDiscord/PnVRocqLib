@@ -93,6 +93,15 @@ Proof.
       clear typNe_betaNf typNf_betaNf. inv BETA; ss!.
 Qed.
 
+Lemma le_ctx_cons Gamma Delta x ty
+  (LE : le_ctx Gamma Delta)
+  : le_ctx ((x, ty) :: Gamma) ((x, ty) :: Delta).
+Proof.
+  red in LE |- *. intros x1 ty1 LOOKUP1. pattern LOOKUP1. revert LOOKUP1. eapply Lookup_cons.
+  - intros. econs 1; eassumption.
+  - intros. econs 2; try eassumption. eapply LE; eassumption.
+Qed.
+
 Lemma le_ctx_preserves_typNe (Gamma : ctx L) (u : trm L) (ty : typ L)
   (u_typNe : typNe Gamma u ty)
   : forall Delta, le_ctx Gamma Delta -> typNe Delta u ty
@@ -108,11 +117,7 @@ Proof.
     + econs 3; eassumption.
   - destruct v_typNf; intros Delta LE.
     + econs 1; try eassumption. eapply le_ctx_preserves_typNe; eassumption.
-    + econs 2. eapply le_ctx_preserves_typNf; try eassumption.
-      red in LE |- *. intros x1 ty1 LOOKUP1. pattern LOOKUP1. revert LOOKUP1.
-      eapply Lookup_cons.
-      * intros. econs 1; eassumption.
-      * intros. econs 2; try eassumption. eapply LE; eassumption.
+    + econs 2. eapply le_ctx_preserves_typNf; try eassumption. eapply le_ctx_cons; eassumption.
 Defined.
 
 Inductive TypingProp (Gamma : ctx L) : trm L -> typ L -> Prop :=
@@ -173,6 +178,8 @@ Proof.
   - exact LOOKUP.
 Qed.
 
+#[local] Infix "≡" := alpha_equiv : type_scope.
+
 Inductive whBeta : trm L -> trm L -> Prop :=
   | whBeta_Beta y ty M N
     : App_trm (Lam_trm y ty M) N ~>β subst_trm (one_subst y N) M
@@ -181,13 +188,13 @@ Inductive whBeta : trm L -> trm L -> Prop :=
     : App_trm M N ~>β App_trm M' N
   | whBeta_alpha M N N'
     (WHBETA : M ~>β N)
-    (ALPHA : alpha_equiv N N')
+    (ALPHA : N ≡ N')
     : M ~>β N'
   where "M ~>β N" := (whBeta M N).
 
 Inductive whBetaStar (M : trm L) (N : trm L) : Set :=
   | whBetaStar_alpha
-    (ALPHA : alpha_equiv M N)
+    (ALPHA : M ≡ N)
     : M ~>β* N
   | whBetaStar_beta
     (WHBETA : M ~>β N)
@@ -199,9 +206,9 @@ Inductive whBetaStar (M : trm L) (N : trm L) : Set :=
   where "M ~>β* N" := (whBetaStar M N).
 
 Inductive whEta (N : trm L) : trm L -> Prop :=
-  | whEta_intro x ty
-    (FRESH : ~ L.In x (FVs N))
-    : Lam_trm x ty (App_trm N (Var_trm x)) ~>η N
+  | whEta_intro y ty
+    (FRESH : ~ L.In y (FVs N))
+    : Lam_trm y ty (App_trm N (Var_trm y)) ~>η N
   where "M ~>η N" := (whEta N M).
 
 Lemma whEta_intro_var1 (Gamma : ctx L) (e : trm L) (ty : typ L)
@@ -299,7 +306,7 @@ Lemma App_Var_wnNf_inv Gamma ty ty' v
 Proof.
   econs 4.
   - eapply whEta_intro_var1 with (Gamma := Gamma) (ty := ty).
-  - simpl. lia.
+  - simpl. eapply le_transitivity; [eapply le_intro_plus_r | eapply n1_le_max_n1_n2].
   - econs 2. fold y. exact v_wnNf.
 Defined.
 
@@ -427,8 +434,6 @@ Proof.
     eapply IHTYPING. eapply eval_ctx_cons_subst; [exact a | eapply eval_ctx_le_ctx]; eassumption.
   - eapply reflect. econs 3. reflexivity.
 Defined.
-
-#[local] Infix "≡" := alpha_equiv : type_scope.
 
 Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
   | wnStep_Var x ty
