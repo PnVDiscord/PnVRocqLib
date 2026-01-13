@@ -184,6 +184,17 @@ Definition _Ord_add : Ord -> Ord -> Ord :=
 Definition _Ord_mul : Ord -> Ord -> Ord :=
   Ord.mul.
 
+Lemma comparabilityOnOrd_implies_EM
+  (COMPARABILITY : forall alpha : Ord, forall beta : Ord, alpha ≦ᵣ beta \/ beta <ᵣ alpha)
+  : forall P : Type, inhabited (P + (P -> Empty_set)).
+Proof.
+  i. pose proof (COMPARABILITY (mkNode P (fun _ => Ord.zer)) (mkNode (P -> Empty_set) (fun _ => Ord.zer))) as [YES | NO].
+  - assert (NP : P -> False).
+    { intros H. destruct YES. simpl in *. pose proof (H_rLt H) as [[c H_rLe]]; simpl in *. pose proof (c H) as []. }
+    econs. right. intros H. pose proof (NP H) as [].
+  - destruct NO as [[c H_rLe]]; simpl in *. econs. left. exact c.
+Qed.
+
 Section HARTOGS.
 
 Definition Hartogs (D : Type@{Set_u}) : Ord :=

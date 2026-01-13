@@ -25,7 +25,7 @@ Definition is_lambda (e : trm L) : Prop :=
 Fixpoint typ_ord (ty : typ L) : nat :=
   match ty with
   | bty _ b => 0
-  | (ty1 -> ty2)%typ => Nat.max (1 + typ_ord ty1) (typ_ord ty2)
+  | (ty1 -> ty2)%typ => Nat.max (typ_ord ty1 + 1) (typ_ord ty2)
   end.
 
 Inductive typNe (Gamma : ctx L) : trm L -> typ L -> Prop :=
@@ -241,6 +241,7 @@ with wnNf (Gamma : ctx L) : typ L -> powerset (trm L) :=
     : Gamma ⊢ v ⇇ ty
   | wnNf_whEtaExpand_wnNf v v' ty
     (WHETA : v' ~>η v)
+    (ty_arrow : typ_ord ty > 0)
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
   | wnNf_alpha_wnNf v v' ty
@@ -273,6 +274,7 @@ Proof.
       * eapply le_ctx_wnNf; eassumption.
     + econs 4.
       * eassumption.
+      * eassumption.
       * eapply le_ctx_wnNf; eassumption.
     + econs 5.
       * eassumption.
@@ -297,6 +299,7 @@ Lemma App_Var_wnNf_inv Gamma ty ty' v
 Proof.
   econs 4.
   - eapply whEta_intro_var1 with (Gamma := Gamma) (ty := ty).
+  - simpl. lia.
   - econs 2. fold y. exact v_wnNf.
 Defined.
 
