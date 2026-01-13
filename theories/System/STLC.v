@@ -450,6 +450,7 @@ Inductive wnStep (Gamma : ctx L) : trm L -> trm L -> typ L -> Prop :=
   | wnStep_whEtaExpand v v' e ty
     (H_M : Gamma ⊢ v' ~~> e ⦂ ty)
     (WHETA : v' ~>η v)
+    (ty_arrow : typ_ord ty > 0)
     : Gamma ⊢ v ~~> e ⦂ ty
   | wnStep_alpha v v' e ty
     (H_M : Gamma ⊢ v' ~~> e ⦂ ty)
@@ -491,7 +492,7 @@ Proof.
       * exact (proj2 H_e.(B.proj2_sig)).
     + pose proof (wnNf_wnStep_typNf Gamma v' ty v_wnNf) as H_e.
       exists H_e.(B.proj1_sig). split.
-      * eapply wnStep_whEtaExpand; [exact (proj1 H_e.(B.proj2_sig)) | exact WHETA].
+      * eapply wnStep_whEtaExpand; [exact (proj1 H_e.(B.proj2_sig)) | exact WHETA | exact ty_arrow].
       * exact (proj2 H_e.(B.proj2_sig)).
     + pose proof (wnNf_wnStep_typNf Gamma v' ty v_wnNf) as H_e.
       exists H_e.(B.proj1_sig). split.
