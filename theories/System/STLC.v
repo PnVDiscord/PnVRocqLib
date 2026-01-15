@@ -5,7 +5,7 @@ Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 Require Import PnV.System.Lambda1.
 
-Module ChurchStyleSTLC.
+Module ChurchStyleStlc1.
 
 Export ChurchStyleStlc.
 
@@ -252,7 +252,7 @@ with wnNf (Gamma : ctx L) : typ L -> powerset (trm L) :=
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
   | wnNf_alpha_wnNf v v' ty
-    (ALPHA : alpha_equiv v v')
+    (ALPHA : v ≡ v')
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
   where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
@@ -542,4 +542,4 @@ End WEAK_NORMALISATION.
 
 End STLC_META.
 
-End ChurchStyleSTLC.
+End ChurchStyleStlc1.
