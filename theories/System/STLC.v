@@ -251,7 +251,7 @@ with wnNf (Gamma : ctx L) : typ L -> powerset (trm L) :=
     (ty_arrow : typ_ord ty > 0)
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
-  | wnNf_alpha_wnNf v v' ty
+  | wnNf_alphaConvert_wnNf v v' ty
     (ALPHA : v ≡ v')
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
