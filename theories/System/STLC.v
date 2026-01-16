@@ -98,9 +98,9 @@ Lemma le_ctx_cons Gamma Delta x ty
   : le_ctx ((x, ty) :: Gamma) ((x, ty) :: Delta).
 Proof.
   red in LE |- *. intros x1 ty1 LOOKUP1. pattern LOOKUP1. revert LOOKUP1. eapply Lookup_cons.
-  - intros. econs 1; eassumption.
-  - intros. econs 2; try eassumption. eapply LE; eassumption.
-Qed.
+  - intros. econs 1; try eassumption.
+  - intros. econs 2; try eassumption. eapply LE; try eassumption.
+Defined.
 
 Lemma le_ctx_preserves_typNe (Gamma : ctx L) (u : trm L) (ty : typ L)
   (u_typNe : typNe Gamma u ty)
