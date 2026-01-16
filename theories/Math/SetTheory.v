@@ -184,15 +184,28 @@ Definition _Ord_add : Ord -> Ord -> Ord :=
 Definition _Ord_mul : Ord -> Ord -> Ord :=
   Ord.mul.
 
-Lemma comparabilityOnOrd_implies_EM
+Theorem OrdComparability_implies_EM
   (COMPARABILITY : forall alpha : Ord, forall beta : Ord, alpha ≦ᵣ beta \/ beta <ᵣ alpha)
-  : forall P : Type, inhabited (P + (P -> Empty_set)).
+  : forall P : Type, inhabited (P + (P -> Empty_set))%type.
 Proof.
   i. pose proof (COMPARABILITY (mkNode P (fun _ => Ord.zer)) (mkNode (P -> Empty_set) (fun _ => Ord.zer))) as [YES | NO].
   - assert (NP : P -> False).
     { intros H. destruct YES. simpl in *. pose proof (H_rLt H) as [[c H_rLe]]; simpl in *. pose proof (c H) as []. }
     econs. right. intros H. pose proof (NP H) as [].
   - destruct NO as [[c H_rLe]]; simpl in *. econs. left. exact c.
+Qed.
+
+Corollary OrdTrichotomy_implies_LEM
+  (trichotomous : forall alpha : Ord, forall beta : Ord, alpha =ᵣ beta \/ (alpha <ᵣ beta \/ beta <ᵣ alpha))
+  : forall P : Prop, P \/ ~ P.
+Proof.
+  assert (COMPARABILITY : forall alpha : Ord, forall beta : Ord, alpha ≦ᵣ beta \/ beta <ᵣ alpha).
+  { intros alpha beta. pose proof (trichotomous alpha beta) as [H_EQ | [H_LT | H_GT]].
+    - left. exact (proj1 H_EQ).
+    - left. eapply rLt_implies_rLe. exact H_LT.
+    - right. exact H_GT.
+  }
+  intros P. pose proof (OrdComparability_implies_EM COMPARABILITY P) as [[YES | NO]]; [left | right]; firstorder.
 Qed.
 
 Section HARTOGS.
