@@ -117,7 +117,7 @@ Lemma proof_flip p q r
   : proof [] (Imp_frm (Imp_frm q (Imp_frm p r)) (Imp_frm p (Imp_frm q r))).
 Proof.
   pose proof (@syllogism) as PF1. specialize PF1 with (p := p) (q := Imp_frm q p) (r := Imp_frm q r).
-  assert (PF2: proof [] (Imp_frm p (Imp_frm q p))) by eapply IMP1.
+  assert (PF2 : proof [] (Imp_frm p (Imp_frm q p))) by eapply IMP1.
   pose proof (PF3 := MP _ _ _ _ PF1 PF2). simpl in PF3.
   1: rewrite <- app_nil_l with (l := @nil (frm L)); eapply MP.
   1: rewrite <- app_nil_l with (l := @nil (frm L)); eapply MP.
@@ -185,23 +185,23 @@ Qed.
 Lemma proof_cp1 (p : frm L) (q : frm L)
   : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm q) (Neg_frm p))).
 Proof.
-  assert (PF1: proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm p q)))).
+  assert (PF1 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm p q)))).
   { eapply IMP1. }
-  assert (PF4: proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) p))).
+  assert (PF4 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) p))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. eapply IMP1. eapply proof_dne. }
-  assert (PF7: proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm p q)) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) p ) (Imp_frm (Neg_frm (Neg_frm p)) q))))).
+  assert (PF7 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm p q)) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) p ) (Imp_frm (Neg_frm (Neg_frm p)) q))))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. eapply IMP1. eapply IMP2. }
-  assert (PF10: proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) p) (Imp_frm (Neg_frm (Neg_frm p)) q)))).
+  assert (PF10 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) p) (Imp_frm (Neg_frm (Neg_frm p)) q)))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. 2: exact PF1. 1: rewrite <- app_nil_l with (l := []); eapply MP. 2: eapply PF7. eapply IMP2. }
-  assert (PF13: proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) q))).
+  assert (PF13 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) q))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. 2: exact PF4. 1: rewrite <- app_nil_l with (l := []); eapply MP. 2: exact PF10. eapply IMP2. }
-  assert (PF16: proof [] (Imp_frm (Imp_frm p q) (Imp_frm q (Neg_frm (Neg_frm q))))).
+  assert (PF16 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm q (Neg_frm (Neg_frm q))))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. 1: eapply IMP1. eapply proof_dni. }
-  assert (PF19: proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm q (Neg_frm (Neg_frm q))) (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm q (Neg_frm (Neg_frm q))))))).
+  assert (PF19 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm q (Neg_frm (Neg_frm q))) (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm q (Neg_frm (Neg_frm q))))))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. eapply IMP1. eapply IMP1. }
-  assert (PF22: proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm q (Neg_frm (Neg_frm q)))))).
+  assert (PF22 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm q (Neg_frm (Neg_frm q)))))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. 2: exact PF16. 1: rewrite <- app_nil_l with (l := []); eapply MP. eapply IMP2. exact PF19. }
-  assert (PF25: proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm q (Neg_frm (Neg_frm q)))) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) q) (Imp_frm (Neg_frm (Neg_frm p)) (Neg_frm (Neg_frm q))))))).
+  assert (PF25 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm q (Neg_frm (Neg_frm q)))) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) q) (Imp_frm (Neg_frm (Neg_frm p)) (Neg_frm (Neg_frm q))))))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. 1: eapply IMP1. eapply IMP2. }
   pose proof (PF26 := IMP2 (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) (Imp_frm q (Neg_frm (Neg_frm q)))) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) q) (Imp_frm (Neg_frm (Neg_frm p)) (Neg_frm (Neg_frm q))))).
   pose proof (PF27 := MP _ _ _ _ PF26 PF25). simpl in PF27.
@@ -209,9 +209,9 @@ Proof.
   pose proof (PF29 := IMP2 (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) q) (Imp_frm (Neg_frm (Neg_frm p)) (Neg_frm (Neg_frm q)))).
   pose proof (PF30 := MP _ _ _ _ PF29 PF28). simpl in PF30.
   pose proof (PF31 := MP _ _ _ _ PF30 PF13). simpl in PF31.
-  assert (PF34: proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) (Neg_frm (Neg_frm q))) (Imp_frm (Neg_frm q) (Neg_frm p))))).
+  assert (PF34 : proof [] (Imp_frm (Imp_frm p q) (Imp_frm (Imp_frm (Neg_frm (Neg_frm p)) (Neg_frm (Neg_frm q))) (Imp_frm (Neg_frm q) (Neg_frm p))))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. eapply IMP1. eapply CP. }
-  assert (PF36: proof [] (Imp_frm (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) (Neg_frm (Neg_frm q)))) (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm q) (Neg_frm p))))).
+  assert (PF36 : proof [] (Imp_frm (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm (Neg_frm p)) (Neg_frm (Neg_frm q)))) (Imp_frm (Imp_frm p q) (Imp_frm (Neg_frm q) (Neg_frm p))))).
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. eapply IMP2. exact PF34. }
   { 1: rewrite <- app_nil_l with (l := []); eapply MP. exact PF36. exact PF31. }
 Qed.
