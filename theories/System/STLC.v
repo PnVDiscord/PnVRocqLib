@@ -5,7 +5,7 @@ Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
 Require Import PnV.System.Lambda1.
 
-Module ChurchStyleSTLC.
+Module ChurchStyleStlc1.
 
 Export ChurchStyleStlc.
 
@@ -98,9 +98,9 @@ Lemma le_ctx_cons Gamma Delta x ty
   : le_ctx ((x, ty) :: Gamma) ((x, ty) :: Delta).
 Proof.
   red in LE |- *. intros x1 ty1 LOOKUP1. pattern LOOKUP1. revert LOOKUP1. eapply Lookup_cons.
-  - intros. econs 1; eassumption.
-  - intros. econs 2; try eassumption. eapply LE; eassumption.
-Qed.
+  - intros. econs 1; try eassumption.
+  - intros. econs 2; try eassumption. eapply LE; try eassumption.
+Defined.
 
 Lemma le_ctx_preserves_typNe (Gamma : ctx L) (u : trm L) (ty : typ L)
   (u_typNe : typNe Gamma u ty)
@@ -251,8 +251,8 @@ with wnNf (Gamma : ctx L) : typ L -> powerset (trm L) :=
     (ty_arrow : typ_ord ty > 0)
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
-  | wnNf_alpha_wnNf v v' ty
-    (ALPHA : alpha_equiv v v')
+  | wnNf_alphaConvert_wnNf v v' ty
+    (ALPHA : v ≡ v')
     (v_wnNf : Gamma ⊢ v' ⇇ ty)
     : Gamma ⊢ v ⇇ ty
   where "Gamma '⊢' M '⇇' A" := (wnNf Gamma A M).
@@ -542,4 +542,4 @@ End WEAK_NORMALISATION.
 
 End STLC_META.
 
-End ChurchStyleSTLC.
+End ChurchStyleStlc1.

@@ -14,16 +14,15 @@ Delimit Scope monad_scope with monad.
 Bind Scope monad_scope with monad.
 Open Scope monad_scope.
 
-Reserved Notation "'do' m" (m custom do_notation at level 10, at level 0, format "'do'  '//' m").
+Reserved Notation "'do' m" (m custom do_notation at level 10, at level 0, format "'do' '//' '[hv' m ']' '//'").
 Notation "'do' m" := m : monad_scope.
-Notation "'do' m" := (m : monad).
 
-Notation "x '<-' m1 ';' m2" := (m1 >>= fun x => m2) (in custom do_notation at level 0, x ident, m1 constr, m2 custom do_notation at level 10, format "x  '<-'  m1 ';' '//' m2").
+Notation "x '<-' m1 ';' m2" := (bind m1 (fun x => m2)) (in custom do_notation at level 0, x ident, m1 constr, m2 custom do_notation at level 10, format "x  '<-'  m1 ';' '//' m2").
 Notation "'let' x ':=' t ';' m" := (let x := t in m) (in custom do_notation at level 0, x pattern, t constr, m custom do_notation at level 10, format "'let'  x  ':='  t ';' '//' m").
-Notation "''' x '<-' m1 ';' m2" := (m1 >>= fun 'x => m2) (in custom do_notation at level 0, x pattern, m1 constr, m2 custom do_notation at level 10, format "''' x  '<-'  m1 ';' '//' m2").
-Notation "m1 ';' m2" := (m1 >>= fun _ => m2) (in custom do_notation at level 0, m1 constr, m2 custom do_notation at level 10, format "m1 ';' '//' m2").
+Notation "''' x '<-' m1 ';' m2" := (bind m1 (fun 'x => m2)) (in custom do_notation at level 0, x pattern, m1 constr, m2 custom do_notation at level 10, format "''' x  '<-'  m1 ';' '//' m2").
+Notation "m1 ';' m2" := (bind m1 (fun _ => m2)) (in custom do_notation at level 0, m1 constr, m2 custom do_notation at level 10, format "m1 ';' '//' m2").
 Notation "'ret' t" := (pure t) (in custom do_notation at level 10, t constr, format "'ret'  t").
-Notation "t" := t (in custom do_notation at level 0, t constr).
+Notation "t 'end'" := t (in custom do_notation at level 0, t constr, format "t  '//' 'end'").
 
 Section EXAMPLE.
 
