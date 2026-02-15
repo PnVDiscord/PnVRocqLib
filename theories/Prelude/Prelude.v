@@ -2205,6 +2205,7 @@ Class isRing (R : Type) {SETOID : isSetoid R} : Type :=
   { Ring_isRng :: isRng R
   ; Ring_hasUnity :: hasUnity R
   ; one_mult_id :: isIdentityElementOf unity mult
+  ; one_ne_zero : \( 1 ≠ 0 \)
   }.
 
 #[universes(polymorphic=yes)]
