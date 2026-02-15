@@ -28,15 +28,6 @@ Tactic Notation "gen" uconstr( t ) "as" ident( X ) :=
 
 Universe U_cosmos.
 
-Class isGood (A : Type@{U_cosmos}) : Type@{U_cosmos} :=
-  is_good : A -> Prop.
-
-Definition addComment {A : Type@{U_cosmos}} (comment : string) (obj : A) : A :=
-  obj.
-
-Class hasComment (A : Type@{U_cosmos}) : Set :=
-  comment : string.
-
 Universe U_discourse.
 
 Constraint U_discourse < U_cosmos.
@@ -1056,6 +1047,14 @@ Proof.
   eapply IH2; eauto.
 Qed.
 
+#[global]
+Instance transitiveClosure_Transitive {A : Type} (R : A -> A -> Prop)
+  : Transitive (transitiveClosure R).
+Proof.
+  intros x y z H1 H2.
+  econs 2; eauto.
+Qed.
+
 Definition Prop_to_Set (P : Prop) : Set :=
   P.
 
@@ -1124,14 +1123,17 @@ Proof.
   intros EQ. rewrite EQ in TRUE. exact TRUE.
 Defined.
 
-Definition maybe {A : Type} {B : option A -> Type} (d : B None) (f : forall x : A, B (Some x)) (m : option A) : B m :=
+#[universes(polymorphic=yes)]
+Definition maybe@{u | } {A : Type@{option.u0}} {B : option A -> Type@{u}} (d : B None) (f : forall x : A, B (Some x)) (m : option A) : B m :=
   match m with
   | None => d
   | Some x => f x
   end.
 
-Definition fromMaybe {A : Type} (d : A) (m : option A) : A :=
-  maybe d (fun x : A => x) m.
+Definition fromMaybe {A : Type@{option.u0}} (d : A) : forall m : option A, A :=
+  maybe d (fun x : A => x).
+
+#[global] Arguments fromMaybe {A} d m /.
 
 Definition either {A : Type} {B : Type} {C : (A + B) -> Type} (f : forall x : A, C (inl x)) (g : forall y : B, C (inr y)) (z : A + B) : C z :=
   match z with
@@ -2224,3 +2226,103 @@ Class isField (K : Type) {SETOID : isSetoid K} : Type :=
   }.
 
 End A.
+
+Module WfHelper. (* REFERENCE: "https://github.com/snu-sf/Ordinal/blob/main/src/WfRel.v" *)
+
+Lemma acc_incl (A : Type) (R : A -> A -> Prop) (R' : A -> A -> Prop) (x : A)
+  (INCL : forall x1 : A, forall x2 : A, forall LT : R x1 x2, R' x1 x2)
+  (ACC : Acc R' x)
+  : Acc R x.
+Proof.
+  induction ACC. econs. i. eapply H0; eauto.
+Qed.
+
+Lemma wf_incl (A : Type) (R : A -> A -> Prop) (R' : A -> A -> Prop)
+  (INCL : forall x1 : A, forall x2 : A, forall LT : R x1 x2, R' x1 x2)
+  (WF : well_founded R')
+  : well_founded R.
+Proof.
+  econs. i. eapply acc_incl; eauto.
+Qed.
+
+#[universes(polymorphic=yes)]
+Definition ProjectedRelRev@{u v} {A : Type@{u}} {B : Type@{v}} (RB : B -> B -> Prop) (f : A -> B) : A -> A -> Prop :=
+  fun x1 : A => fun x2 : A => RB (f x1) (f x2).
+
+Lemma ProjectedRelRev_wf (A : Type) (B : Type) (R : B -> B -> Prop) (f : A -> B)
+  (R_wf : well_founded R)
+  : well_founded (ProjectedRelRev R f).
+Proof.
+  assert (claim1 : forall y, forall x, forall LE : R (f x) y, Acc (ProjectedRelRev R f) x).
+  { intros y'. induction (R_wf y') as [y' _ IH]. i. econs. i. red in H. exploit (IH (f x)); eauto. }
+  ii. econs. i. red in H. eapply claim1; eauto.
+Qed.
+
+Inductive ProjectedRel {A : Type} {B : Type} (R : A -> A -> Prop) (f : A -> B) : B -> B -> Prop :=
+  | ProjectedRel_intro (x1 : A) (x2 : A)
+    (LT : R x1 x2)
+  : ProjectedRel R f (f x1) (f x2).
+
+Lemma inj_ProjectedRel_incl (A : Type) (B : Type) (RA : A -> A -> Prop) (RB : B -> B -> Prop) (f : A -> B)
+  (INJ : forall x1 : A, forall x2: A, forall LT : RA x1 x2, RB (f x1) (f x2))
+  : forall y1, forall y2, forall FLT: ProjectedRel RA f y1 y2, RB y1 y2.
+Proof.
+  i. inv FLT. eapply INJ; eauto.
+Qed.
+
+Lemma embed_ProjectedRel_wf (A : Type) (B : Type) (A_isSetoid : isSetoid A) (RA : A -> A -> Prop) (f : A -> B)
+  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, RA x x1 -> RA x x2)
+  (WF : well_founded RA)
+  (INJ : forall x1 : A, forall x2 : A, forall EQ : f x1 = f x2, x1 == x2)
+  : well_founded (ProjectedRel RA f).
+Proof.
+  assert (claim1 : forall x, Acc (ProjectedRel RA f) (f x)).
+  { intros x. induction (WF x) as [x _ IH]. econs. i. inv H. apply INJ in H2. eapply IH with (y := x1); eauto with *. }
+  ii; econs. i; inv H. eapply claim1 with (x := x1); eauto with *.
+Qed.
+
+Lemma inj_ProjectedRel_wf (A : Type) (B : Type) (RA : A -> A -> Prop) (RB : B -> B -> Prop) (f : A -> B)
+  (RA_wf : well_founded RA)
+  (RB_wf : well_founded RB)
+  (INJ : forall x1 : A, forall x2 : A, forall LT: RA x1 x2, RB (f x1) (f x2))
+  : well_founded (ProjectedRel RA f).
+Proof.
+  eapply wf_incl.
+  - eapply inj_ProjectedRel_incl. eapply INJ.
+  - eauto.
+Qed.
+
+Definition ProjectedRelSig {A : Type} {B : Type} (f : A -> B) : Type :=
+  { b : B | exists a, f a = b }.
+
+Definition toProjectedRelSig {A : Type} {B : Type} (f : A -> B) (a : A) : ProjectedRelSig f :=
+  @exist _ _ (f a) (ex_intro _ a eq_refl).
+
+Inductive ProjectedRelSigRel {A : Type} {B : Type} (RA : A -> A -> Prop) (f : A -> B) : ProjectedRelSig f -> ProjectedRelSig f -> Prop :=
+  | ProjectedRelSigRel_intro (x1 : A) (x2 : A)
+    (LT : RA x1 x2)
+  : ProjectedRelSigRel RA f (toProjectedRelSig f x1) (toProjectedRelSig f x2).
+
+Lemma ProjectedRelSigRel_wf (A : Type) (B : Type) (A_isSetoid : isSetoid A) (RA : A -> A -> Prop) (f : A -> B)
+  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, RA x x1 -> RA x x2)
+  (WF : well_founded RA)
+  (INJ : forall x1 : A, forall x2 : A, forall EQ : f x1 = f x2, x1 == x2)
+  : well_founded (ProjectedRelSigRel RA f).
+Proof.
+  assert (claim1 : forall a, Acc (ProjectedRelSigRel RA f) (toProjectedRelSig f a)).
+  { intros a. induction (WF a) as [a _ IH]. econs. i. inv H. apply INJ in H2. eapply IH with (y := x1); eauto with *. }
+  ii. econs. i. inv H. eapply claim1.
+Qed.
+
+Definition InitialSegRel {A : Type} (R : A -> A -> Prop) (a : A) : { x : A | R x a } -> { x : A | R x a } -> Prop :=
+  fun x1 => fun x2 => R (proj1_sig x1) (proj1_sig x2).
+
+Lemma InitialSegRel_wf (A : Type) (R : A -> A -> Prop) (a : A)
+  (WF : well_founded R)
+  : well_founded (InitialSegRel R a).
+Proof.
+  ii. destruct a0 as [a0 r]. revert r. induction (WF a0) as [a0 _ IH].
+  i. econs. i. destruct y as [a1 r1]. red in H. ss. eapply IH; eauto.
+Qed.
+
+End WfHelper.

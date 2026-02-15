@@ -738,7 +738,7 @@ Qed.
 
 #[local] Hint Resolve dunion_supremum dunion_l dunion_r : core.
 
-Lemma BASEJOIN (cs : Type) (ts : cs -> Tree)
+Let BASEJOIN (cs : Type) (ts : cs -> Tree)
   : dbase ⊑ djoin cs (fun c : cs => rec (ts c)) \/ djoin cs (fun c : cs => rec (ts c)) ⊑ dbase.
 Proof.
   destruct (classic (inhabited cs)) as [YES | NO].
@@ -747,7 +747,7 @@ Proof.
   - right. eapply djoin_supremum; eauto. intros c. contradiction NO. econs. exact c.
 Qed.
 
-Lemma BASENEXTJOIN (cs : Type) (ts : cs -> Tree)
+Let BASENEXTJOIN (cs : Type) (ts : cs -> Tree)
   : dbase ⊑ djoin cs (fun c : cs => next (rec (ts c))) \/ djoin cs (fun c : cs => next (rec (ts c))) ⊑ dbase.
 Proof.
   destruct (classic (inhabited cs)) as [YES | NO].
@@ -850,12 +850,12 @@ Proof.
       * i. eapply dle_trans with (d2 := rec (alpha i)). 1,2,3: eauto. eapply H0. eapply djoin_upperbound with (ds := fun i => rec (alpha i)); eauto.
 Qed.
 
-Lemma rec_characterisation (f : Tree -> D)
-  (REC : forall cs : Type, forall ts : cs -> Tree, f (mkNode cs ts) ≡ dunion dbase (djoin cs (fun c : cs => next (f (ts c)))))
-  (GOOD : forall o : Tree, good (f o))
-  : forall t : Tree, f t ≡ rec t.
+Lemma rec_characterisation (rec' : Tree -> D)
+  (REC : forall cs : Type, forall ts : cs -> Tree, rec' (mkNode cs ts) ≡ dunion dbase (djoin cs (fun c : cs => next (rec' (ts c)))))
+  (GOOD : forall o : Tree, good (rec' o))
+  : forall o : Ord.t, rec' o ≡ rec o.
 Proof.
-  induction t as [cs ts IH]; simpl.
+  rename rec' into f. intros t; red in t. induction t as [cs ts IH]; simpl.
   assert (NEXTLE : forall c1 : cs, forall c2 : cs, ts c1 ≦ᵣ ts c2 -> next (f (ts c1)) ⊑ next (f (ts c2))).
   { ii. eapply dle_trans with (d2 := next (rec (ts c1))); eauto.
     - eapply next_congruence; eauto.
@@ -914,14 +914,13 @@ Inductive strictly_increasing : D -> D -> Prop :=
 Lemma strictly_increasing_well_founded
   : well_founded strictly_increasing.
 Proof.
-  assert (claim1 : forall o : Tree, Acc strictly_increasing (rec o)).
-  { intros o. pose proof (rLt_wf o) as H_Acc. induction H_Acc as [o _ IH].
-    econs. intros o' H. inv H. eapply IH.
-    pose proof (rLe_or_rGt o alpha) as [LE | GT].
-    - contradiction INCR. rewrite H2. eapply le_rec. exact LE.
-    - exact GT.
-  }
-  intros d. econs. intros d' H. inv H. eapply claim1.
+  enough (claim1 : forall o : Tree, Acc strictly_increasing (rec o)).
+  { intros d. econs. intros d' H. inv H. eapply claim1. }
+  intros o. pose proof (rLt_wf o) as H_Acc. induction H_Acc as [o _ IH].
+  econs. intros o' H. inv H. eapply IH.
+  pose proof (rLe_or_rGt o alpha) as [LE | GT].
+  - contradiction INCR. rewrite H2. eapply le_rec. exact LE.
+  - exact GT.
 Qed.
 
 Definition not_fixed (beta : Tree) : Prop :=
@@ -1008,6 +1007,15 @@ Proof.
 Qed.
 
 End BOURBAKI_WITT_FIXEDPOINT_THEOREM.
+
+Section RESTRICTED_TRANSFINITE_RECURSION.
+
+Context (Omega : Ord.t) (D : Type) (SEQ := forall alpha : Ord.t, alpha <ᵣ Omega -> D).
+
+Definition restricted_rec (NEXT : SEQ -> D) (LIM : forall I : Type@{Set_u}, (I -> SEQ) -> D) : SEQ :=
+  @Ord.transfinite_rec SEQ (fun t => fun alpha => fun _ => NEXT t) (fun I => fun S_I => fun alpha => fun _ => LIM I S_I) Omega.
+
+End RESTRICTED_TRANSFINITE_RECURSION.
 
 Section GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
 
@@ -1224,3 +1232,508 @@ Qed.
 End ToOrderType.
 
 End Ordinal1.
+
+Module LEM_plus_AC.
+
+Section AXIOM_OF_CHOICE.
+
+Hypothesis choice : forall A : Type, forall B : A -> Type, forall R : forall x : A, B x -> Prop, (forall x : A, exists y : B x, R x y) -> (exists f : forall x : A, B x, forall x : A, R x (f x)).
+
+Lemma fromWfSet_embed (A : Type@{Set_u}) (B : Type@{Set_u}) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) (RA : A -> A -> Prop) (RB : B -> B -> Prop)
+  (RA_wf : well_founded RA)
+  (RB_wf : well_founded RB)
+  (RB_eqPropCompatible2 : eqPropCompatible2 RB)
+  (RB_Transitive : Transitive RB)
+  (H_rLe : @fromWfSet A RA RA_wf ≦ᵣ @fromWfSet B RB RB_wf)
+  (RB_total : forall y1, forall y2, y1 == y2 \/ RB y1 y2 \/ RB y2 y1)
+  : exists f : A -> B, forall x1 : A, forall x2 : A, RA x1 x2 -> RB (f x1) (f x2).
+Proof.
+  hexploit (choice A (fun _ => B) (fun a : A => fun b : B => rEq (fromWf RA RA_wf a) (fromWf RB RB_wf b))).
+  { intros a. eapply InducedOrdinal.fromWfSet_complete. eapply rLt_rLe_rLt; eauto. econs. exists a. reflexivity. }
+  intros EQ. des. exists f. intros a1 a2 a1_RA_a2.
+  assert (LT : fromWf RA RA_wf a1 <ᵣ fromWf RA RA_wf a2).
+  { eapply member_implies_rLt. rewrite fromWf_unfold. exists a1. now split; trivial. }
+  assert (claim1 : fromWf RB RB_wf (f a1) <ᵣ fromWf RB RB_wf (f a2)).
+  { eapply rLe_rLt_rLt with (y := fromWf RA RA_wf a1); eauto.
+    - eapply EQ.
+    - eapply rLt_rLe_rLt with (y := fromWf RA RA_wf a2); eauto. eapply EQ.
+  }
+  pose proof (RB_total (f a1) (f a2)) as [H_EQ | [H_LT | H_GT]].
+  - exfalso. revert claim1. change (~ fromWf RB RB_wf (f a1) <ᵣ fromWf RB RB_wf (f a2)).
+    eapply @well_founded_implies_Irreflexive' with (SETOID := rEq_asSetoid) (R := rLt).
+    + exact rLt_wf.
+    + intros x1 x2 x1_rEq_x2. do 3 red in x1_rEq_x2.
+      destruct x1_rEq_x2 as [H1_rLe H2_rLe]. intros x H_rLt. eapply rLe_rLt_rLt; eauto.
+    + set (WPOSET := {| wltProp := RB; wltProp_well_founded := RB_wf; wltProp_Transitive := RB_Transitive |}).
+      set (WOSET := @O.WellfoundedToset_isWoset classic B B_isSetoid WPOSET RB_eqPropCompatible2 RB_total).
+      change (@fromOrderType B B_isSetoid WOSET (f a1) =ᵣ @fromOrderType B B_isSetoid WOSET (f a2)).
+      enough (fromOrderType B (f a1) == fromOrderType B (f a2)) as H by now rewrite H.
+      now rewrite fromOrderType_eq_fromOrderType_iff.
+  - trivial.
+  - assert (claim2 : fromWf RB RB_wf (f a2) <ᵣ fromWf RB RB_wf (f a1)).
+    { eapply member_implies_rLt. rewrite fromWf_unfold. exists (f a2). now split. }
+    contradiction (StrictOrder_Irreflexive (fromWf RB RB_wf (f a1))); now transitivity (fromWf RB RB_wf (f a2)).
+Qed.
+
+Lemma fromWfSet_embed' (A : Type@{Set_u}) (B : Type@{Set_u}) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) (RA : A -> A -> Prop) (RB : B -> B -> Prop)
+  (RA_wf : well_founded RA)
+  (RB_wf : well_founded RB)
+  (RA_eqPropCompatible2 : eqPropCompatible2 RA)
+  (RB_eqPropCompatible2 : eqPropCompatible2 RB)
+  (RA_Transitive : Transitive RA)
+  (RB_Transitive : Transitive RB)
+  (H_rLe : @fromWfSet A RA RA_wf ≦ᵣ @fromWfSet B RB RB_wf)
+  (RA_total : forall x1, forall x2, x1 == x2 \/ RA x1 x2 \/ RA x2 x1)
+  (RB_total : forall y1, forall y2, y1 == y2 \/ RB y1 y2 \/ RB y2 y1)
+  : exists f : A -> B, forall x1 : A, forall x2 : A, RA x1 x2 <-> RB (f x1) (f x2).
+Proof.
+  hexploit (choice A (fun _ => B) (fun a : A => fun b : B => rEq (fromWf RA RA_wf a) (fromWf RB RB_wf b))).
+  { intros a. eapply InducedOrdinal.fromWfSet_complete. eapply rLt_rLe_rLt; eauto. econs. exists a. reflexivity. }
+  intros EQ. des. exists f. intros a1 a2; split; [intros a1_RA_a2 | intros f_a1_RB_f_a2].
+  - assert (LT : fromWf RA RA_wf a1 <ᵣ fromWf RA RA_wf a2).
+    { eapply member_implies_rLt. rewrite fromWf_unfold. exists a1. now split; trivial. }
+    assert (claim1 : fromWf RB RB_wf (f a1) <ᵣ fromWf RB RB_wf (f a2)).
+    { eapply rLe_rLt_rLt with (y := fromWf RA RA_wf a1); eauto.
+      - eapply EQ.
+      - eapply rLt_rLe_rLt with (y := fromWf RA RA_wf a2); eauto. eapply EQ.
+    }
+    pose proof (RB_total (f a1) (f a2)) as [H_EQ | [H_LT | H_GT]].
+    + exfalso. revert claim1. change (~ fromWf RB RB_wf (f a1) <ᵣ fromWf RB RB_wf (f a2)).
+      eapply @well_founded_implies_Irreflexive' with (SETOID := rEq_asSetoid) (R := rLt).
+      * exact rLt_wf.
+      * intros x1 x2 x1_rEq_x2. do 3 red in x1_rEq_x2.
+        destruct x1_rEq_x2 as [H1_rLe H2_rLe]. intros x H_rLt. eapply rLe_rLt_rLt; eauto.
+      * set (WPOSET := {| wltProp := RB; wltProp_well_founded := RB_wf; wltProp_Transitive := RB_Transitive |}).
+        set (WOSET := @O.WellfoundedToset_isWoset classic B B_isSetoid WPOSET RB_eqPropCompatible2 RB_total).
+        change (@fromOrderType B B_isSetoid WOSET (f a1) =ᵣ @fromOrderType B B_isSetoid WOSET (f a2)).
+        enough (fromOrderType B (f a1) == fromOrderType B (f a2)) as H by now rewrite H.
+        now rewrite fromOrderType_eq_fromOrderType_iff.
+    + trivial.
+    + assert (claim2 : fromWf RB RB_wf (f a2) <ᵣ fromWf RB RB_wf (f a1)).
+      { eapply member_implies_rLt. rewrite fromWf_unfold. exists (f a2). now split. }
+      contradiction (StrictOrder_Irreflexive (fromWf RB RB_wf (f a1))); now transitivity (fromWf RB RB_wf (f a2)).
+  - assert (LT : fromWf RB RB_wf (f a1) <ᵣ fromWf RB RB_wf (f a2)).
+    { eapply member_implies_rLt. rewrite fromWf_unfold. exists (f a1). now split; trivial. }
+    assert (claim1 : fromWf RA RA_wf a1 <ᵣ fromWf RA RA_wf a2).
+    { now do 2 rewrite EQ. }
+    pose proof (RA_total a1 a2) as [H_EQ | [H_LT | H_GT]].
+    + exfalso. revert claim1. change (~ fromWf RA RA_wf a1 <ᵣ fromWf RA RA_wf a2).
+      eapply @well_founded_implies_Irreflexive' with (SETOID := rEq_asSetoid) (R := rLt).
+      * exact rLt_wf.
+      * intros x1 x2 x1_rEq_x2. do 3 red in x1_rEq_x2.
+        destruct x1_rEq_x2 as [H1_rLe H2_rLe]. intros x H_rLt. eapply rLe_rLt_rLt; eauto.
+      * set (WPOSET := {| wltProp := RA; wltProp_well_founded := RA_wf; wltProp_Transitive := RA_Transitive |}).
+        set (WOSET := @O.WellfoundedToset_isWoset classic A A_isSetoid WPOSET RA_eqPropCompatible2 RA_total).
+        change (@fromOrderType A A_isSetoid WOSET a1 =ᵣ @fromOrderType A A_isSetoid WOSET a2).
+        enough (fromOrderType A a1 == fromOrderType A a2) as H by now rewrite H.
+        now rewrite fromOrderType_eq_fromOrderType_iff.
+    + trivial.
+    + assert (claim2 : fromWf RA RA_wf a2 <ᵣ fromWf RA RA_wf a1).
+      { eapply member_implies_rLt. rewrite fromWf_unfold. exists a2. now split. }
+      contradiction (StrictOrder_Irreflexive (fromWf RA RA_wf a1)); now transitivity (fromWf RA RA_wf a2).
+Qed.
+
+Variant good {X : Type} {SETOID : isSetoid X} (P : X -> Prop) (R : X -> X -> Prop) : Prop :=
+  | good_intro
+    (SOUND : forall a : X, forall b : X, forall LT : R a b, P a /\ P b)
+    (COMPLETE : forall a : X, forall b : X, forall IN : P a, forall IN' : P b, a == b \/ (R a b \/ R b a))
+    (WELL_FOUNDED : well_founded R)
+    (R_eqPropCompatible2 : eqPropCompatible2 R)
+    (P_eqCompatible1 : eqPropCompatible1 P)
+    : good P R.
+
+Section WELL_ORDERING_THEOREM.
+
+Context {X : Type}.
+
+#[projections(primitive)]
+Record pair : Type :=
+  { P (x : X) : Prop
+  ; R (x : X) (y : X) : Prop
+  } as s.
+
+Variant pair_le (s : pair) (s' : pair) : Prop :=
+  | pair_le_intro
+    (P_incl : forall a : X, forall IN : s.(P) a, s'.(P) a)
+    (R_incl : forall a : X, forall b : X, forall LT : s.(R) a b, s'.(R) a b)
+    (NO_INSERTION : forall a : X, forall b : X, forall IN' : s.(P) b, s'.(R) a b <-> s.(R) a b)
+    : pair_le s s'.
+
+#[global]
+Instance pair_le_Reflexive 
+  : Reflexive pair_le.
+Proof.
+  intros s0. econs; eauto.
+Qed.
+
+#[global]
+Instance pair_le_Transitive
+  : Transitive pair_le.
+Proof.
+  intros s0 s1 s2 [? ? ?] [? ? ?]. simpl in *.
+  econs; simpl in *; eauto; i. rewrite <- NO_INSERTION; eauto.
+Qed.
+
+#[global]
+Instance pair_le_PreOrder : PreOrder pair_le :=
+  { PreOrder_Reflexive := pair_le_Reflexive
+  ; PreOrder_Transitive := pair_le_Transitive
+  }.
+
+Let pair_isSetoid : isSetoid pair :=
+  mkSetoidFromPreOrder pair_le_PreOrder.
+
+#[local] Existing Instance pair_isSetoid.
+
+#[local]
+Instance pair_isProset : isProset pair :=
+  { leProp := pair_le
+  ; Proset_isSetoid := pair_isSetoid
+  ; leProp_PreOrder := pair_le_PreOrder
+  ; leProp_PartialOrder := mkSetoidFromPreOrder_good pair_le_PreOrder
+  }.
+
+Definition pair_sup (I : Type) (chain : I -> pair) : pair :=
+  {| P (x : X) := exists i : I, (chain i).(P) x; R (x : X) (y : X) := exists i : I, (chain i).(R) x y; |}.
+
+Lemma pair_sup_isSupremum (I : Type) (chain : I -> pair)
+  (H_chain : forall i1 : I, forall i2 : I, chain i1 =< chain i2 \/ chain i2 =< chain i1)
+  : is_supremum_of (pair_sup I chain) (fun s : pair => exists i : I, s = chain i).
+Proof.
+  intros u; split.
+  - intros [? ? ?]. intros x x_in. destruct x_in as [i ->]. econs; i.
+    + eapply P_incl. simpl. exists i; eauto.
+    + eapply R_incl. simpl. exists i; eauto.
+    + rewrite -> NO_INSERTION; simpl; eauto. split.
+      * intros [i' H_R]. pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION0; eauto.
+      * intros H_R. exists i. eauto.
+  - intros u_in. do 2 red in u_in. econs; simpl; i; des.
+    + hexploit (u_in (chain i)).
+      { exists i. reflexivity. }
+      intros [? ? ?]; eauto.
+    + hexploit (u_in (chain i)).
+      { exists i. reflexivity. }
+      intros [? ? ?]; eauto.
+    + hexploit (u_in (chain i)).
+      { exists i. reflexivity. }
+      intros [? ? ?]. rewrite -> NO_INSERTION; eauto. split.
+      * intros H_R. exists i. eauto.
+      * intros [i' H_R]. pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION0; eauto.
+Qed.
+
+Context {SETOID : isSetoid X}.
+
+Variable X_bot : X.
+
+Definition base : pair :=
+  {| P := eqProp X_bot; R _ _ := False |}.
+
+#[local] Notation good s := (good (X := X) (SETOID := SETOID) s.(P) s.(R)).
+
+Lemma pair_sup_good (I : Type) (chain : I -> pair)
+  (H_chain : forall i1 : I, forall i2 : I, chain i1 =< chain i2 \/ chain i2 =< chain i1)
+  (chain_good : forall i : I, good (chain i))
+  : good (pair_sup I chain).
+Proof.
+  split.
+  - intros a b [i H_R]. pose proof (chain_good i) as [? ? ?]. pose proof (SOUND a b H_R). split; exists i; tauto.
+  - intros a b [i1 H_P1] [i2 H_P2]. pose proof (H_chain i1 i2) as [[? ? ?] | [? ? ?]].
+    + pose proof (chain_good i2) as [? ? ?]. hexploit (COMPLETE _ _ (P_incl _ H_P1) H_P2); eauto.
+      intros [? | [? | ?]]; [left; tauto | right | right]; [left | right]; exists i2; tauto.
+    + pose proof (chain_good i1) as [? ? ?]. hexploit (COMPLETE _ _ H_P1 (P_incl _ H_P2)); eauto.
+      intros [? | [? | ?]]; [left; tauto | right | right]; [left | right]; exists i1; tauto.
+  - intros x1. econs. intros x0 [i H_R]. pose proof (chain_good i) as [? ? ?].
+    assert (H_Acc : Acc (chain i).(R) x0) by eauto.
+    pose proof (SOUND _ _ H_R) as [H_P _]. clear H_R. induction H_Acc as [x0 _ IH]; intros; econs; intros y [i' H_R'].
+    assert (LT : (chain i).(R) y x0).
+    { pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION; eauto. }
+    eapply IH; eauto. pose proof (SOUND _ _ LT) as [? ?]; tauto.
+  - ii. do 2 red. unfold pair_sup. simpl. split; intros [i H]; pose proof (chain_good i) as [? ? ? ?]; exists i.
+    + rewrite <- x_EQ, <- y_EQ; eauto.
+    + rewrite -> x_EQ, -> y_EQ; eauto.
+  - ii. do 2 red. unfold pair_sup. simpl. split; intros [i H]; pose proof (chain_good i) as [? ? ? ?]; exists i.
+    + rewrite <- x_EQ; eauto.
+    + rewrite -> x_EQ; eauto.
+Qed.
+
+Lemma base_good
+  : good base.
+Proof.
+  econs; ss.
+  i. subst.
+  - left. now rewrite <- IN.
+  - do 3 red. ii. now rewrite <- x_EQ.
+Qed.
+
+Lemma pair_sup_isSupremum' (I : Type) (ds : I -> pair) (d : pair)
+  (H_chain : forall i1 : I, forall i2 : I, ds i1 =< ds i2 \/ ds i2 =< ds i1)
+  (GOOD : good d)
+  : pair_le (pair_sup I ds) d <-> (forall i : I, pair_le (ds i) d).
+Proof.
+  pose proof (pair_sup_isSupremum I ds H_chain) as claim1. split.
+  - intros H_le i. eapply claim1; eauto. red. now exists i.
+  - intros H_le. eapply claim1. red. red. intros x H_x. red in H_x.
+    destruct H_x as [i ->]. eapply H_le.
+Qed.
+
+Section NEXT.
+
+Variable next : pair -> pair.
+
+Hypothesis next_extensive : forall s : pair, good s -> s =< next s.
+
+Hypothesis next_eq : forall s1 : pair, forall s2 : pair, good s1 -> good s2 -> s1 == s2 -> next s1 == next s2.
+
+Hypothesis next_good : forall s : pair, good s -> good (next s).
+
+Hypothesis next_exhausted : forall s : pair, good s-> (forall x : X, s.(P) x) \/ (exists x : X, (next s).(P) x /\ ~ s.(P) x).
+
+Lemma eventually_exhausted'
+  : forall x : X, (Ord.rec base next pair_sup (Hartogs pair)).(P) x.
+Proof.
+  exploit (InducedOrdinal.BourbakiWittFixedpointTheorem (fun s : pair => good s) pair_le _ _ pair_sup _ _ base _ next); i.
+  { ii; reflexivity. }
+  { ii; transitivity d2; eauto. }
+  { ii; eapply pair_sup_good; eauto. }
+  { ii; eapply pair_sup_isSupremum'; eauto. }
+  { ii; eapply base_good. }
+  { ii; eapply next_good; eauto. }
+  { ii; eapply next_extensive; eauto. }
+  { ii; eapply next_eq; eauto. }
+  hexploit (next_exhausted (Ord.rec base next pair_sup (Hartogs pair))); i.
+  - eapply (InducedOrdinal.rec_good); eauto.
+    { ii; reflexivity. }
+    { ii; transitivity d2; eauto. }
+    { ii; eapply pair_sup_good; eauto. }
+    { ii; eapply pair_sup_isSupremum'; eauto. }
+    { ii; eapply base_good. }
+  - des; eauto. exfalso. eapply H0. eapply x0. eauto.
+Qed.
+
+Lemma eventually_exhausted
+  : exists o : Ord.t, forall x : X, (Ord.rec base next pair_sup o).(P) x.
+Proof.
+  exists (Hartogs pair). eapply eventually_exhausted'.
+Qed.
+
+Lemma well_ordering_aux
+  : exists R : X -> X -> Prop, well_founded R /\ (forall x1, forall x2, x1 == x2 \/ R x1 x2 \/ R x2 x1) /\ Transitive R /\ eqPropCompatible2 R.
+Proof.
+  hexploit eventually_exhausted. i. des.
+  assert (GOOD : good (Ord.rec base next pair_sup o)).
+  { exploit (InducedOrdinal.rec_good (fun s : pair => good s) pair_le _ _ pair_sup _ _ base _ next).
+    { ii; reflexivity. }
+    { ii; transitivity d2; eauto. }
+    { ii; eapply pair_sup_good; eauto. }
+    { ii; eapply pair_sup_isSupremum'; eauto. }
+    { ii; eapply base_good. }
+    { ii; eapply next_good; eauto. }
+    { ii; eapply next_extensive; eauto. }
+    { ii; eapply next_eq; eauto. }
+    { intros HH; exact HH. }
+  }
+  exists (B.transitiveClosure (R (Ord.rec base next pair_sup o))). destruct GOOD. splits.
+  - eapply B.transitiveClosure_lift_well_founded; eauto.
+  - intros x1 x2. unshelve epose proof (COMPLETE x1 x2 _ _) as [H_EQ | [H_LT | H_GT]]; eauto; right; [left | right]; econs 1; eauto.
+  - ii; econs 2; eauto.
+  - ii. do 2 red. split; intros H_LT.
+    + revert x2 y2 x_EQ y_EQ. induction H_LT; ii.
+      * econs 1. now rewrite <- x_EQ, <- y_EQ.
+      * econs 2; [eapply IHH_LT1 | eapply IHH_LT2]; eauto; reflexivity.
+    + revert x1 y1 x_EQ y_EQ. induction H_LT; ii.
+      * econs 1. now rewrite -> x_EQ, -> y_EQ.
+      * econs 2; [eapply IHH_LT1 | eapply IHH_LT2]; eauto; reflexivity.
+Qed.
+
+End NEXT.
+
+Lemma choice_and_pred_exts_imply_well_ordering
+  (pred1_ext : forall A : Type, forall P1 : A -> Prop, forall P2 : A -> Prop, (forall x : A, P1 x <-> P2 x) -> P1 = P2)
+  (pred2_ext : forall A : Type, forall B : Type, forall P1 : A -> B -> Prop, forall P2 : A -> B -> Prop, (forall x : A, forall y : B, P1 x y <-> P2 x y) -> P1 = P2)
+  : exists R : X -> X -> Prop, well_founded R /\ (forall x1, forall x2, x1 == x2 \/ R x1 x2 \/ R x2 x1) /\ Transitive R /\ eqPropCompatible2 R.
+Proof.
+  assert (exists next : pair -> pair, (forall s : pair, good s -> s =< next s) /\ (forall s : pair, good s -> good (next s)) /\ (forall s : pair, good s -> (forall x : X, s.(P) x) \/ (exists x : X, (next s).(P) x /\ ~ s.(P) x))) as [next H_next].
+  { hexploit (choice pair (fun _ => pair) (fun x => fun y => forall GOOD : good x, good y /\ x =< y /\ ((forall a, x.(P) a) \/ (exists a, y.(P) a /\ ~ x.(P) a)))).
+    - intros d1. pose proof (classic (forall x, P d1 x)) as [YES | NO].
+      { exists d1. i. now splits; eauto. }
+      { assert (exists x : X, ~ d1.(P) x) as [x0 H].
+        { eapply NNPP. intros H_contra. contradiction NO. intros x. eapply NNPP. ii. contradiction H_contra. now exists x. }
+        exists {| P x := d1.(P) x \/ x == x0; R x1 x2 := d1.(R) x1 x2 \/ (d1.(P) x1 /\ x2 == x0) |}; simpl.
+        i. destruct GOOD. splits.
+        - split; ss.
+          + i. des; clarify; splits; eauto.
+            * left. apply SOUND in LT. des; eauto.
+            * left. apply SOUND in LT. des; eauto.
+          + i. des; clarify; eauto.
+            * pose proof (COMPLETE a b) as [H_EQ | [H_LT | H_GT]]; eauto.
+            * left. now rewrite -> IN.
+          + assert (forall x, Acc d1.(R) x -> d1.(P) x -> Acc (fun x1 => fun x2 => R d1 x1 x2 \/ P d1 x1 /\ x2 == x0) x).
+            { i. revert H1. induction H0. econs. i. des. 
+              - eapply H1; eauto. apply SOUND in H3. des; eauto.
+              - econs. now rewrite <- H4 in H.
+            }
+            econs. i. des; clarify.
+            * eapply H0.
+              { eapply WELL_FOUNDED. }
+              { eapply SOUND in H1. des; eauto. }
+            * eapply H0; eauto.
+          + ii. do 2 red. now rewrite <- x_EQ, <- y_EQ.
+          + ii. do 2 red. now rewrite <- x_EQ.
+        - econs; ss; eauto. i. split; i; eauto. des; clarify. now rewrite <- H1 in H.
+        - i. right. ss. exists x0. split; eauto. now right.
+      }
+    - i. des. exists f. splits; i; try apply H; eauto.
+  }
+  des. eapply well_ordering_aux; eauto. intros s1 s2 GOOD1 GOOD2 H_EQ.
+  assert (s1 = s2) as EQ.
+  { destruct s1, s2; simpl in *. f_equal.
+    - eapply pred1_ext. i; split; i; eapply H_EQ; eauto.
+    - eapply pred2_ext. destruct H_EQ as [[? ? ?] [? ? ?]]; i; split; i; firstorder.
+  }
+  now subst s2.
+Qed.
+
+End WELL_ORDERING_THEOREM.
+
+Theorem well_ordering_thm (X : Type) (SETOID : isSetoid X)
+  (pred1_ext : forall A : Type, forall P1 : A -> Prop, forall P2 : A -> Prop, (forall x : A, P1 x <-> P2 x) -> P1 = P2)
+  (pred2_ext : forall A : Type, forall B : Type, forall P1 : A -> B -> Prop, forall P2 : A -> B -> Prop, (forall x : A, forall y : B, P1 x y <-> P2 x y) -> P1 = P2)
+  : exists R : X -> X -> Prop, well_founded R /\ (forall x1, forall x2, x1 == x2 \/ R x1 x2 \/ R x2 x1) /\ Transitive R /\ eqPropCompatible2 R.
+Proof.
+  pose proof (classic (inhabited X)) as [[x] | NO].
+  - eapply choice_and_pred_exts_imply_well_ordering; eauto.
+  - exists (fun _ => fun _ => False). splits; ii; contradiction NO; eauto.
+Qed.
+
+Section EXTEND_ORDER.
+
+Context {A : Type} {SETOID : isSetoid A} (RT : A -> A -> Prop) (R : A -> A -> Prop).
+
+Hypothesis R_wf : well_founded R.
+
+Definition extendedOrder (x1 : A) (x2 : A) : Prop :=
+  fromWf R R_wf x1 <ᵣ fromWf R R_wf x2 \/ (fromWf R R_wf x1 =ᵣ fromWf R R_wf x2 /\ RT x1 x2).
+
+Hypothesis RT_wf : well_founded RT.
+
+Hypothesis TOTAL : forall x1 : A, forall x2 : A, x1 == x2 \/ RT x1 x2 \/ RT x2 x1.
+
+Lemma extendedOrder_total x1 x2
+  : x1 == x2 \/ extendedOrder x1 x2 \/ extendedOrder x2 x1.
+Proof.
+  pose proof (O.wlt_trichotomous (classic := classic) (WOSET := rLt_isWellOrdering) (fromWf R R_wf x1) (fromWf R R_wf x2)) as [H_EQ | [H_LT | H_GT]].
+  - pose proof (@TOTAL x1 x2) as [H_EQ' | [H_LT' | H_GT']]; eauto.
+    + right. left. right. split; eauto with *.
+    + right. right. right. split; eauto with *.
+  - right. left. left. eauto.
+  - right. right. left. eauto.
+Qed.
+
+Lemma extendedOrder_well_founded
+  : well_founded extendedOrder.
+Proof.
+  ii.
+  enough (forall o : Tree, forall LE : fromWf R R_wf a ≦ᵣ o, Acc extendedOrder a) as WTS.
+  { eapply WTS with (o := fromWfSet R R_wf). eapply rLt_implies_rLe. econs. exists a. reflexivity. }
+  intros o. revert a. induction (rLt_wf o) as [o _ IH].
+  assert (LTS : forall a : A, forall LT : fromWf R R_wf a <ᵣ o, Acc extendedOrder a).
+  { i. econs. i.
+    hexploit (IH _ LT).
+    - reflexivity.
+    - i. inv H0. eauto.
+  }
+  ii. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in LE. des; eauto.
+  induction (RT_wf a) as [a _ IH']. econs. i. inv H.
+  - eapply IH with (y := fromWf R R_wf y).
+    + now rewrite <- LE.
+    + reflexivity.
+  - des. eapply IH'; eauto. transitivity (fromWf R R_wf a); eauto.
+Qed.
+
+Lemma extendedOrder_incl x1 x2
+  (LT : R x1 x2)
+  : extendedOrder x1 x2.
+Proof.
+  left. eapply member_implies_rLt. rewrite fromWf_unfold. now exists x1; split.
+Qed.
+
+#[global]
+Instance extendedOrder_Transitive
+  (RT_Transitive : Transitive RT)
+  : Transitive extendedOrder.
+Proof.
+  intros x y z. unfold extendedOrder; ii; des.
+  - left. now rewrite H.
+  - left. now rewrite H.
+  - left. now rewrite <- H0.
+  - right. split; [rewrite <- H0 | transitivity y]; eauto.
+Qed.
+
+End EXTEND_ORDER.
+
+Lemma extendedOrder_exists (A : Type) (R : A -> A -> Prop)
+  (pred1_ext : forall A : Type, forall P1 : A -> Prop, forall P2 : A -> Prop, (forall x : A, P1 x <-> P2 x) -> P1 = P2)
+  (pred2_ext : forall A : Type, forall B : Type, forall P1 : A -> B -> Prop, forall P2 : A -> B -> Prop, (forall x : A, forall y : B, P1 x y <-> P2 x y) -> P1 = P2)
+  (R_wf : well_founded R)
+  : exists R' : A -> A -> Prop, well_founded R' /\ (forall x, forall x', forall LT : R x x', R' x x') /\ (forall x, forall x', x = x' \/ R' x x' \/ R' x' x) /\ Transitive R'.
+Proof.
+  exploit (well_ordering_thm A mkSetoid_from_eq); eauto.
+  intros (R1 & R1_wf & R1_total & R1_Transitive & R1_eqPropCompatible2).
+  exists (extendedOrder R1 R R_wf); splits; ii.
+  - eapply extendedOrder_well_founded; eauto.
+  - eapply extendedOrder_incl; eauto.
+  - eapply @extendedOrder_total with (SETOID := mkSetoid_from_eq); eauto.
+  - eapply extendedOrder_Transitive; eauto.
+Qed.
+
+Lemma fromWfSet_comparable (A : Type) (B : Type) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) (RA : A -> A -> Prop) (RB : B -> B -> Prop)
+  (WFA : well_founded RA)
+  (WFB : well_founded RB)
+  (RA_eqPropCompatible2 : eqPropCompatible2 RA)
+  (RB_eqPropCompatible2 : eqPropCompatible2 RB)
+  (RA_Transitive : Transitive RA)
+  (RB_Transitive : Transitive RB)
+  (TOTALA : forall x1, forall x2, x1 == x2 \/ (RA x1 x2 \/ RA x2 x1))
+  (TOTALB : forall y1, forall y2, y1 == y2 \/ (RB y1 y2 \/ RB y2 y1))
+  : ⟪ LE : exists f : A -> B, forall x1, forall x2, RA x1 x2 <-> RB (f x1) (f x2) ⟫ \/ ⟪ GE : exists g : B -> A, forall y1, forall y2, RB y1 y2 <-> RA (g y1) (g y2) ⟫.
+Proof.
+  pose proof (InducedOrdinal.rLe_total (fromWfSet RA WFA) (fromWfSet RB WFB)) as [H_LE | H_GE].
+  - left. eapply fromWfSet_embed'; eauto.
+  - right. eapply fromWfSet_embed'; eauto.
+Qed.
+
+Theorem compareSetoids (A : Type@{Set_u}) (B : Type@{Set_u}) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B)
+  (pred1_ext : forall A : Type, forall P1 : A -> Prop, forall P2 : A -> Prop, (forall x : A, P1 x <-> P2 x) -> P1 = P2)
+  (pred2_ext : forall A : Type, forall B : Type, forall P1 : A -> B -> Prop, forall P2 : A -> B -> Prop, (forall x : A, forall y : B, P1 x y <-> P2 x y) -> P1 = P2)
+  : ⟪ card_LE : exists f : A -> B, forall x1, forall x2, x1 == x2 <-> f x1 == f x2 ⟫ \/ ⟪ card_GE : exists g : B -> A, forall y1, forall y2, y1 == y2 <-> g y1 == g y2 ⟫.
+Proof.
+  hexploit (@well_ordering_thm A A_isSetoid); eauto; i; des.
+  hexploit (@well_ordering_thm B B_isSetoid); eauto; i; des.
+  hexploit (fromWfSet_comparable A B A_isSetoid B_isSetoid); eauto; i; des.
+  - left. exists f; i; split; i.
+    + pose proof (H4 (f x1) (f x2)); des; eauto.
+      * rewrite <- LE in H8. rewrite H7 in H8. exfalso.
+        eapply well_founded_implies_Irreflexive with (R := R0); eauto.
+      * rewrite <- LE in H8. rewrite H7 in H8. exfalso.
+        eapply well_founded_implies_Irreflexive with (R := R0); eauto.
+    + pose proof (H0 x1 x2); des; eauto.
+      * rewrite -> LE in H8. rewrite H7 in H8. exfalso.
+        eapply well_founded_implies_Irreflexive with (R := R1); eauto.
+      * rewrite -> LE in H8. rewrite H7 in H8. exfalso.
+        eapply well_founded_implies_Irreflexive with (R := R1); eauto.
+  - right. exists g; i; split; i.
+    + pose proof (H0 (g y1) (g y2)); des; eauto.
+      * rewrite <- GE in H8. rewrite H7 in H8. exfalso.
+        eapply well_founded_implies_Irreflexive with (R := R1); eauto.
+      * rewrite <- GE in H8. rewrite H7 in H8. exfalso.
+        eapply well_founded_implies_Irreflexive with (R := R1); eauto.
+    + pose proof (H4 y1 y2); des; eauto.
+      * rewrite -> GE in H8. rewrite H7 in H8. exfalso.
+        eapply well_founded_implies_Irreflexive with (R := R0); eauto.
+      * rewrite -> GE in H8. rewrite H7 in H8. exfalso.
+        eapply well_founded_implies_Irreflexive with (R := R0); eauto.
+Qed.
+
+End AXIOM_OF_CHOICE.
+
+End LEM_plus_AC.

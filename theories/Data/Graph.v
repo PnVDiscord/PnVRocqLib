@@ -10,7 +10,7 @@ Module GRAPH.
 Record t : Type :=
   { vertices : Type
   ; edges : ensemble (vertices * vertices)
-  }.
+  } as G.
 
 End GRAPH.
 

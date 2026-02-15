@@ -8,7 +8,7 @@ Require Import PnV.Math.OrderTheory.
 
 Lemma VisF_eq_VisF_elim {E : Type -> Type} {R : Type} (X1 : Type) (X2 : Type) (e1 : E X1) (e2 : E X2) (k1 : X1 -> itree E R) (k2 : X2 -> itree E R)
   (VisF_eq_VisF : @VisF (itree E R) E R X1 e1 k1 = @VisF (itree E R) E R X2 e2 k2)
-  : { H : X1 = X2 | @eq_rect Type X1 (fun X => E X * (X -> itree E R))%type (e1, k1) X2 H = (e2, k2) }.
+  : { X_EQ : X1 = X2 | @eq_rect Type X1 (fun X => E X * (X -> itree E R))%type (e1, k1) X2 X_EQ = (e2, k2) }.
 Proof.
   set (view := fun default : { X : Type & (E X * (X -> itree E R))%type } => fun ot : @itreeF (itree E R) E R =>
     match ot return { X : Type & (E X * (X -> itree E R))%type } with
@@ -415,7 +415,7 @@ Section eqit_defn.
 #[local] Existing Instance ensemble_isUpperSemilattice.
 
 #[universes(polymorphic=yes)]
-Definition subseteq1@{u1 u2} {A : Type@{u1}} (REL : A -> Prop) (REL' : A -> Prop) : Prop :=
+Definition subseteq1@{u1} {A : Type@{u1}} (REL : A -> Prop) (REL' : A -> Prop) : Prop :=
   forall x : A, REL x -> REL' x.
 
 #[universes(polymorphic=yes)]
@@ -485,8 +485,8 @@ Section section_1.
 #[local] Notation b2 := skip_r.
 #[local] Notation SIM := (Similarity (itree E R1) (itree E R2)).
 
-Let __LocalInstance_eqitF (vclo : SIM -> SIM) (sim : SIM) : Similarity (@itreeF (itree E R1) E R1) (@itreeF (itree E R2) E R2) :=
-  @eqitF b1 b2 vclo sim.
+Let __LocalInstance_eqitF : forall vclo : SIM -> SIM, forall sim : SIM, Similarity (@itreeF (itree E R1) E R1) (@itreeF (itree E R2) E R2) :=
+  @eqitF b1 b2.
 
 #[local] Existing Instance __LocalInstance_eqitF.
 

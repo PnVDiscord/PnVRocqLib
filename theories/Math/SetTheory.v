@@ -199,13 +199,12 @@ Corollary OrdTrichotomy_implies_LEM
   (trichotomous : forall alpha : Ord, forall beta : Ord, alpha =ᵣ beta \/ (alpha <ᵣ beta \/ beta <ᵣ alpha))
   : forall P : Prop, P \/ ~ P.
 Proof.
-  assert (COMPARABILITY : forall alpha : Ord, forall beta : Ord, alpha ≦ᵣ beta \/ beta <ᵣ alpha).
-  { intros alpha beta. pose proof (trichotomous alpha beta) as [H_EQ | [H_LT | H_GT]].
-    - left. exact (proj1 H_EQ).
-    - left. eapply rLt_implies_rLe. exact H_LT.
-    - right. exact H_GT.
-  }
-  intros P. pose proof (OrdComparability_implies_EM COMPARABILITY P) as [[YES | NO]]; [left | right]; firstorder.
+  enough (COMPARABILITY : forall alpha : Ord, forall beta : Ord, alpha ≦ᵣ beta \/ beta <ᵣ alpha).
+  {  intros P. pose proof (OrdComparability_implies_EM COMPARABILITY P) as [[YES | NO]]; [left | right]; firstorder. }
+  intros alpha beta. pose proof (trichotomous alpha beta) as [H_EQ | [H_LT | H_GT]].
+  - left. exact (proj1 H_EQ).
+  - left. eapply rLt_implies_rLe. exact H_LT.
+  - right. exact H_GT.
 Qed.
 
 Section HARTOGS.
@@ -265,22 +264,19 @@ Record t : Type@{Set_V} :=
 Variant le (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
   | le_intro (f : forall x : lhs.(carrier), rhs.(carrier))
     (f_cong : eqPropCompatible1 f)
-    (f_inj : forall x1, forall x2, f x1 == f x2 -> x1 == x2)
-    : le lhs rhs.
+    (f_inj : forall x1, forall x2, f x1 == f x2 -> x1 == x2).
 
 Variant eq (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
   | eq_intro (f : forall x : lhs.(carrier), rhs.(carrier)) (g : forall y : rhs.(carrier), lhs.(carrier))
     (f_cong : eqPropCompatible1 f)
     (g_cong : eqPropCompatible1 g)
     (f_inj : forall x1, forall x2, f x1 == f x2 -> x1 == x2)
-    (g_inj : forall y1, forall y2, g y1 == g y2 -> y1 == y2)
-    : eq lhs rhs.
+    (g_inj : forall y1, forall y2, g y1 == g y2 -> y1 == y2).
 
 Variant lt (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
   | lt_intro
     (LE : Cardinality.le lhs rhs)
-    (NE : ~ Cardinality.eq lhs rhs)
-    : lt lhs rhs.
+    (NE : ~ Cardinality.eq lhs rhs).
 
 Definition add (kappa : Cardinality.t) (lambda : Cardinality.t) : Cardinality.t :=
   mk (kappa.(carrier) + lambda.(carrier))%type sum_isSetoid.
@@ -291,6 +287,71 @@ Definition mul (kappa : Cardinality.t) (lambda : Cardinality.t) : Cardinality.t 
 Definition exp (kappa : Cardinality.t) (lambda : Cardinality.t) : Cardinality.t :=
   mk { f : kappa.(carrier) -> lambda.(carrier) | eqPropCompatible1 f }%type fun_isSetoid.
 
+#[global]
+Instance _Card_eq_Equivalence
+  : Equivalence Cardinality.eq.
+Proof.
+  split.
+  - intros kappa. exists id id; firstorder.
+  - intros kappa kappa' [f g ? ? ? ?]. exists g f; firstorder.
+  - intros kappa kappa' kappa'' [f g ? ? ? ?] [f' g' ? ? ? ?]. exists (compose f' f) (compose g g'); unfold compose; firstorder.
+Qed.
+
+#[global] 
+Instance t_isSetoid : isSetoid Cardinality.t :=
+  { eqProp := Cardinality.eq
+  ; eqProp_Equivalence := _Card_eq_Equivalence
+  }.
+
+#[global]
+Instance _Card_le_PreOrder
+  : PreOrder Cardinality.le.
+Proof.
+  split.
+  - intros kappa. exists id; firstorder.
+  - intros kappa kappa' kappa'' [f ? ?] [f' ? ?]. exists (compose f' f); firstorder.
+Qed.
+
+#[global]
+Instance _Card_le_PartialOrder
+  : PartialOrder Cardinality.eq Cardinality.le.
+Proof.
+  intros kappa kappa'; split; cbv.
+  - intros [f g ? ? ? ?]; split; [exists f | exists g]; firstorder.
+  - intros [[f ? ?] [g ? ?]]; exists f g; firstorder.
+Qed.
+
+#[global]
+Instance t_isProset : isProset Cardinality.t :=
+  { Proset_isSetoid := Cardinality.t_isSetoid
+  ; leProp := Cardinality.le
+  ; leProp_PreOrder := _Card_le_PreOrder
+  ; leProp_PartialOrder := _Card_le_PartialOrder
+  }.
+
+#[global]
+Instance _Card_lt_StrictOrder
+  : StrictOrder Cardinality.lt.
+Proof.
+  split.
+  - intros kappa [[f ? ?] H_not]. contradiction H_not; eapply _Card_eq_Equivalence.(Equivalence_Reflexive).
+  - intros kappa kappa' kappa'' [[f ? ?] H_not] [[g ? ?] H_not']. split.
+    + eapply _Card_le_PreOrder; [exists f | exists g]; firstorder.
+    + intros [f' g' ? ?]; contradiction H_not'. exists g (compose f g'); firstorder.
+Qed.
+
+#[global]
+Instance t_hasStrictOrder : hasStrictOrder Cardinality.t :=
+  { lt := Cardinality.lt
+  ; lt_StrictOrder := _Card_lt_StrictOrder
+  }.
+
+Definition ofType (A : Type@{Set_u}) : Cardinality.t :=
+  {|
+    Cardinality.carrier := A;
+    Cardinality.carrier_isSetoid := @mkSetoid_from_eq A
+  |}.
+
 End Cardinality.
 
 Definition Card : Type@{Set_V} :=
@@ -299,13 +360,13 @@ Definition Card : Type@{Set_V} :=
 #[global] Typeclasses Opaque Card.
 
 Definition _Card_eq : Card -> Card -> Prop :=
-  Cardinality.eq.
+  @eqProp Cardinality.t Cardinality.t_isSetoid.
 
 Definition _Card_lt : Card -> Card -> Prop :=
-  Cardinality.lt.
+  @lt Cardinality.t Cardinality.t_hasStrictOrder.
 
 Definition _Card_le : Card -> Card -> Prop :=
-  Cardinality.le.
+  @leProp Cardinality.t Cardinality.t_isProset.
 
 Definition _card : forall A : Type@{Set_u}, isSetoid A -> Card :=
   Cardinality.mk.

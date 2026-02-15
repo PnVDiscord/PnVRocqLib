@@ -6,11 +6,71 @@ Require Import PnV.Prelude.Prelude.
 
 Create HintDb poset_hints.
 
+Section UPTO_SETOID.
+
+Context (A : Type) (SETOID : isSetoid A) (R : A -> A -> Prop) (R_eqPropCompatible2 : eqPropCompatible2 R) (R_wf : well_founded R).
+
+Definition wltProp_upto_eqProp (x : A) (y : A) : Prop :=
+  exists z : A, R x z /\ y == z.
+
+Lemma wltProp_upto_eqProp_well_founded
+  : well_founded wltProp_upto_eqProp.
+Proof.
+  intros x. induction (R_wf x) as [x _ IH]. econs.
+  intros y (z & R_y_z & x_eq_z). eapply IH.
+  eapply R_eqPropCompatible2 with (x2 := y) (y2 := z); eauto with *.
+Qed.
+
+#[global]
+Instance wltProp_upto_eqProp_Transitive
+  (R_Transitive : Transitive R)
+  : Transitive wltProp_upto_eqProp.
+Proof.
+  intros x1 x2 x3 (z & LT & EQ) (z' & LT' & EQ').
+  exists x3. split; eauto with *. transitivity x2.
+  - eapply R_eqPropCompatible2 with (x2 := x1) (y2 := z); eauto with *.
+  - eapply R_eqPropCompatible2 with (x2 := x2) (y2 := z'); eauto with *.
+Qed.
+
+#[global]
+Instance wltProp_upto_eqProp_eqPropCompatible2
+  : eqPropCompatible2 wltProp_upto_eqProp.
+Proof.
+  ii. do 2 red. split; intros (z & LT & EQ).
+  - exists z. rewrite <- y_EQ. split; trivial.
+    eapply R_eqPropCompatible2 with (x2 := x1) (y2 := z); eauto with *.
+  - exists z. rewrite -> y_EQ. split; trivial.
+    eapply R_eqPropCompatible2 with (x2 := x2) (y2 := z); eauto with *.
+Qed.
+
+End UPTO_SETOID.
+
 Lemma well_founded_implies_Irreflexive {A : Type} (R : A -> A -> Prop)
   (WF : well_founded R)
   : Irreflexive R.
 Proof.
   intros x H_R. induction (WF x) as [x _ IH]. eapply IH with (y := x); exact H_R.
+Qed.
+
+Lemma well_founded_eqPropCl {A : Type} {SETOID : isSetoid A} (R : A -> A -> Prop)
+  (WF : well_founded R)
+  (COMPARABILITY : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
+  : forall x : A, Acc (fun x1 => fun x2 => exists x0 : A, x1 == x0 /\ R x0 x2) x.
+Proof.
+  intros x. induction (WF x) as [x _ IH]; intros.
+  econs. intros x' (x0 & H1_EQ & H2_EQ). eapply IH.
+  now eapply COMPARABILITY with (x1 := x0); eauto.
+Qed.
+
+Lemma well_founded_implies_Irreflexive' {A : Type} {SETOID : isSetoid A} (R : A -> A -> Prop)
+  (WF : well_founded R)
+  (COMPARABILITY : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
+  : forall x1 : A, forall x2 : A, x1 == x2 -> ~ R x1 x2.
+Proof.
+  intros x1 x2 EQ. revert x1 EQ.
+  pose proof (well_founded_eqPropCl R WF COMPARABILITY x2) as H_Acc.
+  induction H_Acc as [x2 _ IH]. ii. eapply IH with (x1 := x1) (y := x2); eauto.
+  exists x1. now split.
 Qed.
 
 #[program]
