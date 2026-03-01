@@ -957,6 +957,17 @@ Proof.
     + rewrite -> H_EQ. intros c. econs. exists c. reflexivity.
 Qed.
 
+Lemma rLt_unions_iff (X : Tree) (s : Tree)
+  : s <ᵣ unions X <-> (exists x, x \in X /\ s <ᵣ x).
+Proof.
+  split; intros H_rLt.
+  - destruct H_rLt as [[c H_rLe]]. simpl in *.
+    exists (childnodes X (projT1 c)). split; eauto with *.
+  - econs. simpl. destruct H_rLt as [x [[i H_i] H_rLt]].
+    rewrite -> H_i in H_rLt. destruct H_rLt as [[c H_rLe]].
+    eexists (@existT _ _ i _). simpl. eauto.
+Qed.
+
 Lemma unions_rLe_intro (X : Tree) (s : Tree)
   (H_rLe : forall x, x \in X -> x ≦ᵣ s)
   : unions X ≦ᵣ s.
@@ -1147,6 +1158,24 @@ Lemma rLt_succ_intro alpha
   : alpha <ᵣ succ alpha.
 Proof.
   econs. simpl. now exists (@existT _ _ false true); simpl.
+Qed.
+
+Lemma rLt_succ_iff alpha beta
+  : alpha <ᵣ succ beta <-> alpha ≦ᵣ beta.
+Proof.
+  split.
+  - intros [[[[ | ] c] H_rLe]]; simpl in *.
+    + transitivity (childnodes beta c); eauto with *.
+    + destruct c; eauto.
+  - intros. econs. simpl. now exists (@existT _ _ false true); simpl.
+Qed.
+
+Lemma succ_rLe_iff alpha beta
+  : succ alpha ≦ᵣ beta <-> alpha <ᵣ beta.
+Proof.
+  split.
+  - intros [H_rLt]; simpl in *. exact (H_rLt (@existT _ _ false true)).
+  - eapply succ_rLe_intro.
 Qed.
 
 Definition isTransitiveSet (x : Tree) : Prop :=

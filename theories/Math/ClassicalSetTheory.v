@@ -1224,7 +1224,7 @@ End ToOrderType.
 
 End Ordinal1.
 
-Lemma fromWfSet_embed `{Axs : ClassicalAxioms (b_AC := true)} (A : Type@{Set_u}) (B : Type@{Set_u}) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) (RA : A -> A -> Prop) (RB : B -> B -> Prop)
+Lemma fromWfSet_embed `{Axms : ClassicalAxioms (b_AC := true)} (A : Type@{Set_u}) (B : Type@{Set_u}) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) (RA : A -> A -> Prop) (RB : B -> B -> Prop)
   (RA_wf : well_founded RA)
   (RB_wf : well_founded RB)
   (RB_eqPropCompatible2 : eqPropCompatible2 RB)
@@ -1260,7 +1260,7 @@ Proof.
     contradiction (StrictOrder_Irreflexive (fromWf RB RB_wf (f a1))); now transitivity (fromWf RB RB_wf (f a2)).
 Qed.
 
-Lemma fromWfSet_embed' `{Axs : ClassicalAxioms (b_AC := true)} (A : Type@{Set_u}) (B : Type@{Set_u}) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) (RA : A -> A -> Prop) (RB : B -> B -> Prop)
+Lemma fromWfSet_embed' `{Axms : ClassicalAxioms (b_AC := true)} (A : Type@{Set_u}) (B : Type@{Set_u}) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) (RA : A -> A -> Prop) (RB : B -> B -> Prop)
   (RA_wf : well_founded RA)
   (RB_wf : well_founded RB)
   (RA_eqPropCompatible2 : eqPropCompatible2 RA)
@@ -1532,7 +1532,7 @@ Qed.
 
 End NEXT.
 
-Lemma choice_and_pred_exts_imply_well_ordering `{Axs : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+Lemma choice_and_pred_exts_imply_well_ordering `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
   : exists R : X -> X -> Prop, well_founded R /\ (forall x1, forall x2, x1 == x2 \/ R x1 x2 \/ R x2 x1) /\ Transitive R /\ eqPropCompatible2 R.
 Proof.
   assert (exists next : pair -> pair, (forall s : pair, good s -> s =< next s) /\ (forall s : pair, good s -> good (next s)) /\ (forall s : pair, good s -> (forall x : X, s.(P) x) \/ (exists x : X, (next s).(P) x /\ ~ s.(P) x))) as [next H_next].
@@ -1581,7 +1581,7 @@ Qed.
 
 End WELL_ORDERING_THEOREM.
 
-Theorem well_ordering_thm `{Axs : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (X : Type) (SETOID : isSetoid X)
+Theorem well_ordering_thm `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (X : Type) (SETOID : isSetoid X)
   : exists R : X -> X -> Prop, well_founded R /\ (forall x1, forall x2, x1 == x2 \/ R x1 x2 \/ R x2 x1) /\ Transitive R /\ eqPropCompatible2 R.
 Proof.
   pose proof (classic (inhabited X)) as [[x] | NO].
@@ -1655,7 +1655,7 @@ Qed.
 
 End EXTEND_ORDER.
 
-Lemma extendedOrder_exists `{Axs : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (A : Type) (SETOID : isSetoid A) (R : A -> A -> Prop)
+Lemma extendedOrder_exists `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (A : Type) (SETOID : isSetoid A) (R : A -> A -> Prop)
   (R_wf : well_founded R)
   : exists R' : A -> A -> Prop, ⟪ WF : well_founded R' ⟫ /\ ⟪ INCL : forall x : A, forall x' : A, forall LT : R x x', R' x x' ⟫ /\ ⟪ TOTAL : forall x : A, forall x' : A, x == x' \/ R' x x' \/ R' x' x ⟫ /\ ⟪ TRANSITIVE : Transitive R' ⟫.
 Proof.
@@ -1668,7 +1668,7 @@ Proof.
   - eapply @extendedOrder_Transitive; eauto.
 Qed.
 
-Lemma fromWfSet_comparable `{Axs : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (A : Type) (B : Type) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) (RA : A -> A -> Prop) (RB : B -> B -> Prop)
+Lemma fromWfSet_comparable `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (A : Type) (B : Type) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) (RA : A -> A -> Prop) (RB : B -> B -> Prop)
   (WFA : well_founded RA)
   (WFB : well_founded RB)
   (RA_eqPropCompatible2 : eqPropCompatible2 RA)
@@ -1684,11 +1684,11 @@ Proof.
   - right. eapply fromWfSet_embed'; eauto.
 Qed.
 
-Theorem compareSetoids `{Axs : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (A : Type@{Set_u}) (B : Type@{Set_u}) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B)
+Theorem compareSetoids `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (A : Type@{Set_u}) (B : Type@{Set_u}) (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B)
   : ⟪ card_LE : exists f : A -> B, forall x1 : A, forall x2 : A, x1 == x2 <-> f x1 == f x2 ⟫ \/ ⟪ card_GE : exists g : B -> A, forall y1 : B, forall y2 : B, y1 == y2 <-> g y1 == g y2 ⟫.
 Proof.
-  hexploit (@well_ordering_thm Axs A A_isSetoid); eauto; i; des.
-  hexploit (@well_ordering_thm Axs B B_isSetoid); eauto; i; des.
+  hexploit (@well_ordering_thm Axms A A_isSetoid); eauto; i; des.
+  hexploit (@well_ordering_thm Axms B B_isSetoid); eauto; i; des.
   hexploit (fromWfSet_comparable A B A_isSetoid B_isSetoid); eauto; i; des.
   - left. exists f; i; split; i.
     + pose proof (H4 (f x1) (f x2)); des; eauto.
@@ -1714,23 +1714,26 @@ Proof.
         eapply well_founded_implies_Irreflexive with (R := R0); eauto.
 Qed.
 
-Section CARDINALITY.
+Reserved Infix "`hasCardinality`" (no associativity, at level 70).
 
-#[local] Infix "\in" := member.
-
-Context `{Axs : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}.
-
-Section CARDINAL.
-
-Context (kappa : Cardinality.t).
-
-Definition isCardinalOf (c : Tree) : Prop :=
+Definition hasCardinality (kappa : Cardinality.t) (c : Tree) : Prop :=
   let P (alpha : Tree) : Prop := exists R : kappa.(Cardinality.carrier) -> kappa.(Cardinality.carrier) -> Prop, exists R_wf : well_founded R, (forall x, forall x', x == x' \/ R x x' \/ R x' x) /\ Transitive R /\ eqPropCompatible2 R /\ fromWfSet R R_wf == alpha in
   P c /\ (forall alpha : Tree, P alpha -> c ≦ᵣ alpha).
 
-Lemma isCardinalOf_intro
-  : isCardinalOf (Cardinality.toTree kappa).
-Proof.
+Infix "`hasCardinality`" := hasCardinality.
+
+Section CARDINALITY.
+
+#[local] Infix "\in" := member.
+#[local] Infix "\subseteq" := isSubsetOf.
+
+Section CARDINAL.
+
+Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t).
+
+Theorem hasCardinality_intro
+  : kappa `hasCardinality` Cardinality.toTree kappa.
+Proof using Axms kappa.
   hexploit (well_ordering_thm kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid)); eauto.
   intros (R0 & R0_wf & R0_total & R0_Transitive & R0_eqPropCompatible2).
   set (WPOSET := {| wltProp := R0; wltProp_Transitive := R0_Transitive; wltProp_well_founded := R0_wf; |}).
@@ -1738,8 +1741,7 @@ Proof.
   red. set (P := fun alpha : Tree => exists R : kappa.(Cardinality.carrier) -> kappa.(Cardinality.carrier) -> Prop, exists R_wf : well_founded R, (forall x, forall x', x == x' \/ R x x' \/ R x' x) /\ Transitive R /\ eqPropCompatible2 R /\ fromWfSet R R_wf == alpha).
   exploit (@O.minimisation_lemma classic _ _ rLt_isWellOrdering P).
   { exists (@FromOrderType _ _ WOSET). red. exists R0, R0_wf. splits; eauto. unfold FromOrderType. reflexivity. }
-  intros (c & H_c & MIN); unnw. red in H_c. destruct H_c as (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_c).
-  split.
+  intros (c & H_c & MIN); unnw. red in H_c. destruct H_c as (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_c). split.
   { exists R, R_wf. splits; eauto. eapply extensionality. intros z; split; intros z_in.
     - unfold Cardinality.toTree. rewrite unions_spec. exists (fromWfSet R R_wf). split; eauto.
       rewrite filter_spec. simpl children. exists (B.exist R (conj R_wf (conj R_total (conj R_Transitive R_eqPropCompatible2)))). split.
@@ -1762,12 +1764,12 @@ Proof.
       { change (isOrdinal (@FromOrderType _ _ WOSET')). eapply FromOrderType_isOrdinal. }
       { change (isOrdinal (@FromOrderType _ _ WOSET'')). eapply FromOrderType_isOrdinal. }
       split.
-      * rewrite -> H_c. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq. eapply MIN. red. exists (B.proj1_sig i), (proj1 (B.proj2_sig i)).
+      + rewrite -> H_c. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq. eapply MIN. red. exists (B.proj1_sig i), (proj1 (B.proj2_sig i)).
         split. { exact (proj1 (proj2 (i.(B.proj2_sig)))). }
         split. { exact (proj1 (proj2 (proj2 i.(B.proj2_sig)))). }
         split. { exact (proj2 (proj2 (proj2 i.(B.proj2_sig)))). }
         reflexivity.
-      * exact (H_i WOSET').
+      + exact (H_i WOSET').
   }
   { intros alpha (R1 & R1_wf & R1_total & R1_Transitive & R1_eqPropCompatible2 & H_alpha).
     rewrite <- H_alpha. unfold Cardinality.toTree. eapply unions_rLe_intro. intros x x_in.
@@ -1779,6 +1781,231 @@ Proof.
   }
 Qed.
 
+Lemma hasCardinality_isOrdinal c
+  (CARDINAL : kappa `hasCardinality` c)
+  : isOrdinal c.
+Proof using kappa.
+  destruct CARDINAL as [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_c) MIN]. rewrite <- H_c.
+  set (WPOSET' := {| wltProp := R; wltProp_Transitive := R_Transitive; wltProp_well_founded := R_wf; |}).
+  set (WOSET' := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET' R_eqPropCompatible2 R_total).
+  change (isOrdinal (@FromOrderType _ _ WOSET')). eapply FromOrderType_isOrdinal.
+Qed.
+
+Lemma hasCardinality_unique c c'
+  (CARDINAL : kappa `hasCardinality` c)
+  (CARDINAL' : kappa `hasCardinality` c')
+  : c == c'.
+Proof using kappa.
+  eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+  - eapply hasCardinality_isOrdinal; eauto.
+  - eapply hasCardinality_isOrdinal; eauto.
+  - destruct CARDINAL as [R MIN]. destruct CARDINAL' as [R' MIN']. split.
+    + eapply MIN; eauto.
+    + eapply MIN'; eauto.
+Qed.
+
+Lemma hasCardinality_rewrite_r (c : Tree) (c' : Tree)
+  (EQ : c == c')
+  (CARDINAL : kappa `hasCardinality` c)
+  : kappa `hasCardinality` c'.
+Proof.
+  destruct CARDINAL as [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_R) MIN]. split.
+  - exists R, R_wf. splits; eauto. now rewrite <- EQ.
+  - intros alpha (R1 & R1_wf & R1_total & R1_Transitive & R1_eqPropCompatible2 & H_R1).
+    rewrite <- EQ. eapply MIN. exists R1, R1_wf. splits; eauto.
+Qed.
+
 End CARDINAL.
+
+#[local] Hint Resolve hasCardinality_intro hasCardinality_isOrdinal : core.
+
+Lemma Cardinality_le_total `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa kappa'
+  : kappa =< kappa' \/ kappa' =< kappa.
+Proof.
+  hexploit (compareSetoids kappa.(Cardinality.carrier) kappa'.(Cardinality.carrier)); i. des; [left | right]; [exists f | exists g]; firstorder.
+Qed.
+
+Lemma Cardinality_lowerbound `{Axms : ClassicalAxioms (b_AC := true)} kappa R
+  (R_wf : well_founded R)
+  (R_total : forall x : kappa.(Cardinality.carrier), forall x' : kappa.(Cardinality.carrier), x == x' \/ R x x' \/ R x' x)
+  (R_Transitive : Transitive R)
+  (R_eqPropCompatible2 : eqPropCompatible2 R)
+  : Cardinality.toTree kappa ≦ᵣ fromWfSet R R_wf.
+Proof.
+  unfold Cardinality.toTree. eapply unions_rLe_intro. intros x x_in.
+  rewrite filter_spec in x_in. destruct x_in as [i [H_i H_x]]; simpl in *.
+  set (WPOSET := {| wltProp := R; wltProp_Transitive := R_Transitive; wltProp_well_founded := R_wf; |}).
+  set (WOSET := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET R_eqPropCompatible2 R_total).
+  rewrite H_x. exact (H_i WOSET).
+Qed.
+
+Lemma Cardinality_le_elim `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (kappa' : Cardinality.t)
+  (H_cLe : kappa =< kappa')
+  : Cardinality.toTree kappa ≦ᵣ Cardinality.toTree kappa'.
+Proof.
+  hexploit (hasCardinality_intro kappa'); intros [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_kappa') MIN].
+  rewrite <- H_kappa'. inversion H_cLe. 
+  pose proof (R1_wf := WfHelper.ProjectedRelRev_wf _ _ R f R_wf).
+  set (R1 := WfHelper.ProjectedRelRev R f) in *.
+  transitivity (fromWfSet R1 R1_wf).
+  - eapply hasCardinality_intro. exists R1, R1_wf.
+    set (WPOSET' := {| wltProp := R; wltProp_Transitive := R_Transitive; wltProp_well_founded := R_wf; |}).
+    set (WOSET' := @O.WellfoundedToset_isWoset classic kappa'.(Cardinality.carrier) kappa'.(Cardinality.carrier_isSetoid) WPOSET' R_eqPropCompatible2 R_total).
+    unfold R1. splits; eauto with *.
+    + intros x x'. pose proof (@O.wlt_trichotomous classic kappa'.(Cardinality.carrier) kappa'.(Cardinality.carrier_isSetoid) WOSET' (f x) (f x')) as [H_EQ | [H_LT | H_GT]].
+      * left. now eapply f_inj.
+      * right. left. eauto.
+      * right. right. eauto.
+    + intros x x' x'' H_LT H_LT'. eapply R_Transitive with (y := f x'); eauto.
+    + ii. change (R (f x1) (f y1) <-> R (f x2) (f y2)).
+      pose proof (f_cong _ _ x_EQ) as f_x_EQ.
+      pose proof (f_cong _ _ y_EQ) as f_y_EQ.
+      now rewrite f_x_EQ, f_y_EQ.
+  - eapply fromWfSet_cong with (f := f). eauto.
+Qed.
+
+Lemma Cardinality_upperbound `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (kappa' : Cardinality.t) (R : kappa'.(Cardinality.carrier) -> kappa'.(Cardinality.carrier) -> Prop)
+  (H_cLt : kappa' ≨ kappa)
+  (R_wf : well_founded R)
+  (R_total : forall x, forall x', x == x' \/ R x x' \/ R x' x)
+  (R_Transitive : Transitive R)
+  (R_eqPropCompatible2 : eqPropCompatible2 R)
+  : fromWfSet R R_wf <ᵣ Cardinality.toTree kappa.
+Proof.
+  assert (H_cLt' : ~ kappa =< kappa').
+  { intros [f ? ?]. destruct H_cLt as [[g ? ?] NE]. contradiction NE. exists g f; eauto. }
+  hexploit (well_ordering_thm kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid)); eauto.
+  intros (R0 & R0_wf & R0_total & R0_Transitive & R0_eqPropCompatible2).
+  set (WPOSET := {| wltProp := R0; wltProp_Transitive := R0_Transitive; wltProp_well_founded := R0_wf; |}).
+  set (WOSET := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET R0_eqPropCompatible2 R0_total).
+  set (P := fun alpha : Tree => exists R : kappa.(Cardinality.carrier) -> kappa.(Cardinality.carrier) -> Prop, exists R_wf : well_founded R, (forall x, forall x', x == x' \/ R x x' \/ R x' x) /\ Transitive R /\ eqPropCompatible2 R /\ fromWfSet R R_wf == alpha).
+  exploit (@O.minimisation_lemma classic _ _ rLt_isWellOrdering P).
+  { exists (@FromOrderType _ _ WOSET). red. exists R0, R0_wf. splits; eauto. unfold FromOrderType. reflexivity. }
+  intros (c & H_c & MIN); unnw. red in H_c. destruct H_c as (R1 & R1_wf & R1_total & R1_Transitive & R1_eqPropCompatible2 & H_c).
+  unfold Cardinality.toTree. rewrite rLt_unions_iff. exists (fromWfSet R1 R1_wf). rewrite filter_spec. split.
+  { unshelve eexists (B.exist R1 _).
+    - splits; eauto.
+    - split.
+      + intros WOSET'. simpl. rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R1_wf). rewrite -> H_c. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq.
+        eapply MIN. exists WOSET'.(Woset_isWellPoset).(wltProp), WOSET'.(Woset_isWellPoset).(wltProp_well_founded).
+        split. { unshelve eapply O.wlt_trichotomous. exact classic. }
+        split. { exact WOSET'.(Woset_isWellPoset).(wltProp_Transitive). }
+        split. { exact WOSET'.(Woset_eqPropCompatible2). }
+        reflexivity.
+      + simpl childnodes. now rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R1_wf).
+  }
+  eapply NNPP. intros H_contra.
+  assert (SUBSET : fromWfSet R1 R1_wf \subseteq fromWfSet R R_wf).
+  { eapply Ordinal1.Ordinal_rLe_Ordinal_elim.
+    - set (WPOSET' := {| wltProp := R1; wltProp_Transitive := R1_Transitive; wltProp_well_founded := R1_wf; |}).
+      set (WOSET' := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET' R1_eqPropCompatible2 R1_total).
+      change (isOrdinal (@FromOrderType _ _ WOSET')). eapply FromOrderType_isOrdinal.
+    - set (WPOSET' := {| wltProp := R; wltProp_Transitive := R_Transitive; wltProp_well_founded := R_wf; |}).
+      set (WOSET' := @O.WellfoundedToset_isWoset classic kappa'.(Cardinality.carrier) kappa'.(Cardinality.carrier_isSetoid) WPOSET' R_eqPropCompatible2 R_total).
+      change (isOrdinal (@FromOrderType _ _ WOSET')). eapply FromOrderType_isOrdinal.
+    - pose proof (InducedOrdinal.rLe_or_rGt (fromWfSet R1 R1_wf) (fromWfSet R R_wf)) as [H | H]; [exact H | contradiction H].
+  }
+  hexploit (fromWfSet_comparable _ _ _ _ R1 R); eauto. i; des.
+  - contradiction H_cLt'. exists f.
+    + intros x1 x2 x_EQ. pose proof (R_total (f x1) (f x2)) as [H_EQ | [H_LT | H_GT]]; eauto.
+      * rewrite <- LE in H_LT. exploit (well_founded_implies_Irreflexive' R1 R1_wf _ x1 x2); eauto.
+        { intros a a' EQ b. now rewrite <- EQ. }
+        intros H_not. contradiction H_not.
+      * rewrite <- LE in H_GT. symmetry in x_EQ. exploit (well_founded_implies_Irreflexive' R1 R1_wf _ x2 x1); eauto.
+        { intros a a' EQ b. now rewrite <- EQ. }
+        intros H_not. contradiction H_not.
+    + intros x1 x2 x_EQ. pose proof (R1_total x1 x2) as [H_EQ | [H_LT | H_GT]]; eauto.
+      * rewrite -> LE in H_LT. exploit (well_founded_implies_Irreflexive' R R_wf _ (f x1) (f x2)); eauto.
+        { intros a a' EQ b. now rewrite <- EQ. }
+        intros H_not. contradiction H_not.
+      * rewrite -> LE in H_GT. symmetry in x_EQ. exploit (well_founded_implies_Irreflexive' R R_wf _ (f x2) (f x1)); eauto.
+        { intros a a' EQ b. now rewrite <- EQ. }
+        intros H_not. contradiction H_not.
+  - assert (fromWfSet R R_wf ≦ᵣ fromWfSet R1 R1_wf) as claim1.
+    { eapply fromWfSet_cong with (f := g); firstorder. }
+    assert (fromWfSet R1 R1_wf ≦ᵣ fromWfSet R R_wf) as claim2.
+    { eapply subseteq_implies_rLe; eauto. }
+    assert (fromWfSet R R_wf =ᵣ fromWfSet R1 R1_wf) as claim3.
+    { split; eauto. }
+    assert (claim4 : forall h : kappa.(Cardinality.carrier) -> kappa'.(Cardinality.carrier), eqPropCompatible1 h -> (exists x1, exists x2, h x1 == h x2 /\ ~ x1 == x2)).
+    { ii. eapply NNPP. intros H_not. contradiction H_cLt'.
+      assert (HH : exists h : Cardinality.carrier kappa -> Cardinality.carrier kappa', eqPropCompatible1 h /\ (forall x1, forall x2, h x1 == h x2 -> x1 == x2)).
+      { eapply NNPP. intros H_not1. contradiction H_not. eapply NNPP. intros H_not'.
+        contradiction H_not1. exists h. split; trivial. ii. eapply NNPP. ii. contradiction H_not'. exists x1, x2. split; eauto.
+      }
+      clear h H H_not. destruct HH as [h [h_cong h_inj]]. exists h; eauto.
+    }
+    set (WPOSET0 := {| wltProp := R; wltProp_Transitive := R_Transitive; wltProp_well_founded := R_wf; |}).
+    set (WOSET0 := @O.WellfoundedToset_isWoset classic kappa'.(Cardinality.carrier) kappa'.(Cardinality.carrier_isSetoid) WPOSET0 R_eqPropCompatible2 R_total).
+    set (WPOSET1 := {| wltProp := R1; wltProp_Transitive := R1_Transitive; wltProp_well_founded := R1_wf; |}).
+    set (WOSET1 := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET1 R1_eqPropCompatible2 R1_total).
+    assert (claim5 : fromWfSet R R_wf == fromWfSet R1 R1_wf).
+    { eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+      - change (isOrdinal (@FromOrderType _ _ WOSET0)). eapply FromOrderType_isOrdinal.
+      - change (isOrdinal (@FromOrderType _ _ WOSET1)). eapply FromOrderType_isOrdinal.
+      - exact claim3.
+    }
+    assert (exists f, forall x, fromWf R R_wf (f x) == fromWf R1 R1_wf x) as [h claim6].
+    { destruct claim5 as [_ H]. exploit (Axiom_of_Choice (Cardinality.carrier kappa) (fun _ => Cardinality.carrier kappa')).
+      - intros x. pose proof (H x) as [y H_y]. exists y. exact H_y.
+      - eauto.
+    }
+    assert (claim7 : forall x, forall x', x == x' <-> h x == h x').
+    { clear WPOSET WOSET. intros x x'; split; intros H_EQ.
+      - pose proof (COPY := H_EQ). rewrite <- fromOrderType_eq_fromOrderType_iff in H_EQ.
+        change (fromWf R1 R1_wf x == fromWf R1 R1_wf x') in H_EQ. do 2 rewrite <- claim6 in H_EQ.
+        rewrite <- fromOrderType_eq_fromOrderType_iff. exact H_EQ.
+      - pose proof (COPY := H_EQ). rewrite <- fromOrderType_eq_fromOrderType_iff in H_EQ.
+        change (fromWf R R_wf (h x) == fromWf R R_wf (h x')) in H_EQ. do 2 rewrite -> claim6 in H_EQ.
+        rewrite <- fromOrderType_eq_fromOrderType_iff. exact H_EQ.
+    }
+    exploit (claim4 h).
+    { ii. now rewrite <- claim7. }
+    intros (x1 & x2 & H_EQ & H_NE). now rewrite <- claim7 in H_EQ.
+Qed.
+
+Theorem Cardinality_le_iff `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa kappa'
+  : kappa =< kappa' <-> Cardinality.toTree kappa ≦ᵣ Cardinality.toTree kappa'.
+Proof.
+  split.
+  - eapply Cardinality_le_elim. 
+  - hexploit (hasCardinality_intro kappa'). intros [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_kappa') MIN] H_rLe.
+    eapply NNPP. intros H_contra. pose proof (Cardinality_le_total kappa kappa') as [H_cLe | H_cGe]; eauto.
+    pose proof (Cardinality_le_elim kappa' kappa H_cGe) as H_rGe.
+    assert (theSameCardinality : Cardinality.toTree kappa == Cardinality.toTree kappa').
+    { eapply Ordinal1.Ordinal_rEq_Ordinal_elim; eauto. split; eauto. }
+    assert (kappa_hasCardinality : kappa `hasCardinality` Cardinality.toTree kappa').
+    { eapply hasCardinality_rewrite_r; eauto with *. }
+    unshelve hexploit (Cardinality_upperbound kappa kappa' R); eauto.
+    + split; eauto. intros [? ? ? ? ? ?]. contradiction H_contra. exists g; eauto.
+    + intros H_rLt. rewrite H_kappa' in H_rLt. rewrite <- theSameCardinality in H_rLt.
+      contradiction (well_founded_implies_Irreflexive rLt rLt_wf (Cardinality.toTree kappa) H_rLt).
+Qed.
+
+Theorem Cardinality_eq_iff `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa kappa'
+  : kappa == kappa' <-> Cardinality.toTree kappa =ᵣ Cardinality.toTree kappa'.
+Proof.
+  split; i.
+  - destruct H. split; eapply Cardinality_le_iff.
+    + exists f; eauto.
+    + exists g; eauto.
+  - enough (kappa =< kappa' /\ kappa' =< kappa) as [[f ? ?] [g ? ?]].
+    { exists f g; eauto. }
+    split; rewrite Cardinality_le_iff; eapply H. 
+Qed.
+
+Theorem Cardinality_lt_iff `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa kappa'
+  : kappa ≨ kappa' <-> Cardinality.toTree kappa <ᵣ Cardinality.toTree kappa'.
+Proof.
+  split.
+  - intros [LE NE]. rewrite Cardinality_le_iff in LE.
+    change (~ kappa == kappa') in NE. rewrite Cardinality_eq_iff in NE.
+    rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in LE.
+    destruct LE; eauto. contradiction.
+  - intros H_rLe. split.
+    + rewrite Cardinality_le_iff. now eapply rLt_implies_rLe.
+    + rewrite Cardinality_eq_iff. intros H_EQ. rewrite H_EQ in H_rLe.
+      contradiction (well_founded_implies_Irreflexive rLt rLt_wf (Cardinality.toTree kappa')).
+Qed.
 
 End CARDINALITY.
