@@ -31,3 +31,16 @@ Proof.
   intros m P_m. enough (WTS : ~ m < i) by lia. intros H_lt.
   contradiction CONTRA'. exists m. split; trivial.
 Qed.
+
+#[projections(primitive)]
+Class ClassicalAxioms `{b_AC : bool} `{b_fun_ext : bool} `{b_prop_ext : bool} : Prop :=
+  { Axiom_of_Choice (A : Type) (B : A -> Type) (R : forall x : A, B x -> Prop)
+    (CHOICE : forall x : A, exists y : B x, R x y)
+    : if b_AC then exists f : forall x : A, B x, forall x : A, R x (f x) else True
+  ; Functional_Extensionality (A : Type) (B : A -> Type) (f : forall x : A, B x) (f' : forall x : A, B x)
+    (EQUAL : forall x : A, f x = f' x)
+    : if b_fun_ext then f = f' else True
+  ; Propositional_Extensionality (P : Prop) (P' : Prop)
+    (EQUAL : P <-> P')
+    : if b_prop_ext then P = P' else True
+  } as ClassicalAxioms.

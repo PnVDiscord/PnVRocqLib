@@ -45,6 +45,22 @@ Qed.
 
 End UPTO_SETOID.
 
+Lemma Acc_implies_nonexistence_of_decr_seq {A : Type} {N : Type} (O : N) (S : N -> N) (R : A -> A -> Prop) (x : A)
+  (H_Acc : Acc R x)
+  : ~ ⟪ EXISTENCE : exists f : N -> A, f O = x /\ ⟪ DECR : forall n : N, R (f (S n)) (f n) ⟫ ⟫.
+Proof.
+  unnw. induction H_Acc as [x _ IH]. intros (f & H_EQ & H_decr).
+  subst x. eapply IH with (y := f (S O)); eauto. exists (fun n : N => f (S n)); eauto.
+Qed.
+
+Lemma well_founded_implies_nonexistence_of_decr_seq {A : Type} (R : A -> A -> Prop)
+  (R_wf : well_founded R)
+  : forall f : nat -> A, ~ ⟪ DECR : forall n : nat, R (f (S n)) (f n) ⟫.
+Proof.
+  red in R_wf. unnw. intros f H_decr.
+  eapply @Acc_implies_nonexistence_of_decr_seq with (A := A) (N := nat) (O := O) (S := S) (R := R) (x := f O); unnw; eauto.
+Qed.
+
 Lemma well_founded_implies_Irreflexive {A : Type} (R : A -> A -> Prop)
   (WF : well_founded R)
   : Irreflexive R.
@@ -54,21 +70,21 @@ Qed.
 
 Lemma well_founded_eqPropCl {A : Type} {SETOID : isSetoid A} (R : A -> A -> Prop)
   (WF : well_founded R)
-  (COMPARABILITY : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
+  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
   : forall x : A, Acc (fun x1 => fun x2 => exists x0 : A, x1 == x0 /\ R x0 x2) x.
 Proof.
   intros x. induction (WF x) as [x _ IH]; intros.
   econs. intros x' (x0 & H1_EQ & H2_EQ). eapply IH.
-  now eapply COMPARABILITY with (x1 := x0); eauto.
+  now eapply COMPAT with (x1 := x0); eauto.
 Qed.
 
 Lemma well_founded_implies_Irreflexive' {A : Type} {SETOID : isSetoid A} (R : A -> A -> Prop)
   (WF : well_founded R)
-  (COMPARABILITY : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
+  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
   : forall x1 : A, forall x2 : A, x1 == x2 -> ~ R x1 x2.
 Proof.
   intros x1 x2 EQ. revert x1 EQ.
-  pose proof (well_founded_eqPropCl R WF COMPARABILITY x2) as H_Acc.
+  pose proof (well_founded_eqPropCl R WF COMPAT x2) as H_Acc.
   induction H_Acc as [x2 _ IH]. ii. eapply IH with (x1 := x1) (y := x2); eauto.
   exists x1. now split.
 Qed.

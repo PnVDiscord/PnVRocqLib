@@ -349,8 +349,13 @@ Instance t_hasStrictOrder : hasStrictOrder Cardinality.t :=
 Definition ofType (A : Type@{Set_u}) : Cardinality.t :=
   {|
     Cardinality.carrier := A;
-    Cardinality.carrier_isSetoid := @mkSetoid_from_eq A
+    Cardinality.carrier_isSetoid := @mkSetoid_from_eq A;
   |}.
+
+Definition toTree (kappa : Cardinality.t) : Tree :=
+  let C : Tree := @mkNode (B.sig (kappa.(Cardinality.carrier) -> kappa.(Cardinality.carrier) -> Prop) (fun R => well_founded R /\ (forall x, forall x', x == x' \/ R x x' \/ R x' x) /\ Transitive R /\ eqPropCompatible2 R)) (fun R_wf => fromWfSet R_wf.(B.proj1_sig) (proj1 R_wf.(B.proj2_sig))) in
+  let P (t : Tree) : Prop := forall WOSET : @isWoset kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid), t ≦ᵣ @fromWfSet kappa.(Cardinality.carrier) wltProp wltProp_well_founded in
+  unions (filter P C).
 
 End Cardinality.
 

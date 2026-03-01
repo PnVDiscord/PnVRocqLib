@@ -3,6 +3,7 @@ Require Import PnV.Prelude.Notations.
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Prelude.ConstructiveFacts.
+Require Import PnV.Prelude.Quotient.
 Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Math.ClassicalDomainTheory.
 Require Import PnV.Math.DomainTheory.
@@ -32,5 +33,3 @@ Require Import PnV.System.Lambda1.
 Require Import PnV.System.P.
 Require Import PnV.System.Regex.
 Require Import PnV.System.STLC.
-Require Import PnV.Flower.FlowerAxioms.
-Require Import PnV.Flower.FlowerPrelude.

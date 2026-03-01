@@ -957,6 +957,22 @@ Proof.
     + rewrite -> H_EQ. intros c. econs. exists c. reflexivity.
 Qed.
 
+Lemma unions_rLe_intro (X : Tree) (s : Tree)
+  (H_rLe : forall x, x \in X -> x ≦ᵣ s)
+  : unions X ≦ᵣ s.
+Proof.
+  econs. simpl. intros [i H_i]. simpl.
+  exploit (H_rLe (childnodes X i)); eauto with *.
+Qed.
+
+Lemma filter_rLe_intro (P : Tree -> Prop) (X : Tree) (s : Tree)
+  (H_rLt : forall x, x \in X -> P x -> x <ᵣ s)
+  : filter P X ≦ᵣ s.
+Proof.
+  econs. simpl. intros [i H_i]. simpl.
+  exploit (H_rLt (childnodes X i)); eauto with *.
+Qed.
+
 (** End RANK_COMPARISON. *)
 
 Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x) {struct ACC} : Tree :=
@@ -1195,6 +1211,56 @@ Proof.
     rewrite -> beta_eq in y_in |- *. rewrite fromWf_unfold in y_in. destruct y_in as (c1 & R_c1_c & y_eq).
     rewrite y_eq in z_in. rewrite fromWf_unfold in z_in. destruct z_in as (c2 & R_c2_c1 & z_eq).
     rewrite z_eq. rewrite fromWf_unfold. exists c2. split; eauto with *.
+Qed.
+
+Lemma zer_isOrdinal
+  : isOrdinal empty.
+Proof.
+  econs; ii.
+  - rewrite empty_spec in H. done.
+  - rewrite empty_spec in H. done.
+Qed.
+
+Lemma suc_isOrdinal alpha
+  (ORDINAL : isOrdinal alpha)
+  : isOrdinal (succ alpha).
+Proof.
+  inv ORDINAL. econs; ii.
+  - rewrite succ_spec in H |- *. destruct H.
+    + left. eauto with *.
+    + left. now rewrite <- H.
+  - rewrite succ_spec in H. destruct H.
+    + eapply TRANS'; eauto with *.
+    + rewrite -> H. eapply TRANS with (y := y); eauto.
+      now rewrite <- H.
+Qed.
+
+Lemma sup_isOrdinal I alphas
+  (ORDINAL : forall i : I, isOrdinal (alphas i))
+  : isOrdinal (@indexed_union I alphas).
+Proof.
+  econs; ii.
+  - rewrite indexed_union_spec in H |- *. des.
+    pose proof (ORDINAL i) as [? ?]. exists i.
+    eapply TRANS with (y := y); eauto with *.
+  - rewrite indexed_union_spec in H. des.
+    pose proof (ORDINAL i) as [? ?].
+    eapply TRANS' with (y := y); eauto with *.
+Qed.
+
+Lemma bigcup_of_singleton_isOrdinal (o : Tree) (C : Tree)
+  (ORDINAL : isOrdinal o)
+  (IN : o \in C)
+  (UNIQUE : forall x, forall x', x \in C -> x' \in C -> x == x')
+  : isOrdinal (unions C).
+Proof.
+  assert (claim1 : unions C == o).
+  { eapply extensionality; intros z.
+    rewrite unions_spec. split.
+    - intros (y & z_in & y_in). rewrite UNIQUE with (x := o) (x' := y); eauto.
+    - intros z_in. exists o. split; eauto.
+  }
+  rewrite claim1. exact ORDINAL.
 Qed.
 
 End ORDINAL_basic1.
@@ -1517,11 +1583,11 @@ Proof.
     assert (LT1 : R y x).
     { destruct (TOTAL y x) as [H_EQ | [H_LT | H_GT]].
       - exfalso. eapply well_founded_implies_Irreflexive with (x := x').
-        { eapply B.transitiveClosure_lift_well_founded; eauto. }
+        { eapply B.transitiveClosure_lifts_well_founded; eauto. }
         { econs 2; econs 1; eauto. }
       - trivial.
       - exfalso. eapply well_founded_implies_Irreflexive with (x := x').
-        { eapply B.transitiveClosure_lift_well_founded; eauto. }
+        { eapply B.transitiveClosure_lifts_well_founded; eauto. }
         { econs 2; [econs 1; eauto | econs 2]; econs 1; eauto. }
     }
     eapply rLe_rLt_rLt with (y := fromWf _ (WfHelper.InitialSegRel_wf A R x WF) (@exist _ _ y LT1)).
