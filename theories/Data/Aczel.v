@@ -984,6 +984,21 @@ Proof.
   exploit (H_rLt (childnodes X i)); eauto with *.
 Qed.
 
+Lemma rLe_intro_var1 alpha beta
+  (H_rLt : forall x, x \in alpha -> x <ᵣ beta)
+  : alpha ≦ᵣ beta.
+Proof.
+  econs. intros c. eapply H_rLt; eauto with *.
+Qed.
+
+Lemma rLt_intro_var1 alpha beta
+  (H_rLe : exists x, x \in beta /\ alpha ≦ᵣ x)
+  : alpha <ᵣ beta.
+Proof.
+  econs. destruct H_rLe as (x & [z z_eq] & H_x).
+  rewrite z_eq in H_x. eauto with *.
+Qed.
+
 (** End RANK_COMPARISON. *)
 
 Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x) {struct ACC} : Tree :=
@@ -1025,8 +1040,20 @@ Proof.
   eapply fromAcc_isMonotonic. exact INCL.
 Qed.
 
+Fixpoint fromAcc_eq_intro (A : Type) (R1 : A -> A -> Prop) (R2 : A -> A -> Prop) (x : A) (INCL : forall x : A, forall x' : A, R1 x x' <-> R2 x x') (ACC1 : Acc R1 x) (ACC2 : Acc R2 x) {struct ACC1} : fromAcc x ACC1 == fromAcc x ACC2.
+Proof.
+  destruct ACC1, ACC2; simpl. eapply extensionality; intros z.
+  split; intros [[c R1_c_x] z_eq]; simpl in *.
+  - rewrite z_eq. exists (@exist _ _ c (proj1 (INCL c x) R1_c_x)). simpl.
+    eapply fromAcc_eq_intro. exact INCL.
+  - rewrite z_eq. exists (@exist _ _ c (proj2 (INCL c x) R1_c_x)). simpl.
+    symmetry. eapply fromAcc_eq_intro. exact INCL.
+Qed.
+
 Definition fromWf {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R) (x : A) : Tree :=
   @fromAcc A R x (R_wf x).
+
+#[local] Hint Resolve fromAcc_pirrel : aczel_hints.
 
 Lemma fromWf_unfold {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R) (x : A)
   : forall z, z \in @fromWf A R R_wf x <-> (exists y : A, R y x /\ z == @fromWf A R R_wf y).
@@ -1035,6 +1062,24 @@ Proof.
   - intros z_in. unfold fromWf in z_in. rewrite fromAcc_unfold in z_in. destruct z_in as [[y R_y_x] z_eq]; simpl proj1_sig in z_eq.
     exists y. split; trivial. rewrite z_eq. eapply fromAcc_pirrel.
   - intros (y & R_y_x & z_eq). rewrite z_eq. unfold fromWf. eapply fromAcc_member_fromAcc_intro. exact R_y_x.
+Qed.
+
+Lemma fromWf_spec (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (R_wf : well_founded R)
+  : forall z, z \in @fromWf A R R_wf x <-> (exists y, z == @fromWf A R R_wf y /\ R y x).
+Proof.
+  intros z. split.
+  - intros [c z_eq]. unfold fromWf in *. destruct (R_wf x) as [H_Acc_inv]; simpl in *.
+    destruct c as [y R_y_x]; simpl in *. exists y. rewrite z_eq. split; eauto with *.
+  - intros (y & z_eq & R_y_x). rewrite z_eq. rewrite fromWf_unfold. eauto with *.
+Qed.
+
+Lemma fromWf_eq_intro (A : Type) (R1 : A -> A -> Prop) (R2 : A -> A -> Prop) (x : A)
+  (R1_wf : well_founded R1)
+  (R2_wf : well_founded R2)
+  (INCL : forall x : A, forall x' : A, R1 x x' <-> R2 x x')
+  : fromWf R1 R1_wf x == fromWf R2 R2_wf x.
+Proof.
+  eapply fromAcc_eq_intro; eauto.
 Qed.
 
 Lemma fromWf_isSupremum {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R) (t : Tree) (x : A)
@@ -1106,6 +1151,23 @@ Lemma fromWfSet_cong {A : Type} {B : Type} (RA : A -> A -> Prop) (RB : B -> B ->
   : @fromWfSet A RA RA_wf ≦ᵣ @fromWfSet B RB RB_wf.
 Proof.
   unfold fromWfSet. econs. intros c. econs. simpl in *. exists (f c). eapply fromWf_cong; eauto.
+Qed.
+
+Theorem fromWfSet_InitialSegment  (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A)
+  (R_wf : well_founded R)
+  (R_Transitive : Transitive R)
+  : @fromWf A R R_wf x == @fromWfSet { y : A | R y x } (binary_relation_on_image R (@proj1_sig _ _)) (relation_on_image_liftsWellFounded _ _ R_wf).
+Proof.
+  eapply extensionality. intros z; split.
+  - intros z_in. rewrite fromWf_spec in z_in. destruct z_in as (y & z_eq & R_y_x).
+    rewrite z_eq. exists (@exist _ _ y R_y_x). symmetry. simpl.
+    eapply fromWf_eq_fromWf_intro with (f := @proj1_sig A (fun y => R y x)). intros [a R_a_x] b. simpl. split.
+    + intros [[c R_c_x] [H_c H_b]]. simpl in *. red in H_c. simpl in *. subst c. exists a. split; eauto.
+    + intros [c [H_c H_b]]. subst c. exists (@exist _ _ b (R_Transitive b a x H_c R_a_x)). split; simpl; eauto.
+  - intros [y z_eq]. simpl in *. rewrite z_eq. eapply fromWf_unfold. destruct y as [y H_y]. exists y. split; eauto.
+    eapply fromWf_eq_fromWf_intro with (f := @proj1_sig A (fun y => R y x)). intros [a R_a_x] b. simpl. split.
+    + intros [[c R_c_x] [H_c H_b]]. simpl in *. red in H_c. simpl in *. subst c. exists a. split; eauto.
+    + intros [c [H_c H_b]]. subst c. exists (@exist _ _ b (R_Transitive b a x H_c R_a_x)). split; simpl; eauto. 
 Qed.
 
 Definition succ (x : Tree) : Tree :=
@@ -1469,7 +1531,7 @@ Lemma fromWf_toWoset_Some_in_fromWf_toWoset_Some_iff {projT2_eq : forall A : Typ
 Proof.
   unfold fromWf. split; cycle 1.
   - intros H_LT. rewrite @fromAcc_unfold. des. exists (@exist _ _ z H_LT). simpl. rewrite H_LT0. eapply fromAcc_pirrel.
-  - rewrite fromAcc_unfold. intros [[c H_LT] EQ]; simpl in *. exists c. ss!. rewrite EQ. eapply fromAcc_pirrel.
+  - rewrite fromAcc_unfold. intros [[c H_LT] EQ]; simpl in *. exists c. ss!.
 Qed.
 
 Fixpoint toWellPoset (t : Tree) : { D : Type@{Set_u} & D -> D -> Prop } :=

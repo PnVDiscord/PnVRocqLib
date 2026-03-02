@@ -2041,4 +2041,46 @@ Proof.
       eapply hasCardinality_intro.
 Qed.
 
+#[global]
+Add Parametric Morphism `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : Cardinality.toTree with signature (eqProp ==> eqProp) as toTree_eqPropCompatible.
+Proof.
+  intros kappa kappa' kappa_EQ. eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+  - eapply hasCardinality_isOrdinal. eapply hasCardinality_intro.
+  - eapply hasCardinality_isOrdinal. eapply hasCardinality_intro.
+  - now rewrite <- Cardinality_eq_iff.
+Qed.
+
+Lemma Cardinality_supremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa c
+  (UPPER : forall kappa' : Cardinality.t, forall CLT : kappa' ≨ kappa, forall R : kappa'.(Cardinality.carrier) -> kappa'.(Cardinality.carrier) -> Prop, forall R_wf : well_founded R, forall R_total : forall x, forall x', x == x' \/ R x x' \/ R x' x, Transitive R -> eqPropCompatible2 R -> fromWfSet R R_wf <ᵣ c)
+  : Cardinality.toTree kappa ≦ᵣ c.
+Proof.
+  unfold Cardinality.toTree. eapply rLe_intro_var1. intros x x_in.
+  rewrite unions_spec in x_in. destruct x_in as (y & [z x_eq] & y_in).
+  rewrite x_eq; clear x x_eq. rewrite filter_spec in y_in. destruct y_in as [x [P_x y_eq]]; simpl in *.
+  unred_eqTree. destruct y as [csy tsy]. simpl in z. simpl in y_eq. pose proof (proj1 y_eq z) as [w H_w].
+  unred_eqTree. simpl. rewrite H_w. rewrite fromWfSet_InitialSegment with (R_Transitive := proj1 (proj2 (proj2 (B.proj2_sig x)))).
+  set (kappa' := {| Cardinality.carrier := { y : Cardinality.carrier kappa | B.proj1_sig x y w }; Cardinality.carrier_isSetoid := subSetoid (fun y => B.proj1_sig x y w); |}).
+  eapply UPPER with (kappa' := kappa').
+  - eapply NNPP. intros H_not_cLt. contradiction H_not_cLt.
+    rewrite Cardinality_lt_iff. eapply rLe_rLt_rLt.
+    { unshelve eapply Cardinality_lowerbound with (R := binary_relation_on_image x.(B.proj1_sig) (@proj1_sig _ _)) (R_wf := (relation_on_image_liftsWellFounded x.(B.proj1_sig) (@proj1_sig _ _) (proj1 x.(B.proj2_sig)))); unfold binary_relation_on_image.
+      - intros [x1 H_x1] [x2 H_x2]. exact (proj1 (proj2 x.(B.proj2_sig)) x1 x2).
+      - intros [x1 H_x1] [x2 H_x2] [x3 H_x3]. exact (proj1 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 x3).
+      - intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]. exact (proj2 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 y1 y2).
+    }
+    pose proof (fromWfSet_InitialSegment kappa.(Cardinality.carrier) x.(B.proj1_sig) w (proj1 x.(B.proj2_sig)) (proj1 (proj2 (proj2 x.(B.proj2_sig))))) as claim5.
+    eapply rLe_rLt_rLt with (y := fromWf x.(B.proj1_sig) (proj1 x.(B.proj2_sig)) w).
+    { rewrite -> claim5. reflexivity. }
+    eapply rLt_rLe_rLt with (y := fromWfSet x.(B.proj1_sig) (proj1 x.(B.proj2_sig))).
+    { eapply member_implies_rLt. exists w. reflexivity. }
+    pose proof (hasCardinality_intro kappa) as [R2 MIN2]. destruct R2 as (R2 & R2_wf & R2_total & R2_Transitive & R2_eqPropCompatible2 & H_R2).
+    set (WPOSET2 := {| wltProp := R2; wltProp_Transitive := R2_Transitive; wltProp_well_founded := R2_wf; |}).
+    set (WOSET2 := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET2 R2_eqPropCompatible2 R2_total).
+    rewrite <- H_R2. now change (fromWfSet (B.proj1_sig x) (proj1 (B.proj2_sig x)) ≦ᵣ fromWfSet WOSET2.(Woset_isWellPoset).(wltProp) WOSET2.(Woset_isWellPoset).(wltProp_well_founded)).
+  - intros [x1 H_x1] [x2 H_x2]. exact (proj1 (proj2 x.(B.proj2_sig)) x1 x2).
+  - intros [x1 H_x1] [x2 H_x2] [x3 H_x3]. exact (proj1 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 x3).
+  - intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]. exact (proj2 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 y1 y2).
+Qed.
+
 End CARDINALITY.
