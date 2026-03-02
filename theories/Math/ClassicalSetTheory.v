@@ -2008,4 +2008,37 @@ Proof.
       contradiction (well_founded_implies_Irreflexive rLt rLt_wf (Cardinality.toTree kappa')).
 Qed.
 
+#[global]
+Add Parametric Morphism `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : hasCardinality with signature (eqProp ==> eqProp ==> iff) as hasCardinality_eqPropCompatible.
+Proof.
+  intros kappa kappa' kappa_EQ c c' c_EQ. transitivity (kappa `hasCardinality` c').
+  - split; now eapply hasCardinality_rewrite_r.
+  - split; intros H.
+    + pose proof (hasCardinality_intro kappa) as claim1.
+      assert (claim2 : c' == Cardinality.toTree kappa).
+      { eapply hasCardinality_unique; eauto. }
+      assert (claim3 : Cardinality.toTree kappa == Cardinality.toTree kappa').
+      { eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+        - eapply hasCardinality_isOrdinal. eapply hasCardinality_intro.
+        - eapply hasCardinality_isOrdinal. eapply hasCardinality_intro.
+        - now rewrite <- Cardinality_eq_iff.
+      }
+      eapply hasCardinality_rewrite_r with (c := Cardinality.toTree kappa').
+      { now rewrite -> claim2. }
+      eapply hasCardinality_intro.
+    + pose proof (hasCardinality_intro kappa') as claim1.
+      assert (claim2 : c' == Cardinality.toTree kappa').
+      { eapply hasCardinality_unique; eauto. }
+      assert (claim3 : Cardinality.toTree kappa == Cardinality.toTree kappa').
+      { eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+        - eapply hasCardinality_isOrdinal. eapply hasCardinality_intro.
+        - eapply hasCardinality_isOrdinal. eapply hasCardinality_intro.
+        - now rewrite <- Cardinality_eq_iff.
+      }
+      eapply hasCardinality_rewrite_r with (c := Cardinality.toTree kappa).
+      { now rewrite -> claim2. }
+      eapply hasCardinality_intro.
+Qed.
+
 End CARDINALITY.

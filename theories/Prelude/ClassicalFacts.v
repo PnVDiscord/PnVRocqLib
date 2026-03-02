@@ -44,3 +44,5 @@ Class ClassicalAxioms `{b_AC : bool} `{b_fun_ext : bool} `{b_prop_ext : bool} : 
     (EQUAL : P <-> P')
     : if b_prop_ext then P = P' else True
   } as ClassicalAxioms.
+
+#[global] Notation flagsOfClassicalAxioms := @ClassicalAxioms.
