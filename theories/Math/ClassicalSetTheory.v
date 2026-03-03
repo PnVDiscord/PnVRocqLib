@@ -9,6 +9,7 @@ Import TypeTheoreticImplementation.
 Section ClassicalWoset.
 
 #[local] Infix "\in" := member : type_scope.
+
 #[local] Infix "\subseteq" := isSubsetOf : type_scope.
 
 Lemma fromWf_rLt_fromWf_iff {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (x' : A) 
@@ -362,11 +363,13 @@ Section BOURBAKI_WITT_FIXEDPOINT_THEOREM.
 Context {D : Type}.
 
 Variable good : D -> Prop.
+
 Variable dle : D -> D -> Prop.
 
 #[local] Infix "⊑" := dle.
 
 Hypothesis dle_refl : forall d1 : D, forall GOOD1 : good d1, d1 ⊑ d1.
+
 Hypothesis dle_trans : forall d1 : D, forall d2 : D, forall d3 : D, forall GOOD1 : good d1, forall GOOD2 : good d2, forall GOOD3 : good d3, forall LE : d1 ⊑ d2, forall LE' : d2 ⊑ d3, d1 ⊑ d3.
 
 Lemma dle_unfold (d1 : D) (d2 : D)
@@ -379,7 +382,9 @@ Qed.
 
 Let deq (lhs : D) (rhs : D) : Prop :=
   lhs ⊑ rhs /\ rhs ⊑ lhs.
+
 #[local] Infix "≡" := deq.
+
 #[local] Hint Unfold deq : core.
 
 Lemma deq_refl d1
@@ -420,11 +425,15 @@ Proof.
 Qed.
 
 Variable dbase : D.
+
 Hypothesis dbase_good : good dbase.
 
 Variable next : D -> D.
+
 Hypothesis next_good : forall d : D, forall GOOD : good d, good (next d).
+
 Hypothesis next_extensive : forall d : D, forall GOOD : good d, d ⊑ next d.
+
 Hypothesis next_congruence : forall d : D, forall d' : D, forall GOOD : good d, forall GOOD' : good d', forall EQ : d ≡ d', next d ≡ next d'.
 
 Let rec : Tree -> D :=
@@ -1069,9 +1078,11 @@ Module Ordinal1.
 Section ORDINAL_section1.
 
 #[local] Infix "\in" := member.
+
 #[local] Infix "\subseteq" := isSubsetOf.
 
 #[local] Hint Resolve isOrdinal_member_isOrdinal : core.
+
 #[local] Hint Unfold rEq : simplication_hints.
 
 Lemma Ordinal_comparison__aux1 (x : Tree) (alpha : Tree) (beta : Tree)
@@ -1142,6 +1153,7 @@ End ORDINAL_section1.
 Section RANK.
 
 #[local] Infix "\in" := member.
+
 #[local] Infix "\subseteq" := isSubsetOf.
 
 Lemma toSet_wlt_Transitive (t : Tree)
@@ -1181,6 +1193,7 @@ End RANK.
 Section ToOrderType.
 
 #[local] Infix "\in" := member.
+
 #[local] Infix "\subseteq" := isSubsetOf.
 
 Lemma FromOrderType_ToOrderType_rEq (alpha : Tree)
@@ -1725,6 +1738,7 @@ Infix "`hasCardinality`" := hasCardinality.
 Section CARDINALITY.
 
 #[local] Infix "\in" := member.
+
 #[local] Infix "\subseteq" := isSubsetOf.
 
 Section CARDINAL.
@@ -1742,17 +1756,17 @@ Proof using Axms kappa.
   exploit (@O.minimisation_lemma classic _ _ rLt_isWellOrdering P).
   { exists (@FromOrderType _ _ WOSET). red. exists R0, R0_wf. splits; eauto. unfold FromOrderType. reflexivity. }
   intros (c & H_c & MIN); unnw. red in H_c. destruct H_c as (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_c). split.
-  { exists R, R_wf. splits; eauto. eapply extensionality. intros z; split; intros z_in.
-    - unfold Cardinality.toTree. rewrite unions_spec. exists (fromWfSet R R_wf). split; eauto.
+  - exists R, R_wf. splits; eauto. eapply extensionality. intros z; split; intros z_in.
+    + unfold Cardinality.toTree. rewrite unions_spec. exists (fromWfSet R R_wf). split; eauto.
       rewrite filter_spec. simpl children. exists (B.exist R (conj R_wf (conj R_total (conj R_Transitive R_eqPropCompatible2)))). split.
-      + intros WOSET'. simpl. rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R_wf). rewrite InducedOrdinal.rLe_iff_rLt_or_rEq.
+      * intros WOSET'. simpl. rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R_wf). rewrite InducedOrdinal.rLe_iff_rLt_or_rEq.
         rewrite -> H_c. eapply MIN. red. exists WOSET'.(Woset_isWellPoset).(wltProp), WOSET'.(Woset_isWellPoset).(wltProp_well_founded).
         split. { unshelve eapply O.wlt_trichotomous. exact classic. }
         split. { exact WOSET'.(Woset_isWellPoset).(wltProp_Transitive). }
         split. { exact WOSET'.(Woset_eqPropCompatible2). }
         reflexivity.
-      + simpl childnodes. rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R_wf). reflexivity.
-    - unfold Cardinality.toTree in z_in. rewrite unions_spec in z_in. destruct z_in as (y & z_in & y_in).
+      * simpl childnodes. rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R_wf). reflexivity.
+    + unfold Cardinality.toTree in z_in. rewrite unions_spec in z_in. destruct z_in as (y & z_in & y_in).
       rewrite filter_spec in y_in. simpl children in y_in. destruct y_in as (i & H_i & y_eq). simpl childnodes in H_i, y_eq.
       rewrite y_eq in z_in. clear y y_eq.
       enough (fromWfSet R R_wf == fromWfSet (B.proj1_sig i) (proj1 (B.proj2_sig i))) as WTS by now rewrite WTS.
@@ -1764,21 +1778,19 @@ Proof using Axms kappa.
       { change (isOrdinal (@FromOrderType _ _ WOSET')). eapply FromOrderType_isOrdinal. }
       { change (isOrdinal (@FromOrderType _ _ WOSET'')). eapply FromOrderType_isOrdinal. }
       split.
-      + rewrite -> H_c. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq. eapply MIN. red. exists (B.proj1_sig i), (proj1 (B.proj2_sig i)).
+      * rewrite -> H_c. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq. eapply MIN. red. exists (B.proj1_sig i), (proj1 (B.proj2_sig i)).
         split. { exact (proj1 (proj2 (i.(B.proj2_sig)))). }
         split. { exact (proj1 (proj2 (proj2 i.(B.proj2_sig)))). }
         split. { exact (proj2 (proj2 (proj2 i.(B.proj2_sig)))). }
         reflexivity.
-      + exact (H_i WOSET').
-  }
-  { intros alpha (R1 & R1_wf & R1_total & R1_Transitive & R1_eqPropCompatible2 & H_alpha).
+      * exact (H_i WOSET').
+  - intros alpha (R1 & R1_wf & R1_total & R1_Transitive & R1_eqPropCompatible2 & H_alpha).
     rewrite <- H_alpha. unfold Cardinality.toTree. eapply unions_rLe_intro. intros x x_in.
     rewrite filter_spec in x_in. simpl children in x_in; simpl childnodes in x_in.
     destruct x_in as (i & H_i & H_x). rewrite H_x. clear x H_x.
     set (WPOSET' := {| wltProp := R1; wltProp_Transitive := R1_Transitive; wltProp_well_founded := R1_wf; |}).
     set (WOSET' := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET' R1_eqPropCompatible2 R1_total).
     exact (H_i WOSET').
-  }
 Qed.
 
 Lemma hasCardinality_isOrdinal c
@@ -1853,9 +1865,8 @@ Proof.
   { unfold binary_relation_on_image; ii; eauto. }
   set (R1 := binary_relation_on_image R f) in *.
   set (R1_wf := relation_on_image_liftsWellFounded R f R_wf) in *.
-  clearbody R1_wf. splits; eauto.
-  transitivity (fromWfSet R1 R1_wf).
-  - eapply hasCardinality_intro. exists R1, R1_wf. splits; eauto with *.
+  clearbody R1_wf. splits; eauto. transitivity (fromWfSet R1 R1_wf).
+  - pose proof (hasCardinality_intro kappa) as [_ MIN']. eapply MIN'. exists R1, R1_wf. splits; eauto with *.
   - eapply fromWfSet_cong with (f := f); eauto with *.
 Qed.
 
@@ -2052,7 +2063,7 @@ Lemma Cardinality_supremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext :=
 Proof.
   unfold Cardinality.toTree. eapply rLe_intro_var1. intros x x_in.
   rewrite unions_spec in x_in. destruct x_in as (y & [z x_eq] & y_in).
-  rewrite x_eq; clear x x_eq. rewrite filter_spec in y_in. destruct y_in as [x [P_x y_eq]]; simpl in *.
+  rewrite x_eq; clear x x_eq. rewrite filter_spec in y_in. destruct y_in as [x [H_x y_eq]]; simpl in *.
   unred_eqTree. destruct y as [csy tsy]. simpl in z. simpl in y_eq. pose proof (proj1 y_eq z) as [w H_w].
   unred_eqTree. simpl. rewrite H_w. rewrite fromWfSet_InitialSegment with (R_Transitive := proj1 (proj2 (proj2 (B.proj2_sig x)))).
   set (kappa' := {| Cardinality.carrier := { y : Cardinality.carrier kappa | B.proj1_sig x y w }; Cardinality.carrier_isSetoid := subSetoid (fun y => B.proj1_sig x y w); |}).
@@ -2071,7 +2082,7 @@ Proof.
     pose proof (hasCardinality_intro kappa) as [R2 MIN2]. destruct R2 as (R2 & R2_wf & R2_total & R2_Transitive & R2_eqPropCompatible2 & H_R2).
     set (WPOSET2 := {| wltProp := R2; wltProp_Transitive := R2_Transitive; wltProp_well_founded := R2_wf; |}).
     set (WOSET2 := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET2 R2_eqPropCompatible2 R2_total).
-    rewrite <- H_R2. now change (fromWfSet (B.proj1_sig x) (proj1 (B.proj2_sig x)) ≦ᵣ fromWfSet WOSET2.(Woset_isWellPoset).(wltProp) WOSET2.(Woset_isWellPoset).(wltProp_well_founded)).
+    rewrite <- H_R2. change (fromWfSet (B.proj1_sig x) (proj1 (B.proj2_sig x)) ≦ᵣ fromWfSet WOSET2.(Woset_isWellPoset).(wltProp) WOSET2.(Woset_isWellPoset).(wltProp_well_founded)). exact (H_x WOSET2).
   - intros [x1 H_x1] [x2 H_x2]. exact (proj1 (proj2 x.(B.proj2_sig)) x1 x2).
   - intros [x1 H_x1] [x2 H_x2] [x3 H_x3]. exact (proj1 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 x3).
   - intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]. exact (proj2 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 y1 y2).
