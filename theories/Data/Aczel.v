@@ -1153,7 +1153,7 @@ Proof.
   unfold fromWfSet. econs. intros c. econs. simpl in *. exists (f c). eapply fromWf_cong; eauto.
 Qed.
 
-Theorem fromWfSet_InitialSegment  (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A)
+Theorem fromWfSet_InitialSegment (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A)
   (R_wf : well_founded R)
   (R_Transitive : Transitive R)
   : @fromWf A R R_wf x == @fromWfSet { y : A | R y x } (binary_relation_on_image R (@proj1_sig _ _)) (relation_on_image_liftsWellFounded _ _ R_wf).

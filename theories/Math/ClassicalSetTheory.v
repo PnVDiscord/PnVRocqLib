@@ -1844,24 +1844,19 @@ Lemma Cardinality_le_elim `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := 
   : Cardinality.toTree kappa ≦ᵣ Cardinality.toTree kappa'.
 Proof.
   hexploit (hasCardinality_intro kappa'); intros [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_kappa') MIN].
-  rewrite <- H_kappa'. inversion H_cLe. 
-  pose proof (R1_wf := WfHelper.ProjectedRelRev_wf _ _ R f R_wf).
-  set (R1 := WfHelper.ProjectedRelRev R f) in *.
+  rewrite <- H_kappa'. inversion H_cLe.
+  assert (R1_total : forall x, forall x', x == x' \/ binary_relation_on_image R f x x' \/ binary_relation_on_image R f x' x).
+  { unfold binary_relation_on_image; intros x1 x2. pose proof (R_total (f x1) (f x2)) as [H_EQ | [H_LT | H_GT]]; eauto. }
+  assert (R1_Transitive : Transitive (binary_relation_on_image R f)).
+  { unfold binary_relation_on_image; ii; eauto. }
+  assert (R1_eqPropCompatible2 : eqPropCompatible2 (binary_relation_on_image R f)).
+  { unfold binary_relation_on_image; ii; eauto. }
+  set (R1 := binary_relation_on_image R f) in *.
+  set (R1_wf := relation_on_image_liftsWellFounded R f R_wf) in *.
+  clearbody R1_wf. splits; eauto.
   transitivity (fromWfSet R1 R1_wf).
-  - eapply hasCardinality_intro. exists R1, R1_wf.
-    set (WPOSET' := {| wltProp := R; wltProp_Transitive := R_Transitive; wltProp_well_founded := R_wf; |}).
-    set (WOSET' := @O.WellfoundedToset_isWoset classic kappa'.(Cardinality.carrier) kappa'.(Cardinality.carrier_isSetoid) WPOSET' R_eqPropCompatible2 R_total).
-    unfold R1. splits; eauto with *.
-    + intros x x'. pose proof (@O.wlt_trichotomous classic kappa'.(Cardinality.carrier) kappa'.(Cardinality.carrier_isSetoid) WOSET' (f x) (f x')) as [H_EQ | [H_LT | H_GT]].
-      * left. now eapply f_inj.
-      * right. left. eauto.
-      * right. right. eauto.
-    + intros x x' x'' H_LT H_LT'. eapply R_Transitive with (y := f x'); eauto.
-    + ii. change (R (f x1) (f y1) <-> R (f x2) (f y2)).
-      pose proof (f_cong _ _ x_EQ) as f_x_EQ.
-      pose proof (f_cong _ _ y_EQ) as f_y_EQ.
-      now rewrite f_x_EQ, f_y_EQ.
-  - eapply fromWfSet_cong with (f := f). eauto.
+  - eapply hasCardinality_intro. exists R1, R1_wf. splits; eauto with *.
+  - eapply fromWfSet_cong with (f := f); eauto with *.
 Qed.
 
 Lemma Cardinality_upperbound `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (kappa' : Cardinality.t) (R : kappa'.(Cardinality.carrier) -> kappa'.(Cardinality.carrier) -> Prop)
@@ -2010,7 +2005,7 @@ Qed.
 
 #[global]
 Add Parametric Morphism `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
-  : hasCardinality with signature (eqProp ==> eqProp ==> iff) as hasCardinality_eqPropCompatible.
+  : hasCardinality with signature (@eqProp Cardinality.t Cardinality.t_isSetoid ==> @eqProp Tree Tree_isSetoid ==> iff) as hasCardinality_eqPropCompatible.
 Proof.
   intros kappa kappa' kappa_EQ c c' c_EQ. transitivity (kappa `hasCardinality` c').
   - split; now eapply hasCardinality_rewrite_r.
@@ -2043,7 +2038,7 @@ Qed.
 
 #[global]
 Add Parametric Morphism `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
-  : Cardinality.toTree with signature (eqProp ==> eqProp) as toTree_eqPropCompatible.
+  : Cardinality.toTree with signature (@eqProp Cardinality.t Cardinality.t_isSetoid ==> @eqProp Tree Tree_isSetoid) as toTree_eqPropCompatible.
 Proof.
   intros kappa kappa' kappa_EQ. eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
   - eapply hasCardinality_isOrdinal. eapply hasCardinality_intro.
@@ -2052,7 +2047,7 @@ Proof.
 Qed.
 
 Lemma Cardinality_supremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa c
-  (UPPER : forall kappa' : Cardinality.t, forall CLT : kappa' ≨ kappa, forall R : kappa'.(Cardinality.carrier) -> kappa'.(Cardinality.carrier) -> Prop, forall R_wf : well_founded R, forall R_total : forall x, forall x', x == x' \/ R x x' \/ R x' x, Transitive R -> eqPropCompatible2 R -> fromWfSet R R_wf <ᵣ c)
+  (UPPER : forall kappa' : Cardinality.t, forall CLT : kappa' ≨ kappa, forall R : kappa'.(Cardinality.carrier) -> kappa'.(Cardinality.carrier) -> Prop, forall R_wf : well_founded R, forall R_total : forall x, forall x', x == x' \/ R x x' \/ R x' x, forall R_Transitive : Transitive R, forall R_eqPropCompatible2 : eqPropCompatible2 R, fromWfSet R R_wf <ᵣ c)
   : Cardinality.toTree kappa ≦ᵣ c.
 Proof.
   unfold Cardinality.toTree. eapply rLe_intro_var1. intros x x_in.
@@ -2062,9 +2057,8 @@ Proof.
   unred_eqTree. simpl. rewrite H_w. rewrite fromWfSet_InitialSegment with (R_Transitive := proj1 (proj2 (proj2 (B.proj2_sig x)))).
   set (kappa' := {| Cardinality.carrier := { y : Cardinality.carrier kappa | B.proj1_sig x y w }; Cardinality.carrier_isSetoid := subSetoid (fun y => B.proj1_sig x y w); |}).
   eapply UPPER with (kappa' := kappa').
-  - eapply NNPP. intros H_not_cLt. contradiction H_not_cLt.
-    rewrite Cardinality_lt_iff. eapply rLe_rLt_rLt.
-    { unshelve eapply Cardinality_lowerbound with (R := binary_relation_on_image x.(B.proj1_sig) (@proj1_sig _ _)) (R_wf := (relation_on_image_liftsWellFounded x.(B.proj1_sig) (@proj1_sig _ _) (proj1 x.(B.proj2_sig)))); unfold binary_relation_on_image.
+  - rewrite Cardinality_lt_iff. eapply rLe_rLt_rLt.
+    { eapply Cardinality_lowerbound with (R := binary_relation_on_image x.(B.proj1_sig) (@proj1_sig _ _)) (R_wf := (relation_on_image_liftsWellFounded x.(B.proj1_sig) (@proj1_sig _ _) (proj1 x.(B.proj2_sig)))).
       - intros [x1 H_x1] [x2 H_x2]. exact (proj1 (proj2 x.(B.proj2_sig)) x1 x2).
       - intros [x1 H_x1] [x2 H_x2] [x3 H_x3]. exact (proj1 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 x3).
       - intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]. exact (proj2 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 y1 y2).
