@@ -386,3 +386,15 @@ Definition _Card_exp : Card -> Card -> Card :=
   Cardinality.exp.
 
 End TypeTheoreticImplementation.
+
+Section ORDINAL_ARITHMETIC.
+
+#[local]
+Instance rLe_asProset : isProset Tree :=
+  { Proset_isSetoid := rEq_asSetoid
+  ; leProp := rLe
+  ; leProp_PreOrder := rLe_PreOrder
+  ; leProp_PartialOrder := rLe_PartialOrder
+  }.
+
+End ORDINAL_ARITHMETIC.

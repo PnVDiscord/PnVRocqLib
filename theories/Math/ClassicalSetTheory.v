@@ -1759,13 +1759,13 @@ Proof using Axms kappa.
   - exists R, R_wf. splits; eauto. eapply extensionality. intros z; split; intros z_in.
     + unfold Cardinality.toTree. rewrite unions_spec. exists (fromWfSet R R_wf). split; eauto.
       rewrite filter_spec. simpl children. exists (B.exist R (conj R_wf (conj R_total (conj R_Transitive R_eqPropCompatible2)))). split.
-      * intros WOSET'. simpl. rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R_wf). rewrite InducedOrdinal.rLe_iff_rLt_or_rEq.
+      * intros WOSET'. simpl. rewrite fromWfSet_pirrel with (R_wf := proj1 _) (R_wf' := R_wf). rewrite InducedOrdinal.rLe_iff_rLt_or_rEq.
         rewrite -> H_c. eapply MIN. red. exists WOSET'.(Woset_isWellPoset).(wltProp), WOSET'.(Woset_isWellPoset).(wltProp_well_founded).
         split. { unshelve eapply O.wlt_trichotomous. exact classic. }
         split. { exact WOSET'.(Woset_isWellPoset).(wltProp_Transitive). }
         split. { exact WOSET'.(Woset_eqPropCompatible2). }
         reflexivity.
-      * simpl childnodes. rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R_wf). reflexivity.
+      * simpl childnodes. rewrite fromWfSet_pirrel with (R_wf := proj1 _) (R_wf' := R_wf). reflexivity.
     + unfold Cardinality.toTree in z_in. rewrite unions_spec in z_in. destruct z_in as (y & z_in & y_in).
       rewrite filter_spec in y_in. simpl children in y_in. destruct y_in as (i & H_i & y_eq). simpl childnodes in H_i, y_eq.
       rewrite y_eq in z_in. clear y y_eq.
@@ -1892,13 +1892,13 @@ Proof.
   { unshelve eexists (B.exist R1 _).
     - splits; eauto.
     - split.
-      + intros WOSET'. simpl. rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R1_wf). rewrite -> H_c. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq.
+      + intros WOSET'. simpl. rewrite fromWfSet_pirrel with (R_wf := proj1 _) (R_wf' := R1_wf). rewrite -> H_c. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq.
         eapply MIN. exists WOSET'.(Woset_isWellPoset).(wltProp), WOSET'.(Woset_isWellPoset).(wltProp_well_founded).
         split. { unshelve eapply O.wlt_trichotomous. exact classic. }
         split. { exact WOSET'.(Woset_isWellPoset).(wltProp_Transitive). }
         split. { exact WOSET'.(Woset_eqPropCompatible2). }
         reflexivity.
-      + simpl childnodes. now rewrite proof_irrelevance with (p1 := proj1 _) (p2 := R1_wf).
+      + simpl childnodes. now rewrite fromWfSet_pirrel with (R_wf := proj1 _) (R_wf' := R1_wf).
   }
   eapply NNPP. intros H_contra.
   assert (SUBSET : fromWfSet R1 R1_wf \subseteq fromWfSet R R_wf).
@@ -2057,7 +2057,17 @@ Proof.
   - now rewrite <- Cardinality_eq_iff.
 Qed.
 
-Lemma Cardinality_supremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa c
+#[local] Existing Instance rLe_asProset.
+
+#[global]
+Instance Cardinality_toTree_isMonotonic1 `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : isMonotonic1 (A_isProset := Cardinality.t_isProset) (B_isProset := rLe_asProset) Cardinality.toTree.
+Proof.
+  intros kappa kappa' kappa_LE. do 2 red.
+  now rewrite <- Cardinality_le_iff.
+Qed.
+
+Lemma Cardinality_supremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (c : Tree)
   (UPPER : forall kappa' : Cardinality.t, forall CLT : kappa' ≨ kappa, forall R : kappa'.(Cardinality.carrier) -> kappa'.(Cardinality.carrier) -> Prop, forall R_wf : well_founded R, forall R_total : forall x, forall x', x == x' \/ R x x' \/ R x' x, forall R_Transitive : Transitive R, forall R_eqPropCompatible2 : eqPropCompatible2 R, fromWfSet R R_wf <ᵣ c)
   : Cardinality.toTree kappa ≦ᵣ c.
 Proof.
