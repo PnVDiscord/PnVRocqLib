@@ -2077,25 +2077,21 @@ Proof.
   unred_eqTree. destruct y as [csy tsy]. simpl in z. simpl in y_eq. pose proof (proj1 y_eq z) as [w H_w].
   unred_eqTree. simpl. rewrite H_w. rewrite fromWfSet_InitialSegment with (R_Transitive := proj1 (proj2 (proj2 (B.proj2_sig x)))).
   set (kappa' := {| Cardinality.carrier := { y : Cardinality.carrier kappa | B.proj1_sig x y w }; Cardinality.carrier_isSetoid := subSetoid (fun y => B.proj1_sig x y w); |}).
-  eapply UPPER with (kappa' := kappa').
-  - rewrite Cardinality_lt_iff. eapply rLe_rLt_rLt.
-    { eapply Cardinality_lowerbound with (R := binary_relation_on_image x.(B.proj1_sig) (@proj1_sig _ _)) (R_wf := (relation_on_image_liftsWellFounded x.(B.proj1_sig) (@proj1_sig _ _) (proj1 x.(B.proj2_sig)))).
-      - intros [x1 H_x1] [x2 H_x2]. exact (proj1 (proj2 x.(B.proj2_sig)) x1 x2).
-      - intros [x1 H_x1] [x2 H_x2] [x3 H_x3]. exact (proj1 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 x3).
-      - intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]. exact (proj2 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 y1 y2).
-    }
-    pose proof (fromWfSet_InitialSegment kappa.(Cardinality.carrier) x.(B.proj1_sig) w (proj1 x.(B.proj2_sig)) (proj1 (proj2 (proj2 x.(B.proj2_sig))))) as claim5.
-    eapply rLe_rLt_rLt with (y := fromWf x.(B.proj1_sig) (proj1 x.(B.proj2_sig)) w).
-    { rewrite -> claim5. reflexivity. }
-    eapply rLt_rLe_rLt with (y := fromWfSet x.(B.proj1_sig) (proj1 x.(B.proj2_sig))).
-    { eapply member_implies_rLt. exists w. reflexivity. }
-    pose proof (hasCardinality_intro kappa) as [R2 MIN2]. destruct R2 as (R2 & R2_wf & R2_total & R2_Transitive & R2_eqPropCompatible2 & H_R2).
-    set (WPOSET2 := {| wltProp := R2; wltProp_Transitive := R2_Transitive; wltProp_well_founded := R2_wf; |}).
-    set (WOSET2 := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET2 R2_eqPropCompatible2 R2_total).
-    rewrite <- H_R2. change (fromWfSet (B.proj1_sig x) (proj1 (B.proj2_sig x)) ≦ᵣ fromWfSet WOSET2.(Woset_isWellPoset).(wltProp) WOSET2.(Woset_isWellPoset).(wltProp_well_founded)). exact (H_x WOSET2).
-  - intros [x1 H_x1] [x2 H_x2]. exact (proj1 (proj2 x.(B.proj2_sig)) x1 x2).
-  - intros [x1 H_x1] [x2 H_x2] [x3 H_x3]. exact (proj1 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 x3).
-  - intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]. exact (proj2 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 y1 y2).
+  assert (claim1 : forall a : Cardinality.carrier kappa', forall b : Cardinality.carrier kappa', a == b \/ binary_relation_on_image (B.proj1_sig x) (@proj1_sig _ _) a b \/ binary_relation_on_image (B.proj1_sig x) (@proj1_sig _ _) b a) by now intros [x1 H_x1] [x2 H_x2]; exact (proj1 (proj2 x.(B.proj2_sig)) x1 x2).
+  assert (claim2 : Transitive (binary_relation_on_image (B.proj1_sig x) (@proj1_sig _ (fun y : Cardinality.carrier kappa => B.proj1_sig x y w)))) by now intros [x1 H_x1] [x2 H_x2] [x3 H_x3]; exact (proj1 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 x3).
+  assert (claim3 : eqPropCompatible2 (binary_relation_on_image (B.proj1_sig x) (@proj1_sig _ (fun y : Cardinality.carrier kappa => B.proj1_sig x y w)))) by now intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]; exact (proj2 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 y1 y2).
+  eapply UPPER with (kappa' := kappa'); eauto.
+  rewrite Cardinality_lt_iff. eapply rLe_rLt_rLt.
+  eapply Cardinality_lowerbound with (R := binary_relation_on_image x.(B.proj1_sig) (@proj1_sig _ _)) (R_wf := (relation_on_image_liftsWellFounded x.(B.proj1_sig) (@proj1_sig _ _) (proj1 x.(B.proj2_sig)))); eauto.
+  pose proof (fromWfSet_InitialSegment kappa.(Cardinality.carrier) x.(B.proj1_sig) w (proj1 x.(B.proj2_sig)) (proj1 (proj2 (proj2 x.(B.proj2_sig))))) as claim5.
+  eapply rLe_rLt_rLt with (y := fromWf x.(B.proj1_sig) (proj1 x.(B.proj2_sig)) w).
+  { rewrite -> claim5. reflexivity. }
+  eapply rLt_rLe_rLt with (y := fromWfSet x.(B.proj1_sig) (proj1 x.(B.proj2_sig))).
+  { eapply member_implies_rLt. exists w. reflexivity. }
+  pose proof (hasCardinality_intro kappa) as [R2 MIN2]. destruct R2 as (R2 & R2_wf & R2_total & R2_Transitive & R2_eqPropCompatible2 & H_R2).
+  set (WPOSET2 := {| wltProp := R2; wltProp_Transitive := R2_Transitive; wltProp_well_founded := R2_wf; |}).
+  set (WOSET2 := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET2 R2_eqPropCompatible2 R2_total).
+  rewrite <- H_R2. change (fromWfSet (B.proj1_sig x) (proj1 (B.proj2_sig x)) ≦ᵣ fromWfSet WOSET2.(Woset_isWellPoset).(wltProp) WOSET2.(Woset_isWellPoset).(wltProp_well_founded)). exact (H_x WOSET2).
 Qed.
 
 End CARDINALITY.
