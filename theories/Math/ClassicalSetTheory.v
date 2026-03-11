@@ -320,13 +320,13 @@ Proof.
   exists o'. econs; eauto. intros o1 o1_in. rewrite rLe_iff_rLt_or_rEq. now eapply MIN.
 Qed.
 
-Definition is_open (alpha : Tree) : Prop :=
+Definition approx (alpha : Tree) : Prop :=
   forall c1 : children alpha, exists c2 : children alpha, childnodes alpha c1 <ᵣ childnodes alpha c2.
 
 Lemma limit_or_succ (alpha : Tree)
-  : ⟪ LIMIT : (alpha =ᵣ unions alpha) /\ (is_open alpha) ⟫ \/ ⟪ SUCC : (exists beta : Tree, alpha =ᵣ succ beta) /\ (~ is_open alpha) ⟫.
+  : ⟪ LIMIT : (alpha =ᵣ unions alpha) /\ (approx alpha) ⟫ \/ ⟪ SUCC : (exists beta : Tree, alpha =ᵣ succ beta) /\ (~ approx alpha) ⟫.
 Proof.
-  unnw. unfold is_open. destruct alpha as [cs ts]; simpl. pose proof (classic (forall c, exists c', ts c <ᵣ ts c')) as [YES | NO].
+  unnw. unfold approx. destruct alpha as [cs ts]; simpl. pose proof (classic (forall c, exists c', ts c <ᵣ ts c')) as [YES | NO].
   - left. split; eauto. split.
     + econs. simpl; i. econs. simpl. pose proof (YES c) as [c' [[t H_rLe]]].
       exists (@existT cs (fun i => children (ts i)) c' t). exact H_rLe.
@@ -1190,22 +1190,22 @@ Qed.
 
 End RANK.
 
-Section fromTree.
+Section toSet.
 
 #[local] Infix "\in" := member.
 
 #[local] Infix "\subseteq" := isSubsetOf.
 
-Lemma FromOrderType_fromTree_rEq (alpha : Tree)
-  : FromOrderType (fromTree alpha) =ᵣ alpha.
+Lemma FromOrderType_toSet_rEq (alpha : Tree)
+  : FromOrderType (toSet alpha) =ᵣ alpha.
 Proof.
   symmetry. etransitivity.
   - symmetry. eapply rank_rEq.
   - eapply Totalify.fromWfSet_rEq.
 Qed.
 
-Lemma fromTree_wlt_iff (alpha : Tree) (x : fromTree alpha) (y : fromTree alpha)
-  : x ≺ y <-> (exists z : fromTree alpha, x == z /\ toSet_wlt alpha z y).
+Lemma toSet_wlt_iff (alpha : Tree) (x : toSet alpha) (y : toSet alpha)
+  : x ≺ y <-> (exists z : toSet alpha, x == z /\ toSet_wlt alpha z y).
 Proof.
   transitivity (@fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) x <ᵣ @fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) y).
   { reflexivity. }
@@ -1223,17 +1223,17 @@ Proof.
   - do 3 red in H_EQ. eapply Ordinal_rEq_Ordinal_elim; try eassumption; eapply fromWf_isOrdinal; eapply toSet_wlt_Transitive.
 Qed.
 
-Lemma FromOrderType_fromTree_id (alpha : Tree)
+Lemma FromOrderType_toSet_id (alpha : Tree)
   (ORDINAL : isOrdinal alpha)
-  : FromOrderType (fromTree alpha) == alpha.
+  : FromOrderType (toSet alpha) == alpha.
 Proof.
   eapply Ordinal_rEq_Ordinal_elim.
   - eapply FromOrderType_isOrdinal.
   - exact ORDINAL.
-  - eapply FromOrderType_fromTree_rEq.
+  - eapply FromOrderType_toSet_rEq.
 Qed.
 
-End fromTree.
+End toSet.
 
 End Ordinal1.
 
@@ -2124,69 +2124,6 @@ Proof.
   - eapply hasCardinality_intro.
   - exact CARDINAL.
 Qed.
-
-Let Cardinality_fromTree_total (c : Tree)
-  (kappa := Cardinality.fromTree c)
-  (R := (fromTree_isWoset c).(Woset_isWellPoset).(wltProp))
-  : forall x1 : kappa.(Cardinality.carrier), forall x2 : kappa.(Cardinality.carrier), x1 == x2 \/ R x1 x2 \/ R x2 x1.
-Proof.
-  eapply @O.wlt_trichotomous with (SETOID := fromTree_isSetoid c) (WOSET := fromTree_isWoset c). exact classic.
-Qed.
-
-#[local] Hint Resolve Woset_eqPropCompatible2 wltProp_Transitive Woset_eqPropCompatible2 Cardinality_fromTree_total : simplication_hints.
-
-Theorem hasCardinality_elim `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa c
-  (CARDINAL : kappa `hasCardinality` c)
-  : kappa == Cardinality.fromTree c.
-Proof.
-  pose proof (Cardinality_toTree_eq_intro kappa c CARDINAL) as HH.
-  rewrite <- Ordinal1.FromOrderType_fromTree_id with (alpha := c) in HH by now eapply hasCardinality_isOrdinal; exact CARDINAL.
-  rewrite -> Cardinality_eq_iff. rewrite HH. clear HH. symmetry. split.
-  - pose proof (hasCardinality_intro (Cardinality.fromTree c)) as [R MIN]. eapply MIN.
-    exists (fromTree_isWoset c).(Woset_isWellPoset).(wltProp), (fromTree_isWoset c).(Woset_isWellPoset).(wltProp_well_founded); splits; eauto with *. reflexivity.
-  - admit.
-Admitted.
-
-Lemma Cardinality_fromTree_le_fromTree_iff `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa kappa' c c'
-  (CARDINAL : kappa `hasCardinality` c)
-  (CARDINAL' : kappa' `hasCardinality` c')
-  : Cardinality.fromTree c =< Cardinality.fromTree c' <-> kappa =< kappa'.
-Proof.
-Admitted.
-
-Lemma Cardinality_fromTree_eq_fromTree_iff `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa kappa' c c'
-  (CARDINAL : kappa `hasCardinality` c)
-  (CARDINAL' : kappa' `hasCardinality` c')
-  : Cardinality.fromTree c == Cardinality.fromTree c' <-> kappa == kappa'.
-Proof.
-Admitted.
-
-Lemma Cardinality_fromTree_eq_fromTree `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} c c'
-  (LE : c =ᵣ c')
-  : Cardinality.toTree (Cardinality.fromTree c) =ᵣ Cardinality.toTree (Cardinality.fromTree c').
-Admitted.
-
-Lemma Cardinality_fromTree_inv `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} c
-  : Cardinality.toTree (Cardinality.fromTree c) =ᵣ c.
-Admitted.
-
-Lemma Cardinality_fromTree_inv1 `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) R
-  (R_wf : well_founded R)
-  : Cardinality.toTree (Cardinality.fromTree (@fromWfSet kappa.(Cardinality.carrier) R R_wf)) ≦ᵣ Cardinality.toTree kappa.
-Admitted.
-
-Lemma theSameCardinality_bijection `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (kappa' : Cardinality.t)
-  : exists f : kappa.(Cardinality.carrier) -> kappa'.(Cardinality.carrier), ⟪ INJ : forall x, forall x', x == x' <-> f x == f x' ⟫ /\ ⟪ SURJ : forall y, exists x, y == f x ⟫.
-Admitted.
-
-Lemma sum_of_subtrees `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} c
-  : exists cs : fromTree c -> Ord.t, mkNode (fromTree c) cs =ᵣ c.
-Admitted.
-
-Lemma sum_of_subtrees_same `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa c
-  (EQ : Cardinality.toTree kappa =ᵣ Cardinality.toTree (Cardinality.fromTree c))
-  : exists cs : fromTree c -> Ord.t, mkNode (fromTree c) cs =ᵣ c.
-Admitted.
 
 Section NEXT.
 

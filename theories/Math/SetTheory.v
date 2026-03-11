@@ -231,24 +231,21 @@ Defined.
 Definition rank (t : Tree) : Tree :=
   @fromWfSet (toSet t) (toSet_wlt t) (toSet_wlt_well_founded t).
 
-Section fromTree.
-
-Definition fromTree : Tree -> Type@{Set_u} :=
-  toSet.
+Section toSet.
 
 Variable alpha : Tree.
 
 #[global]
-Instance fromTree_isSetoid : isSetoid (fromTree alpha) :=
+Instance toSet_isSetoid : isSetoid (toSet alpha) :=
   @Totalify.mkSetoid_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
 
 #[global]
-Instance fromTree_isWoset : isWoset (fromTree alpha) :=
+Instance toSet_isWoset : isWoset (toSet alpha) :=
   @Totalify.mkWoset_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
 
-End fromTree.
+End toSet.
 
-#[global] Typeclasses Opaque fromTree.
+#[global] Typeclasses Opaque toSet.
 
 Module Cardinality.
 
@@ -260,12 +257,6 @@ Record t : Type@{Set_V} :=
   }.
 
 #[global] Existing Instance carrier_isSetoid.
-
-Definition fromTree (c : Tree) : Cardinality.t :=
-  {|
-    carrier := fromTree c;
-    carrier_isSetoid := fromTree_isSetoid c;
-  |}.
 
 Variant le (lhs : Cardinality.t) (rhs : Cardinality.t) : Prop :=
   | le_intro (f : forall x : lhs.(carrier), rhs.(carrier))
@@ -362,8 +353,6 @@ Definition toTree (kappa : Cardinality.t) : Tree :=
   let C : Tree := @mkNode (B.sig (kappa.(Cardinality.carrier) -> kappa.(Cardinality.carrier) -> Prop) (fun R => well_founded R /\ (forall x, forall x', x == x' \/ R x x' \/ R x' x) /\ Transitive R /\ eqPropCompatible2 R)) (fun R_wf => fromWfSet R_wf.(B.proj1_sig) (proj1 R_wf.(B.proj2_sig))) in
   let P (t : Tree) : Prop := forall WOSET : @isWoset kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid), t ≦ᵣ @fromWfSet kappa.(Cardinality.carrier) wltProp wltProp_well_founded in
   unions (filter P C).
-
-#[global] Typeclasses Opaque fromTree.
 
 End Cardinality.
 
