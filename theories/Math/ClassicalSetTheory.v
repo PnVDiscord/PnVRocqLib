@@ -346,10 +346,10 @@ Qed.
 Theorem transfinite_induction (P : Tree -> Prop)
   (P_zero : forall o, forall ZERO : o =ᵣ empty, P o)
   (P_succ : forall o, forall alpha : Tree, ⟪ IH : P alpha ⟫ -> forall SUCC : o =ᵣ succ alpha, P o)
-  (P_lim' : forall o, forall I : Type, ⟪ INHABITED : inhabited I ⟫ -> forall alpha : I -> Tree, ⟪ IH : forall i, P (alpha i) ⟫ -> forall LIMIT : o =ᵣ @indexed_union I alpha, ⟪ OPEN : forall i1 : I, exists i2 : I, alpha i1 <ᵣ alpha i2 ⟫ -> P o)
+  (P_lim' : forall o, forall I : Type, ⟪ INHABITED : inhabited I ⟫ -> forall alpha : I -> Tree, ⟪ IH : forall i, P (alpha i) ⟫ -> forall LIMIT : o =ᵣ @indexed_union I alpha, ⟪ APPROX : forall i1 : I, exists i2 : I, alpha i1 <ᵣ alpha i2 ⟫ -> P o)
   : forall o : Tree, P o.
 Proof.
-  intros o. pose proof (rLt_wf o) as H_Acc. induction H_Acc as [o _ IH]. pose proof (limit_or_succ o) as [[LIMIT OPEN] | [SUCC _]]; unnw.
+  intros o. pose proof (rLt_wf o) as H_Acc. induction H_Acc as [o _ IH]. pose proof (limit_or_succ o) as [[LIMIT APPROX] | [SUCC _]]; unnw.
   - pose proof (classic (inhabited (children o))) as [YES | NO].
     + eapply P_lim' with (I := children o); eauto. intros i. eapply IH. econs. now exists i.
     + eapply P_zero. split.
@@ -673,7 +673,7 @@ Proof.
 Qed.
 
 Lemma rec_lim' (o : Tree) (cs : Type) (ts : cs -> Tree)
-  (OPEN : forall c1 : cs, exists c2 : cs, ts c1 <ᵣ ts c2)
+  (APPROX : forall c1 : cs, exists c2 : cs, ts c1 <ᵣ ts c2)
   (INHABITED : inhabited cs)
   (LIM' : o =ᵣ indexed_union cs ts)
   : rec o ≡ djoin cs (fun c : cs => rec (ts c)).
@@ -688,7 +688,7 @@ Proof.
       * eapply djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := projT1 c); eauto.
   - eapply djoin_supremum; eauto. clear c. intros c. eapply dle_trans with (d2 := djoin cs (fun c => rec (ts c))); eauto.
     + eapply djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto.
-    + clear c. eapply djoin_supremum; eauto. intros c1. simpl in *. pose proof (OPEN c1) as [c2 H_rLt].
+    + clear c. eapply djoin_supremum; eauto. intros c1. simpl in *. pose proof (APPROX c1) as [c2 H_rLt].
       destruct H_rLt as [[c H_rLe]]. destruct LIM' as [LE1 LE2]. destruct LE2 as [LE2]; simpl in *.
       pose proof (LE2 (@existT cs (fun i : cs => children (ts i)) c2 c)) as claim1. simpl in *. destruct claim1 as [[c' H_rLe']]. simpl in *.
       eapply dle_trans with (d2 := rec (ts' c')); eauto. eapply dle_trans with (d2 := djoin cs' (fun i : cs' => next (rec (ts' i)))); eauto.
@@ -1190,22 +1190,22 @@ Qed.
 
 End RANK.
 
-Section ToOrderType.
+Section fromTree.
 
 #[local] Infix "\in" := member.
 
 #[local] Infix "\subseteq" := isSubsetOf.
 
-Lemma FromOrderType_ToOrderType_rEq (alpha : Tree)
-  : FromOrderType (ToOrderType alpha) =ᵣ alpha.
+Lemma FromOrderType_fromTree_rEq (alpha : Tree)
+  : FromOrderType (fromTree alpha) =ᵣ alpha.
 Proof.
   symmetry. etransitivity.
   - symmetry. eapply rank_rEq.
   - eapply Totalify.fromWfSet_rEq.
 Qed.
 
-Lemma ToOrderType_wlt_iff (alpha : Tree) (x : ToOrderType alpha) (y : ToOrderType alpha)
-  : x ≺ y <-> (exists z : ToOrderType alpha, x == z /\ toSet_wlt alpha z y).
+Lemma fromTree_wlt_iff (alpha : Tree) (x : fromTree alpha) (y : fromTree alpha)
+  : x ≺ y <-> (exists z : fromTree alpha, x == z /\ toSet_wlt alpha z y).
 Proof.
   transitivity (@fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) x <ᵣ @fromWf (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha) y).
   { reflexivity. }
@@ -1223,17 +1223,17 @@ Proof.
   - do 3 red in H_EQ. eapply Ordinal_rEq_Ordinal_elim; try eassumption; eapply fromWf_isOrdinal; eapply toSet_wlt_Transitive.
 Qed.
 
-Lemma FromOrderType_ToOrderType_id (alpha : Tree)
+Lemma FromOrderType_fromTree_id (alpha : Tree)
   (ORDINAL : isOrdinal alpha)
-  : FromOrderType (ToOrderType alpha) == alpha.
+  : FromOrderType (fromTree alpha) == alpha.
 Proof.
   eapply Ordinal_rEq_Ordinal_elim.
   - eapply FromOrderType_isOrdinal.
   - exact ORDINAL.
-  - eapply FromOrderType_ToOrderType_rEq.
+  - eapply FromOrderType_fromTree_rEq.
 Qed.
 
-End ToOrderType.
+End fromTree.
 
 End Ordinal1.
 
@@ -2093,5 +2093,77 @@ Proof.
   set (WOSET2 := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET2 R2_eqPropCompatible2 R2_total).
   rewrite <- H_R2. change (fromWfSet (B.proj1_sig x) (proj1 (B.proj2_sig x)) ≦ᵣ fromWfSet WOSET2.(Woset_isWellPoset).(wltProp) WOSET2.(Woset_isWellPoset).(wltProp_well_founded)). exact (H_x WOSET2).
 Qed.
+
+Lemma Cardinality_fromTree_le_fromTree `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} c c'
+  (LE : c ≦ᵣ c')
+  : Cardinality.toTree (Cardinality.fromTree c) ≦ᵣ Cardinality.toTree (Cardinality.fromTree c').
+Admitted.
+
+Lemma Cardinality_fromTree_eq_fromTree `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} c c'
+  (LE : c =ᵣ c')
+  : Cardinality.toTree (Cardinality.fromTree c) =ᵣ Cardinality.toTree (Cardinality.fromTree c').
+Admitted.
+
+Lemma Cardinality_fromTree_inv `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} c
+  : Cardinality.toTree (Cardinality.fromTree c) =ᵣ c.
+Admitted.
+
+Lemma Cardinality_fromTree_inv1 `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) R
+  (R_wf : well_founded R)
+  : Cardinality.toTree (Cardinality.fromTree (@fromWfSet kappa.(Cardinality.carrier) R R_wf)) ≦ᵣ Cardinality.toTree kappa.
+Admitted.
+
+Lemma theSameCardinality_bijection `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (kappa' : Cardinality.t)
+  : exists f : kappa.(Cardinality.carrier) -> kappa'.(Cardinality.carrier), ⟪ INJ : forall x, forall x', x == x' <-> f x == f x' ⟫ /\ ⟪ SURJ : forall y, exists x, y == f x ⟫.
+Admitted.
+
+Lemma sum_of_subtrees `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} c
+  : exists cs : fromTree c -> Ord.t, mkNode (fromTree c) cs =ᵣ c.
+Admitted.
+
+Lemma sum_of_subtrees_same `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa c
+  (EQ : Cardinality.toTree kappa =ᵣ Cardinality.toTree (Cardinality.fromTree c))
+  : exists cs : fromTree c -> Ord.t, mkNode (fromTree c) cs =ᵣ c.
+Admitted.
+
+Section NEXT.
+
+
+
+End NEXT.
+
+
+
+Section ALEPH.
+
+
+
+End ALEPH.
+
+
+
+Section BETH.
+
+
+
+End BETH.
+
+
+
+Section FINITE.
+
+
+
+End FINITE.
+
+
+
+Section SANDWICH.
+
+
+
+End SANDWICH.
+
+
 
 End CARDINALITY.
