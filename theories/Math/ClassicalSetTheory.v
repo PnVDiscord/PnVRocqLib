@@ -1737,6 +1737,28 @@ Infix "`hasCardinality`" := hasCardinality.
 
 Section CARDINALITY.
 
+Lemma Cardinality_le_lt_lt (kappa : Cardinality.t) (kappa' : Cardinality.t) (kappa'' : Cardinality.t)
+  (LE : kappa =< kappa')
+  (LT : kappa' ≨ kappa'')
+  : kappa ≨ kappa''.
+Proof.
+  destruct LT as [[f1 ? ?] NE]. econs.
+  - transitivity kappa'; eauto. exists f1; eauto.
+  - intros [f2 g2 ? ? ? ?]. destruct LE as [g1 ? ?]. contradiction NE.
+    exists f1 (compose g1 g2); firstorder. 
+Qed.
+
+Lemma Cardinality_lt_le_lt (kappa : Cardinality.t) (kappa' : Cardinality.t) (kappa'' : Cardinality.t)
+  (LT : kappa ≨ kappa')
+  (LE : kappa' =< kappa'')
+  : kappa ≨ kappa''.
+Proof.
+  destruct LT as [[f1 ? ?] NE]. econs.
+  - transitivity kappa'; eauto. exists f1; eauto.
+  - intros [f2 g2 ? ? ? ?]. destruct LE as [g1 ? ?]. contradiction NE.
+    eexists f1 (compose g2 g1); firstorder. 
+Qed.
+
 #[local] Infix "\in" := member.
 
 #[local] Infix "\subseteq" := isSubsetOf.
@@ -2094,9 +2116,49 @@ Proof.
   rewrite <- H_R2. change (fromWfSet (B.proj1_sig x) (proj1 (B.proj2_sig x)) ≦ᵣ fromWfSet WOSET2.(Woset_isWellPoset).(wltProp) WOSET2.(Woset_isWellPoset).(wltProp_well_founded)). exact (H_x WOSET2).
 Qed.
 
-Lemma Cardinality_fromTree_le_fromTree `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} c c'
-  (LE : c ≦ᵣ c')
-  : Cardinality.toTree (Cardinality.fromTree c) ≦ᵣ Cardinality.toTree (Cardinality.fromTree c').
+Lemma Cardinality_toTree_eq_intro `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa c
+  (CARDINAL : kappa `hasCardinality` c)
+  : Cardinality.toTree kappa == c.
+Proof.
+  eapply hasCardinality_unique.
+  - eapply hasCardinality_intro.
+  - exact CARDINAL.
+Qed.
+
+Let Cardinality_fromTree_total (c : Tree)
+  (kappa := Cardinality.fromTree c)
+  (R := (fromTree_isWoset c).(Woset_isWellPoset).(wltProp))
+  : forall x1 : kappa.(Cardinality.carrier), forall x2 : kappa.(Cardinality.carrier), x1 == x2 \/ R x1 x2 \/ R x2 x1.
+Proof.
+  eapply @O.wlt_trichotomous with (SETOID := fromTree_isSetoid c) (WOSET := fromTree_isWoset c). exact classic.
+Qed.
+
+#[local] Hint Resolve Woset_eqPropCompatible2 wltProp_Transitive Woset_eqPropCompatible2 Cardinality_fromTree_total : simplication_hints.
+
+Theorem hasCardinality_elim `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa c
+  (CARDINAL : kappa `hasCardinality` c)
+  : kappa == Cardinality.fromTree c.
+Proof.
+  pose proof (Cardinality_toTree_eq_intro kappa c CARDINAL) as HH.
+  rewrite <- Ordinal1.FromOrderType_fromTree_id with (alpha := c) in HH by now eapply hasCardinality_isOrdinal; exact CARDINAL.
+  rewrite -> Cardinality_eq_iff. rewrite HH. clear HH. symmetry. split.
+  - pose proof (hasCardinality_intro (Cardinality.fromTree c)) as [R MIN]. eapply MIN.
+    exists (fromTree_isWoset c).(Woset_isWellPoset).(wltProp), (fromTree_isWoset c).(Woset_isWellPoset).(wltProp_well_founded); splits; eauto with *. reflexivity.
+  - admit.
+Admitted.
+
+Lemma Cardinality_fromTree_le_fromTree_iff `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa kappa' c c'
+  (CARDINAL : kappa `hasCardinality` c)
+  (CARDINAL' : kappa' `hasCardinality` c')
+  : Cardinality.fromTree c =< Cardinality.fromTree c' <-> kappa =< kappa'.
+Proof.
+Admitted.
+
+Lemma Cardinality_fromTree_eq_fromTree_iff `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa kappa' c c'
+  (CARDINAL : kappa `hasCardinality` c)
+  (CARDINAL' : kappa' `hasCardinality` c')
+  : Cardinality.fromTree c == Cardinality.fromTree c' <-> kappa == kappa'.
+Proof.
 Admitted.
 
 Lemma Cardinality_fromTree_eq_fromTree `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} c c'
