@@ -389,6 +389,8 @@ End TypeTheoreticImplementation.
 
 Section ORDINAL_ARITHMETIC.
 
+Import TypeTheoreticImplementation.
+
 #[local] Existing Instance rEq_asSetoid.
 
 #[local]
