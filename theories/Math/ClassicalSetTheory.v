@@ -2076,7 +2076,7 @@ Proof.
   rewrite x_eq; clear x x_eq. rewrite filter_spec in y_in. destruct y_in as [x [H_x y_eq]]; simpl in *.
   unred_eqTree. destruct y as [csy tsy]. simpl in z. simpl in y_eq. pose proof (proj1 y_eq z) as [w H_w].
   unred_eqTree. simpl. rewrite H_w. rewrite fromWfSet_InitialSegment with (R_Transitive := proj1 (proj2 (proj2 (B.proj2_sig x)))).
-  set (kappa' := {| Cardinality.carrier := { y : Cardinality.carrier kappa | B.proj1_sig x y w }; Cardinality.carrier_isSetoid := subSetoid (fun y => B.proj1_sig x y w); |}).
+  set (kappa' := {| Cardinality.carrier := { y : Cardinality.carrier kappa | B.proj1_sig x y w }; Cardinality.carrier_isSetoid := @subSetoid (Cardinality.carrier kappa) (Cardinality.carrier_isSetoid kappa) (fun y => B.proj1_sig x y w); |}).
   assert (claim1 : forall a : Cardinality.carrier kappa', forall b : Cardinality.carrier kappa', a == b \/ binary_relation_on_image (B.proj1_sig x) (@proj1_sig _ _) a b \/ binary_relation_on_image (B.proj1_sig x) (@proj1_sig _ _) b a) by now intros [x1 H_x1] [x2 H_x2]; exact (proj1 (proj2 x.(B.proj2_sig)) x1 x2).
   assert (claim2 : Transitive (binary_relation_on_image (B.proj1_sig x) (@proj1_sig _ (fun y : Cardinality.carrier kappa => B.proj1_sig x y w)))) by now intros [x1 H_x1] [x2 H_x2] [x3 H_x3]; exact (proj1 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 x3).
   assert (claim3 : eqPropCompatible2 (binary_relation_on_image (B.proj1_sig x) (@proj1_sig _ (fun y : Cardinality.carrier kappa => B.proj1_sig x y w)))) by now intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]; exact (proj2 (proj2 (proj2 x.(B.proj2_sig))) x1 x2 y1 y2).
