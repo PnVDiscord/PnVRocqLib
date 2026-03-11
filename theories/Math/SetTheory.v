@@ -389,6 +389,8 @@ End TypeTheoreticImplementation.
 
 Section ORDINAL_ARITHMETIC.
 
+#[local] Existing Instance rEq_asSetoid.
+
 #[local]
 Instance rLe_asProset : isProset Tree :=
   { Proset_isSetoid := rEq_asSetoid
