@@ -235,11 +235,11 @@ Section toSet.
 
 Variable alpha : Tree.
 
-#[global]
+#[local]
 Instance toSet_isSetoid : isSetoid (toSet alpha) :=
   @Totalify.mkSetoid_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
 
-#[global]
+#[local]
 Instance toSet_isWoset : isWoset (toSet alpha) :=
   @Totalify.mkWoset_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
 

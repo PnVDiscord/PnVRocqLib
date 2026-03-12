@@ -1192,6 +1192,10 @@ End RANK.
 
 Section toSet.
 
+#[local] Existing Instance toSet_isSetoid.
+
+#[local] Existing Instance toSet_isWoset.
+
 #[local] Infix "\in" := member.
 
 #[local] Infix "\subseteq" := isSubsetOf.
@@ -2123,6 +2127,60 @@ Proof.
   eapply hasCardinality_unique.
   - eapply hasCardinality_intro.
   - exact CARDINAL.
+Qed.
+
+Lemma toSet_Card_le `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa (alpha : Tree)
+  (CARDINAL : kappa `hasCardinality` alpha)
+  : {| Cardinality.carrier := toSet alpha; Cardinality.carrier_isSetoid := toSet_isSetoid alpha; |} =< kappa.
+Proof.
+  destruct alpha as [cs ts]. cbv [toSet]. simpl toWellPoset at 1.
+  pose proof (Cardinality_toTree_eq_intro kappa (mkNode cs ts) CARDINAL) as HH.
+  rewrite <- Ordinal1.FromOrderType_toSet_id with (alpha := mkNode cs ts) in HH by now eapply hasCardinality_isOrdinal; exact CARDINAL.
+  rewrite -> Cardinality_le_iff. rewrite HH. clear HH kappa CARDINAL. set (kappa := {| Cardinality.carrier := _ |}).
+  pose proof (hasCardinality_intro kappa) as [R MIN]. eapply MIN.
+  exists (toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp).
+  exists (toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp_well_founded).
+  split. { intros x x'. eapply @O.wlt_trichotomous with (SETOID := toSet_isSetoid (mkNode cs ts)) (WOSET := toSet_isWoset (mkNode cs ts)). exact classic. }
+  split. { intros x x' x''. exact ((toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp_Transitive) x x' x''). }
+  split. { intros x x' y y'. exact ((toSet_isWoset (mkNode cs ts)).(Woset_eqPropCompatible2) x x' y y'). }
+  reflexivity.
+Qed.
+
+Lemma trim_toSet `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa (alpha : Tree)
+  (CARDINAL : kappa `hasCardinality` alpha)
+  : { phi : toSet alpha -> Prop | kappa =< {| Cardinality.carrier := @sig (toSet alpha) phi; Cardinality.carrier_isSetoid := @subSetoid _ (toSet_isSetoid alpha) phi; |} }.
+Proof.
+  destruct alpha as [cs ts]. cbv [toSet]. simpl toWellPoset at 1. simpl projT1.
+  exists (fun t : {c : cs & option (projT1 (toWellPoset (ts c)))} => projT2 t = None).
+  pose proof (Cardinality_toTree_eq_intro kappa (mkNode cs ts) CARDINAL) as HH.
+  rewrite <- Ordinal1.FromOrderType_toSet_id with (alpha := mkNode cs ts) in HH by now eapply hasCardinality_isOrdinal; exact CARDINAL.
+  rewrite -> Cardinality_le_iff. rewrite HH. clear HH kappa CARDINAL. set (kappa := {| Cardinality.carrier := _; Cardinality.carrier_isSetoid := _ |}).
+  set (eqProp_c := fun c1 : cs => fun c2 : cs => kappa.(Cardinality.carrier_isSetoid).(eqProp) (@exist _ _ (@existT _ _ c1 None) eq_refl) (@exist _ _ (@existT _ _ c2 None) eq_refl)).
+  rewrite Cardinality_toTree_eq_intro.
+  { reflexivity. }
+  split.
+  { exists (binary_relation_on_image (toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp) (@proj1_sig (toSet (mkNode cs ts)) (fun w => projT2 w = None))).
+    exists (relation_on_image_liftsWellFounded _ (@proj1_sig (toSet (mkNode cs ts)) (fun w => projT2 w = None)) (toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp_well_founded)).
+    split. { intros [x H_x] [x' H_x']. eapply @O.wlt_trichotomous with (SETOID := toSet_isSetoid (mkNode cs ts)) (WOSET := toSet_isWoset (mkNode cs ts)). exact classic. }
+    split. { intros [x H_x] [x' H_x'] [x'' H_x'']. exact ((toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp_Transitive) x x' x''). }
+    split. { intros [x H_x] [x' H_x'] [y H_y] [y' H_y']. exact ((toSet_isWoset (mkNode cs ts)).(Woset_eqPropCompatible2) x x' y y'). }
+    admit.
+  }
+  admit.
+Admitted.
+
+Lemma toSet_Card_eq `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa (alpha : Tree)
+  (CARDINAL : kappa `hasCardinality` alpha)
+  : kappa == {| Cardinality.carrier := toSet alpha; Cardinality.carrier_isSetoid := toSet_isSetoid alpha; |}.
+Proof.
+  rewrite -> Cardinality_eq_iff. split.
+  - pose proof (trim_toSet kappa alpha CARDINAL) as [phi H_phi]. rewrite -> Cardinality_le_iff in H_phi.
+    transitivity (Cardinality.toTree {| Cardinality.carrier := @sig (toSet alpha) phi; Cardinality.carrier_isSetoid := @subSetoid (toSet alpha) (toSet_isSetoid alpha) phi |}).
+    { exact H_phi. }
+    rewrite <- Cardinality_le_iff. exists (@proj1_sig _ _).
+    + intros [x H_x] [x' H_x']; simpl; eauto.
+    + intros [x H_x] [x' H_x']; simpl; eauto.
+  - rewrite <- Cardinality_le_iff. eapply toSet_Card_le. exact CARDINAL.
 Qed.
 
 Section NEXT.
