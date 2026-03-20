@@ -219,8 +219,8 @@ Inductive L_cfg2 : lang :=
     (H_cfg2 : str \in L_cfg2)
     : [L] ++ str ++ [R] \in L_cfg2
   | cfg2_app str1 str2
-    (H_str1: str1 \in L_cfg2)
-    (H_str2: str2 \in L_cfg2)
+    (H1_cfg2 : str1 \in L_cfg2)
+    (H2_cfg2 : str2 \in L_cfg2)
     : str1 ++ str2 \in L_cfg2.
 
 #[local] Hint Constructors L_cfg2 : core.
