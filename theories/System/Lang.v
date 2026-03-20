@@ -148,7 +148,7 @@ Proof with eauto.
     destruct count_L_s_lt_count_R_s as [[? ? ? ? ?] | H_last_R].
     + assert (IH1 : length s' < S (length s)) by now pose proof (@length_app _ s_prefix s'); subst s; lia.
       pose proof (IHs s' IH1 H_cut) as H_s'.
-      assert (IH2: length (L :: s_prefix) < S (length s)) by now simpl; pose proof (@length_app _ s_prefix s'); subst s; lia.
+      assert (IH2 : length (L :: s_prefix) < S (length s)) by now simpl; pose proof (@length_app _ s_prefix s'); subst s; lia.
       assert (CLAIM : count L (L :: s_prefix) = count R (L :: s_prefix)).
       { eapply count_app_cancel_r with (s := L :: s_prefix) (s' := s') (n' := count R s')...
         simpl. rewrite <- H_app. rewrite <- count_app. rewrite <- H_app...
