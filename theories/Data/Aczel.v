@@ -1090,6 +1090,12 @@ Proof.
   econs. simpl. intros [y R_y_x]; simpl. rewrite fromAcc_pirrel. now eapply LE.
 Qed.
 
+Lemma fromWf_pirrel {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R) (R_wf' : well_founded R) (x : A)
+  : @fromWf A R R_wf x == @fromWf A R R_wf' x.
+Proof.
+  eapply fromAcc_pirrel.
+Qed.
+
 Lemma fromWf_isMonotonic {A : Type} {R1 : A -> A -> Prop} {R2 : A -> A -> Prop} (x : A)
   (INCL : forall x : A, forall x' : A, forall LE : R1 x x', R2 x x')
   (R1_wf : well_founded R1)
@@ -1134,6 +1140,13 @@ Qed.
 
 Definition fromWfSet {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R) : Tree :=
   mkNode A (@fromWf A R R_wf).
+
+Lemma fromWfSet_pirrel {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R) (R_wf' : well_founded R)
+  : @fromWfSet A R R_wf == @fromWfSet A R R_wf'.
+Proof.
+  unfold fromWfSet. change (eqTree (@fromWfSet A R R_wf) (@fromWfSet A R R_wf')).
+  simpl. split; intros c; exists c; eapply fromWf_pirrel.
+Qed.
 
 Lemma fromWfSet_isMonotonic {A : Type} {R1 : A -> A -> Prop} {R2 : A -> A -> Prop}
   (INCL : forall x : A, forall x' : A, forall LE : R1 x x', R2 x x')

@@ -332,25 +332,29 @@ Proof.
     + exact (IH i).
 Qed.
 
-Fixpoint replicate {A : Type} {n : nat} {struct n} : A -> Vector.t A n :=
+Section PURE_and_JOIN.
+
+Context {A : Type}.
+
+Fixpoint replicate {n : nat} {struct n} : A -> Vector.t A n :=
   match n with
   | O => fun x => []
   | S n' => fun x => x :: replicate (n := n') x
   end.
 
-Lemma replicate_spec {A : Type} {n : nat} (x : A)
+Lemma replicate_spec (n : nat) (x : A)
   : forall i : Fin.t n, x = replicate x !! i.
 Proof.
   induction n; [Fin.case0 | Fin.caseS i]; simpl; eauto.
 Qed.
 
-Fixpoint diagonal {A : Type} {n : nat} {struct n} : Vector.t (Vector.t A n) n -> Vector.t A n :=
+Fixpoint diagonal {n : nat} {struct n} : Vector.t (Vector.t A n) n -> Vector.t A n :=
   match n with
   | O => fun xss => []
   | S n' => fun xss => head (head xss) :: diagonal (n := n') (map tail (tail xss))
   end.
 
-Lemma diagonal_spec {A : Type} {n : nat} (xss : Vector.t (Vector.t A n) n)
+Lemma diagonal_spec (n : nat) (xss : Vector.t (Vector.t A n) n)
   : forall i : Fin.t n, xss !! i !! i = diagonal xss !! i.
 Proof.
   revert xss; induction n as [ | n IH].
@@ -359,6 +363,8 @@ Proof.
     + now rewrite nth_unfold.
     + now rewrite nth_unfold; rewrite <- IH with (i := i); rewrite map_spec with (f := tail) (xs := xss) (i := i).
 Qed.
+
+End PURE_and_JOIN.
 
 Ltac red_vec :=
   first [rewrite <- diagonal_spec | rewrite <- map_spec | rewrite <- replicate_spec].
@@ -622,52 +628,6 @@ Proof.
   - revert m ys. induction xs, ys; simpl; ss!. pose proof (IHxs _ _ H0) as claim. rewrite <- claim. red in H. done!.
 Qed.
 
-Fixpoint snoc {A : Type} {n : nat} (xs : Vector.t A n) (x : A) {struct xs} : Vector.t A (S n) :=
-  match xs with
-  | [] => [x]
-  | x' :: xs' => x' :: snoc xs' x
-  end.
-
-Lemma to_list_snoc {A : Type} {n : nat} (xs : Vector.t A n) (x : A)
-  : to_list (snoc xs x) = L.app (to_list xs) (L.cons x L.nil).
-Proof.
-  revert x. induction xs as [ | n x' xs' IH]; simpl; i.
-  - reflexivity.
-  - f_equal. eapply IH.
-Qed.
-
-Fixpoint rev {A : Type} {n : nat} (xs : Vector.t A n) {struct xs} : Vector.t A n :=
-  match xs with
-  | [] => []
-  | x :: xs => snoc (rev xs) x
-  end.
-
-Lemma to_list_rev {A : Type} {n : nat} (xs : Vector.t A n)
-  : to_list (rev xs) = L.rev (to_list xs).
-Proof.
-  induction xs as [ | n x xs IH]; simpl.
-  - reflexivity.
-  - rewrite to_list_snoc. f_equal. exact IH.
-Qed.
-
-Fixpoint forallb {A : Type} {n : nat} (p : A -> bool) (xs : Vector.t A n) : bool :=
-  match xs with
-  | [] => true
-  | x :: xs => p x && forallb p xs
-  end.
-
-Lemma forallb_forall {A : Type} {n : nat} (p : A -> bool) (xs : Vector.t A n)
-  : forallb p xs = true <-> (forall i, p (xs !! i) = true).
-Proof.
-  induction xs as [ | n x xs IH]; simpl.
-  - split; trivial. intros _. Fin.case0.
-  - rewrite andb_true_iff. rewrite IH. split.
-    + intros [p_x p_xs]. Fin.caseS i; eauto.
-    + intros H_p. split.
-      * eapply H_p with (i := FZ).
-      * intros i. eapply H_p with (i := FS i).
-Qed.
-
 Inductive Similarity_vec_list {A : Type} {A' : Type} (SIM : Similarity A A') : forall n : nat, Similarity (Vector.t A n) (list A') :=
   | VNil_corres_nil
     : is_similar_to VNil (@L.nil A')
@@ -686,6 +646,78 @@ Proof.
   - intros <-; induction xs as [ | n x xs IH]; simpl; econs; try red; eauto.
 Qed.
 
+Section METHODS.
+
+Context {A : Type}.
+
+Fixpoint snoc {n : nat} (xs : Vector.t A n) (x : A) {struct xs} : Vector.t A (S n) :=
+  match xs with
+  | [] => [x]
+  | x' :: xs' => x' :: snoc xs' x
+  end.
+
+Lemma to_list_snoc (n : nat) (xs : Vector.t A n) (x : A)
+  : to_list (snoc xs x) = L.app (to_list xs) (L.cons x L.nil).
+Proof.
+  revert x. induction xs as [ | n x' xs' IH]; simpl; i.
+  - reflexivity.
+  - f_equal. eapply IH.
+Qed.
+
+Fixpoint rev {n : nat} (xs : Vector.t A n) {struct xs} : Vector.t A n :=
+  match xs with
+  | [] => []
+  | x :: xs => snoc (rev xs) x
+  end.
+
+Lemma to_list_rev (n : nat) (xs : Vector.t A n)
+  : to_list (rev xs) = L.rev (to_list xs).
+Proof.
+  induction xs as [ | n x xs IH]; simpl.
+  - reflexivity.
+  - rewrite to_list_snoc. f_equal. exact IH.
+Qed.
+
+Fixpoint forallb {n : nat} (p : A -> bool) (xs : Vector.t A n) : bool :=
+  match xs with
+  | [] => true
+  | x :: xs => p x && forallb p xs
+  end.
+
+Lemma forallb_forall (n : nat) (p : A -> bool) (xs : Vector.t A n)
+  : forallb p xs = true <-> (forall i, p (xs !! i) = true).
+Proof.
+  induction xs as [ | n x xs IH]; simpl.
+  - split; trivial. intros _. Fin.case0.
+  - rewrite andb_true_iff. rewrite IH. split.
+    + intros [p_x p_xs]. Fin.caseS i; eauto.
+    + intros H_p. split.
+      * eapply H_p with (i := FZ).
+      * intros i. eapply H_p with (i := FS i).
+Qed.
+
+Fixpoint nth_list (xs : list A) {struct xs} : Fin.t (length xs) -> A :=
+  match xs with
+  | []%list => Fin.case0
+  | (x :: xs)%list => Fin.caseS x (nth_list xs)
+  end.
+
+Fixpoint fromMap {n : nat} : forall map : Fin.t n -> A, Vector.t A n :=
+  match n as n return (Fin.t n -> A) -> Vector.t A n with
+  | O => fun map => []
+  | S n => fun map => map (@FZ n) :: fromMap (n := n) (fun i : Fin.t n => map (@FS n i))
+  end.
+
+Lemma fromMap_spec (n : nat) (map : Fin.t n -> A)
+  : forall i, fromMap map !! i = map i.
+Proof.
+  induction i as [ | n' i' IH]; simpl.
+  - reflexivity.
+  - eapply IH with (map := fun i => map (FS i)).
+Qed.
+
+End METHODS.
+
 End V.
 
 Ltac introVNil :=
@@ -700,8 +732,4 @@ Ltac introVCons x' xs' :=
 
 Infix "!!" := V.nth.
 
-Fixpoint nth_list {A : Type} (xs : list A) {struct xs} : Fin.t (length xs) -> A :=
-  match xs with
-  | [] => Fin.case0
-  | x :: xs => Fin.caseS x (nth_list xs)
-  end.
+Notation nth_list := V.nth_list.

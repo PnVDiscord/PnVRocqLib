@@ -231,24 +231,21 @@ Defined.
 Definition rank (t : Tree) : Tree :=
   @fromWfSet (toSet t) (toSet_wlt t) (toSet_wlt_well_founded t).
 
-Section ToOrderType.
-
-Definition ToOrderType : Tree -> Type@{Set_u} :=
-  toSet.
+Section toSet.
 
 Variable alpha : Tree.
 
-#[global]
-Instance ToOrderType_isSetoid : isSetoid (ToOrderType alpha) :=
+#[local]
+Instance toSet_isSetoid : isSetoid (toSet alpha) :=
   @Totalify.mkSetoid_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
 
-#[global]
-Instance ToOrderType_isWoset : isWoset (ToOrderType alpha) :=
+#[local]
+Instance toSet_isWoset : isWoset (toSet alpha) :=
   @Totalify.mkWoset_from_wellfounded (toSet alpha) (toSet_wlt alpha) (toSet_wlt_well_founded alpha).
 
-End ToOrderType.
+End toSet.
 
-#[global] Typeclasses Opaque ToOrderType.
+#[global] Typeclasses Opaque toSet.
 
 Module Cardinality.
 
@@ -386,3 +383,19 @@ Definition _Card_exp : Card -> Card -> Card :=
   Cardinality.exp.
 
 End TypeTheoreticImplementation.
+
+Section ORDINAL_ARITHMETIC.
+
+Import TypeTheoreticImplementation.
+
+#[local] Existing Instance rEq_asSetoid.
+
+#[local]
+Instance rLe_asProset : isProset Tree :=
+  { Proset_isSetoid := rEq_asSetoid
+  ; leProp := rLe
+  ; leProp_PreOrder := rLe_PreOrder
+  ; leProp_PartialOrder := rLe_PartialOrder
+  }.
+
+End ORDINAL_ARITHMETIC.
