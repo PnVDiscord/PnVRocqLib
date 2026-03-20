@@ -22,24 +22,24 @@ Defined.
 Inductive L_cfg1 : lang :=
   | cfg1_rule1
     : [] \in L_cfg1
-  | cfg1_rule2 (str: string)
-    (H_str: str \in L_cfg1)
+  | cfg1_rule2 str
+    (H_str : str \in L_cfg1)
     : [L] ++ str ++ [R] \in L_cfg1
-  | cfg1_rule3 (str: string)
-    (H_str: str \in L_cfg1)
+  | cfg1_rule3 str
+    (H_str : str \in L_cfg1)
     : [R] ++ str ++ [L] \in L_cfg1
-  | cfg1_rule4 (str1: string) (str2: string)
-    (H_str1: str1 \in L_cfg1)
-    (H_str2: str2 \in L_cfg1)
+  | cfg1_rule4 str1 str2
+    (H_str1 : str1 \in L_cfg1)
+    (H_str2 : str2 \in L_cfg1)
     : str1 ++ str2 \in L_cfg1.
 
 #[local] Hint Constructors L_cfg1 : core.
 
-Notation count a s := (count_occ eq_dec s a).
+#[local] Notation count a s := (count_occ eq_dec s a).
 
-Variant cfg1_spec (LANG: lang) : Prop :=
+Variant cfg1_spec LANG : Prop :=
   | cfg1_lang_spec
-    (nL_eq_nR: forall str, str \in LANG <-> count L str = count R str)
+    (nL_eq_nR : forall str, str \in LANG <-> count L str = count R str)
     : cfg1_spec LANG.
 
 Section THEORY.
@@ -83,8 +83,8 @@ Qed.
 Inductive isLast a : string -> Prop :=
   | isLast_1
     : isLast a [a]
-  | isLast_S (a': alphabet) (s: string)
-    (H_isLast: isLast a s)
+  | isLast_S a' s
+    (H_isLast : isLast a s)
     : isLast a (a' :: s).
 
 #[local] Hint Constructors isLast : core.
@@ -194,3 +194,37 @@ Qed.
 End THEORY.
 
 End LANG1.
+
+Module LANG2.
+
+Variant alphabet : Set :=
+  | L
+  | R.
+
+#[local] Notation string := (list alphabet).
+#[local] Notation lang := (ensemble string).
+#[local] Infix " \in " := E.In : type_scope.
+
+#[local]
+Instance alphabet_hasEqDec
+  : hasEqDec alphabet.
+Proof.
+  red. decide equality.
+Defined.
+
+Inductive L_cfg2 : lang :=
+  | cfg2_epsilon
+    : [] \in L_cfg2
+  | cfg2_paren str
+    (H_cfg2 : str \in L_cfg2)
+    : [L] ++ str ++ [R] \in L_cfg2
+  | cfg2_app str1 str2
+    (H_str1: str1 \in L_cfg2)
+    (H_str2: str2 \in L_cfg2)
+    : str1 ++ str2 \in L_cfg2.
+
+#[local] Hint Constructors L_cfg2 : core.
+
+#[local] Notation count a s := (count_occ eq_dec s a).
+
+End LANG2.
