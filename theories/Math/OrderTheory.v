@@ -53,6 +53,29 @@ Proof.
   subst x. eapply IH with (y := f (S O)); eauto. exists (fun n : N => f (S n)); eauto.
 Qed.
 
+Lemma nonexistence_of_decr_seq_implies_Acc {classic : forall P : Prop, P \/ ~ P} {DC : forall X : Type, forall step : X -> X -> Prop, forall x0 : X, (forall x, exists x', step x x') -> exists seq : nat -> X, seq O = x0 /\ ⟪ STEP : forall n : nat, step (seq n) (seq (S n)) ⟫} {A : Type} (R : A -> A -> Prop) (x : A)
+  (NOT_ACC : ~ Acc R x)
+  : exists f : nat -> A, f O = x /\ ⟪ DECR : forall n : nat, R (f (S n)) (f n) ⟫.
+Proof.
+  assert (NNPP : forall P : Prop, (~ (~ P)) -> P).
+  { ii. pose proof (classic P). tauto. }
+  assert (not_Acc_step : forall a, ~ Acc R a -> exists b, R b a /\ ~ Acc R b).
+  { intros a Hna. eapply NNPP.
+    intro Hnone. eapply Hna. econs.
+    intros b Hb. eapply NNPP.
+    intro Hnb. eapply Hnone; ss!.
+  }
+  eapply NNPP. intros NO_SEQ.
+  set (X := { a : A | ~ Acc R a }).
+  set (step := fun x : X => fun x' : X => R (proj1_sig x') (proj1_sig x)).
+  assert (STEP : forall x : X, exists x' : X, step x x').
+  { intros [a Ha]. pose proof (not_Acc_step a Ha) as [b [Hab Hb]]. exists (@exist _ _ b Hb). exact Hab. }
+  pose proof (DC X step (@exist _ _ x NOT_ACC) STEP) as (g & Hg0 & Hstep); unnw.
+  contradiction NO_SEQ. exists (fun n => proj1_sig (g n)). split.
+  - change (proj1_sig (g 0) = x). now rewrite Hg0.
+  - exact Hstep.
+Qed.
+
 Lemma well_founded_implies_nonexistence_of_decr_seq {A : Type} (R : A -> A -> Prop)
   (R_wf : well_founded R)
   : forall f : nat -> A, ~ ⟪ DECR : forall n : nat, R (f (S n)) (f n) ⟫.

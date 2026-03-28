@@ -46,3 +46,11 @@ Class ClassicalAxioms `{b_AC : bool} `{b_fun_ext : bool} `{b_prop_ext : bool} : 
   } as ClassicalAxioms.
 
 #[global] Notation flagsOfClassicalAxioms := @ClassicalAxioms.
+
+Lemma AC_implies_DC `{Axms : ClassicalAxioms (b_AC := true)} {X : Type} (step : X -> X -> Prop) (x0 : X)
+  (Hstep : forall x : X, exists x' : X, step x x')
+  : exists seq : nat -> X, seq O = x0 /\ ⟪ STEP : forall n : nat, step (seq n) (seq (S n)) ⟫.
+Proof.
+  pose proof (Axiom_of_Choice X (fun _ => X) step Hstep) as Hsucc.
+  exact (FUN_FACTS.AC_implies_DC step x0 Hstep Hsucc).
+Qed.

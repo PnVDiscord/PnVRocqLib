@@ -695,4 +695,14 @@ Proof.
   destruct existT_eq_existT; simpl. exists eq_refl. reflexivity.
 Qed.
 
+Lemma AC_implies_DC {X : Type} (step : X -> X -> Prop) (x0 : X)
+  (Hstep : forall x, exists x', step x x')
+  (AC : exists S : X -> X, forall n, step n (S n))
+  : exists seq : nat -> X, seq O = x0 /\ ⟪ STEP : forall n : nat, step (seq n) (seq (S n)) ⟫.
+Proof.
+  destruct AC as [succ Hsucc].
+  exists (fix seq (n : nat) {struct n} : X := match n with O => x0 | S n' => succ (seq n') end).
+  split; ss!.
+Qed.
+
 End FUN_FACTS.

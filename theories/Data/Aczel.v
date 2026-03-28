@@ -1724,7 +1724,7 @@ Lemma InitialSegRel_total (A : Type) (A_isSetoid : isSetoid A) (R : A -> A -> Pr
   : forall x1, forall x2, x1 == x2 \/ WfHelper.InitialSegRel R x x1 x2 \/ WfHelper.InitialSegRel R x x2 x1.
 Proof.
   ii. destruct x1 as [x1 H_x1], x2 as [x2 H_x2]. unfold WfHelper.InitialSegRel. simpl in *.
-  destruct (TOTAL x1 x2) as [H_EQ | [H_LT | H_GT]]; eauto.
+  pose proof (TOTAL x1 x2) as [H_EQ | [H_LT | H_GT]]; eauto.
 Qed.
 
 End fromWfHelper.
