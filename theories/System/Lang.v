@@ -208,11 +208,11 @@ Inductive L_cfg2 : lang :=
   | cfg2_epsilon
     : [] \in L_cfg2
   | cfg2_paren str
-    (H_cfg2 : str \in L_cfg2)
+    (H_in : str \in L_cfg2)
     : [L] ++ str ++ [R] \in L_cfg2
   | cfg2_concat str1 str2
-    (H1_cfg2 : str1 \in L_cfg2)
-    (H2_cfg2 : str2 \in L_cfg2)
+    (H1_in : str1 \in L_cfg2)
+    (H2_in : str2 \in L_cfg2)
     : str1 ++ str2 \in L_cfg2.
 
 Section THEORY.
@@ -383,10 +383,10 @@ Qed.
 
 #[local] Hint Resolve WellParen_epsilon WellParen_paren WellParen_concat : core.
 
-Theorem cfg2_equiv_WellParen (s : string)
-  : s \in L_cfg2 <-> WellParen s.
+Theorem cfg2_equiv_WellParen
+  : L_cfg2 == WellParen.
 Proof.
-  split.
+  change (forall s : string, s \in L_cfg2 <-> WellParen s). intros s. split.
   { intros H_in. induction H_in; eauto. }
   pose proof (relation_on_image_liftsWellFounded lt (@length alphabet) lt_wf s) as H_ACC.
   induction H_ACC as [s _ IH]. change (forall s' : string, length s' < length s -> WellParen s' -> s' \in L_cfg2) in IH.
@@ -447,13 +447,12 @@ Proof.
           { inv H_prefix. destruct s_suffix; s!; lia. }
     }
   - destruct H_j as [POS count_L_eq_count_R]. eapply IH.
-    + rewrite length_skipn. subst w. s!. destruct j; lia.
+    + rewrite length_skipn. subst w. s!. destruct j; simpl; lia.
     + destruct WELLPAREN as [H1 H2]. econs.
-      { rewrite <- firstn_skipn with (n := j) (l := w) in H1. s!. lia. }
-      { intros s_prefix H_prefix. exploit (H2 (L.firstn j w ++ s_prefix)).
-        - rewrite <- firstn_skipn with (n := j) (l := w) at 2. now eapply app_isPrefixOf with (s := L.firstn j w).
-        - s!. lia.
-      }
+      * rewrite <- firstn_skipn with (n := j) (l := w) in H1. s!. lia.
+      * intros s_prefix H_prefix. exploit (H2 (L.firstn j w ++ s_prefix)).
+        { rewrite <- firstn_skipn with (n := j) (l := w) at 2. now eapply app_isPrefixOf with (s := L.firstn j w). }
+        { s!. lia. }
 Qed.
 
 End THEORY.
