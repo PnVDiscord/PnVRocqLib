@@ -487,7 +487,7 @@ Qed.
 Instance Lookup_retracts x ty Gamma : B.retracts (Lookup x ty Gamma) (LookupProp x ty Gamma) :=
   { section := Lookup_to_LookupProp x ty Gamma
   ; retraction := LookupProp_to_Lookup x ty Gamma
-  ; retraction_section X := LookupProp_Lookup_LookupProp x ty Gamma X
+  ; retraction_section := LookupProp_Lookup_LookupProp x ty Gamma
   }.
 Next Obligation.
   eapply LookupProp_pirrel.

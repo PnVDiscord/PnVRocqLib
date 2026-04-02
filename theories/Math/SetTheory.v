@@ -207,13 +207,6 @@ Proof.
   - right. exact H_GT.
 Qed.
 
-Section HARTOGS.
-
-Definition Hartogs (D : Type@{Set_u}) : Ord :=
-  mkNode (B.sig (D -> D -> Prop) (@well_founded D)) (fun RWF => @fromWfSet D RWF.(B.proj1_sig) RWF.(B.proj2_sig)).
-
-End HARTOGS.
-
 Definition toSet (t : Tree) : Type@{Set_u} :=
   projT1 (toWellPoset t).
 
@@ -381,6 +374,13 @@ Definition _Card_mul : Card -> Card -> Card :=
 
 Definition _Card_exp : Card -> Card -> Card :=
   Cardinality.exp.
+
+Section HARTOGS.
+
+End HARTOGS.
+
+Definition cutoff (D : Type@{Set_u}) : Tree :=
+  mkNode (B.sig (D -> D -> Prop) (@well_founded D)) (fun RWF => @fromWfSet D RWF.(B.proj1_sig) RWF.(B.proj2_sig)).
 
 End TypeTheoreticImplementation.
 

@@ -562,6 +562,8 @@ Class isWoset (A : Type) {SETOID : isSetoid A} : Type :=
     : x == y
   }.
 
+Notation isExtensional R := (forall x, forall y, (forall z, R z x <-> R z y) -> x == y).
+
 Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
   wltProp (isWellPoset := @Woset_isWellPoset A SETOID WOSET) x y.
 

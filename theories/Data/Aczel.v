@@ -1367,6 +1367,72 @@ Proof.
   rewrite claim1. exact ORDINAL.
 Qed.
 
+Section ORDINAL_EQUIV_DEF_1.
+
+#[local]
+Instance Setoid_consistOf_members (alpha : Tree) : isSetoid (children alpha) :=
+  { eqProp c c' := childnodes alpha c == childnodes alpha c'
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence Tree_isSetoid.(eqProp_Equivalence) (childnodes alpha)
+  }.
+
+Theorem isOrdinal_iff1 (alpha : Tree)
+  (R := fun c : children alpha => fun c' : children alpha => childnodes alpha c \in childnodes alpha c')
+  : isOrdinal alpha <-> (isTransitiveSet alpha /\ ⟪ R_WellOrder : well_founded R /\ Transitive R /\ eqPropCompatible2 R /\ isExtensional R ⟫).
+Proof.
+  unnw. split.
+  - intros ORDINAL.
+    split. { now inv ORDINAL. }
+    split. { eapply relation_on_image_liftsWellFounded with (R := member) (f := childnodes alpha). exact member_wf. }
+    split. { inv ORDINAL. ii. unfold R in *. eapply TRANS' with (beta := childnodes alpha z); eauto with *. }
+    split. { ii. unfold R; do 2 red. destruct alpha as [cs ts]; simpl in *. unred_eqTree. now rewrite x_EQ, y_EQ. }
+    unfold R; intros x y EXT. eapply extensionality. destruct alpha as [cs ts]; simpl in *. inversion ORDINAL.
+    enough (claim1 : ts x == ts y) by now intros z; rewrite claim1.
+    eapply extensionality; intros z; split; intros [c z_eq]; rewrite z_eq; clear z z_eq.
+    + assert (childnodes (ts x) c \in mkNode cs ts) as [k EQ].
+      { eapply TRANS with (y := ts x); eauto with *. }
+      rewrite EQ. simpl in *. rewrite <- EXT. rewrite <- EQ. eauto with *.
+    + assert (childnodes (ts y) c \in mkNode cs ts) as [k EQ].
+      { eapply TRANS with (y := ts y); eauto with *. }
+      rewrite EQ. simpl in *. rewrite -> EXT. rewrite <- EQ. eauto with *.
+  - intros [TRANSITIVE (R_wf & R_Transitive & R_eqPropCompatible2 & R_extensional)].
+    split; [trivial | intros beta beta_in y y_in z z_in].
+    assert (y_in' : y \in alpha).
+    { eapply TRANSITIVE; eauto. }
+    assert (z_in' : z \in alpha).
+    { eapply TRANSITIVE; eauto. }
+    destruct y_in' as [cy y_eq], z_in' as [cz z_eq], beta_in as [c beta_eq].
+    rewrite beta_eq, z_eq. eapply R_Transitive with (y := cy); unfold R.
+    + now rewrite <- y_eq, <- z_eq.
+    + now rewrite <- beta_eq, <- y_eq.
+Qed.
+
+Definition isElemOf (alpha : Tree) (c : children alpha) (c' : children alpha) : Prop :=
+  childnodes alpha c \in childnodes alpha c'.
+
+Lemma isOrdinal_intro_variant1 (alpha : Tree)
+  (TRANSITIVE : isTransitiveSet alpha)
+  (H_WellOrder : well_founded (isElemOf alpha) /\ Transitive (isElemOf alpha) /\ eqPropCompatible2 (isElemOf alpha) /\ isExtensional (isElemOf alpha))
+  : isOrdinal alpha.
+Proof.
+  rewrite isOrdinal_iff1. eauto.
+Qed.
+
+#[local]
+Instance membersOf_Ordinal_isWellPoset (alpha : Tree) (ORDINAL : isOrdinal alpha) : isWellPoset (children alpha) :=
+  { wltProp := isElemOf alpha
+  ; wltProp_well_founded := proj1 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL))
+  ; wltProp_Transitive := proj1 (proj2 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL)))
+  }.
+
+#[local]
+Instance membersOf_Ordinal_isWoset (alpha : Tree) (ORDINAL : isOrdinal alpha) : isWoset (children alpha) :=
+  { Woset_isWellPoset := membersOf_Ordinal_isWellPoset alpha ORDINAL
+  ; Woset_eqPropCompatible2 := proj1 (proj2 (proj2 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL))))
+  ; Woset_ext_eq := proj2 (proj2 (proj2 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL))))
+  }.
+
+End ORDINAL_EQUIV_DEF_1.
+
 End ORDINAL_basic1.
 
 Module Totalify.

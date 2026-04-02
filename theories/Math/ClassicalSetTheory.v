@@ -990,27 +990,27 @@ Proof.
   econs. eapply member_implies_rLt. unfold fromWf. eapply fromAcc_member_fromAcc_intro. exact claim3.
 Qed.
 
-Lemma Hartogs_fixed
-  : ~ not_fixed (Hartogs D).
+Lemma cutoff_fixed
+  : ~ not_fixed (cutoff D).
 Proof.
   intros H_contra. apply least_lt_incr_acc in H_contra; eauto.
   eapply rLt_iff_not_rGe. 2: exact H_contra. eapply rLe_rLt_rLt with (y := @fromWfSet D strictly_increasing strictly_increasing_well_founded).
-  - eapply rLt_implies_rLe. econs. unfold fromWfSet. exists (rec (Hartogs D)). reflexivity.
+  - eapply rLt_implies_rLe. econs. unfold fromWfSet. exists (rec (cutoff D)). reflexivity.
   - econs. simpl. exists (B.exist strictly_increasing strictly_increasing_well_founded). reflexivity.
 Qed.
 
 Theorem BourbakiWittFixedpointTheorem
-  : next (rec (Hartogs D)) ≡ rec (Hartogs D).
+  : next (rec (cutoff D)) ≡ rec (cutoff D).
 Proof.
   split.
-  - eapply NNPP. intros H_contra. eapply Hartogs_fixed. eapply end_le_end with (o' := succ (Hartogs D)).
+  - eapply NNPP. intros H_contra. eapply cutoff_fixed. eapply end_le_end with (o' := succ (cutoff D)).
     { eapply rLt_implies_rLe. econs. simpl. exists (@existT _ _ false true). simpl. reflexivity. }
-    intros o H_rLt H_dle. eapply H_contra. eapply dle_trans with (d2 := rec (succ (Hartogs D))). 1,2,3: eauto.
+    intros o H_rLt H_dle. eapply H_contra. eapply dle_trans with (d2 := rec (succ (cutoff D))). 1,2,3: eauto.
     + eapply rec_succ. reflexivity.
-    + pose proof (rLe_or_rGt o (Hartogs D)) as [H_rLe | H_rGt].
+    + pose proof (rLe_or_rGt o (cutoff D)) as [H_rLe | H_rGt].
       * eapply dle_trans with (d2 := rec o); eauto.
       * exfalso. eapply rLt_iff_not_rGe; [exact H_rLt | ].
-        assert (claim1 : succ (Hartogs D) =ᵣ succ (Hartogs D)) by reflexivity.
+        assert (claim1 : succ (cutoff D) =ᵣ succ (cutoff D)) by reflexivity.
         rewrite rEq_succ_iff in claim1. eapply succ_rLe_intro; eauto.
   - eapply next_extensive; eauto.
 Qed.
@@ -1031,7 +1031,7 @@ Hypothesis ipo_sup_is_supremum : forall I : Type, forall ds : I -> D, forall CHA
 
 Theorem generalised_Kleene_fixedpoint_theorem (f : D -> D)
   (f_isMonotonic : isMonotonic1 f)
-  (mu_f := Ord.rec (D := D) (ipo_sup Empty_set (Empty_set_rect (fun _ : Empty_set => D))) f ipo_sup (Hartogs D))
+  (mu_f := Ord.rec (D := D) (ipo_sup Empty_set (Empty_set_rect (fun _ : Empty_set => D))) f ipo_sup (cutoff D))
   : is_lfpOf mu_f f.
 Proof.
   split.
@@ -1491,7 +1491,7 @@ Hypothesis next_good : forall s : pair, good s -> good (next s).
 Hypothesis next_exhausted : forall s : pair, good s-> (forall x : X, s.(P) x) \/ (exists x : X, (next s).(P) x /\ ~ s.(P) x).
 
 Lemma eventually_exhausted'
-  : forall x : X, (Ord.rec base next pair_sup (Hartogs pair)).(P) x.
+  : forall x : X, (Ord.rec base next pair_sup (cutoff pair)).(P) x.
 Proof.
   exploit (InducedOrdinal.BourbakiWittFixedpointTheorem (fun s : pair => good s) pair_le _ _ pair_sup _ _ base _ next); i.
   { ii; reflexivity. }
@@ -1502,7 +1502,7 @@ Proof.
   { ii; eapply next_good; eauto. }
   { ii; eapply next_extensive; eauto. }
   { ii; eapply next_eq; eauto. }
-  hexploit (next_exhausted (Ord.rec base next pair_sup (Hartogs pair))); i.
+  hexploit (next_exhausted (Ord.rec base next pair_sup (cutoff pair))); i.
   - eapply (InducedOrdinal.rec_good); eauto.
     { ii; reflexivity. }
     { ii; transitivity d2; eauto. }
@@ -1515,7 +1515,7 @@ Qed.
 Lemma eventually_exhausted
   : exists o : Ord.t, forall x : X, (Ord.rec base next pair_sup o).(P) x.
 Proof.
-  exists (Hartogs pair). eapply eventually_exhausted'.
+  exists (cutoff pair). eapply eventually_exhausted'.
 Qed.
 
 Lemma well_ordering_aux
