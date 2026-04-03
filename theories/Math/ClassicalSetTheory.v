@@ -186,6 +186,62 @@ Qed.
 
 End ClassicalWoset.
 
+Section CHILDREN_ORDERTYPE.
+
+#[local] Infix "\in" := member.
+
+#[local]
+Instance children_isSetoid (alpha : Tree) : isSetoid (children alpha) :=
+  { eqProp c c' := childnodes alpha c == childnodes alpha c'
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence Tree_isSetoid.(eqProp_Equivalence) (childnodes alpha)
+  }.
+
+#[local]
+Instance children_isWellPoset (alpha : Tree) (ORDINAL : isOrdinal alpha) : isWellPoset (children alpha) :=
+  { wltProp := isElemOf alpha
+  ; wltProp_well_founded := proj1 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL))
+  ; wltProp_Transitive := proj1 (proj2 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL)))
+  }.
+
+#[local]
+Instance children_isWoset (alpha : Tree) (ORDINAL : isOrdinal alpha) : isWoset (children alpha) :=
+  { Woset_isWellPoset := children_isWellPoset alpha ORDINAL
+  ; Woset_eqPropCompatible2 := proj1 (proj2 (proj2 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL))))
+  ; Woset_ext_eq := proj2 (proj2 (proj2 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL))))
+  }.
+
+Lemma fromOrderType_children_eq (alpha : Tree) (c : children alpha)
+  (ORDINAL : isOrdinal alpha)
+  : @fromOrderType (children alpha) (children_isSetoid alpha) (children_isWoset alpha ORDINAL) c == childnodes alpha c.
+Proof.
+  pose proof (proj1 (isOrdinal_iff1 alpha) ORDINAL) as Hord.
+  pose proof (proj1 Hord) as TRANSITIVE.
+  pose proof (proj1 (proj2 Hord)) as H_wf.
+  induction (H_wf c) as [c _ IH]. eapply extensionality; intros z; split; intros H_in.
+  - unfold fromOrderType in H_in. rewrite fromWf_unfold in H_in. destruct H_in as (d & Hdc & z_eq).
+    rewrite z_eq. eapply eqProp_member_member; eauto.
+  - assert (H_in_alpha : z \in alpha).
+    { eapply TRANSITIVE with (y := childnodes alpha c); eauto with *. }
+    destruct H_in_alpha as [d z_eq].
+    assert (Hdc : isElemOf alpha d c).
+    { unfold isElemOf. eapply eqProp_member_member; eauto with *. now symmetry. }
+    rewrite -> z_eq. rewrite <- IH; eauto.
+    now rewrite fromOrderType_in_fromOrderType_iff.
+Qed.
+
+Lemma FromOrderType_children_id (alpha : Tree)
+  (ORDINAL : isOrdinal alpha)
+  : @FromOrderType (children alpha) (children_isSetoid alpha) (children_isWoset alpha ORDINAL) == alpha.
+Proof.
+  eapply extensionality; intros z; split; intros H_in.
+  - rewrite FromOrderType_spec in H_in. destruct H_in as [c z_eq].
+    rewrite z_eq. rewrite fromOrderType_children_eq. eauto with *.
+  - destruct H_in as [c z_eq]. rewrite FromOrderType_spec. exists c.
+    rewrite z_eq. symmetry. eapply fromOrderType_children_eq.
+Qed.
+
+End CHILDREN_ORDERTYPE.
+
 Module InducedOrdinal.
 
 Section THEORY_ON_RANK.
@@ -1730,6 +1786,224 @@ Proof.
       * rewrite -> GE in H8. rewrite H7 in H8. exfalso.
         eapply well_founded_implies_Irreflexive with (R := R0); eauto.
 Qed.
+
+Section HARTOGS.
+
+#[local] Infix "\in" := member.
+
+#[local] Existing Instance toSet_isSetoid.
+
+#[local] Existing Instance toSet_isWoset.
+
+Definition Hartogs (D : Type@{Set_u}) {SETOID : isSetoid D} : Tree :=
+  mkNode { P : D -> Prop & { R : @sig D P -> @sig D P -> Prop | well_founded R /\ (forall x, forall x', x == x' \/ R x x' \/ R x' x) /\ Transitive R /\ eqPropCompatible2 R } } (fun X => @fromWfSet (@sig D (projT1 X)) (proj1_sig (projT2 X)) (proj1 (proj2_sig (projT2 X)))).
+
+Lemma Hartogs_isTransitiveSet {D : Type@{Set_u}} {SETOID : isSetoid D}
+  : isTransitiveSet (Hartogs D).
+Proof.
+  intros y y_in z [cy z_eq]. rewrite z_eq. clear z z_eq. destruct y as [csy tsy]; simpl in *.
+  destruct y_in as [(P & R & R_wf & R_total & R_Transitive & R_eqPropCompatible2) y_eq]; simpl in *.
+  destruct y_eq as [H1_eq H2_eq]; unred_eqTree. pose proof (H1_eq cy) as [c EQ].
+  rewrite EQ. rewrite fromWf_pirrel with (R_wf := _) (R_wf' := R_wf).
+  rewrite fromWfSet_InitialSegment; eauto.
+  refine (let P' (d : D) : Prop := { H_d : P d | R (@exist _ _ d H_d) c } in _).
+  refine (let R' (x1 : @sig D P') (x2 : @sig D P') : Prop := R (@exist _ _ (proj1_sig x1) (proj1_sig (proj2_sig x1))) (@exist _ _ (proj1_sig x2) (proj1_sig (proj2_sig x2))) in _).
+  assert (H1_R' : well_founded R').
+  { exact (@relation_on_image_liftsWellFounded _ _ R (fun x : @sig D P' => @exist D P (proj1_sig x) (proj1_sig (proj2_sig x))) R_wf). }
+  assert (H2_R' : forall x, forall x', x == x' \/ R' x x' \/ R' x' x).
+  { intros x1 x2; simpl. exact (R_total (@exist _ _ (proj1_sig x1) (proj1_sig (proj2_sig x1))) (@exist _ _ (proj1_sig x2) (proj1_sig (proj2_sig x2)))). }
+  assert (H3_R' : Transitive R').
+  { intros x1 x2 x3; simpl. exact (R_Transitive (@exist _ _ (proj1_sig x1) (proj1_sig (proj2_sig x1))) (@exist _ _ (proj1_sig x2) (proj1_sig (proj2_sig x2))) (@exist _ _ (proj1_sig x3) (proj1_sig (proj2_sig x3)))). }
+  assert (H4_R' : eqPropCompatible2 R').
+  { intros x1 x2 y1 y2; simpl. exact (R_eqPropCompatible2 (@exist _ _ (proj1_sig x1) (proj1_sig (proj2_sig x1))) (@exist _ _ (proj1_sig x2) (proj1_sig (proj2_sig x2))) (@exist _ _ (proj1_sig y1) (proj1_sig (proj2_sig y1))) (@exist _ _ (proj1_sig y2) (proj1_sig (proj2_sig y2)))). }
+  exists (@existT _ _ P' (@exist _ _ R' (conj H1_R' (conj H2_R' (conj H3_R' H4_R'))))). simpl childnodes. simpl. split; intros a.
+  - set (f := fun a : @sig (@sig D P) (fun y => R y c) => let '(@exist _ _ (@exist _ _ x p) r) := a in @exist D P' x (@exist (P x) (fun H_d => R (@exist _ P x H_d) c) p r)).
+    destruct a as [[x p] r]. exists (@exist _ _ x (@exist _ _ p r)). unred_eqTree. eapply fromWf_eq_fromWf_intro with (f := f). intros [[? ?] ?] [? [? ?]]; simpl. unfold binary_relation_on_image, f. split.
+    + intros ([[? ?] ?] & H1 & H2); simpl in *. eexists; split; [red | reflexivity]. simpl. clarify. now rewrite proof_irrelevance with (p1 := x2) (p2 := p1).
+    + intros ([? [? ?]] & H1 & H2); simpl in *. eexists (@exist _ _ (@exist _ _ _ _) _); simpl; split; [ | reflexivity]; clarify. cbv in H1. now rewrite proof_irrelevance with (p1 := p0) (p2 := x4).
+  - set (f := fun a : @sig D P' => let '(@exist _ _ x (@exist _ _ p r)) := a in @exist (@sig D P) (fun y => R y c) (@exist _ _ x p) r).
+    destruct a as [x [p r]]. exists (@exist _ _ (@exist _ _ x p) r). unred_eqTree. symmetry. eapply fromWf_eq_fromWf_intro with (f := f). intros [? [? ?]] [[? ?] ?]; simpl. unfold binary_relation_on_image, f. split.
+    + intros ([? [? ?]] & H1 & H2); simpl in *. eexists (@exist _ _ (@exist _ _ _ _) _); simpl; split; [ | reflexivity]; clarify. cbv in H1. now rewrite proof_irrelevance with (p1 := p0) (p2 := x4).
+    + intros ([[? ?] ?] & H1 & H2); simpl in *. eexists (@exist D _ _ (@exist _ _ _ _)); simpl; split; [ | reflexivity]; clarify. red. simpl. now rewrite proof_irrelevance with (p1 := x1) (p2 := p1).
+Qed.
+
+Lemma Hartogs_isOrdinal {D : Type@{Set_u}} {SETOID : isSetoid D}
+  : isOrdinal (Hartogs D).
+Proof.
+  enough (claim : forall alpha, alpha \in Hartogs D -> isOrdinal alpha).
+  { split.
+    - eapply Hartogs_isTransitiveSet.
+    - intros beta beta_in. now pose proof (claim beta beta_in) as [? ?].
+  }
+  intros alpha [(P & R & R_wf & R_total & R_Transitive & R_eqPropCompatible2) alpha_eq]; simpl in *.
+  rewrite alpha_eq. rewrite fromWfSet_pirrel with (R_wf' := R_wf).
+  pose (WOSET := @O.WellfoundedToset_isWoset classic (@sig D P) (@subSetoid D SETOID P) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+  change (isOrdinal (@FromOrderType (@sig D P) (@subSetoid D SETOID P) WOSET)). eapply FromOrderType_isOrdinal.
+Qed.
+
+Theorem Hartogs_spec1 `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (alpha : Ord.t)
+  (H_isOrdinal : isOrdinal alpha)
+  : alpha \in Hartogs D <-> {| Cardinality.carrier := toSet alpha; Cardinality.carrier_isSetoid := toSet_isSetoid alpha; |} =< {| Cardinality.carrier := D; Cardinality.carrier_isSetoid := D_isSetoid; |}.
+Proof.
+  pose (RA_wf := (toSet_isWoset alpha).(Woset_isWellPoset).(wltProp_well_founded)).
+  set (RA := (toSet_isWoset alpha).(Woset_isWellPoset).(wltProp)) in *.
+  assert (claim2 : forall x : toSet alpha, forall x' : toSet alpha, eqProp (isSetoid := toSet_isSetoid alpha) x x' \/ RA x x' \/ RA x' x).
+  { eapply @O.wlt_trichotomous with (SETOID := toSet_isSetoid alpha) (WOSET := toSet_isWoset alpha). exact classic. }  
+  split.
+  - intros [(P & R & R_wf & R_total & R_Transitive & R_eqPropCompatible2) alpha_eq]; simpl in *.
+    pose proof (fromWfSet_embed' (toSet alpha) (@sig D P) (toSet_isSetoid alpha) (@subSetoid D D_isSetoid P)) as HH.
+    rewrite <- Ordinal1.FromOrderType_toSet_id in alpha_eq by eassumption.
+    rewrite fromWfSet_pirrel with (R_wf' := R_wf) in alpha_eq.
+    change (FromOrderType (toSet alpha)) with (fromWfSet RA RA_wf) in alpha_eq.
+    assert (claim1 : fromWfSet RA RA_wf ≦ᵣ fromWfSet R R_wf) by now rewrite alpha_eq.
+    specialize (HH RA R RA_wf R_wf (toSet_isWoset alpha).(Woset_eqPropCompatible2) R_eqPropCompatible2 (toSet_isWoset alpha).(Woset_isWellPoset).(wltProp_Transitive) R_Transitive claim1 claim2 R_total).
+    assert (claim3 : forall x1 : toSet alpha, forall x2 : toSet alpha, eqProp (isSetoid := toSet_isSetoid alpha) x1 x2 -> forall x : toSet alpha, RA x1 x -> RA x2 x).
+    { pose proof (toSet_isWoset alpha).(Woset_eqPropCompatible2) as X. ii; eapply X with (x2 := x1) (y2 := x); eauto with *. }
+    assert (claim4 : forall x1, forall x2, x1 == x2 -> forall x : @sig D P, R x1 x -> R x2 x).
+    { ii. now rewrite <- H. }
+    destruct HH as [f H_f]. exists (fun x : toSet alpha => proj1_sig (f x)).
+    + red; simpl Cardinality.carrier; ii. pose proof (R_total (f x1) (f x2)) as [H_EQ | [H_LT | H_GT]]; eauto.
+      * rewrite <- H_f in H_LT. exfalso. contradiction (well_founded_implies_Irreflexive' (SETOID := toSet_isSetoid alpha) RA RA_wf claim3 x1 x2 x_EQ H_LT).
+      * rewrite <- H_f in H_GT. exfalso. symmetry in x_EQ. contradiction (well_founded_implies_Irreflexive' (SETOID := toSet_isSetoid alpha) RA RA_wf claim3 x2 x1 x_EQ H_GT).
+    + simpl Cardinality.carrier; ii. pose proof (claim2 x1 x2) as [H_EQ | [H_LT | H_GT]]; eauto.
+      * rewrite -> H_f in H_LT. exfalso. contradiction (well_founded_implies_Irreflexive' R R_wf claim4 (f x1) (f x2) H H_LT).
+      * rewrite -> H_f in H_GT. exfalso. symmetry in H. contradiction (well_founded_implies_Irreflexive' R R_wf claim4 (f x2) (f x1) H H_GT).
+  - intros [f f_cong f_inj].
+    set (A := toSet alpha).
+    set (RA_Transitive := (toSet_isWoset alpha).(Woset_isWellPoset).(wltProp_Transitive)).
+    set (RA_eqPropCompatible2 := (toSet_isWoset alpha).(Woset_eqPropCompatible2)).
+    pose (Pimg := fun d : D => exists x, f x == d).
+    exploit (Axiom_of_Choice (@sig D Pimg) (fun _ => toSet alpha) (fun y => fun x => f x == proj1_sig y)).
+    { intros [d Hd]; exact Hd. }
+    intros [g Hg]. change (forall y : { d : D | Pimg d }, f (g y) == proj1_sig y) in Hg.
+    set (R := binary_relation_on_image RA g).
+    assert (g_cong : eqPropCompatible1 (B_isSetoid := toSet_isSetoid alpha) g).
+    { intros y1 y2 Hy. eapply f_inj. now do 2 rewrite Hg. }
+    assert (R_wf : well_founded R) by exact (relation_on_image_liftsWellFounded RA g RA_wf).
+    assert (R_total : forall x : { d : D | Pimg d }, forall x' : { d : D | Pimg d }, x == x' \/ R x x' \/ R x' x).
+    { intros y1 y2.
+      pose proof (O.wlt_trichotomous (classic := classic) (WOSET := toSet_isWoset alpha) (g y1) (g y2)) as [H_eq | [H_lt | H_gt]].
+      - left. change (proj1_sig y1 == proj1_sig y2). do 2 rewrite <- Hg. now rewrite H_eq.
+      - right; left; exact H_lt.
+      - right; right; exact H_gt.
+    }
+    assert (R_Transitive : Transitive R).
+    { ii; eapply RA_Transitive; eauto. }
+    assert (R_eqPropCompatible2 : eqPropCompatible2 R).
+    { ii; eapply RA_eqPropCompatible2; eapply g_cong; eauto. }
+    exists (@existT _ _ Pimg (@exist _ _ R (conj R_wf (conj R_total (conj R_Transitive R_eqPropCompatible2))))).
+    simpl. rewrite fromWfSet_pirrel with (R_wf' := R_wf). simpl Cardinality.carrier in *.
+    rewrite <- Ordinal1.FromOrderType_toSet_id with (alpha := alpha); eauto.
+    eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+    { eapply FromOrderType_isOrdinal. }
+    { pose (WOSET := @O.WellfoundedToset_isWoset classic (@sig D Pimg) (@subSetoid D D_isSetoid Pimg) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+      change (isOrdinal (@FromOrderType _ _ WOSET)). eapply FromOrderType_isOrdinal.
+    }
+    set (h := fun x : toSet alpha => @exist D Pimg (f x) (@ex_intro _ _ x (eqProp_Equivalence.(Equivalence_Reflexive) (f x)))).
+    assert (claim : forall x, g (h x) == x).
+    { intros x. eapply f_inj. now rewrite Hg. }
+    unfold FromOrderType. split.
+    + eapply fromWfSet_cong with (f := h). intros x1 x2 H_lt. eapply Woset_eqPropCompatible2 with (x2 := x1) (y2 := x2); eauto.
+    + eapply fromWfSet_cong with (f := g). intros y1 y2 H_lt; eauto.
+Qed.
+
+#[local] Existing Instance children_isSetoid.
+
+#[local] Existing Instance children_isWoset.
+
+Theorem Hartogs_spec2 `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (alpha : Tree)
+  (H_isOrdinal : isOrdinal alpha)
+  : alpha \in Hartogs D <-> Cardinality.mk (children alpha) (children_isSetoid alpha) =< Cardinality.mk D D_isSetoid.
+Proof.
+  pose (RA := isElemOf alpha).
+  pose (RA_wf := (children_isWoset alpha H_isOrdinal).(Woset_isWellPoset).(wltProp_well_founded)).
+  pose (RA_Transitive := (children_isWoset alpha H_isOrdinal).(Woset_isWellPoset).(wltProp_Transitive)).
+  pose (RA_eqPropCompatible2 := (children_isWoset alpha H_isOrdinal).(Woset_eqPropCompatible2)).
+  assert (RA_total : forall x x' : children alpha, x == x' \/ RA x x' \/ RA x' x).
+  { eapply @O.wlt_trichotomous with (SETOID := children_isSetoid alpha) (WOSET := children_isWoset alpha H_isOrdinal). exact classic. }
+  split.
+  - intros [(P & R & R_wf & R_total & R_Transitive & R_eqPropCompatible2) alpha_eq].
+    pose proof (fromWfSet_embed' (children alpha) (@sig D P) (children_isSetoid alpha) (@subSetoid D D_isSetoid P)) as HH.
+    unshelve rewrite <- FromOrderType_children_id in alpha_eq; eauto.
+    simpl childnodes in alpha_eq. rewrite fromWfSet_pirrel with (R_wf' := R_wf) in alpha_eq.
+    change (@FromOrderType (children alpha) (children_isSetoid alpha) (children_isWoset alpha H_isOrdinal)) with (@fromWfSet (children alpha) RA RA_wf) in alpha_eq.
+    assert (claim1 : @fromWfSet (children alpha) RA RA_wf ≦ᵣ @fromWfSet (@sig D P) R R_wf).
+    { rewrite <- alpha_eq. unfold FromOrderType. now eapply fromWfSet_cong with (f := fun x => x). }
+    specialize (HH RA R RA_wf R_wf RA_eqPropCompatible2 R_eqPropCompatible2 RA_Transitive R_Transitive claim1 RA_total R_total).
+    assert (claim3 : forall x1 : children alpha, forall x2 : children alpha, x1 == x2 -> forall x : children alpha, RA x1 x -> RA x2 x).
+    { intros x1 x2 H x Hlt. eapply RA_eqPropCompatible2 with (x2 := x1) (y2 := x); eauto with *. }
+    assert (claim4 : forall x1 : @sig D P, forall x2 : @sig D P, x1 == x2 -> forall x : @sig D P, R x1 x -> R x2 x).
+    { intros x1 x2 H x Hlt. now rewrite <- H. }
+    destruct HH as [g Hg]. exists (fun x : children alpha => proj1_sig (g x)).
+    + red. simpl. intros x1 x2 x_EQ. pose proof (R_total (g x1) (g x2)) as [H_EQ | [H_LT | H_GT]]; eauto.
+      * rewrite <- Hg in H_LT. exfalso. contradiction (well_founded_implies_Irreflexive' (SETOID := children_isSetoid alpha) RA RA_wf claim3 x1 x2 x_EQ H_LT).
+      * rewrite <- Hg in H_GT. exfalso. symmetry in x_EQ. contradiction (well_founded_implies_Irreflexive' (SETOID := children_isSetoid alpha) RA RA_wf claim3 x2 x1 x_EQ H_GT).
+    + intros x1 x2 H. pose proof (RA_total x1 x2) as [H_EQ | [H_LT | H_GT]]; eauto.
+      * rewrite -> Hg in H_LT. exfalso. contradiction (well_founded_implies_Irreflexive' R R_wf claim4 (g x1) (g x2) H H_LT).
+      * rewrite -> Hg in H_GT. exfalso. symmetry in H. contradiction (well_founded_implies_Irreflexive' R R_wf claim4 (g x2) (g x1) H H_GT).
+  - intros [f f_cong f_inj]. pose (Pimg := fun d : D => exists x : children alpha, f x == d).
+    exploit (Axiom_of_Choice (@sig D Pimg) (fun _ => children alpha) (fun y => fun x => f x == proj1_sig y)).
+    { intros [d Hd]. exact Hd. }
+    intros [g Hg]. change (forall y : { d : D | Pimg d }, f (g y) == proj1_sig y) in Hg.
+    pose (R := binary_relation_on_image RA g).
+    assert (g_cong : eqPropCompatible1 g).
+    { intros y1 y2 Hy. eapply f_inj. now do 2 rewrite Hg. }
+    assert (R_wf : well_founded R).
+    { exact (relation_on_image_liftsWellFounded RA g RA_wf). }
+    assert (R_total : forall y1 : { d : D | Pimg d }, forall y2 : { d : D | Pimg d }, y1 == y2 \/ R y1 y2 \/ R y2 y1).
+    { intros y1 y2. pose proof (O.wlt_trichotomous (classic := classic) (SETOID := children_isSetoid alpha) (WOSET := children_isWoset alpha H_isOrdinal) (g y1) (g y2)) as [H_eq | [H_lt | H_gt]].
+      - left. change (proj1_sig y1 == proj1_sig y2). do 2 rewrite <- Hg. now rewrite H_eq.
+      - right; left; exact H_lt.
+      - right; right; exact H_gt.
+    }
+    assert (R_Transitive : Transitive R).
+    { intros y1 y2 y3 H12 H23. eapply RA_Transitive; eauto. }
+    assert (R_eqPropCompatible2 : eqPropCompatible2 R).
+    { intros y1 y1' y2 y2' Hy1 Hy2. eapply RA_eqPropCompatible2; eauto. }
+    exists (@existT _ _ Pimg (@exist _ _ R (conj R_wf (conj R_total (conj R_Transitive R_eqPropCompatible2))))); simpl.
+    rewrite fromWfSet_pirrel with (R_wf' := R_wf). unshelve rewrite <- FromOrderType_children_id with (alpha := alpha); eauto.
+    eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+    + eapply FromOrderType_isOrdinal.
+    + pose (WOSET := @O.WellfoundedToset_isWoset classic (@sig D Pimg) (@subSetoid D D_isSetoid Pimg) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+      change (isOrdinal (@FromOrderType _ _ WOSET)). eapply FromOrderType_isOrdinal.
+    + set (h := fun x : children alpha => @exist D Pimg (f x) (@ex_intro _ _ x (eqProp_Equivalence.(Equivalence_Reflexive) (f x)))).
+      assert (claim : forall x, g (h x) == x).
+      { intros x. eapply f_inj. now rewrite Hg. }
+      unfold FromOrderType. split.
+      * eapply fromWfSet_cong with (f := h). intros x1 x2 Hlt. eapply RA_eqPropCompatible2 with (x2 := x1) (y2 := x2); eauto.
+      * eapply fromWfSet_cong with (f := g); eauto.
+Qed.
+
+Corollary Hartogs_rLt_iff `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (alpha : Tree)
+  (H_isOrdinal : isOrdinal alpha)
+  : alpha <ᵣ Hartogs D <-> Cardinality.mk (children alpha) (children_isSetoid alpha) =< Cardinality.mk D D_isSetoid.
+Proof.
+  split.
+  - intros Hlt. rewrite <- Hartogs_spec2; eauto.
+    eapply Ordinal1.Ordinal_rLt_Ordinal_elim; eauto using Hartogs_isOrdinal.
+  - intros Hle. eapply member_implies_rLt. rewrite -> Hartogs_spec2; eauto.
+Qed.
+
+Corollary Hartogs_not_embed `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D)
+  : ~ Cardinality.mk (children (Hartogs D)) (children_isSetoid (Hartogs D)) =< Cardinality.mk D D_isSetoid.
+Proof.
+  intros Hle. pose proof (proj2 (Hartogs_spec2 D D_isSetoid (Hartogs D) (Hartogs_isOrdinal)) Hle) as H_in.
+  contradiction (StrictOrder_Irreflexive (Hartogs D)). exact (member_implies_rLt (Hartogs D) (Hartogs D) H_in).
+Qed.
+
+Corollary Hartogs_minimal_nonembed `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D)
+  (beta : Tree)
+  (H_isOrdinal : isOrdinal beta)
+  (H_nLe : ~ Cardinality.mk (children beta) (children_isSetoid beta) =< Cardinality.mk D D_isSetoid)
+  : Hartogs D ≦ᵣ beta.
+Proof.
+  eapply NNPP; intro H_contra.
+  pose proof (proj2 (InducedOrdinal.rLt_iff_not_rGe beta (Hartogs D)) H_contra) as Hlt.
+  pose proof (Ordinal1.Ordinal_rLt_Ordinal_elim beta (Hartogs D) H_isOrdinal (Hartogs_isOrdinal) Hlt) as Hin.
+  contradiction H_nLe. exact (proj1 (Hartogs_spec2 D D_isSetoid beta H_isOrdinal) Hin).
+Qed.
+
+End HARTOGS.
 
 Reserved Infix "`hasCardinality`" (no associativity, at level 70).
 
