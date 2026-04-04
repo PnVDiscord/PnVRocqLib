@@ -2420,6 +2420,19 @@ Proof.
   reflexivity.
 Qed.
 
+#[local] Existing Instance rLe_asProset.
+
+Definition isCardinal (alpha : Tree) : Prop :=
+  exists kappa : Cardinality.t, kappa `hasCardinality` alpha.
+
+Lemma isCardinal_isOrdinal (alpha : Tree)
+  (CARDINAL : isCardinal alpha)
+  : isOrdinal alpha.
+Proof.
+  destruct CARDINAL as [kappa CARDINAL].
+  eapply hasCardinality_isOrdinal; eauto.
+Qed.
+
 Section NEXT.
 
 Lemma Hartogs_ordertype_iff `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (A : Type@{Set_u}) (A_isSetoid : isSetoid A) (WOSET : @isWoset A A_isSetoid)
@@ -2532,17 +2545,244 @@ Proof.
   exists (@proj1_sig (Cardinality.carrier kappa) P); firstorder.
 Qed.
 
+#[global]
+Instance next_isMonotonic1 `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : isMonotonic1 (A_isProset := Cardinality.t_isProset) next.
+Proof.
+  intros kappa lambda H_le. rewrite next_le_iff_lt. eapply Cardinality_le_lt_lt; eauto using next_gt.
+Qed.
+
+#[global]
+Instance next_eqPropCompatible1 `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : eqPropCompatible1 next.
+Proof.
+  intros kappa lambda H_eq. enough (next kappa =< next lambda /\ next lambda =< next kappa) as [[f f_cong f_inj] [g g_cong g_inj]] by now exists f g.
+  destruct H_eq; split; eapply next_isMonotonic1; [exists f | exists g]; eauto.
+Qed.
+
 End NEXT.
 
+#[local] Existing Instance children_isSetoid.
 
+#[local] Existing Instance children_isWoset.
+
+Lemma cardinal_canonical_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (alpha : Tree)
+  (CARDINAL : isCardinal alpha)
+  : Cardinality.mk (children alpha) (children_isSetoid alpha) `hasCardinality` alpha.
+Proof.
+  destruct CARDINAL as [kappa CARDINAL]. pose proof (hasCardinality_isOrdinal kappa alpha CARDINAL) as ORDINAL.
+  pose proof (COPY := CARDINAL). destruct CARDINAL as [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_alpha) MIN].
+  set (WOSET := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+  change (@FromOrderType kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WOSET == alpha) in H_alpha.
+  assert (H_le1 : Cardinality.mk (children alpha) (children_isSetoid alpha) =< kappa).
+  { rewrite <- Hartogs_spec2; eauto. rewrite <- H_alpha; eauto. rewrite Hartogs_ordertype_iff. reflexivity. }
+  assert (H_le2 : kappa =< Cardinality.mk (children alpha) (children_isSetoid alpha)).
+  { rewrite <- Hartogs_ordertype_iff. rewrite -> H_alpha. rewrite Hartogs_spec2; eauto. reflexivity. }
+  assert (H_eq : Cardinality.mk (children alpha) (children_isSetoid alpha) == kappa).
+  { destruct H_le1 as [f f_cong f_inj], H_le2 as [g g_cong g_inj]; exists f g; eauto. }
+  now rewrite H_eq.
+Qed.
 
 Section ALEPH.
 
+Lemma indexed_union_of_cardinals_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (alphas : I -> Tree)
+  (CHAIN : forall i1, forall i2, alphas i1 ≦ᵣ alphas i2 \/ alphas i2 ≦ᵣ alphas i1)
+  (HCARD : forall i, isCardinal (alphas i))
+  : Cardinality.mk (children (indexed_union I alphas)) (children_isSetoid (indexed_union I alphas)) `hasCardinality` indexed_union I alphas.
+Proof.
+  set (u := indexed_union I alphas).
+  assert (Hord : forall i, isOrdinal (alphas i)).
+  { intro i. eapply isCardinal_isOrdinal. exact (HCARD i). }
+  assert (Hord_u : isOrdinal u).
+  { unfold u. eapply sup_isOrdinal. exact Hord. }
+  split.
+  - exists (isElemOf u). exists ((children_isWoset u Hord_u).(Woset_isWellPoset).(wltProp_well_founded)).
+    split. { eapply @O.wlt_trichotomous with (SETOID := children_isSetoid u) (WOSET := children_isWoset u Hord_u). exact classic. }
+    split. { exact ((children_isWoset u Hord_u).(Woset_isWellPoset).(wltProp_Transitive)). }
+    split. { exact ((children_isWoset u Hord_u).(Woset_eqPropCompatible2)). }
+    exact (FromOrderType_children_id u Hord_u).
+  - intros beta (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_beta).
+    set (WOSET := @O.WellfoundedToset_isWoset classic (children u) (children_isSetoid u) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+    change (@FromOrderType (children u) (children_isSetoid u) WOSET == beta) in H_beta.
+    rewrite <- H_beta. unfold u. rewrite indexed_union_rLe_iff. intros i.
+    pose proof (cardinal_canonical_hasCardinality (alphas i) (HCARD i)) as [_ MIN_i].
+    set (A := children (alphas i)).
+    set (A_isSetoid := children_isSetoid (alphas i)).
+    set (h := fun x : A => @existT I (fun j => children (alphas j)) i x).
+    set (Ri := binary_relation_on_image R h).
+    assert (h_cong : @eqPropCompatible1 A (children u) A_isSetoid (children_isSetoid u) h) by now ii; eauto.
+    assert (Ri_wf : well_founded Ri) by exact (relation_on_image_liftsWellFounded R h R_wf).
+    assert (Ri_total : forall x y : A, x == y \/ Ri x y \/ Ri y x).
+    { intros x y. unfold Ri, binary_relation_on_image. pose proof (R_total (h x) (h y)) as [Heq | [Hlt | Hgt]]; eauto. }
+    assert (Ri_Transitive : Transitive Ri).
+    { ii; eapply R_Transitive; eauto. }
+    assert (Ri_eqPropCompatible2 : eqPropCompatible2 Ri).
+    { ii; eapply R_eqPropCompatible2; eauto. }
+    set (WOSET_i := @O.WellfoundedToset_isWoset classic A A_isSetoid {| wltProp := Ri; wltProp_well_founded := Ri_wf; wltProp_Transitive := Ri_Transitive |} Ri_eqPropCompatible2 Ri_total).
+    assert (H_left : alphas i ≦ᵣ @FromOrderType A A_isSetoid WOSET_i).
+    { eapply MIN_i. exists Ri, Ri_wf; splits; eauto. reflexivity. }
+    assert (H_right : @FromOrderType A A_isSetoid WOSET_i ≦ᵣ @FromOrderType (children u) (children_isSetoid u) WOSET).
+    { eapply fromWfSet_cong with (f := h); eauto. }
+    eapply rLe_trans; [exact H_left | exact H_right].
+Qed.
 
+Lemma indexed_union_of_cardinals_isCardinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (alphas : I -> Tree)
+  (CHAIN : forall i1, forall i2, alphas i1 ≦ᵣ alphas i2 \/ alphas i2 ≦ᵣ alphas i1)
+  (HCARD : forall i, isCardinal (alphas i))
+  : isCardinal (indexed_union I alphas).
+Proof.
+  exists (Cardinality.mk (children (indexed_union I alphas)) (children_isSetoid (indexed_union I alphas))).
+  eapply indexed_union_of_cardinals_hasCardinality; eauto.
+Qed.
+
+Lemma indexed_union_supremum_of_cardinals `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (alphas : I -> Tree) (beta : Tree)
+  (CHAIN : forall i1, forall i2, alphas i1 ≦ᵣ alphas i2 \/ alphas i2 ≦ᵣ alphas i1)
+  (HCARD : forall i, isCardinal (alphas i))
+  (HCARD_beta : isCardinal beta)
+  : indexed_union I alphas ≦ᵣ beta <-> forall i, alphas i ≦ᵣ beta.
+Proof.
+  rewrite indexed_union_rLe_iff; eauto using isCardinal_isOrdinal.
+Qed.
+
+Definition aleph0 : Tree :=
+  Cardinality.toTree (Cardinality.ofType nat).
+
+Lemma aleph0_is_cardinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : isCardinal aleph0.
+Proof.
+  exists (Cardinality.ofType nat). eapply hasCardinality_intro.
+Qed.
+
+Lemma aleph0_isOrdinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : isOrdinal aleph0.
+Proof.
+  eapply isCardinal_isOrdinal. eapply aleph0_is_cardinal.
+Qed.
+
+Definition alephS (kappa : Tree) : Tree :=
+  Cardinality.toTree (next (Cardinality.mk (children kappa) (children_isSetoid kappa))).
+
+Lemma alephS_eq_Hartogs `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree)
+  : alephS o == Hartogs (children o).
+Proof.
+  eapply next_toTree_eq.
+Qed.
+
+Lemma alephS_is_cardinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree)
+  : isCardinal (alephS o).
+Proof.
+  exists (next (Cardinality.mk (children o) (children_isSetoid o))). eapply hasCardinality_intro.
+Qed.
+
+Lemma alephS_isOrdinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree)
+  : isOrdinal (alephS o).
+Proof.
+  eapply isCardinal_isOrdinal. eapply alephS_is_cardinal.
+Qed.
+
+Lemma alephS_lt
+  `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  (o : Tree)
+  (ORDINAL : isOrdinal o)
+  : o <ᵣ alephS o.
+Proof.
+  rewrite alephS_eq_Hartogs. rewrite Hartogs_rLt_iff; eauto. reflexivity.
+Qed.
+
+Lemma alephS_le `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree)
+  (ORDINAL : isOrdinal o)
+  : o ≦ᵣ alephS o.
+Proof.
+  eapply rLt_implies_rLe. eapply alephS_lt; eauto.
+Qed.
+
+Lemma ordinal_children_card_le `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree) (o' : Tree)
+  (ORDINAL : isOrdinal o)
+  (ORDINAL' : isOrdinal o')
+  (LE : o ≦ᵣ o')
+  : Cardinality.mk (children o) (children_isSetoid o) =< Cardinality.mk (children o') (children_isSetoid o').
+Proof.
+  rewrite <- Hartogs_rLt_iff; eauto. eapply rLe_rLt_rLt; eauto. rewrite -> Hartogs_rLt_iff; eauto. reflexivity.
+Qed.
+
+Lemma le_alephS `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree) (o' : Tree)
+  (ORDINAL : isOrdinal o)
+  (ORDINAL' : isOrdinal o')
+  (LE : o ≦ᵣ o')
+  : alephS o ≦ᵣ alephS o'.
+Proof.
+  eapply Cardinality_toTree_isMonotonic1. eapply next_isMonotonic1. eapply ordinal_children_card_le; eauto.
+Qed.
+
+Let aleph_dle_refl d1
+  (GOOD : isCardinal d1)
+  : d1 ≦ᵣ d1.
+Proof.
+  reflexivity.
+Qed.
+
+Let aleph_dle_trans d1 d2 d3
+  (GOOD1 : isCardinal d1)
+  (GOOD2 : isCardinal d2)
+  (GOOD3 : isCardinal d3)
+  (LE : d1 ≦ᵣ d2)
+  (LE' : d2 ≦ᵣ d3)
+  : d1 ≦ᵣ d3.
+Proof.
+  now transitivity d2.
+Qed.
+
+Let aleph_djoin_good `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (ds : I -> Tree)
+  (CHAIN : forall i1, forall i2, ds i1 ≦ᵣ ds i2 \/ ds i2 ≦ᵣ ds i1)
+  (GOODs : forall i, isCardinal (ds i))
+  : isCardinal (indexed_union I ds).
+Proof.
+  eapply indexed_union_of_cardinals_isCardinal; eauto.
+Qed.
+
+Let aleph_djoin_supremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (ds : I -> Tree)
+  (CHAIN : forall i1, forall i2, ds i1 ≦ᵣ ds i2 \/ ds i2 ≦ᵣ ds i1)
+  (GOODs : forall i, isCardinal (ds i))
+  (d : Tree)
+  (GOOD : isCardinal d)
+  : indexed_union I ds ≦ᵣ d <-> forall i, ds i ≦ᵣ d.
+Proof.
+  eapply indexed_union_supremum_of_cardinals; eauto.
+Qed.
+
+Let aleph_base_good `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : isCardinal aleph0.
+Proof.
+  eapply aleph0_is_cardinal.
+Qed.
+
+Let aleph_next_good `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (d : Tree)
+  (GOOD : isCardinal d)
+  : isCardinal (alephS d).
+Proof.
+  eapply alephS_is_cardinal.
+Qed.
+
+Let aleph_next_extensive `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (d : Tree)
+  (GOOD : isCardinal d)
+  : d ≦ᵣ alephS d.
+Proof.
+  eapply alephS_le. eapply isCardinal_isOrdinal. exact GOOD.
+Qed.
+
+Let aleph_next_congruence `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} d d'
+  (GOOD : isCardinal d)
+  (GOOD' : isCardinal d')
+  (EQ : d =ᵣ d')
+  : alephS d =ᵣ alephS d'.
+Proof.
+  destruct EQ as [LE GE]. split; eapply le_alephS; eauto using isCardinal_isOrdinal.
+Qed.
+
+Definition aleph : Tree -> Tree :=
+  Ord.orec aleph0 alephS.
 
 End ALEPH.
-
-
 
 Section BETH.
 
