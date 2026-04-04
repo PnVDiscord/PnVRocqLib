@@ -2043,11 +2043,9 @@ Qed.
 
 Section CARDINAL.
 
-Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t).
-
-Theorem hasCardinality_intro
+Theorem hasCardinality_intro `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
   : kappa `hasCardinality` Cardinality.toTree kappa.
-Proof using Axms kappa.
+Proof.
   hexploit (well_ordering_thm kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid)); eauto.
   intros (R0 & R0_wf & R0_total & R0_Transitive & R0_eqPropCompatible2).
   set (WPOSET := {| wltProp := R0; wltProp_Transitive := R0_Transitive; wltProp_well_founded := R0_wf; |}).
@@ -2093,21 +2091,21 @@ Proof using Axms kappa.
     exact (H_i WOSET').
 Qed.
 
-Lemma hasCardinality_isOrdinal c
+Lemma hasCardinality_isOrdinal kappa c
   (CARDINAL : kappa `hasCardinality` c)
   : isOrdinal c.
-Proof using kappa.
+Proof.
   destruct CARDINAL as [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_c) MIN]. rewrite <- H_c.
   set (WPOSET' := {| wltProp := R; wltProp_Transitive := R_Transitive; wltProp_well_founded := R_wf; |}).
   set (WOSET' := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET' R_eqPropCompatible2 R_total).
   change (isOrdinal (@FromOrderType _ _ WOSET')). eapply FromOrderType_isOrdinal.
 Qed.
 
-Lemma hasCardinality_unique c c'
+Lemma hasCardinality_unique kappa c c'
   (CARDINAL : kappa `hasCardinality` c)
   (CARDINAL' : kappa `hasCardinality` c')
   : c == c'.
-Proof using kappa.
+Proof.
   eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
   - eapply hasCardinality_isOrdinal; eauto.
   - eapply hasCardinality_isOrdinal; eauto.
@@ -2116,7 +2114,7 @@ Proof using kappa.
     + eapply MIN'; eauto.
 Qed.
 
-Lemma hasCardinality_rewrite_r (c : Tree) (c' : Tree)
+Lemma hasCardinality_rewrite_r kappa (c : Tree) (c' : Tree)
   (EQ : c == c')
   (CARDINAL : kappa `hasCardinality` c)
   : kappa `hasCardinality` c'.
