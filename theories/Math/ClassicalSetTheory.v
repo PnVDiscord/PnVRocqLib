@@ -2422,21 +2422,49 @@ Qed.
 
 Section NEXT.
 
-Theorem Hartogs_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D)
-  : Cardinality.mk (children (Hartogs D)) (children_isSetoid (Hartogs D)) `hasCardinality` Hartogs D.
-Proof.
-Admitted.
-
 Lemma Hartogs_ordertype_iff `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (A : Type@{Set_u}) (A_isSetoid : isSetoid A) (WOSET : @isWoset A A_isSetoid)
   : @FromOrderType A A_isSetoid WOSET \in Hartogs D <-> Cardinality.mk A A_isSetoid =< Cardinality.mk D D_isSetoid.
 Proof.
-Admitted.
+  split.
+  - intros H_in.
+    pose proof (proj1 (Hartogs_spec2 D D_isSetoid (@FromOrderType A A_isSetoid WOSET) FromOrderType_isOrdinal) H_in) as [f f_cong f_inj]; simpl in *. exists f.
+    + ii; eapply f_cong. now rewrite <- fromOrderType_eq_fromOrderType_iff in x_EQ.
+    + ii; simpl in *.
+      assert (HH : @fromOrderType A A_isSetoid WOSET x1 == @fromOrderType A A_isSetoid WOSET x2) by now eapply f_inj.
+      now rewrite <- fromOrderType_eq_fromOrderType_iff.
+  - intros [f f_cong f_inj].
+    rewrite Hartogs_spec2; [simpl in * | eapply FromOrderType_isOrdinal]. exists f.
+    + ii; eapply f_cong. now rewrite <- fromOrderType_eq_fromOrderType_iff.
+    + ii. change (@fromOrderType A A_isSetoid WOSET x1 == @fromOrderType A A_isSetoid WOSET x2).
+      rewrite -> fromOrderType_eq_fromOrderType_iff; eauto.
+Qed.
 
 Corollary Hartogs_ordertype_lowerbound `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (A : Type@{Set_u}) (A_isSetoid : isSetoid A) (WOSET : @isWoset A A_isSetoid)
   (H_nLe : ~ Cardinality.mk A A_isSetoid =< Cardinality.mk D D_isSetoid)
   : Hartogs D ≦ᵣ @FromOrderType A A_isSetoid WOSET.
 Proof.
-Admitted.
+  eapply NNPP; intro H_contra.
+  contradiction H_nLe. rewrite <- Hartogs_ordertype_iff.
+  eapply Ordinal1.Ordinal_rLt_Ordinal_elim.
+  - eapply FromOrderType_isOrdinal.
+  - eapply Hartogs_isOrdinal.
+  - now rewrite -> InducedOrdinal.rLt_iff_not_rGe.
+Qed.
+
+Theorem Hartogs_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D)
+  : Cardinality.mk (children (Hartogs D)) (children_isSetoid (Hartogs D)) `hasCardinality` Hartogs D.
+Proof.
+  split.
+  - exists (isElemOf (Hartogs D)). exists ((children_isWoset (Hartogs D) Hartogs_isOrdinal).(Woset_isWellPoset).(wltProp_well_founded)).
+    split. { eapply @O.wlt_trichotomous with (SETOID := children_isSetoid (Hartogs D)) (WOSET := children_isWoset (Hartogs D) Hartogs_isOrdinal). exact classic. }
+    split. { exact ((children_isWoset (Hartogs D) Hartogs_isOrdinal).(Woset_isWellPoset).(wltProp_Transitive)). }
+    split. { exact ((children_isWoset (Hartogs D) Hartogs_isOrdinal).(Woset_eqPropCompatible2)). }
+    exact (FromOrderType_children_id (Hartogs D) Hartogs_isOrdinal).
+  - intros alpha (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_alpha).
+    set (WOSET := @O.WellfoundedToset_isWoset classic (children (Hartogs D)) (children_isSetoid (Hartogs D)) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+    change (@FromOrderType (children (Hartogs D)) (children_isSetoid (Hartogs D)) WOSET == alpha) in H_alpha.
+    rewrite <- H_alpha. eapply Hartogs_ordertype_lowerbound with (A := children (Hartogs D)) (A_isSetoid := children_isSetoid (Hartogs D)) (WOSET := WOSET). exact (Hartogs_not_embed D D_isSetoid).
+Qed.
 
 Definition next (kappa : Cardinality.t) : Cardinality.t :=
   Cardinality.mk (children (Hartogs kappa.(Cardinality.carrier))) (children_isSetoid (Hartogs kappa.(Cardinality.carrier))).
@@ -2444,39 +2472,65 @@ Definition next (kappa : Cardinality.t) : Cardinality.t :=
 Corollary next_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
   : next kappa `hasCardinality` @Hartogs kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid).
 Proof.
-Admitted.
+  eapply Hartogs_hasCardinality.
+Qed.
 
 Corollary next_toTree_eq `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
   : Cardinality.toTree (next kappa) == @Hartogs kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid).
 Proof.
-Admitted.
+  eapply Cardinality_toTree_eq_intro. exact (next_hasCardinality kappa).
+Qed.
 
 Corollary next_not_le `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
   : ~ next kappa =< kappa.
 Proof.
-Admitted.
+  exact (Hartogs_not_embed kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid)).
+Qed.
 
 Theorem next_gt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
   : kappa ≨ next kappa.
 Proof.
-Admitted.
+  pose proof (hasCardinality_intro kappa) as H_card.
+  pose proof (hasCardinality_isOrdinal kappa (Cardinality.toTree kappa) H_card) as H_ord.
+  rewrite Cardinality_lt_iff. rewrite next_toTree_eq.
+  eapply member_implies_rLt. rewrite Hartogs_spec1; eauto.
+  exact (toSet_Card_le kappa (Cardinality.toTree kappa) H_card).
+Qed.
 
 Theorem next_le_iff_lt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (lambda : Cardinality.t)
   : next kappa =< lambda <-> kappa ≨ lambda.
 Proof.
-Admitted.
+  split.
+  - intros H_le; eapply Cardinality_lt_le_lt; [exact (next_gt kappa) | exact H_le].
+  - intros [H_le H_ne].
+    pose proof (hasCardinality_intro lambda) as [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_lambda) MIN].
+    set (WOSET := @O.WellfoundedToset_isWoset classic lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+    assert (H_nLe : ~ Cardinality.mk lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) =< Cardinality.mk kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid)).
+    { intro H_ge. contradiction H_ne. destruct H_le as [f f_cong f_inj], H_ge as [g g_cong g_inj]. exists f g; eauto. }
+    rewrite Cardinality_le_iff. rewrite next_toTree_eq.
+    change (@FromOrderType lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) WOSET == Cardinality.toTree lambda) in H_lambda.
+    rewrite <- H_lambda. now eapply Hartogs_ordertype_lowerbound with (A := lambda.(Cardinality.carrier)) (A_isSetoid := lambda.(Cardinality.carrier_isSetoid)) (WOSET := WOSET).
+Qed.
 
 Corollary FromOrderType_lt_next `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (A : Type@{Set_u}) (A_isSetoid : isSetoid A) (WOSET : @isWoset A A_isSetoid)
   (H_le : Cardinality.mk A A_isSetoid =< kappa)
   : @FromOrderType A A_isSetoid WOSET <ᵣ Cardinality.toTree (next kappa).
 Proof.
-Admitted.
+  rewrite next_toTree_eq. eapply member_implies_rLt. now rewrite -> Hartogs_ordertype_iff.
+Qed.
 
 Corollary next_supremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (c : Tree)
   (UPPER : forall A : Type@{Set_u}, forall A_isSetoid : isSetoid A, forall WOSET : @isWoset A A_isSetoid, Cardinality.mk A A_isSetoid =< kappa -> @FromOrderType A A_isSetoid WOSET <ᵣ c)
   : Cardinality.toTree (next kappa) ≦ᵣ c.
 Proof.
-Admitted.
+  rewrite next_toTree_eq. eapply rLe_intro_var1.
+  intros x [(P & R & R_wf & R_total & R_Transitive & R_eqPropCompatible2) x_eq].
+  set (A := @sig kappa.(Cardinality.carrier) P).
+  set (A_isSetoid := @subSetoid kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) P).
+  set (WOSET := @O.WellfoundedToset_isWoset classic A A_isSetoid {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+  rewrite x_eq. simpl. erewrite fromWfSet_pirrel. eapply UPPER with (A := A) (A_isSetoid := A_isSetoid) (WOSET := WOSET).
+  exists (@proj1_sig _ P); firstorder.
+Qed.
 
 End NEXT.
 
