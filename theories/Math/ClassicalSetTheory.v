@@ -2420,7 +2420,62 @@ Qed.
 
 Section NEXT.
 
+Theorem Hartogs_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D)
+  : Cardinality.mk (children (Hartogs D)) (children_isSetoid (Hartogs D)) `hasCardinality` Hartogs D.
+Proof.
+Admitted.
 
+Lemma Hartogs_ordertype_iff `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (A : Type@{Set_u}) (A_isSetoid : isSetoid A) (WOSET : @isWoset A A_isSetoid)
+  : @FromOrderType A A_isSetoid WOSET \in Hartogs D <-> Cardinality.mk A A_isSetoid =< Cardinality.mk D D_isSetoid.
+Proof.
+Admitted.
+
+Corollary Hartogs_ordertype_lowerbound `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (A : Type@{Set_u}) (A_isSetoid : isSetoid A)
+  (WOSET : @isWoset A A_isSetoid)
+  (H_nLe : ~ Cardinality.mk A A_isSetoid =< Cardinality.mk D D_isSetoid)
+  : Hartogs D ≦ᵣ @FromOrderType A A_isSetoid WOSET.
+Proof.
+Admitted.
+
+Definition next (kappa : Cardinality.t) : Cardinality.t :=
+  Cardinality.mk (children (Hartogs kappa.(Cardinality.carrier))) (children_isSetoid (Hartogs kappa.(Cardinality.carrier))).
+
+Corollary next_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
+  : next kappa `hasCardinality` Hartogs kappa.(Cardinality.carrier).
+Proof.
+Admitted.
+
+Corollary next_toTree_eq `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
+  : Cardinality.toTree (next kappa) == Hartogs kappa.(Cardinality.carrier).
+Proof.
+Admitted.
+
+Corollary next_not_le `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
+  : ~ next kappa =< kappa.
+Proof.
+Admitted.
+
+Theorem next_gt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
+  : kappa ≨ next kappa.
+Proof.
+Admitted.
+
+Theorem next_le_iff_lt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (lambda : Cardinality.t)
+  : next kappa =< lambda <-> kappa ≨ lambda.
+Proof.
+Admitted.
+
+Corollary next_lt_fromOrderType `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (A : Type@{Set_u}) (A_isSetoid : isSetoid A) (WOSET : @isWoset A A_isSetoid)
+  (H_le : Cardinality.mk A A_isSetoid =< kappa)
+  : @FromOrderType A A_isSetoid WOSET <ᵣ Cardinality.toTree (next kappa).
+Proof.
+Admitted.
+
+Corollary next_supremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (c : Tree)
+  (UPPER : forall A : Type@{Set_u}, forall A_isSetoid : isSetoid A, forall WOSET : @isWoset A A_isSetoid, Cardinality.mk A A_isSetoid =< kappa -> @FromOrderType A A_isSetoid WOSET <ᵣ c)
+  : Cardinality.toTree (next kappa) ≦ᵣ c.
+Proof.
+Admitted.
 
 End NEXT.
 
