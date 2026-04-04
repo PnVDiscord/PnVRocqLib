@@ -2529,7 +2529,7 @@ Proof.
   set (A_isSetoid := @subSetoid kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) P).
   set (WOSET := @O.WellfoundedToset_isWoset classic A A_isSetoid {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
   rewrite x_eq. simpl. erewrite fromWfSet_pirrel. eapply UPPER with (A := A) (A_isSetoid := A_isSetoid) (WOSET := WOSET).
-  exists (@proj1_sig _ P); firstorder.
+  exists (@proj1_sig (Cardinality.carrier kappa) P); firstorder.
 Qed.
 
 End NEXT.
