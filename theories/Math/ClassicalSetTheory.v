@@ -1787,6 +1787,12 @@ Proof.
         eapply well_founded_implies_Irreflexive with (R := R0); eauto.
 Qed.
 
+Reserved Infix "`hasCardinality`" (no associativity, at level 70).
+
+Module Cardinal1.
+
+Notation pack kappa := (Cardinality.mk (children kappa) (children_isSetoid kappa)).
+
 Section HARTOGS.
 
 #[local] Infix "\in" := member.
@@ -2003,9 +2009,24 @@ Proof.
   contradiction H_nLe. exact (proj1 (Hartogs_spec2 D D_isSetoid beta H_isOrdinal) Hin).
 Qed.
 
-End HARTOGS.
+Lemma Hartogs_ordertype_iff `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (A : Type@{Set_u}) (A_isSetoid : isSetoid A) (WOSET : @isWoset A A_isSetoid)
+  : @FromOrderType A A_isSetoid WOSET \in Hartogs D <-> Cardinality.mk A A_isSetoid =< Cardinality.mk D D_isSetoid.
+Proof.
+  split.
+  - intros H_in.
+    pose proof (proj1 (Hartogs_spec2 D D_isSetoid (@FromOrderType A A_isSetoid WOSET) FromOrderType_isOrdinal) H_in) as [f f_cong f_inj]; simpl in *. exists f.
+    + ii; eapply f_cong. now rewrite <- fromOrderType_eq_fromOrderType_iff in x_EQ.
+    + ii; simpl in *.
+      assert (HH : @fromOrderType A A_isSetoid WOSET x1 == @fromOrderType A A_isSetoid WOSET x2) by now eapply f_inj.
+      now rewrite <- fromOrderType_eq_fromOrderType_iff.
+  - intros [f f_cong f_inj].
+    rewrite Hartogs_spec2; [simpl in * | eapply FromOrderType_isOrdinal]. exists f.
+    + ii; eapply f_cong. now rewrite <- fromOrderType_eq_fromOrderType_iff.
+    + ii. change (@fromOrderType A A_isSetoid WOSET x1 == @fromOrderType A A_isSetoid WOSET x2).
+      rewrite -> fromOrderType_eq_fromOrderType_iff; eauto.
+Qed.
 
-Reserved Infix "`hasCardinality`" (no associativity, at level 70).
+End HARTOGS.
 
 Definition hasCardinality (kappa : Cardinality.t) (c : Tree) : Prop :=
   let P (alpha : Tree) : Prop := exists R : kappa.(Cardinality.carrier) -> kappa.(Cardinality.carrier) -> Prop, exists R_wf : well_founded R, (forall x, forall x', x == x' \/ R x x' \/ R x' x) /\ Transitive R /\ eqPropCompatible2 R /\ fromWfSet R R_wf == alpha in
@@ -2043,11 +2064,9 @@ Qed.
 
 Section CARDINAL.
 
-Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t).
-
-Theorem hasCardinality_intro
+Theorem hasCardinality_intro `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
   : kappa `hasCardinality` Cardinality.toTree kappa.
-Proof using Axms kappa.
+Proof.
   hexploit (well_ordering_thm kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid)); eauto.
   intros (R0 & R0_wf & R0_total & R0_Transitive & R0_eqPropCompatible2).
   set (WPOSET := {| wltProp := R0; wltProp_Transitive := R0_Transitive; wltProp_well_founded := R0_wf; |}).
@@ -2093,21 +2112,21 @@ Proof using Axms kappa.
     exact (H_i WOSET').
 Qed.
 
-Lemma hasCardinality_isOrdinal c
+Lemma hasCardinality_isOrdinal kappa c
   (CARDINAL : kappa `hasCardinality` c)
   : isOrdinal c.
-Proof using kappa.
+Proof.
   destruct CARDINAL as [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_c) MIN]. rewrite <- H_c.
   set (WPOSET' := {| wltProp := R; wltProp_Transitive := R_Transitive; wltProp_well_founded := R_wf; |}).
   set (WOSET' := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET' R_eqPropCompatible2 R_total).
   change (isOrdinal (@FromOrderType _ _ WOSET')). eapply FromOrderType_isOrdinal.
 Qed.
 
-Lemma hasCardinality_unique c c'
+Lemma hasCardinality_unique kappa c c'
   (CARDINAL : kappa `hasCardinality` c)
   (CARDINAL' : kappa `hasCardinality` c')
   : c == c'.
-Proof using kappa.
+Proof.
   eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
   - eapply hasCardinality_isOrdinal; eauto.
   - eapply hasCardinality_isOrdinal; eauto.
@@ -2116,7 +2135,7 @@ Proof using kappa.
     + eapply MIN'; eauto.
 Qed.
 
-Lemma hasCardinality_rewrite_r (c : Tree) (c' : Tree)
+Lemma hasCardinality_rewrite_r kappa (c : Tree) (c' : Tree)
   (EQ : c == c')
   (CARDINAL : kappa `hasCardinality` c)
   : kappa `hasCardinality` c'.
@@ -2405,44 +2424,1414 @@ Qed.
 
 Lemma toSet_Card_le `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} kappa (alpha : Tree)
   (CARDINAL : kappa `hasCardinality` alpha)
-  : {| Cardinality.carrier := toSet alpha; Cardinality.carrier_isSetoid := toSet_isSetoid alpha; |} =< kappa.
+  : Cardinality.mk (toSet alpha) (toSet_isSetoid alpha) =< kappa.
 Proof.
   destruct alpha as [cs ts]. cbv [toSet]. simpl toWellPoset at 1.
   pose proof (Cardinality_toTree_eq_intro kappa (mkNode cs ts) CARDINAL) as HH.
   rewrite <- Ordinal1.FromOrderType_toSet_id with (alpha := mkNode cs ts) in HH by now eapply hasCardinality_isOrdinal; exact CARDINAL.
   rewrite -> Cardinality_le_iff. rewrite HH. clear HH kappa CARDINAL. set (kappa := {| Cardinality.carrier := _ |}).
   pose proof (hasCardinality_intro kappa) as [R MIN]. eapply MIN.
-  exists (toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp).
-  exists (toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp_well_founded).
-  split. { intros x x'. eapply @O.wlt_trichotomous with (SETOID := toSet_isSetoid (mkNode cs ts)) (WOSET := toSet_isWoset (mkNode cs ts)). exact classic. }
-  split. { intros x x' x''. exact ((toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp_Transitive) x x' x''). }
-  split. { intros x x' y y'. exact ((toSet_isWoset (mkNode cs ts)).(Woset_eqPropCompatible2) x x' y y'). }
-  reflexivity.
+  exists (toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp). exists (toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp_well_founded). splits.
+  - intros x x'. eapply @O.wlt_trichotomous with (SETOID := toSet_isSetoid (mkNode cs ts)) (WOSET := toSet_isWoset (mkNode cs ts)). exact classic.
+  - intros x x' x''. exact ((toSet_isWoset (mkNode cs ts)).(Woset_isWellPoset).(wltProp_Transitive) x x' x'').
+  - intros x x' y y'. exact ((toSet_isWoset (mkNode cs ts)).(Woset_eqPropCompatible2) x x' y y').
+  - reflexivity.
+Qed.
+
+Definition isCardinal (alpha : Tree) : Prop :=
+  exists kappa : Cardinality.t, kappa `hasCardinality` alpha.
+
+Lemma isCardinal_isOrdinal (alpha : Tree)
+  (CARDINAL : isCardinal alpha)
+  : isOrdinal alpha.
+Proof.
+  destruct CARDINAL as [kappa CARDINAL].
+  eapply hasCardinality_isOrdinal; eauto.
+Qed.
+
+Lemma isCardinal_elim `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (alpha : Tree)
+  (CARDINAL : isCardinal alpha)
+  : Cardinality.mk (children alpha) (children_isSetoid alpha) `hasCardinality` alpha.
+Proof.
+  destruct CARDINAL as [kappa CARDINAL]. pose proof (hasCardinality_isOrdinal kappa alpha CARDINAL) as ORDINAL.
+  pose proof (COPY := CARDINAL). destruct CARDINAL as [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_alpha) MIN].
+  set (WOSET := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+  change (@FromOrderType kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WOSET == alpha) in H_alpha.
+  assert (H_le1 : Cardinality.mk (children alpha) (children_isSetoid alpha) =< kappa).
+  { rewrite <- Hartogs_spec2; eauto. rewrite <- H_alpha; eauto. rewrite Hartogs_ordertype_iff. reflexivity. }
+  assert (H_le2 : kappa =< Cardinality.mk (children alpha) (children_isSetoid alpha)).
+  { rewrite <- Hartogs_ordertype_iff. rewrite -> H_alpha. rewrite Hartogs_spec2; eauto. reflexivity. }
+  assert (H_eq : Cardinality.mk (children alpha) (children_isSetoid alpha) == kappa).
+  { destruct H_le1 as [f f_cong f_inj], H_le2 as [g g_cong g_inj]; exists f g; eauto. }
+  now rewrite H_eq.
+Qed.
+
+Lemma indexed_union_ofCardinals_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (alphas : I -> Tree)
+  (HCARD : forall i, isCardinal (alphas i))
+  : Cardinality.mk (children (indexed_union I alphas)) (children_isSetoid (indexed_union I alphas)) `hasCardinality` indexed_union I alphas.
+Proof.
+  set (u := indexed_union I alphas).
+  assert (Hord : forall i, isOrdinal (alphas i)).
+  { intro i. eapply isCardinal_isOrdinal. exact (HCARD i). }
+  assert (Hord_u : isOrdinal u).
+  { unfold u. eapply sup_isOrdinal. exact Hord. }
+  split.
+  - exists (isElemOf u). exists ((children_isWoset u Hord_u).(Woset_isWellPoset).(wltProp_well_founded)). splits.
+    + eapply @O.wlt_trichotomous with (SETOID := children_isSetoid u) (WOSET := children_isWoset u Hord_u). exact classic.
+    + exact ((children_isWoset u Hord_u).(Woset_isWellPoset).(wltProp_Transitive)).
+    + exact ((children_isWoset u Hord_u).(Woset_eqPropCompatible2)).
+    + exact (FromOrderType_children_id u Hord_u).
+  - intros beta (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_beta).
+    set (WOSET := @O.WellfoundedToset_isWoset classic (children u) (children_isSetoid u) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+    change (@FromOrderType (children u) (children_isSetoid u) WOSET == beta) in H_beta.
+    rewrite <- H_beta. unfold u. rewrite indexed_union_rLe_iff. intros i.
+    pose proof (isCardinal_elim (alphas i) (HCARD i)) as [_ MIN_i].
+    set (A := children (alphas i)).
+    set (A_isSetoid := children_isSetoid (alphas i)).
+    set (h := fun x : A => @existT I (fun j => children (alphas j)) i x).
+    set (Ri := binary_relation_on_image R h).
+    assert (h_cong : @eqPropCompatible1 A (children u) A_isSetoid (children_isSetoid u) h) by now ii; eauto.
+    assert (Ri_wf : well_founded Ri) by exact (relation_on_image_liftsWellFounded R h R_wf).
+    assert (Ri_total : forall x y : A, x == y \/ Ri x y \/ Ri y x).
+    { intros x y. unfold Ri, binary_relation_on_image. pose proof (R_total (h x) (h y)) as [Heq | [Hlt | Hgt]]; eauto. }
+    assert (Ri_Transitive : Transitive Ri).
+    { ii; eapply R_Transitive; eauto. }
+    assert (Ri_eqPropCompatible2 : eqPropCompatible2 Ri).
+    { ii; eapply R_eqPropCompatible2; eauto. }
+    set (WOSET_i := @O.WellfoundedToset_isWoset classic A A_isSetoid {| wltProp := Ri; wltProp_well_founded := Ri_wf; wltProp_Transitive := Ri_Transitive |} Ri_eqPropCompatible2 Ri_total).
+    assert (H_left : alphas i ≦ᵣ @FromOrderType A A_isSetoid WOSET_i).
+    { eapply MIN_i. exists Ri, Ri_wf; splits; eauto. reflexivity. }
+    assert (H_right : @FromOrderType A A_isSetoid WOSET_i ≦ᵣ @FromOrderType (children u) (children_isSetoid u) WOSET).
+    { eapply fromWfSet_cong with (f := h); eauto. }
+    eapply rLe_trans; [exact H_left | exact H_right].
+Qed.
+
+Lemma indexed_union_ofCardinals_isCardinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (alphas : I -> Tree)
+  (HCARD : forall i, isCardinal (alphas i))
+  : isCardinal (indexed_union I alphas).
+Proof.
+  exists (Cardinality.mk (children (indexed_union I alphas)) (children_isSetoid (indexed_union I alphas))).
+  eapply indexed_union_ofCardinals_hasCardinality; eauto.
+Qed.
+
+Lemma indexed_union_ofCardinals_isSupremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (alphas : I -> Tree) (beta : Tree)
+  (HCARD : forall i, isCardinal (alphas i))
+  (HCARD_beta : isCardinal beta)
+  : indexed_union I alphas ≦ᵣ beta <-> (forall i, alphas i ≦ᵣ beta).
+Proof.
+  rewrite indexed_union_rLe_iff; eauto using isCardinal_isOrdinal.
+Qed.
+
+Lemma Cardinality_toTree_isCardinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  (kappa : Cardinality.t)
+  : isCardinal (Cardinality.toTree kappa).
+Proof.
+  exists kappa. eapply hasCardinality_intro.
+Qed.
+
+Definition Cardinality_sup (I : Type@{Set_u}) (ks : I -> Cardinality.t) : Cardinality.t :=
+  pack (indexed_union I (fun i => Cardinality.toTree (ks i))).
+
+Lemma Cardinality_sup_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (ks : I -> Cardinality.t)
+  : Cardinality_sup I ks `hasCardinality` indexed_union I (fun i => Cardinality.toTree (ks i)).
+Proof.
+  eapply indexed_union_ofCardinals_hasCardinality.
+  intros i. exact (Cardinality_toTree_isCardinal (ks i)).
+Qed.
+
+Lemma Cardinality_sup_toTree_eq `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (ks : I -> Cardinality.t)
+  : Cardinality.toTree (Cardinality_sup I ks) == indexed_union I (fun i => Cardinality.toTree (ks i)).
+Proof.
+  eapply Cardinality_toTree_eq_intro. eapply Cardinality_sup_hasCardinality.
+Qed.
+
+#[local] Hint Resolve Cardinality_toTree_isCardinal : core.
+
+Theorem Cardinality_sup_spec `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (ks : I -> Cardinality.t) (lambda : Cardinality.t)
+  : Cardinality_sup I ks =< lambda <-> forall i, ks i =< lambda.
+Proof.
+  rewrite Cardinality_le_iff. rewrite Cardinality_sup_toTree_eq.
+  rewrite indexed_union_ofCardinals_isSupremum with (I := I) (alphas := fun i => Cardinality.toTree (ks i)) (beta := Cardinality.toTree lambda); eauto.
+  split.
+  - intros H i. rewrite -> Cardinality_le_iff. exact (H i).
+  - intros H i. rewrite <- Cardinality_le_iff. exact (H i).
+Qed.
+
+Corollary Cardinality_sup_upperbound `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (ks : I -> Cardinality.t) (i : I)
+  : ks i =< Cardinality_sup I ks.
+Proof.
+  rewrite Cardinality_le_iff. rewrite Cardinality_sup_toTree_eq. eapply rLe_indexed_union_intro. exists i. reflexivity.
+Qed.
+
+Corollary Cardinality_sup_least `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (I : Type@{Set_u}) (ks : I -> Cardinality.t) (lambda : Cardinality.t)
+  (H_upper : forall i, ks i =< lambda)
+  : Cardinality_sup I ks =< lambda.
+Proof.
+  rewrite Cardinality_sup_spec. exact H_upper.
 Qed.
 
 Section NEXT.
 
+Corollary Hartogs_ordertype_lowerbound `{Axms : ClassicalAxioms (b_AC := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D) (A : Type@{Set_u}) (A_isSetoid : isSetoid A) (WOSET : @isWoset A A_isSetoid)
+  (H_nLe : ~ Cardinality.mk A A_isSetoid =< Cardinality.mk D D_isSetoid)
+  : Hartogs D ≦ᵣ @FromOrderType A A_isSetoid WOSET.
+Proof.
+  eapply NNPP; intro H_contra.
+  contradiction H_nLe. rewrite <- Hartogs_ordertype_iff.
+  eapply Ordinal1.Ordinal_rLt_Ordinal_elim.
+  - eapply FromOrderType_isOrdinal.
+  - eapply Hartogs_isOrdinal.
+  - now rewrite -> InducedOrdinal.rLt_iff_not_rGe.
+Qed.
 
+Theorem Hartogs_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (D : Type@{Set_u}) (D_isSetoid : isSetoid D)
+  : Cardinality.mk (children (Hartogs D)) (children_isSetoid (Hartogs D)) `hasCardinality` Hartogs D.
+Proof.
+  split.
+  - exists (isElemOf (Hartogs D)). exists ((children_isWoset (Hartogs D) Hartogs_isOrdinal).(Woset_isWellPoset).(wltProp_well_founded)). splits.
+    + eapply @O.wlt_trichotomous with (SETOID := children_isSetoid (Hartogs D)) (WOSET := children_isWoset (Hartogs D) Hartogs_isOrdinal). exact classic.
+    + exact ((children_isWoset (Hartogs D) Hartogs_isOrdinal).(Woset_isWellPoset).(wltProp_Transitive)).
+    + exact ((children_isWoset (Hartogs D) Hartogs_isOrdinal).(Woset_eqPropCompatible2)).
+    + exact (FromOrderType_children_id (Hartogs D) Hartogs_isOrdinal).
+  - intros alpha (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_alpha).
+    set (WOSET := @O.WellfoundedToset_isWoset classic (children (Hartogs D)) (children_isSetoid (Hartogs D)) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+    change (@FromOrderType (children (Hartogs D)) (children_isSetoid (Hartogs D)) WOSET == alpha) in H_alpha.
+    rewrite <- H_alpha. eapply Hartogs_ordertype_lowerbound with (A := children (Hartogs D)) (A_isSetoid := children_isSetoid (Hartogs D)) (WOSET := WOSET). exact (Hartogs_not_embed D D_isSetoid).
+Qed.
+
+Definition next (kappa : Cardinality.t) : Cardinality.t :=
+  Cardinality.mk (children (Hartogs kappa.(Cardinality.carrier))) (children_isSetoid (Hartogs kappa.(Cardinality.carrier))).
+
+Corollary next_hasCardinality `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
+  : next kappa `hasCardinality` @Hartogs kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid).
+Proof.
+  eapply Hartogs_hasCardinality.
+Qed.
+
+Corollary next_toTree_eq `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
+  : Cardinality.toTree (next kappa) == @Hartogs kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid).
+Proof.
+  eapply Cardinality_toTree_eq_intro. exact (next_hasCardinality kappa).
+Qed.
+
+Corollary next_not_le `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
+  : ~ next kappa =< kappa.
+Proof.
+  exact (Hartogs_not_embed kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid)).
+Qed.
+
+Theorem next_gt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t)
+  : kappa ≨ next kappa.
+Proof.
+  pose proof (hasCardinality_intro kappa) as H_card.
+  pose proof (hasCardinality_isOrdinal kappa (Cardinality.toTree kappa) H_card) as H_ord.
+  rewrite Cardinality_lt_iff. rewrite next_toTree_eq.
+  eapply member_implies_rLt. rewrite Hartogs_spec1; eauto.
+  exact (toSet_Card_le kappa (Cardinality.toTree kappa) H_card).
+Qed.
+
+Theorem next_le_iff_lt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (lambda : Cardinality.t)
+  : next kappa =< lambda <-> kappa ≨ lambda.
+Proof.
+  split.
+  - intros H_le; eapply Cardinality_lt_le_lt; [exact (next_gt kappa) | exact H_le].
+  - intros [H_le H_ne].
+    pose proof (hasCardinality_intro lambda) as [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_lambda) MIN].
+    set (WOSET := @O.WellfoundedToset_isWoset classic lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+    assert (H_nLe : ~ Cardinality.mk lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) =< Cardinality.mk kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid)).
+    { intro H_ge. contradiction H_ne. destruct H_le as [f f_cong f_inj], H_ge as [g g_cong g_inj]. exists f g; eauto. }
+    rewrite Cardinality_le_iff. rewrite next_toTree_eq.
+    change (@FromOrderType lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) WOSET == Cardinality.toTree lambda) in H_lambda.
+    rewrite <- H_lambda. now eapply Hartogs_ordertype_lowerbound with (A := lambda.(Cardinality.carrier)) (A_isSetoid := lambda.(Cardinality.carrier_isSetoid)) (WOSET := WOSET).
+Qed.
+
+Corollary FromOrderType_lt_next `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (A : Type@{Set_u}) (A_isSetoid : isSetoid A) (WOSET : @isWoset A A_isSetoid)
+  (H_le : Cardinality.mk A A_isSetoid =< kappa)
+  : @FromOrderType A A_isSetoid WOSET <ᵣ Cardinality.toTree (next kappa).
+Proof.
+  rewrite next_toTree_eq. eapply member_implies_rLt. now rewrite -> Hartogs_ordertype_iff.
+Qed.
+
+Corollary next_supremum `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (c : Tree)
+  (UPPER : forall A : Type@{Set_u}, forall A_isSetoid : isSetoid A, forall WOSET : @isWoset A A_isSetoid, Cardinality.mk A A_isSetoid =< kappa -> @FromOrderType A A_isSetoid WOSET <ᵣ c)
+  : Cardinality.toTree (next kappa) ≦ᵣ c.
+Proof.
+  rewrite next_toTree_eq. eapply rLe_intro_var1.
+  intros x [(P & R & R_wf & R_total & R_Transitive & R_eqPropCompatible2) x_eq].
+  set (A := @sig kappa.(Cardinality.carrier) P).
+  set (A_isSetoid := @subSetoid kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) P).
+  set (WOSET := @O.WellfoundedToset_isWoset classic A A_isSetoid {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive |} R_eqPropCompatible2 R_total).
+  rewrite x_eq. simpl. erewrite fromWfSet_pirrel. eapply UPPER with (A := A) (A_isSetoid := A_isSetoid) (WOSET := WOSET).
+  exists (@proj1_sig (Cardinality.carrier kappa) P); firstorder.
+Qed.
+
+#[global]
+Instance next_isMonotonic1 `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : isMonotonic1 next.
+Proof.
+  intros kappa lambda H_le. rewrite next_le_iff_lt. eapply Cardinality_le_lt_lt; eauto using next_gt.
+Qed.
+
+#[global]
+Instance next_eqPropCompatible1 `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : eqPropCompatible1 next.
+Proof.
+  intros kappa lambda H_eq. enough (next kappa =< next lambda /\ next lambda =< next kappa) as [[f f_cong f_inj] [g g_cong g_inj]] by now exists f g.
+  destruct H_eq; split; eapply next_isMonotonic1; [exists f | exists g]; eauto.
+Qed.
 
 End NEXT.
 
+#[local] Existing Instance children_isSetoid.
 
+#[local] Existing Instance children_isWoset.
 
 Section ALEPH.
 
+Definition aleph0 : Tree :=
+  Cardinality.toTree (Cardinality.ofType nat).
 
+Lemma aleph0_isCardinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : isCardinal aleph0.
+Proof.
+  exists (Cardinality.ofType nat). eapply hasCardinality_intro.
+Qed.
+
+Lemma aleph0_isOrdinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : isOrdinal aleph0.
+Proof.
+  eapply isCardinal_isOrdinal. eapply aleph0_isCardinal.
+Qed.
+
+Definition alephS (kappa : Tree) : Tree :=
+  Cardinality.toTree (next (Cardinality.mk (children kappa) (children_isSetoid kappa))).
+
+Lemma alephS_eq_Hartogs `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree)
+  : alephS o == Hartogs (children o).
+Proof.
+  eapply next_toTree_eq.
+Qed.
+
+Lemma alephS_isCardinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree)
+  : isCardinal (alephS o).
+Proof.
+  exists (next (Cardinality.mk (children o) (children_isSetoid o))). eapply hasCardinality_intro.
+Qed.
+
+Lemma alephS_isOrdinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree)
+  : isOrdinal (alephS o).
+Proof.
+  eapply isCardinal_isOrdinal. eapply alephS_isCardinal.
+Qed.
+
+Lemma alephS_lt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  (o : Tree)
+  (ORDINAL : isOrdinal o)
+  : o <ᵣ alephS o.
+Proof.
+  rewrite alephS_eq_Hartogs. rewrite Hartogs_rLt_iff; eauto. reflexivity.
+Qed.
+
+Lemma alephS_le `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree)
+  (ORDINAL : isOrdinal o)
+  : o ≦ᵣ alephS o.
+Proof.
+  eapply rLt_implies_rLe. eapply alephS_lt; eauto.
+Qed.
+
+Lemma Ordinal_children_Cardinality_le `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree) (o' : Tree)
+  (ORDINAL : isOrdinal o)
+  (ORDINAL' : isOrdinal o')
+  (LE : o ≦ᵣ o')
+  : Cardinality.mk (children o) (children_isSetoid o) =< Cardinality.mk (children o') (children_isSetoid o').
+Proof.
+  rewrite <- Hartogs_rLt_iff; eauto. eapply rLe_rLt_rLt; eauto. rewrite -> Hartogs_rLt_iff; eauto. reflexivity.
+Qed.
+
+Lemma le_alephS `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (o : Tree) (o' : Tree)
+  (ORDINAL : isOrdinal o)
+  (ORDINAL' : isOrdinal o')
+  (LE : o ≦ᵣ o')
+  : alephS o ≦ᵣ alephS o'.
+Proof.
+  eapply Cardinality_toTree_isMonotonic1. eapply next_isMonotonic1. eapply Ordinal_children_Cardinality_le; eauto.
+Qed.
+
+Lemma aleph_base_good `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
+  : isCardinal aleph0.
+Proof.
+  eapply aleph0_isCardinal.
+Qed.
+
+Lemma aleph_next_good `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (d : Tree)
+  (GOOD : isCardinal d)
+  : isCardinal (alephS d).
+Proof.
+  eapply alephS_isCardinal.
+Qed.
+
+Lemma aleph_next_extensive `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (d : Tree)
+  (GOOD : isCardinal d)
+  : d ≦ᵣ alephS d.
+Proof.
+  eapply alephS_le. eapply isCardinal_isOrdinal. exact GOOD.
+Qed.
+
+Lemma aleph_next_congruence `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} d d'
+  (GOOD : isCardinal d)
+  (GOOD' : isCardinal d')
+  (EQ : d =ᵣ d')
+  : alephS d =ᵣ alephS d'.
+Proof.
+  destruct EQ as [LE GE]. split; eapply le_alephS; eauto using isCardinal_isOrdinal.
+Qed.
+
+#[local] Hint Resolve aleph_base_good aleph_next_good aleph_next_extensive aleph_next_extensive aleph_next_congruence : core.
+
+Definition aleph : Tree -> Tree :=
+  Ord.orec aleph0 alephS.
+
+Let aleph_dle_refl d1
+  (GOOD : isCardinal d1)
+  : d1 ≦ᵣ d1.
+Proof.
+  reflexivity.
+Qed.
+
+Let aleph_dle_trans d1 d2 d3
+  (GOOD1 : isCardinal d1)
+  (GOOD2 : isCardinal d2)
+  (GOOD3 : isCardinal d3)
+  (LE : d1 ≦ᵣ d2)
+  (LE' : d2 ≦ᵣ d3)
+  : d1 ≦ᵣ d3.
+Proof.
+  now transitivity d2.
+Qed.
+
+Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}.
+
+Let aleph_djoin_good (I : Type@{Set_u}) (ds : I -> Tree)
+  (CHAIN : forall i1, forall i2, ds i1 ≦ᵣ ds i2 \/ ds i2 ≦ᵣ ds i1)
+  (GOODs : forall i, isCardinal (ds i))
+  : isCardinal (indexed_union I ds).
+Proof.
+  eapply indexed_union_ofCardinals_isCardinal; eauto.
+Qed.
+
+Let aleph_djoin_isSupremum (I : Type@{Set_u}) (ds : I -> Tree) (d : Tree)
+  (CHAIN : forall i1, forall i2, ds i1 ≦ᵣ ds i2 \/ ds i2 ≦ᵣ ds i1)
+  (GOODs : forall i, isCardinal (ds i))
+  (GOOD : isCardinal d)
+  : indexed_union I ds ≦ᵣ d <-> forall i, ds i ≦ᵣ d.
+Proof.
+  eapply indexed_union_ofCardinals_isSupremum; eauto.
+Qed.
+
+#[local] Notation rank_trichotomy := (O.wlt_trichotomous (classic := classic) (WOSET := rLt_isWellOrdering)).
+
+#[local] Infix "⊑" := rLe.
+#[local] Infix "≡" := rEq.
+
+#[local] Notation good := isCardinal.
+#[local] Notation rec := aleph.
+#[local] Notation dbase := aleph0.
+#[local] Notation next := alephS.
+#[local] Notation djoin := indexed_union.
+#[local] Notation dle_refl := aleph_dle_refl.
+#[local] Notation dle_trans := aleph_dle_trans.
+#[local] Notation djoin_good := aleph_djoin_good.
+#[local] Notation djoin_supremum := aleph_djoin_isSupremum.
+#[local] Notation next_good := aleph_next_good.
+#[local] Notation next_extensive := aleph_next_extensive.
+#[local] Notation next_congruence := aleph_next_congruence.
+
+Let aleph_djoin_upperbound (I : Type@{Set_u}) (ds : I -> Tree)
+  (CHAIN : forall i1, forall i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1)
+  (GOODs : forall i, good (ds i))
+  : forall i : I, ds i ⊑ djoin I ds.
+Proof.
+  i. eapply djoin_supremum; eauto.
+Qed.
+
+#[local] Hint Resolve alephS_isCardinal : core.
+
+Theorem aleph_rec_spec (o : Tree)
+  : ⟪ mono_rec : forall o', o' ≦ᵣ o -> rec o' ⊑ rec o ⟫ /\ ⟪ base_rec : dbase ⊑ rec o ⟫ /\ ⟪ next_rec : forall o', o' <ᵣ o -> next (rec o') ⊑ rec o ⟫ /\ ⟪ good_rec : good (rec o) ⟫.
+Proof.
+  rename o into t. pose proof (rLt_wf t) as H_ACC. induction H_ACC as [t _ IH]. destruct t as [cs ts]; simpl.
+  assert (H_chain : forall cs' : Type@{Set_u}, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, forall c1 : cs', forall c2 : cs', next (rec (ts' c1)) ⊑ next (rec (ts' c2)) \/ next (rec (ts' c2)) ⊑ next (rec (ts' c1))).
+  { ii.
+    assert (ts' c1 <ᵣ mkNode cs ts /\ ts' c2 <ᵣ mkNode cs ts) as [helper1 helper2].
+    { split; econs; eapply LE. }
+    pose proof (rank_trichotomy (ts' c1) (ts' c2)) as [EQ | [LT | GT]].
+    - hexploit (next_congruence (rec (ts' c1)) (rec (ts' c2))).
+      + eapply IH; eauto.
+      + eapply IH; eauto.
+      + destruct EQ as [LE1 LE2]. split; eapply IH; eauto.
+      + intros H_deq. left. exact (proj1 H_deq).
+    - left. eapply dle_trans with (d2 := rec (ts' c2)); eauto.
+      + eapply IH; eauto.
+      + eapply IH; eauto.
+      + eapply next_extensive. eapply IH; eauto.
+    - right. eapply dle_trans with (d2 := rec (ts' c1)); eauto.
+      + eapply IH; eauto.
+      + eapply IH; eauto.
+      + eapply next_extensive. eapply IH; eauto.
+  }
+  assert (H_next_good : forall cs' : Type@{Set_u}, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, forall c' : cs', good (next (rec (ts' c')))).
+  { ii. eapply next_good. eapply IH; eauto. econs. eapply LE. }
+  set (fun cs' : Type@{Set_u} => fun ts' : cs' -> Tree => fun b : bool => if b then dbase else djoin cs' (fun c' => next (rec (ts' c')))) as f.
+  assert (claim1 : forall b1 : bool, forall b2 : bool, forall cs' : Type@{Set_u}, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, f cs' ts' b1 ⊑ f cs' ts' b2 \/ f cs' ts' b2 ⊑ f cs' ts' b1).
+  { ii.
+    assert (helper1 : forall c' : cs', ts' c' <ᵣ mkNode cs ts).
+    { i; econs; eapply LE. }
+    assert (GOOD1 : forall i : cs', isCardinal (next (rec (ts' i)))).
+    { i; eapply next_good. exploit (IH (ts' i)); eauto. i; des; eauto. }
+    assert (helper2 : dbase ⊑ djoin cs' (fun c' : cs' => next (rec (ts' c'))) \/ djoin cs' (fun c' : cs' => next (rec (ts' c'))) ⊑ dbase).
+    { pose proof (classic (inhabited cs')) as [YES | NO]; [left | right].
+      - destruct YES as [c']. exploit (IH (ts' c')); eauto. i; des.
+        enough (next (rec (ts' c')) ⊑ djoin cs' (fun i : cs' => next (rec (ts' i)))) by now eapply dle_trans with (d2 := next (rec (ts' c'))); eauto.
+        eapply aleph_djoin_upperbound with (ds := fun c' : cs' => next (rec (ts' c'))); eauto.
+      - enough (forall i : cs', next (rec (ts' i)) ⊑ dbase) by now eapply djoin_supremum; eauto.
+        intros c'. contradiction NO. econs. exact c'.
+    }
+    destruct b1, b2; simpl in *; eauto; tauto.
+  }
+  assert (claim2 : forall b : bool, forall cs' : Type@{Set_u}, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, good (f cs' ts' b)).
+  { ii. destruct b; simpl; eauto. }
+  set (djoin bool (f cs ts)) as x.
+  assert (claim3 : good x).
+  { eapply djoin_good; eauto.
+    - ii; eapply claim1; eauto with *.
+    - ii; eapply claim2; eauto with *.
+  }
+  assert (claim4 : dbase ⊑ x).
+  { eapply aleph_djoin_upperbound with (ds := f cs ts) (i := true); eauto.
+    - ii; eapply claim1; eauto with *.
+    - ii; eapply claim2; eauto with *.
+  }
+  assert (claim5 : forall cs' : Type@{Set_u}, forall ts' : cs' -> Tree, forall H_rLt : forall c, ts' c <ᵣ mkNode cs ts, forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c).
+  { ii. pose proof (H_rLt c') as [[c H_rLe]]; simpl in *. exists c. exact H_rLe. }
+  assert (claim6 : forall o : Tree, forall LE : o ≦ᵣ mkNode cs ts, rec o ⊑ x).
+  { intros [cs' ts'] [H_rLt]. simpl in *. unfold Ord.join.
+    change (fun b : bool => if b then dbase else djoin cs' (fun c : cs' => next (rec (ts' c)))) with (f cs' ts').
+    rewrite -> djoin_supremum; eauto. destruct i; eauto. simpl. eapply djoin_supremum; i; eauto.
+    { unfold x. eapply dle_trans with (d2 := djoin cs' (fun c' => next (rec (ts' c')))); eauto.
+      - eapply aleph_djoin_upperbound with (ds := fun c' : cs' => next (rec (ts' c'))); eauto.
+      - eapply djoin_supremum; eauto.
+        intros c'. pose proof (H_rLt c') as [[c H_rLe]]; simpl in *.
+        rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_LT | H_EQ].
+        + eapply dle_trans with (d2 := next (rec (ts c))); eauto.
+          { eapply dle_trans with (d2 := rec (ts c)); eauto.
+            - eapply IH; eauto with *.
+            - eapply IH; eauto with *.
+            - eapply next_extensive; eauto. eapply IH; eauto with *.
+          }
+          { unfold f. eapply dle_trans with (d2 := djoin cs (fun i : cs => next (rec (ts i)))); eauto.
+            - eapply djoin_good; eauto with *.
+            - eapply aleph_djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto with *.
+            - eapply aleph_djoin_upperbound with (ds := f cs ts) (i := false); eauto with *.
+          }
+        + eapply dle_trans with (d2 := next (rec (ts c))); eauto.
+          { eapply next_congruence.
+            - eapply IH; eauto with *.
+            - eapply IH; eauto with *.
+            - destruct H_EQ as [H_LE1 H_LE2]. split; eapply IH; eauto with *.
+          }
+          { unfold f. eapply dle_trans with (d2 := djoin cs (fun i : cs => next (rec (ts i)))); eauto.
+            - eapply djoin_good; eauto with *.
+            - eapply aleph_djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto with *.
+            - eapply aleph_djoin_upperbound with (ds := f cs ts) (i := false); eauto with *.
+          }
+    }
+  }
+  split; eauto. split; eauto. split; eauto. intros o H_rLt.
+  pose proof (classic (exists o' : Tree, o <ᵣ o' /\ o' <ᵣ mkNode cs ts)) as [YES | NO].
+  - unfold Ord.join. des. hexploit (IH o'); eauto. i; des. eapply dle_trans with (d2 := rec o'); eauto.
+    eapply claim6. eapply rLt_implies_rLe; eauto.
+  - assert (exists c, ts c =ᵣ o) as [c H_rEq].
+    { eapply NNPP. intros H_contra. rewrite InducedOrdinal.rLt_iff_not_rGe in H_rLt. contradiction H_rLt.
+      econs. simpl. intros c. pose proof (rank_trichotomy (ts c) o) as [H_EQ | [H_LT | H_GT]]; eauto.
+      - contradiction H_contra; eauto.
+      - contradiction NO; eauto with *.
+    }
+    assert (rec o ≡ rec (ts c)) as claim7.
+    { destruct H_rEq; split; eapply IH; eauto with *. }
+    unfold Ord.join. eapply dle_trans with (d2 := next (rec (ts c))); eauto.
+    { eapply next_congruence.
+      - eapply IH; eauto with *.
+      - eapply IH; eauto with *.
+      - now symmetry.
+    }
+    { eapply dle_trans with (d2 := djoin cs (fun i : cs => next (rec (ts i)))); eauto.
+      - eapply djoin_good; eauto with *.
+      - eapply aleph_djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto with *.
+      - eapply aleph_djoin_upperbound with (ds := f cs ts) (i := false); eauto with *.
+    }
+Qed.
+
+Lemma aleph_le_rec (t : Tree) (t' : Tree)
+  (H_rLe : t ≦ᵣ t')
+  : rec t ⊑ rec t'.
+Proof.
+  eapply aleph_rec_spec; eauto.
+Qed.
+
+Lemma aleph_eq_rec (t : Tree) (t' : Tree)
+  (H_rLe : t =ᵣ t')
+  : rec t ≡ rec t'.
+Proof.
+  destruct H_rLe; split; eapply aleph_rec_spec; eauto.
+Qed.
+
+Lemma aleph_lt_rec (t : Tree) (t' : Tree)
+  (H_rLt : t <ᵣ t')
+  : next (rec t) ⊑ rec t'.
+Proof.
+  eapply aleph_rec_spec; eauto.
+Qed.
+
+Lemma aleph_rec_le_base (t : Tree)
+  : dbase ⊑ rec t.
+Proof.
+  eapply aleph_rec_spec; eauto.
+Qed.
+
+Lemma aleph_good_rec (t : Tree)
+  : good (rec t).
+Proof.
+  eapply aleph_rec_spec; eauto.
+Qed.
+
+#[local] Hint Resolve aleph_le_rec aleph_eq_rec aleph_lt_rec : simplication_hints.
+
+#[local] Hint Resolve aleph_rec_le_base aleph_good_rec : simplication_hints.
+
+Lemma aleph_rec_next_dle (t : Tree) (t' : Tree)
+  (H_rLe : t ≦ᵣ t')
+  : next (rec t) ⊑ next (rec t').
+Proof.
+  rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_rLt | H_rEq].
+  - eapply dle_trans with (d2 := rec t'); eauto with *.
+  - eapply next_congruence; eauto with *.
+Qed.
+
+Lemma aleph_rec_chain (t : Tree) (t' : Tree)
+  : rec t ⊑ rec t' \/ rec t' ⊑ rec t.
+Proof.
+  pose proof (InducedOrdinal.rLe_total t t') as [H | H]; [left | right]; eauto with *.
+Qed.
+
+Lemma aleph_rec_next_chain (t : Tree) (t' : Tree)
+  : next (rec t) ⊑ next (rec t') \/ next (rec t') ⊑ next (rec t).
+Proof.
+  pose proof (InducedOrdinal.rLe_total t t') as [H | H]; [left | right]; eapply aleph_rec_next_dle; eauto.
+Qed.
+
+Lemma aleph_good_next_rec (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : forall c : cs, good (next (rec (ts c))).
+Proof.
+  eauto.
+Qed.
+
+#[local] Hint Resolve aleph_rec_next_dle aleph_rec_chain : simplication_hints.
+
+#[local] Hint Resolve aleph_rec_next_chain aleph_good_next_rec : core.
+
+Let dbase_next_rec alpha
+  : dbase ⊑ next (rec alpha).
+Proof.
+  eauto with *.
+Qed.
+
+Let j (cs : Type@{Set_u}) (ts : cs -> Tree) (b : bool) : Tree :=
+  if b then dbase else djoin cs (fun c => next (rec (ts c))).
+
+Lemma aleph_j_chain (cs : Type@{Set_u}) (ts : cs -> Tree) (b : bool) (b' : bool)
+  : j cs ts b ⊑ j cs ts b' \/ j cs ts b' ⊑ j cs ts b.
+Proof.
+  assert (dbase ⊑ djoin cs (fun c => next (rec (ts c))) \/ djoin cs (fun c => next (rec (ts c))) ⊑ dbase) as claim1.
+  { pose proof (classic (inhabited cs)) as [YES | NO]; [left | right].
+    - destruct YES as [c]. eapply dle_trans with (d2 := next (rec (ts c))); eauto.
+      eapply aleph_djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto with *.
+    - eapply djoin_supremum; eauto. intros c. contradiction NO. econs. exact c.
+  }
+  destruct b, b'; simpl; eauto with *; try tauto.
+Qed.
+
+Lemma aleph_good_j (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : forall b, good (j cs ts b).
+Proof.
+  intros [ | ]; simpl; eauto with *.
+Qed.
+
+#[local] Hint Resolve aleph_j_chain aleph_good_j : core.
+
+Lemma aleph_rec_zero (o : Tree)
+  (ZERO : o ≡ empty)
+  : rec o ≡ dbase.
+Proof.
+  transitivity (rec empty); eauto with *.
+  change (djoin bool (j Empty_set (Empty_set_rect _)) ≡ dbase). split.
+  - eapply djoin_supremum; auto. intros [ | ]; auto. eapply djoin_supremum; auto; intros [].
+  - eapply aleph_djoin_upperbound with (ds := j Empty_set (Empty_set_rect _)) (i := true); eauto.
+Qed.
+
+Lemma aleph_rec_succ (o : Tree) (alpha : Tree)
+  (SUCC : o ≡ succ alpha)
+  : rec o ≡ next (rec alpha).
+Proof.
+  transitivity (rec (succ alpha)); eauto with *.
+  change (djoin bool (j { b : bool & children (if b then alpha else singleton alpha) } (fun c => childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))) ≡ next (rec alpha)). split.
+  - eapply djoin_supremum; auto. intros [ | ]; simpl; auto. eapply djoin_supremum; auto.
+    intros [[ | ] c]; simpl; eapply aleph_rec_next_dle.
+    + eapply rLt_implies_rLe. econs. exists c. reflexivity.
+    + simpl in c. destruct c as [ | ]; reflexivity.
+  - refine (let c : { b : bool & children (if b then alpha else singleton alpha) } := @existT _ _ false true in _).
+    eapply dle_trans with (d2 := djoin { b : bool & children (if b then alpha else singleton alpha) } (fun c => next (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))))); eauto.
+    + eapply aleph_djoin_upperbound with (ds := fun c : {b : bool & children (if b then alpha else singleton alpha)} => next (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c)))) (i := c); eauto with *.
+    + eapply aleph_djoin_upperbound with (ds := j { b : bool & children (if b then alpha else singleton alpha) } (fun c => childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))) (i := false); eauto.
+Qed.
+
+Let djoin_rec_good (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : good (djoin cs (fun i : cs => rec (ts i))).
+Proof.
+  eauto with *.
+Qed.
+
+Let rec_good (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : forall c : cs, good (rec (ts c)).
+Proof.
+  eauto with *.
+Qed.
+
+Let dbase_le_rec (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : forall c : cs, dbase ⊑ rec (ts c).
+Proof.
+  eauto with *.
+Qed.
+
+Lemma aleph_rec_lim' (o : Tree) (cs : Type@{Set_u}) (ts : cs -> Tree)
+  (APPROX : forall c1 : cs, exists c2 : cs, ts c1 <ᵣ ts c2)
+  (INHABITED : inhabited cs)
+  (LIM' : o ≡ indexed_union cs ts)
+  : rec o ≡ djoin cs (fun c : cs => rec (ts c)).
+Proof.
+  destruct INHABITED as [c]. destruct o as [cs' ts']; simpl.
+  change (djoin bool (j cs' ts') ≡ djoin cs (fun i : cs => rec (ts i))); split.
+  - eapply djoin_supremum; auto. intros [ | ]; simpl.
+    + eapply dle_trans with (d2 := rec (ts c)); auto.
+      eapply aleph_djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto with *.
+    + eapply djoin_supremum; auto.
+      clear c. intros c'. destruct LIM' as [LE1 LE2]; simpl in *. destruct LE1 as [H_rLt]; simpl in *.
+      pose proof (H_rLt c') as [[c H_rLe]]; simpl in *. eapply dle_trans with (d2 := rec (ts (projT1 c))); auto.
+      * eapply aleph_lt_rec. econs. exists (projT2 c). exact H_rLe.
+      * eapply aleph_djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := projT1 c); eauto with *.
+  - eapply djoin_supremum; auto with *. clear c. intros c. eapply dle_trans with (d2 := djoin cs (fun c => rec (ts c))); auto.
+    + eapply aleph_djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto with *.
+    + clear c. eapply djoin_supremum; auto with *. intros c1. simpl in *. pose proof (APPROX c1) as [c2 H_rLt].
+      destruct H_rLt as [[c H_rLe]]. destruct LIM' as [LE1 LE2]. destruct LE2 as [LE2]; simpl in *.
+      pose proof (LE2 (@existT cs (fun i : cs => children (ts i)) c2 c)) as claim1. simpl in *. destruct claim1 as [[c' H_rLe']]. simpl in *.
+      eapply dle_trans with (d2 := rec (ts' c')); auto.
+      { eapply aleph_le_rec. transitivity (childnodes (ts c2) c); auto. }
+      { eapply dle_trans with (d2 := djoin cs' (fun i : cs' => next (rec (ts' i)))); auto.
+        - eapply dle_trans with (d2 := next (rec (ts' c'))); auto.
+          eapply aleph_djoin_upperbound with (ds := fun i : cs' => next (rec (ts' i))) (i := c'); eauto with *.
+        - eapply aleph_djoin_upperbound with (ds := j cs' ts') (i := false); eauto with *.
+      }
+Qed.
+
+Lemma aleph_isCardinal (o : Tree)
+  : isCardinal (aleph o).
+Proof.
+  exact (aleph_good_rec o).
+Qed.
+
+Lemma aleph_isOrdinal (o : Tree)
+  : isOrdinal (aleph o).
+Proof.
+  eapply isCardinal_isOrdinal. eapply aleph_isCardinal.
+Qed.
+
+Lemma aleph_zero (o : Tree)
+  (ZERO : o =ᵣ empty)
+  : aleph o =ᵣ aleph0.
+Proof.
+  exact (aleph_rec_zero o ZERO).
+Qed.
+
+Lemma aleph_succ (o : Tree) (alpha : Tree)
+  (SUCC : o =ᵣ succ alpha)
+  : aleph o =ᵣ alephS (aleph alpha).
+Proof.
+  exact (aleph_rec_succ o alpha SUCC).
+Qed.
+
+Lemma aleph_lim' (o : Tree) (I : Type@{Set_u}) (alpha : I -> Tree)
+  (APPROX : forall i1 : I, exists i2 : I, alpha i1 <ᵣ alpha i2)
+  (INHABITED : inhabited I)
+  (LIMIT : o =ᵣ indexed_union I alpha)
+  : aleph o =ᵣ indexed_union I (fun i : I => aleph (alpha i)).
+Proof.
+  exact (aleph_rec_lim' o I alpha APPROX INHABITED LIMIT).
+Qed.
+
+Lemma le_aleph (o0 : Tree) (o1 : Tree)
+  (LE : o0 ≦ᵣ o1)
+  : aleph o0 ≦ᵣ aleph o1.
+Proof.
+  exact (aleph_le_rec o0 o1 LE).
+Qed.
+
+Lemma lt_aleph (o0 : Tree) (o1 : Tree)
+  (LT : o0 <ᵣ o1)
+  : aleph o0 <ᵣ aleph o1.
+Proof.
+  eapply rLt_rLe_rLt with (y := alephS (aleph o0)).
+  - eapply alephS_lt. eapply aleph_isOrdinal.
+  - eapply aleph_lt_rec. exact LT.
+Qed.
+
+Lemma aleph0_le_aleph (o : Tree)
+  : aleph0 ≦ᵣ aleph o.
+Proof.
+  exact (aleph_rec_le_base o).
+Qed.
+
+Theorem aleph_expand
+  : forall o : Tree, o ≦ᵣ aleph o.
+Proof.
+  eapply member_rect. intros o IH. eapply rLe_intro_var1. intros x x_in. eapply rLe_rLt_rLt.
+  - eapply IH. exact x_in.
+  - eapply rLt_rLe_rLt.
+    + eapply alephS_lt. eapply aleph_isOrdinal.
+    + eapply aleph_lt_rec. eapply member_implies_rLt. exact x_in.
+Qed.
+
+Theorem aleph_hasCardinality (o : Tree)
+  : Cardinality.mk (children (aleph o)) (children_isSetoid (aleph o)) `hasCardinality` aleph o.
+Proof.
+  eapply isCardinal_elim. eapply aleph_isCardinal.
+Qed.
 
 End ALEPH.
 
-
-
 Section BETH.
 
+Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}.
 
+#[local] Existing Instance children_isSetoid.
+
+#[local] Existing Instance children_isWoset.
+
+#[local] Existing Instance rLe_asProset.
+
+Definition powerCard (o : Tree) : Cardinality.t :=
+  Cardinality.mk (children (power o)) (children_isSetoid (power o)).
+
+Definition beth0 : Tree :=
+  aleph0.
+
+Definition singleton_index (o : Tree) (c : children o) : children (power o) :=
+  fun c' : children o => childnodes o c' == childnodes o c.
+
+Lemma singleton_index_spec (o : Tree) (c : children o) (z : Tree)
+  : z \in childnodes (power o) (singleton_index o c) <-> z == childnodes o c.
+Proof.
+  unfold singleton_index. simpl childnodes. rewrite filterc_spec. split.
+  - intros [c' [EQ H]]. transitivity (childnodes o c'); eauto.
+  - intros EQ. exists c. split; eauto with *.
+Qed.
+
+Lemma subset_children_Cardinality_le x y
+  (SUBSET : x \subseteq y)
+  : Cardinality.mk (children x) (children_isSetoid x) =< Cardinality.mk (children y) (children_isSetoid y).
+Proof.
+  destruct x as [csx tsx], y as [csy tsy]. simpl in *.
+  exploit (Axiom_of_Choice csx (fun _ => csy) (fun c d => tsx c == tsy d)).
+  { intros c. pose proof (SUBSET _ (member_intro _ _ c)) as [d EQ]; eauto. }
+  intros [f Hf]. exists f.
+  - intros c1 c2 H_EQ; simpl in c1, c2. change (tsy (f c1) == tsy (f c2)).
+    do 2 rewrite <- Hf. exact H_EQ.
+  - intros c1 c2 H_EQ; simpl in c1, c2. change (tsx c1 == tsx c2).
+    do 2 rewrite -> Hf. exact H_EQ.
+Qed.
+
+Lemma power_isMmonotonic x y
+  (SUBSET : x \subseteq y)
+  : power x \subseteq power y.
+Proof.
+  intros z H_in. rewrite power_spec in H_in |- *. intros w H_w. eapply SUBSET. eauto with *.
+Qed.
+
+Lemma powerCard_le x y
+  (SUBSET : x \subseteq y)
+  : powerCard x =< powerCard y.
+Proof.
+  eapply subset_children_Cardinality_le. now eapply power_isMmonotonic.
+Qed.
+
+Lemma powerCard_lowerbound (o : Tree)
+  : Cardinality.mk (children o) (children_isSetoid o) =< powerCard o.
+Proof.
+  exists (singleton_index o).
+  - intros c1 c2 H_EQ. change (childnodes (power o) (singleton_index o c1) == childnodes (power o) (singleton_index o c2)).
+    eapply extensionality. intros z. do 2 rewrite singleton_index_spec. simpl in H_EQ. unred_eqTree. now rewrite H_EQ.
+  - intros c1 c2 H_EQ. change (childnodes (power o) (singleton_index o c1) == childnodes (power o) (singleton_index o c2)) in H_EQ.
+    change (childnodes o c1 == childnodes o c2).
+    assert (H_in : childnodes o c1 \in childnodes (power o) (singleton_index o c2)).
+    { eapply member_eqProp_member.
+      - rewrite singleton_index_spec. reflexivity.
+      - exact H_EQ.
+    }
+    now rewrite singleton_index_spec in H_in.
+Qed.
+
+Theorem powerCard_not_le (o : Tree)
+  : ~ powerCard o =< Cardinality.mk (children o) (children_isSetoid o).
+Proof.
+  intros [f f_cong f_inj].
+  pose (Diag := fun c : children o => exists P : children (power o), f P == c /\ ~ childnodes o c \in childnodes (power o) P).
+  refine (let S : children (power o) := Diag in _).
+  set (d := f S).
+  assert (H_diag_not : ~ childnodes o d \in childnodes (power o) S).
+  { intros H_in. simpl childnodes in H_in. rewrite filterc_spec in H_in.
+    destruct H_in as [c [H_EQ [P [HfP HnotP]]]].
+    assert (Hf_EQ : f P == f S).
+    { transitivity c; auto. now symmetry. }
+    assert (HP_EQ : P == S).
+    { eapply f_inj. exact Hf_EQ. }
+    assert (H_inP : childnodes o c \in childnodes (power o) P).
+    { simpl. rewrite <- H_EQ. do 2 red in HP_EQ. simpl childnodes in HP_EQ. rewrite -> HP_EQ.
+      rewrite filterc_spec. exists d. split; eauto with *. red. red. exists P. split; eauto.
+      now rewrite -> H_EQ at 1.
+    }
+    contradiction (HnotP H_inP).
+  }
+  assert (H_diag_yes : childnodes o d \in childnodes (power o) S).
+  { simpl. rewrite filterc_spec. exists d; split; auto with *.
+    red. red. exists S; split; auto with *. reflexivity.
+  }
+  exact (H_diag_not H_diag_yes).
+Qed.
+
+Theorem powerCard_gt (o : Tree)
+  : Cardinality.mk (children o) (children_isSetoid o) ≨ powerCard o.
+Proof.
+  split.
+  - exact (powerCard_lowerbound o).
+  - intros [f g f_cong g_cong f_inj g_inj]. eapply powerCard_not_le. exists g; eauto.
+Qed.
+
+Definition bethS (o : Tree) : Tree :=
+  Cardinality.toTree (powerCard o).
+
+Lemma bethS_isCardinal (o : Tree)
+ : isCardinal (bethS o).
+Proof.
+  exists (powerCard o). eapply hasCardinality_intro.
+Qed.
+
+Lemma bethS_isOrdinal (o : Tree)
+  : isOrdinal (bethS o).
+Proof.
+  eapply isCardinal_isOrdinal. eapply bethS_isCardinal.
+Qed.
+
+Lemma alephS_le_bethS (o : Tree)
+  : alephS o ≦ᵣ bethS o.
+Proof.
+  unfold alephS, bethS. eapply Cardinality_toTree_isMonotonic1. rewrite next_le_iff_lt. exact (powerCard_gt o).
+Qed.
+
+Lemma bethS_lt (o : Tree)
+  (ORDINAL : isOrdinal o)
+  : o <ᵣ bethS o.
+Proof.
+  eapply rLt_rLe_rLt with (y := alephS o).
+  - eapply alephS_lt. exact ORDINAL.
+  - eapply alephS_le_bethS.
+Qed.
+
+Lemma bethS_le (o : Tree)
+  (ORDINAL : isOrdinal o)
+  : o ≦ᵣ bethS o.
+Proof.
+  eapply rLt_implies_rLe. eapply bethS_lt. exact ORDINAL.
+Qed.
+
+Lemma le_bethS (o o' : Tree)
+  (ORDINAL : isOrdinal o)
+  (ORDINAL' : isOrdinal o')
+  (LE : o ≦ᵣ o')
+  : bethS o ≦ᵣ bethS o'.
+Proof.
+  unfold bethS. eapply Cardinality_toTree_isMonotonic1. eapply powerCard_le.
+  eapply Ordinal1.Ordinal_rLe_Ordinal_elim; eauto with *.
+Qed.
+
+Let beth_djoin_good (I : Type@{Set_u}) (ds : I -> Tree)
+  (CHAIN : forall i1 i2, ds i1 ≦ᵣ ds i2 \/ ds i2 ≦ᵣ ds i1)
+  (GOODs : forall i, isCardinal (ds i))
+  : isCardinal (indexed_union I ds).
+Proof.
+  eapply indexed_union_ofCardinals_isCardinal; eauto.
+Qed.
+
+Lemma beth_djoin_isSupremum (I : Type@{Set_u}) (ds : I -> Tree) (d : Tree)
+  (CHAIN : forall i1 i2, ds i1 ≦ᵣ ds i2 \/ ds i2 ≦ᵣ ds i1)
+  (GOODs : forall i, isCardinal (ds i))
+  (GOOD : isCardinal d)
+  : indexed_union I ds ≦ᵣ d <-> forall i, ds i ≦ᵣ d.
+Proof.
+  eapply indexed_union_ofCardinals_isSupremum; eauto.
+Qed.
+
+Let beth_base_good
+  : isCardinal beth0.
+Proof.
+  exact aleph0_isCardinal.
+Qed.
+
+Let beth_next_good (d : Tree)
+  (GOOD : isCardinal d)
+  : isCardinal (bethS d).
+Proof.
+  eapply bethS_isCardinal.
+Qed.
+
+Lemma beth_next_extensive (d : Tree)
+  (GOOD : isCardinal d)
+  : d ≦ᵣ bethS d.
+Proof.
+  eapply bethS_le. eapply isCardinal_isOrdinal. exact GOOD.
+Qed.
+
+Lemma beth_next_congruence d d'
+  (GOOD : isCardinal d)
+  (GOOD' : isCardinal d')
+  (EQ : d =ᵣ d')
+  : bethS d =ᵣ bethS d'.
+Proof.
+  destruct EQ as [LE GE]. split; eapply le_bethS; eauto using isCardinal_isOrdinal.
+Qed.
+
+#[local] Hint Resolve beth_djoin_isSupremum beth_next_extensive beth_next_congruence : aczel_hints.
+
+Definition beth : Tree -> Tree :=
+  Ord.orec beth0 bethS.
+
+#[local] Notation rank_trichotomy := (O.wlt_trichotomous (classic := classic) (WOSET := rLt_isWellOrdering)).
+#[local] Infix "⊑" := rLe.
+#[local] Infix "≡" := rEq.
+#[local] Notation good := isCardinal.
+#[local] Notation rec := beth.
+#[local] Notation dbase := beth0.
+#[local] Notation next := bethS.
+#[local] Notation djoin := indexed_union.
+#[local] Notation djoin_good := beth_djoin_good.
+#[local] Notation djoin_supremum := beth_djoin_isSupremum.
+#[local] Notation next_good := beth_next_good.
+#[local] Notation next_extensive := beth_next_extensive.
+#[local] Notation next_congruence := beth_next_congruence.
+
+Let beth_djoin_upperbound (I : Type@{Set_u}) (ds : I -> Tree)
+  (CHAIN : forall i1 i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1)
+  (GOODs : forall i, good (ds i))
+  : forall i, ds i ⊑ djoin I ds.
+Proof.
+  i. eapply djoin_supremum; eauto with *.
+Qed.
+
+#[local] Hint Resolve bethS_isCardinal : core.
+
+Theorem beth_rec_spec (o : Tree)
+  : ⟪ mono_rec : forall o', o' ≦ᵣ o -> rec o' ⊑ rec o ⟫ /\ ⟪ base_rec : dbase ⊑ rec o ⟫ /\ ⟪ next_rec : forall o', o' <ᵣ o -> next (rec o') ⊑ rec o ⟫ /\ ⟪ good_rec : good (rec o) ⟫.
+Proof.
+  rename o into t. pose proof (rLt_wf t) as H_ACC. induction H_ACC as [t _ IH]. destruct t as [cs ts]; simpl.
+  assert (H_chain : forall cs' : Type@{Set_u}, forall ts' : cs' -> Tree, forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, forall c1 : cs', forall c2 : cs', next (rec (ts' c1)) ⊑ next (rec (ts' c2)) \/ next (rec (ts' c2)) ⊑ next (rec (ts' c1))).
+  { ii.
+    assert (ts' c1 <ᵣ mkNode cs ts /\ ts' c2 <ᵣ mkNode cs ts) as [helper1 helper2].
+    { split; econs; eapply LE. }
+    pose proof (rank_trichotomy (ts' c1) (ts' c2)) as [EQ | [LT | GT]].
+    - hexploit (next_congruence (rec (ts' c1)) (rec (ts' c2))).
+      + eapply IH; eauto.
+      + eapply IH; eauto.
+      + destruct EQ as [LE1 LE2]. split; eapply IH; eauto.
+      + intros H_deq. left. exact (proj1 H_deq).
+    - left. transitivity (rec (ts' c2)); eauto.
+      + eapply IH; eauto.
+      + eapply next_extensive. eapply IH; eauto.
+    - right. transitivity (rec (ts' c1)); eauto.
+      + eapply IH; eauto.
+      + eapply next_extensive. eapply IH; eauto.
+  }
+  assert (H_next_good : forall cs' : Type@{Set_u}, forall ts' : cs' -> Tree,forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, forall c', good (next (rec (ts' c')))).
+  { ii. eapply next_good. eapply IH; eauto. econs. eapply LE. }
+  set (fun cs' : Type@{Set_u} => fun ts' : cs' -> Tree => fun b : bool => if b then dbase else djoin cs' (fun c' => next (rec (ts' c')))) as f.
+  assert (claim1 : forall b1 b2 cs' ts', forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, f cs' ts' b1 ⊑ f cs' ts' b2 \/ f cs' ts' b2 ⊑ f cs' ts' b1).
+  { ii.
+    assert (helper1 : forall c' : cs', ts' c' <ᵣ mkNode cs ts).
+    { i; econs; eapply LE. }
+    assert (GOOD1 : forall i : cs', isCardinal (next (rec (ts' i)))).
+    { i. eapply next_good. exploit (IH (ts' i)); eauto. i; des; eauto. }
+    assert (helper2 : dbase ⊑ djoin cs' (fun c' => next (rec (ts' c'))) \/ djoin cs' (fun c' => next (rec (ts' c'))) ⊑ dbase).
+    { pose proof (classic (inhabited cs')) as [YES | NO]; [left | right].
+      - destruct YES as [c'].
+        exploit (IH (ts' c')); eauto. i; des.
+        enough (next (rec (ts' c')) ⊑ djoin cs' (fun i : cs' => next (rec (ts' i)))).
+        { transitivity (next (rec (ts' c'))); eauto with *. transitivity (rec (ts' c')); eauto with *. }
+        eapply beth_djoin_upperbound with (ds := fun c' : cs' => next (rec (ts' c'))); eauto.
+      - enough (forall i : cs', next (rec (ts' i)) ⊑ dbase) by now eapply djoin_supremum; eauto.
+        intros c'. contradiction NO. econs. exact c'.
+    }
+    destruct b1, b2; simpl in *; eauto with *; tauto.
+  }
+  assert (claim2 : forall b cs' ts', forall LE : forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c, good (f cs' ts' b)).
+  { ii. destruct b; simpl; eauto. }
+  set (djoin bool (f cs ts)) as x.
+  assert (claim3 : good x).
+  { eapply djoin_good; eauto.
+    - ii; eapply claim1; eauto with *.
+    - ii; eapply claim2; eauto with *.
+  }
+  assert (claim4 : dbase ⊑ x).
+  { eapply beth_djoin_upperbound with (ds := f cs ts) (i := true); eauto.
+    - ii; eapply claim1; eauto with *.
+    - ii; eapply claim2; eauto with *.
+  }
+  assert (claim5 : forall cs' : Type@{Set_u}, forall ts' : cs' -> Tree, forall H_rLt : forall c, ts' c <ᵣ mkNode cs ts, forall c' : cs', exists c : cs, ts' c' ≦ᵣ ts c).
+  { ii. pose proof (H_rLt c') as [[c H_rLe]]. simpl in *. exists c. exact H_rLe. }
+  assert (claim6 : forall o : Tree, forall LE : o ≦ᵣ mkNode cs ts, rec o ⊑ x).
+  { intros [cs' ts'] [H_rLt]. simpl in *. unfold Ord.join.
+    change (fun b : bool => if b then dbase else djoin cs' (fun c : cs' => next (rec (ts' c)))) with (f cs' ts').
+    rewrite -> djoin_supremum; eauto. destruct i; eauto. simpl. eapply djoin_supremum; i; eauto.
+    { unfold x. transitivity (djoin cs' (fun c' => next (rec (ts' c')))); eauto.
+      - eapply beth_djoin_upperbound with (ds := fun c' : cs' => next (rec (ts' c'))); eauto.
+      - eapply djoin_supremum; eauto. intros c'. pose proof (H_rLt c') as [[c H_rLe]]; simpl in *.
+        rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_LT | H_EQ].
+        + transitivity (next (rec (ts c))); eauto.
+          { transitivity (rec (ts c)); eauto.
+            - eapply IH; eauto with *.
+            - eapply next_extensive; eauto. eapply IH; eauto with *.
+          }
+          { unfold f. transitivity (djoin cs (fun i : cs => next (rec (ts i)))); eauto.
+            - eapply beth_djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto with *.
+            - eapply beth_djoin_upperbound with (ds := f cs ts) (i := false); eauto with *.
+          }
+        + transitivity (next (rec (ts c))); eauto.
+          { eapply next_congruence.
+            - eapply IH; eauto with *.
+            - eapply IH; eauto with *.
+            - destruct H_EQ as [H_LE1 H_LE2]. split; eapply IH; eauto with *.
+          }
+          { unfold f. transitivity (djoin cs (fun i : cs => next (rec (ts i)))); eauto.
+            - eapply beth_djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto with *.
+            - eapply beth_djoin_upperbound with (ds := f cs ts) (i := false); eauto with *.
+          }
+    }
+  }
+  split; eauto. split; eauto. split; eauto.
+  intros o H_rLt.
+  pose proof (classic (exists o' : Tree, o <ᵣ o' /\ o' <ᵣ mkNode cs ts)) as [YES | NO].
+  - unfold Ord.join. des. hexploit (IH o'); eauto. i; des.
+    transitivity (rec o'); eauto.
+    eapply claim6. eapply rLt_implies_rLe; eauto.
+  - assert (exists c, ts c =ᵣ o) as [c H_rEq].
+    { eapply NNPP. intros H_contra. rewrite InducedOrdinal.rLt_iff_not_rGe in H_rLt.
+      contradiction H_rLt. econs. simpl. intros c.
+      pose proof (rank_trichotomy (ts c) o) as [H_EQ | [H_LT | H_GT]]; eauto.
+      - contradiction H_contra; eauto.
+      - contradiction NO; eauto with *.
+    }
+    assert (rec o ≡ rec (ts c)) as claim7.
+    { destruct H_rEq; split; eapply IH; eauto with *. }
+    unfold Ord.join.
+    transitivity (next (rec (ts c))); eauto.
+    { eapply next_congruence.
+      - eapply IH; eauto with *.
+      - eapply IH; eauto with *.
+      - now symmetry.
+    }
+    { transitivity (djoin cs (fun i : cs => next (rec (ts i)))); eauto.
+      - eapply beth_djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto with *.
+      - eapply beth_djoin_upperbound with (ds := f cs ts) (i := false); eauto with *.
+    }
+Qed.
+
+Lemma beth_le_rec t t'
+  (H_rLe : t ⊑ t')
+  : rec t ⊑ rec t'.
+Proof.
+  eapply beth_rec_spec; eauto.
+Qed.
+
+Lemma beth_eq_rec t t'
+  (H_rEq : t ≡ t')
+  : rec t ≡ rec t'.
+Proof.
+  destruct H_rEq; split; eapply beth_rec_spec; eauto.
+Qed.
+
+Lemma beth_lt_rec t t'
+  (H_rLt : t <ᵣ t')
+  : next (rec t) ⊑ rec t'.
+Proof.
+  eapply beth_rec_spec; eauto.
+Qed.
+
+Lemma beth_rec_le_base (t : Tree)
+  : dbase ⊑ rec t.
+Proof.
+  eapply beth_rec_spec; eauto.
+Qed.
+
+Lemma beth_good_rec (t : Tree)
+  : good (rec t).
+Proof.
+  eapply beth_rec_spec; eauto.
+Qed.
+
+#[local] Hint Resolve beth_le_rec beth_eq_rec beth_lt_rec : aczel_hints.
+
+#[local] Hint Resolve beth_rec_le_base beth_good_rec : aczel_hints.
+
+Lemma beth_rec_next_dle t t'
+  (H_rLe : t ≦ᵣ t')
+  : next (rec t) ⊑ next (rec t').
+Proof.
+  rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe.
+  destruct H_rLe as [H_rLt | H_rEq].
+  - transitivity (rec t'); eauto with *.
+  - eapply next_congruence; eauto with *.
+Qed.
+
+Lemma beth_rec_chain t t'
+  : rec t ⊑ rec t' \/ rec t' ⊑ rec t.
+Proof.
+  pose proof (InducedOrdinal.rLe_total t t') as [H | H]; [left | right]; eauto with *.
+Qed.
+
+Lemma beth_rec_next_chain t t'
+  : next (rec t) ⊑ next (rec t') \/ next (rec t') ⊑ next (rec t).
+Proof.
+  pose proof (InducedOrdinal.rLe_total t t') as [H | H]; [left | right]; eapply beth_rec_next_dle; eauto.
+Qed.
+
+Lemma beth_good_next_rec (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : forall c : cs, good (next (rec (ts c))).
+Proof.
+  eauto.
+Qed.
+
+#[local] Hint Resolve beth_rec_next_dle beth_rec_chain : aczel_hints.
+
+#[local] Hint Resolve beth_rec_next_chain beth_good_next_rec : core.
+
+Let dbase_next_rec alpha
+  : dbase ⊑ next (rec alpha).
+Proof.
+  transitivity (rec alpha); eauto with *.
+Qed.
+
+Let j (cs : Type@{Set_u}) (ts : cs -> Tree) (b : bool) : Tree :=
+  if b then dbase else djoin cs (fun c => next (rec (ts c))).
+
+Lemma beth_j_chain (cs : Type@{Set_u}) (ts : cs -> Tree) (b b' : bool) :
+  j cs ts b ⊑ j cs ts b' \/ j cs ts b' ⊑ j cs ts b.
+Proof.
+  assert (dbase ⊑ djoin cs (fun c => next (rec (ts c))) \/ djoin cs (fun c => next (rec (ts c))) ⊑ dbase) as claim1.
+  { pose proof (classic (inhabited cs)) as [YES | NO]; [left | right].
+    - destruct YES as [c]. transitivity (next (rec (ts c))); eauto.
+      eapply beth_djoin_upperbound with (ds := fun c : cs => next (rec (ts c))); eauto with *.
+    - eapply djoin_supremum; eauto.
+      intros c. contradiction NO. econs. exact c.
+  }
+  destruct b, b'; simpl; eauto with *; try tauto.
+Qed.
+
+Lemma beth_good_j (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : forall b, good (j cs ts b).
+Proof.
+  intros [ | ]; simpl; eauto with *.
+Qed.
+
+#[local] Hint Resolve beth_j_chain beth_good_j : core.
+
+Lemma beth_rec_zero (o : Tree)
+  (ZERO : o ≡ empty)
+  : rec o ≡ dbase.
+Proof.
+  transitivity (rec empty); eauto with *. change (djoin bool (j Empty_set (Empty_set_rect _)) ≡ dbase). split.
+  - eapply djoin_supremum; auto. unfold j. intros [ | ]; auto with *. eapply djoin_supremum; auto; intros [].
+  - eapply beth_djoin_upperbound with (ds := j Empty_set (Empty_set_rect _)) (i := true); eauto.
+Qed.
+
+Lemma beth_rec_succ (o : Tree) (alpha : Tree)
+  (SUCC : o ≡ succ alpha)
+  : rec o ≡ next (rec alpha).
+Proof.
+  transitivity (rec (succ alpha)); eauto with *.
+  change (djoin bool (j { b : bool & children (if b then alpha else singleton alpha) } (fun c => childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))) ≡ next (rec alpha)). split.
+  - eapply djoin_supremum; auto. unfold j. intros [ | ]; simpl; auto.
+    eapply djoin_supremum; auto. intros [[ | ] c]; simpl; eapply beth_rec_next_dle.
+    + eapply rLt_implies_rLe. econs. exists c. reflexivity.
+    + simpl in c. destruct c as [ | ]; reflexivity.
+  - refine (let c : { b : bool & children (if b then alpha else singleton alpha) } := @existT _ _ false true in _).
+    transitivity (djoin { b : bool & children (if b then alpha else singleton alpha) } (fun c => next (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))))); auto.
+    + eapply beth_djoin_upperbound with (ds := fun c : { b : bool & children (if b then alpha else singleton alpha) } => next (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c)))) (i := c); eauto with *.
+    + eapply beth_djoin_upperbound with (ds := j { b : bool & children (if b then alpha else singleton alpha) } (fun c => childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))) (i := false); eauto.
+Qed.
+
+Let djoin_rec_good (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : good (djoin cs (fun i : cs => rec (ts i))).
+Proof.
+  eauto with *.
+Qed.
+
+Let rec_good (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : forall c : cs, good (rec (ts c)).
+Proof.
+  eauto with *.
+Qed.
+
+Let dbase_le_rec (cs : Type@{Set_u}) (ts : cs -> Tree)
+  : forall c : cs, dbase ⊑ rec (ts c).
+Proof.
+  eauto with *.
+Qed.
+
+Lemma beth_rec_lim' (o : Tree) (cs : Type@{Set_u}) (ts : cs -> Tree)
+  (APPROX : forall c1 : cs, exists c2 : cs, ts c1 <ᵣ ts c2)
+  (INHABITED : inhabited cs)
+  (LIM' : o ≡ indexed_union cs ts)
+  : rec o ≡ djoin cs (fun c : cs => rec (ts c)).
+Proof.
+  destruct INHABITED as [c]. destruct o as [cs' ts']; simpl. change (djoin bool (j cs' ts') ≡ djoin cs (fun i : cs => rec (ts i))). split.
+  - eapply djoin_supremum; auto. intros [|]; simpl.
+    + transitivity (rec (ts c)); auto. eapply beth_djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto with *.
+    + eapply djoin_supremum; auto. clear c. intros c'. destruct LIM' as [LE1 LE2]; simpl in *. destruct LE1 as [H_rLt]; simpl in *.
+      pose proof (H_rLt c') as [[c H_rLe]]. simpl in *. transitivity (rec (ts (projT1 c))).
+      * eapply beth_lt_rec. econs. exists (projT2 c). exact H_rLe.
+      * eapply beth_djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := projT1 c); eauto with *.
+  - eapply djoin_supremum; auto with *. clear c. intros c. transitivity (djoin cs (fun c => rec (ts c))).
+    + eapply beth_djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto with *.
+    + clear c. eapply djoin_supremum; auto with *. intros c1. simpl in *.
+      pose proof (APPROX c1) as [c2 H_rLt]. destruct H_rLt as [[c H_rLe]]. destruct LIM' as [LE1 LE2]. destruct LE2 as [LE2]. simpl in *.
+      pose proof (LE2 (@existT cs (fun i : cs => children (ts i)) c2 c)) as claim1. simpl in *.
+      destruct claim1 as [[c' H_rLe']]. simpl in *.
+      transitivity (rec (ts' c')).
+      { eapply beth_le_rec. transitivity (childnodes (ts c2) c); auto. }
+      { transitivity (djoin cs' (fun i : cs' => next (rec (ts' i)))); auto.
+        - transitivity (next (rec (ts' c'))); auto with *.
+          eapply beth_djoin_upperbound with (ds := fun i : cs' => next (rec (ts' i))) (i := c'); eauto with *.
+        - eapply beth_djoin_upperbound with (ds := j cs' ts') (i := false); eauto with *.
+      }
+Qed.
+
+Lemma beth_isCardinal (o : Tree)
+  : isCardinal (beth o).
+Proof.
+  exact (beth_good_rec o).
+Qed.
+
+Lemma beth_isOrdinal (o : Tree)
+  : isOrdinal (beth o).
+Proof.
+  eapply isCardinal_isOrdinal. eapply beth_isCardinal.
+Qed.
+
+Lemma beth_zero (o : Tree)
+  (ZERO : o =ᵣ empty)
+  : beth o =ᵣ beth0.
+Proof.
+  exact (beth_rec_zero o ZERO).
+Qed.
+
+Lemma beth_succ (o : Tree) (alpha : Tree)
+  (SUCC : o =ᵣ succ alpha)
+  : beth o =ᵣ bethS (beth alpha).
+Proof.
+  exact (beth_rec_succ o alpha SUCC).
+Qed.
+
+Lemma beth_lim' (o : Tree) (I : Type@{Set_u}) (alpha : I -> Tree)
+  (APPROX : forall i1 : I, exists i2 : I, alpha i1 <ᵣ alpha i2)
+  (INHABITED : inhabited I)
+  (LIMIT : o =ᵣ indexed_union I alpha)
+  : beth o =ᵣ indexed_union I (fun i : I => beth (alpha i)).
+Proof.
+  exact (beth_rec_lim' o I alpha APPROX INHABITED LIMIT).
+Qed.
+
+Lemma beth_le_beth_intro o o'
+  (LE : o ≦ᵣ o')
+  : beth o ≦ᵣ beth o'.
+Proof.
+  exact (beth_le_rec o o' LE).
+Qed.
+
+Lemma beth_lt_beth_intro o o'
+  (LT : o <ᵣ o')
+  : beth o <ᵣ beth o'.
+Proof.
+  eapply rLt_rLe_rLt with (y := bethS (beth o)).
+  - eapply bethS_lt. eapply beth_isOrdinal.
+  - eapply beth_lt_rec. exact LT.
+Qed.
+
+Lemma beth0_le_beth (o : Tree)
+  : beth0 ≦ᵣ beth o.
+Proof.
+  exact (beth_rec_le_base o).
+Qed.
+
+Corollary beth_le_omega (o : Tree)
+  : aleph0 ≦ᵣ beth o.
+Proof.
+  exact (beth0_le_beth o).
+Qed.
+
+Theorem beth_expand
+  : forall o : Tree, o ≦ᵣ beth o.
+Proof.
+  eapply member_rect. intros o IH. eapply rLe_intro_var1. intros x x_in. eapply rLe_rLt_rLt.
+  - eapply IH. exact x_in.
+  - eapply rLt_rLe_rLt.
+    + eapply bethS_lt. eapply beth_isOrdinal.
+    + eapply beth_lt_rec. eapply member_implies_rLt. exact x_in.
+Qed.
+
+Theorem beth_hasCardinality (o : Tree)
+  : Cardinality.mk (children (beth o)) (children_isSetoid (beth o)) `hasCardinality` beth o.
+Proof.
+  eapply isCardinal_elim. eapply beth_isCardinal.
+Qed.
+
+Theorem aleph_le_beth
+  : forall o : Tree, aleph o ≦ᵣ beth o.
+Proof.
+  induction o as [cs ts IH]; simpl. eapply rLe_intro_var1. intros x x_in.
+  change (x \in indexed_union bool (fun b : bool => if b then aleph0 else djoin cs (fun c : cs => alephS (aleph (ts c))))) in x_in.
+  change (x <ᵣ indexed_union bool (fun b : bool => if b then beth0 else djoin cs (fun c : cs => bethS (beth (ts c))))).
+  rewrite indexed_union_spec in x_in. destruct x_in as [[ | ] x_in].
+  - eapply member_implies_rLt. rewrite indexed_union_spec. exists true. exact x_in.
+  - rewrite indexed_union_spec in x_in. destruct x_in as [c x_in]. eapply member_implies_rLt.
+    rewrite indexed_union_spec. exists false. rewrite indexed_union_spec. exists c.
+    revert x x_in. change (alephS (aleph (ts c)) \subseteq bethS (beth (ts c))).
+    eapply Ordinal1.Ordinal_rLe_Ordinal_elim; eauto.
+    { eapply alephS_isOrdinal. }
+    { eapply bethS_isOrdinal. }
+    eapply rLe_trans.
+    { eapply alephS_le_bethS. }
+    eapply le_bethS.
+    { eapply aleph_isOrdinal. }
+    { eapply beth_isOrdinal. }
+    exact (IH c).
+Qed.
 
 End BETH.
-
-
 
 Section FINITE.
 
@@ -2461,3 +3850,5 @@ End SANDWICH.
 
 
 End CARDINALITY.
+
+End Cardinal1.

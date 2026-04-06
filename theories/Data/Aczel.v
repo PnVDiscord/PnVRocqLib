@@ -1253,6 +1253,23 @@ Proof.
   - eapply succ_rLe_intro.
 Qed.
 
+Lemma rLe_indexed_union_intro (I : Type@{Set_u}) (alphas : I -> Tree) (beta : Tree)
+  (H_rLe : exists i : I, beta ≦ᵣ alphas i)
+  : beta ≦ᵣ @indexed_union I alphas.
+Proof.
+  destruct H_rLe as [i [H_rLt]]. econs. intros c.
+  pose proof (H_rLt c) as [[x H]]. econs. simpl.
+  now exists (@existT _ _ i x); simpl.
+Qed.
+
+Lemma indexed_union_rLe_iff (I : Type@{Set_u}) (alphas : I -> Tree) (beta : Tree)
+  : @indexed_union I alphas ≦ᵣ beta <-> (forall i : I, alphas i ≦ᵣ beta).
+Proof.
+  split.
+  - intros [?] i; simpl in *. econs. intros c. pose proof (H_rLt (@existT _ _ i c)) as []; simpl in *. econs; eauto.
+  - intros H_rLe. econs; simpl. intros [i c]; simpl. pose proof (H_rLe i) as []; simpl in *; eauto.
+Qed.
+
 Definition isTransitiveSet (x : Tree) : Prop :=
   forall y, y \in x -> forall z, z \in y -> z \in x.
 
