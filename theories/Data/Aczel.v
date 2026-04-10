@@ -1387,7 +1387,7 @@ Qed.
 Section ORDINAL_EQUIV_DEF_1.
 
 #[local]
-Instance Setoid_consistOf_members (alpha : Tree) : isSetoid (children alpha) :=
+Instance children_isSetoid (alpha : Tree) : isSetoid (children alpha) :=
   { eqProp c c' := childnodes alpha c == childnodes alpha c'
   ; eqProp_Equivalence := relation_on_image_liftsEquivalence Tree_isSetoid.(eqProp_Equivalence) (childnodes alpha)
   }.
@@ -1435,15 +1435,15 @@ Proof.
 Qed.
 
 #[local]
-Instance membersOf_Ordinal_isWellPoset (alpha : Tree) (ORDINAL : isOrdinal alpha) : isWellPoset (children alpha) :=
+Instance children_isWellPoset (alpha : Tree) (ORDINAL : isOrdinal alpha) : isWellPoset (children alpha) :=
   { wltProp := isElemOf alpha
   ; wltProp_well_founded := proj1 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL))
   ; wltProp_Transitive := proj1 (proj2 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL)))
   }.
 
 #[local]
-Instance membersOf_Ordinal_isWoset (alpha : Tree) (ORDINAL : isOrdinal alpha) : isWoset (children alpha) :=
-  { Woset_isWellPoset := membersOf_Ordinal_isWellPoset alpha ORDINAL
+Instance children_isWoset (alpha : Tree) (ORDINAL : isOrdinal alpha) : isWoset (children alpha) (SETOID := children_isSetoid alpha) :=
+  { Woset_isWellPoset := children_isWellPoset alpha ORDINAL
   ; Woset_eqPropCompatible2 := proj1 (proj2 (proj2 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL))))
   ; Woset_ext_eq := proj2 (proj2 (proj2 (proj2 (proj1 (isOrdinal_iff1 alpha) ORDINAL))))
   }.
@@ -1691,123 +1691,25 @@ Qed.
 
 End toWellPoset.
 
-Section fromWfHelper.
-
-Lemma fromWf_ProjectedRel_rEq (A : Type) (B : Type) (A_isSetoid : isSetoid A) (RA : A -> A -> Prop) (f : A -> B)
-  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, RA x x1 -> RA x x2)
-  (WF : well_founded RA)
-  (INJ : forall x1 : A, forall x2 : A, forall EQ : f x1 = f x2, x1 == x2)
-  : forall x : A, @fromWf A RA WF x =ᵣ @fromWf B (WfHelper.ProjectedRel RA f) (WfHelper.embed_ProjectedRel_wf A B A_isSetoid RA f COMPAT WF INJ) (f x).
+Lemma AczelTree_Reflexive (t : Tree)
+  : t == t.
 Proof.
-  intros x. induction (WF x) as [x _ IH]. split.
-  - eapply fromWf_isSupremum. i. exploit IH; eauto. intros EQ.
-    rewrite EQ. eapply member_implies_rLt. rewrite fromWf_unfold.
-    exists (f y); split; eauto. econs; eauto.
-  - eapply fromWf_isSupremum. i. inv H.
-    eapply INJ in H2. exploit IH; eauto. intros EQ.
-    symmetry in EQ. rewrite EQ. eapply member_implies_rLt. rewrite fromWf_unfold.
-    exists x1; split; eauto.
+  eauto with *.
 Qed.
 
-Lemma fromWfSet_ProjectedRel_rGe (A : Type) (B : Type) (A_isSetoid : isSetoid A) (RA : A -> A -> Prop) (f : A -> B)
-  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, RA x x1 -> RA x x2)
-  (WF : well_founded RA)
-  (INJ : forall x1 : A, forall x2 : A, forall EQ : f x1 = f x2, x1 == x2)
-  : @fromWfSet A RA WF ≦ᵣ @fromWfSet B (WfHelper.ProjectedRel RA f) (WfHelper.embed_ProjectedRel_wf A B A_isSetoid RA f COMPAT WF INJ).
+Lemma AczelTree_Symmetric (t : Tree) (t' : Tree)
+  (EQ : t == t')
+  : t' == t.
 Proof.
-  econs. simpl. i. rewrite fromWf_ProjectedRel_rEq with (A_isSetoid := A_isSetoid) (f := f) (COMPAT := COMPAT) (WF := WF) (INJ := INJ).
-  econs. simpl. exists (f c). reflexivity.
+  eauto with *.
 Qed.
 
-Lemma fromWf_ProjectedRelSigRel_rEq (A : Type) (B : Type) (A_isSetoid : isSetoid A) (RA : A -> A -> Prop) (f : A -> B)
-  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, RA x x1 -> RA x x2)
-  (WF : well_founded RA)
-  (INJ : forall x1 : A, forall x2 : A, forall EQ : f x1 = f x2, x1 == x2)
-  : forall x : A, fromWf RA WF x =ᵣ fromWf (WfHelper.ProjectedRelSigRel RA f) (WfHelper.ProjectedRelSigRel_wf A B A_isSetoid RA f COMPAT WF INJ) (WfHelper.toProjectedRelSig f x).
+Lemma AczelTree_Transitive (t : Tree) (t' : Tree) (t'' : Tree)
+  (EQ : t == t')
+  (EQ' : t' == t'')
+  : t == t''.
 Proof.
-  intros x. induction (WF x) as [x _ IH]. split.
-  - eapply fromWf_isSupremum. i. exploit IH; eauto. intros EQ.
-    rewrite EQ. eapply member_implies_rLt. rewrite fromWf_unfold.
-    exists (WfHelper.toProjectedRelSig f y); split; eauto. econs; eauto.
-  - eapply fromWf_isSupremum. i. inv H.
-    eapply INJ in H2. exploit IH; eauto. intros EQ.
-    symmetry in EQ. rewrite EQ. eapply member_implies_rLt. rewrite fromWf_unfold.
-    exists x1; split; eauto.
+  eauto with *.
 Qed.
 
-Lemma fromWfSet_ProjectedRelSigRel_rGe (A : Type) (B : Type) (A_isSetoid : isSetoid A) (RA : A -> A -> Prop) (f : A -> B)
-  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, RA x x1 -> RA x x2)
-  (WF : well_founded RA)
-  (INJ : forall x1 : A, forall x2 : A, forall EQ : f x1 = f x2, x1 == x2)
-  : fromWfSet RA WF ≦ᵣ fromWfSet (WfHelper.ProjectedRelSigRel RA f) (WfHelper.ProjectedRelSigRel_wf A B A_isSetoid RA f COMPAT WF INJ).
-Proof.
-  econs. simpl. i. rewrite fromWf_ProjectedRelSigRel_rEq with (A_isSetoid := A_isSetoid) (f := f) (COMPAT := COMPAT) (WF := WF) (INJ := INJ).
-  econs. simpl. exists (WfHelper.toProjectedRelSig f c). reflexivity.
-Qed.
-
-Lemma fromWfSet_ProjectedRelSigRel_rEq (A : Type) (B : Type) (A_isSetoid : isSetoid A) (RA : A -> A -> Prop) (f : A -> B)
-  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, RA x x1 -> RA x x2)
-  (WF : well_founded RA)
-  (INJ : forall x1 : A, forall x2 : A, forall EQ : f x1 = f x2, x1 == x2)
-  : fromWfSet RA WF =ᵣ fromWfSet (WfHelper.ProjectedRelSigRel RA f) (WfHelper.ProjectedRelSigRel_wf A B A_isSetoid RA f COMPAT WF INJ).
-Proof.
-  split.
-  - eapply fromWfSet_ProjectedRelSigRel_rGe.
-  - econs. simpl. i. destruct c. des. subst. simpl. eapply rLe_rLt_rLt.
-    + eapply fromWf_ProjectedRelSigRel_rEq with (A_isSetoid := A_isSetoid) (f := f) (COMPAT := COMPAT) (WF := WF) (INJ := INJ).
-    + econs. exists a. simpl. reflexivity.
-Qed.
-
-Lemma fromWf_InitialSegRel_rEq (A : Type) (A_isSetoid : isSetoid A) (R : A -> A -> Prop) (x : A) (x' : A)
-  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
-  (WF : well_founded R)
-  (TOTAL : forall x1 : A, forall x2 : A, x1 == x2 \/ R x1 x2 \/ R x2 x1)
-  (LT : R x' x)
-  : fromWf R WF x' =ᵣ fromWf (WfHelper.InitialSegRel R x) (WfHelper.InitialSegRel_wf A R x WF) (@exist _ _ x' LT).
-Proof.
-  revert TOTAL LT. induction (WF x') as [x' _ IH]; i; split.
-  - eapply fromWf_isSupremum. i.
-    assert (LT1 : R y x).
-    { destruct (TOTAL y x) as [H_EQ | [H_LT | H_GT]].
-      - exfalso. eapply well_founded_implies_Irreflexive with (x := x').
-        { eapply B.transitiveClosure_lifts_well_founded; eauto. }
-        { econs 2; econs 1; eauto. }
-      - trivial.
-      - exfalso. eapply well_founded_implies_Irreflexive with (x := x').
-        { eapply B.transitiveClosure_lifts_well_founded; eauto. }
-        { econs 2; [econs 1; eauto | econs 2]; econs 1; eauto. }
-    }
-    eapply rLe_rLt_rLt with (y := fromWf _ (WfHelper.InitialSegRel_wf A R x WF) (@exist _ _ y LT1)).
-    { eapply IH; eauto. }
-    { eapply member_implies_rLt. rewrite fromWf_unfold. eexists; split; eauto. red; simpl; eauto. }
-  - eapply fromWf_isSupremum. i. destruct y as [a2 LT1].
-    red in H. simpl in *. eapply rLe_rLt_rLt with (y := fromWf _ WF a2).
-    { eapply IH; auto. }
-    { eapply member_implies_rLt. rewrite fromWf_unfold. eexists; split; eauto. }
-Qed.
-
-Lemma fromWfSet_InitialSegRel_rGe (A : Type) (A_isSetoid : isSetoid A) (R : A -> A -> Prop) (x : A)
-  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
-  (WF : well_founded R)
-  (TOTAL : forall x1 : A, forall x2 : A, x1 == x2 \/ R x1 x2 \/ R x2 x1)
-  : fromWf R WF x =ᵣ fromWfSet (WfHelper.InitialSegRel R x) (WfHelper.InitialSegRel_wf A R x WF).
-Proof.
-  split.
-  - eapply fromWf_isSupremum. i. econs. exists (@exist _ _ y H). simpl.
-    eapply fromWf_InitialSegRel_rEq; eauto.
-  - econs. intros [a0 r]. simpl. eapply rLe_rLt_rLt with (y := fromWf _ WF a0).
-    + eapply fromWf_InitialSegRel_rEq; eauto.
-    + eapply member_implies_rLt. rewrite fromWf_unfold. eexists; split; eauto.
-Qed.
-
-Lemma InitialSegRel_total (A : Type) (A_isSetoid : isSetoid A) (R : A -> A -> Prop) (x : A)
-  (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
-  (WF : well_founded R)
-  (TOTAL : forall x1 : A, forall x2 : A, x1 == x2 \/ R x1 x2 \/ R x2 x1)
-  : forall x1, forall x2, x1 == x2 \/ WfHelper.InitialSegRel R x x1 x2 \/ WfHelper.InitialSegRel R x x2 x1.
-Proof.
-  ii. destruct x1 as [x1 H_x1], x2 as [x2 H_x2]. unfold WfHelper.InitialSegRel. simpl in *.
-  pose proof (TOTAL x1 x2) as [H_EQ | [H_LT | H_GT]]; eauto.
-Qed.
-
-End fromWfHelper.
+#[global] Hint Resolve AczelTree_Reflexive AczelTree_Symmetric AczelTree_Transitive : aczel_hints.

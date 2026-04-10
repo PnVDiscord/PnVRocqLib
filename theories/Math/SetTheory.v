@@ -44,13 +44,13 @@ Parameter _Ord_mul : Ord -> Ord -> Ord.
 
 Parameter Card : Type@{Set_V}.
 
+Parameter _card : V -> Card.
+
 Parameter _Card_eq : Card -> Card -> Prop.
 
 Parameter _Card_lt : Card -> Card -> Prop.
 
 Parameter _Card_le : Card -> Card -> Prop.
-
-Parameter _card : forall A : Type@{Set_u}, isSetoid A -> Card.
 
 Parameter _Card_add : Card -> Card -> Card.
 
@@ -352,7 +352,10 @@ End Cardinality.
 Definition Card : Type@{Set_V} :=
   Cardinality.t.
 
-#[global] Typeclasses Opaque Card.
+Definition _card (t : V) : Card :=
+  Cardinality.mk (children t) (children_isSetoid t).
+
+Notation card := _card.
 
 Definition _Card_eq : Card -> Card -> Prop :=
   @eqProp Cardinality.t Cardinality.t_isSetoid.
@@ -362,9 +365,6 @@ Definition _Card_lt : Card -> Card -> Prop :=
 
 Definition _Card_le : Card -> Card -> Prop :=
   @leProp Cardinality.t Cardinality.t_isProset.
-
-Definition _card : forall A : Type@{Set_u}, isSetoid A -> Card :=
-  Cardinality.mk.
 
 Definition _Card_add : Card -> Card -> Card :=
   Cardinality.add.
