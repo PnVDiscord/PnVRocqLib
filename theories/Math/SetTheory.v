@@ -394,4 +394,27 @@ Instance rLe_asProset : isProset Tree :=
   ; leProp_PartialOrder := rLe_PartialOrder
   }.
 
+Fixpoint Ord_of_nat (n : nat) : Ord.t :=
+  match n with
+  | O => empty
+  | S n' => succ (Ord_of_nat n')
+  end.
+
+Lemma Ord_of_nat_isOrdinal n
+  : isOrdinal (Ord_of_nat n).
+Proof.
+  induction n as [ | n IH]; simpl.
+  - eapply zer_isOrdinal.
+  - eapply suc_isOrdinal. exact IH.
+Qed.
+
+Definition omega : Ord.t :=
+  indexed_union nat Ord_of_nat.
+
+Lemma omega_isOrdinal
+  : isOrdinal omega.
+Proof.
+  eapply sup_isOrdinal. exact Ord_of_nat_isOrdinal.
+Qed.
+
 End ORDINAL_ARITHMETIC.

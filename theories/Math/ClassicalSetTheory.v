@@ -3,6 +3,8 @@ Require Import PnV.Math.OrderTheory.
 Require Import PnV.Data.Aczel.
 Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Math.SetTheory.
+Require Import PnV.Data.Vector.
+Require Import PnV.Math.ThN.
 
 Import TypeTheoreticImplementation.
 
@@ -2681,15 +2683,410 @@ End NEXT.
 
 #[local] Existing Instance children_isWoset.
 
+Theorem Woset_iso_Ord `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (A : Type@{Set_u}) (SETOID : isSetoid A) (WOSET : isWoset A) (alpha : Tree)
+  (ORDINAL : isOrdinal alpha)
+  : @FromOrderType A SETOID WOSET == alpha <-> (exists f : A -> children alpha, ⟪ f_inj : forall x1 : A, forall x2 : A, x1 == x2 <-> f x1 == f x2 ⟫ /\ ⟪ f_preserves : forall x1 : A, forall x2 : A, x1 ≺ x2 <-> isElemOf alpha (f x1) (f x2) ⟫ /\ ⟪ f_surj : forall y, exists x, y == f x ⟫).
+Proof.
+  pose (B := children alpha). pose (BWOSET := children_isWoset alpha ORDINAL). split.
+  - intros H_eq.
+    assert (Hex : forall x : A, exists y : B, @fromOrderType A SETOID WOSET x == @fromOrderType B (children_isSetoid alpha) BWOSET y).
+    { intros x.
+      assert (Hx : @fromOrderType A SETOID WOSET x \in @FromOrderType A SETOID WOSET).
+      { rewrite FromOrderType_spec. exists x. reflexivity. }
+      rewrite H_eq in Hx.
+      rewrite <- (FromOrderType_children_id alpha ORDINAL) in Hx.
+      now rewrite FromOrderType_spec in Hx.
+    }
+    pose proof (Axiom_of_Choice A (fun _ => B) (fun x => fun y => @fromOrderType A SETOID WOSET x == @fromOrderType B (children_isSetoid alpha) BWOSET y) Hex) as [f Hf].
+    exists f. splits.
+    + intros x1 x2; split; [intros Hxx | intros Hff].
+      * erewrite <- fromOrderType_eq_fromOrderType_iff. unfold B in Hf. do 2 rewrite <- Hf. now rewrite -> fromOrderType_eq_fromOrderType_iff.
+      * erewrite <- fromOrderType_eq_fromOrderType_iff. do 2 rewrite -> Hf. now rewrite -> fromOrderType_eq_fromOrderType_iff.
+    + intros x1 x2; split; [intros Hxx | intros Hff].
+      * change (wlt (WOSET := children_isWoset alpha ORDINAL) (f x1) (f x2)).
+        rewrite <- fromOrderType_in_fromOrderType_iff in Hxx. do 2 rewrite Hf in Hxx.
+        now rewrite <- fromOrderType_in_fromOrderType_iff.
+      * rewrite <- fromOrderType_in_fromOrderType_iff. do 2 rewrite Hf.
+        change (wlt (WOSET := children_isWoset alpha ORDINAL) (f x1) (f x2)) in Hff.
+        now rewrite <- fromOrderType_in_fromOrderType_iff in Hff.
+    + intros y.
+      assert (Hy : @fromOrderType B (children_isSetoid alpha) BWOSET y \in @FromOrderType B (children_isSetoid alpha) BWOSET).
+      { rewrite FromOrderType_spec. exists y. reflexivity. }
+      pose proof (FromOrderType_children_id alpha ORDINAL) as claim1. change (@FromOrderType B _ BWOSET == alpha) in claim1.
+      rewrite claim1 in Hy. rewrite <- H_eq in Hy at 2. rewrite FromOrderType_spec in Hy.
+      destruct Hy as [x Hy]. exists x. rewrite Hf in Hy. now rewrite <- fromOrderType_eq_fromOrderType_iff.
+  - i; des.
+    pose proof (Axiom_of_Choice B (fun _ => A) (fun y => fun x => y == f x) f_surj) as [g Hg].
+    assert (H_le1 : @FromOrderType A SETOID WOSET ≦ᵣ @FromOrderType B (children_isSetoid alpha) BWOSET).
+    { unfold FromOrderType. eapply fromWfSet_cong with (f := f).
+      intros x1 x2 Hlt. change (isElemOf alpha (f x1) (f x2)). now rewrite <- f_preserves.
+    }
+    assert (H_le2 : @FromOrderType B (children_isSetoid alpha) BWOSET ≦ᵣ @FromOrderType A SETOID WOSET).
+    { unfold FromOrderType. eapply fromWfSet_cong with (f := g). intros y1 y2 Hlt.
+      assert (Hlt' : isElemOf alpha (f (g y1)) (f (g y2))).
+      { eapply (children_isWoset alpha ORDINAL).(Woset_eqPropCompatible2).
+        - symmetry. exact (Hg y1).
+        - symmetry. exact (Hg y2).
+        - exact Hlt.
+      }
+      now rewrite <- f_preserves in Hlt'.
+    }
+    assert (H_eq' : @FromOrderType A SETOID WOSET == @FromOrderType B (children_isSetoid alpha) BWOSET).
+    { eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+      - apply FromOrderType_isOrdinal.
+      - apply FromOrderType_isOrdinal.
+      - split; assumption.
+    }
+    rewrite H_eq'. exact (FromOrderType_children_id alpha ORDINAL).
+Qed.
+
+Section COUNTABLE.
+
+Let Nat_lt_Transitive
+  : Transitive Nat.lt.
+Proof.
+  clear; red; lia.
+Qed.
+
+#[local]
+Instance nat_isWellPoset : isWellPoset nat :=
+  { wltProp := Nat.lt
+  ; wltProp_well_founded := lt_wf
+  ; wltProp_Transitive := Nat_lt_Transitive
+  }.
+
+#[local, program]
+Instance nat_isWoset : isWoset nat (SETOID := @mkSetoid_from_eq nat) :=
+  { Woset_isWellPoset := nat_isWellPoset }.
+Next Obligation.
+  ii; simpl in *. lia.
+Qed.
+Next Obligation.
+  enough ((~ Nat.lt x y) /\ (~ Nat.lt y x))%nat by lia.
+  split; [rewrite <- EXT_EQ | rewrite -> EXT_EQ]; lia.
+Qed.
+
+#[local]
+Instance Fin_isWellPoset {n : nat} : isWellPoset (Fin.t n) :=
+  { wltProp := Fin.Fin_lt
+  ; wltProp_well_founded := Fin.Fin_lt_wf n
+  ; wltProp_Transitive := Fin.Fin_lt_Transitive n
+  }.
+
+#[local]
+Instance Fin_isWoset (n : nat) : isWoset (Fin.t n) (SETOID := @Fin.t_isSetoid n) :=
+  @O.WellfoundedToset_isWoset classic (Fin.t n) (@Fin.t_isSetoid n) Fin_isWellPoset (Fin.Fin_lt_eqPropCompatible2 n) (@Fin.Fin_lt_total n).
+
+Lemma fromWf_vs_Ord_of_nat (n : nat)
+  : @fromWf nat Nat.lt lt_wf n == Ord_of_nat n.
+Proof.
+  assert (claim1 : forall m : nat, isOrdinal (fromWf Nat.lt lt_wf m)).
+  { eapply fromWf_isOrdinal; eauto. }
+  eapply Ordinal1.Ordinal_rEq_Ordinal_elim; auto.
+  { eapply Ord_of_nat_isOrdinal. }
+  induction n as [ | n IH]; simpl.
+  - split.
+    + econs. intros [c Hc]; simpl in Hc. red in Hc. exfalso; lia.
+    + econs. simpl. intros [].
+  - assert (IH' : fromWf Nat.lt lt_wf n == Ord_of_nat n).
+    { eapply Ordinal1.Ordinal_rEq_Ordinal_elim; auto. eapply Ord_of_nat_isOrdinal. }
+    split.
+    + econs. intros [c Hc]; simpl in Hc.
+      assert (c = n \/ c < n) as [EQ | LT] by lia.
+      * econs. exists (@existT _ _ false true).
+        subst n. simpl childnodes at 2. rewrite <- IH.
+        econs. intros [n Hn]. simpl in *.
+        rewrite fromAcc_pirrel with (ACC' := lt_wf n). eapply member_implies_rLt.
+        eapply fromAcc_member_fromAcc_intro. exact Hn.
+      * rewrite <- IH'. econs. exists (@existT _ _ true (@exist _ _ c LT)).
+        econs. intros [m Hm]. simpl in Hm |- *.
+        rewrite fromAcc_pirrel with (x := c) (ACC' := lt_wf c).
+        rewrite fromAcc_pirrel with (x := m) (ACC' := lt_wf m).
+         eapply member_implies_rLt. eapply fromAcc_member_fromAcc_intro. exact Hm.
+    + rewrite <- IH'. econs. intros [b c]; simpl in b, c |- *. destruct b as [ | ].
+      * eapply member_implies_rLt. pose proof (claim1 (S n)) as [? ?].
+        eapply TRANS with (y := fromWf Nat.lt lt_wf n); eauto with *.
+        unfold fromWf. rewrite fromAcc_unfold.
+        assert (n < S n) as Hn by lia.
+        exists (@exist _ _ n Hn). eapply fromAcc_pirrel.
+      * assert (n < S n) as Hn by lia.
+        simpl in c. destruct c; simpl; eapply member_implies_rLt; unfold fromWf; rewrite fromAcc_unfold; exists (@exist _ _ n Hn); eapply fromAcc_pirrel.
+Qed.
+
+Lemma fromWfSet_Fin_lt_vs_Ord_of_nat (n : nat)
+  : @fromWfSet (Fin.t n) (@Fin.Fin_lt n) (Fin.Fin_lt_wf n) == Ord_of_nat n.
+Proof.
+  set (A := @sig nat (gt n)).
+  pose (A_isWoset := O.subWoset (classic := classic) (A := nat) (SETOID := @mkSetoid_from_eq nat) nat_isWoset (gt n)).
+  set (RA := binary_relation_on_image Nat.lt (@proj1_sig nat (gt n))).
+  assert (claim1 : @fromWfSet (Fin.t n) (@Fin.Fin_lt n) (Fin.Fin_lt_wf n) == @fromWfSet A RA (relation_on_image_liftsWellFounded Nat.lt (@proj1_sig nat (gt n)) lt_wf)).
+  { eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+    - change (isOrdinal (@FromOrderType _ _ (@Fin_isWoset n))). eapply FromOrderType_isOrdinal.
+    - change (isOrdinal (@FromOrderType _ _ A_isWoset)). eapply FromOrderType_isOrdinal.
+    - split.
+      + eapply fromWfSet_cong with (f := Fin.runFin); eauto.
+      + eapply fromWfSet_cong with (f := fun z : A => Fin.getFin (proj1_sig z) (proj2_sig z)).
+        intros [x Hx] [y Hy] Hlt; simpl. do 2 red in Hlt. simpl in Hlt. red. unfold Fin.evalFin. now do 2 rewrite Fin.runFin_getFin_id.
+  }
+  rewrite claim1. transitivity (@fromWf nat Nat.lt lt_wf n).
+  - symmetry. eapply fromWfSet_InitialSegment; eauto.
+  - eapply fromWf_vs_Ord_of_nat.
+Qed.
+
+Lemma Fin_choose_top (n : nat)
+  (R : Fin.t (S n) -> Fin.t (S n) -> Prop)
+  (R_total : forall x : Fin.t (S n), forall x' : Fin.t (S n), x == x' \/ R x x' \/ R x' x)
+  (R_Transitive : Transitive R)
+  : exists top : Fin.t (S n), forall x : Fin.t (S n), x == top \/ R x top.
+Proof.
+  induction n as [ | n IH].
+  - exists (@FZ 0). Fin.caseS x; simpl; eauto. inv x.
+  - set (R' := fun x : Fin.t (S n) => fun y : Fin.t (S n) => R (FS x) (FS y)).
+    assert (R'_total : forall x x', x == x' \/ R' x x' \/ R' x' x).
+    { intros x x'. unfold R'. pose proof (R_total (FS x) (FS x')) as [H | [H | H]].
+      - left. rewrite Fin.Fin_eqProp_iff in H |- *. congruence.
+      - now right; left.
+      - now right; right.
+    }
+    assert (R'_Transitive : Transitive R').
+    { intros x y z H1 H2. unfold R' in *. eapply R_Transitive; eauto. }
+    pose proof (IH R' R'_total R'_Transitive) as [top' Htop'].
+    pose proof (R_total FZ (FS top')) as [H | [H | H]].
+    + rewrite Fin.Fin_eqProp_iff in H. exfalso. congruence.
+    + exists (FS top'). Fin.caseS x; auto with *.
+      pose proof (Htop' x) as [Hx | Hx].
+      * left. rewrite Fin.Fin_eqProp_iff in Hx |- *. congruence.
+      * now right.
+    + exists FZ. Fin.caseS x; auto with *.
+      pose proof (Htop' x) as [Hx | Hx].
+      * right. rewrite Fin.Fin_eqProp_iff in Hx. congruence.
+      * right. eapply R_Transitive; eauto.
+Qed.
+
+#[refine]
+Fixpoint Fin_omit {n : nat} (z : Fin.t (S n)) {struct z} : Fin.t n -> Fin.t (S n):=
+  match z with
+  | @FZ n' => _
+  | @FS n' z' => _
+  end.
+Proof.
+  - intros i. exact (FS i).
+  - intros i. revert z; destruct i as [m | m i']; intros z.
+    + exact FZ.
+    + exact (FS (@Fin_omit m z' i')).
+Defined.
+
+Lemma Fin_omit_omit {n : nat} (z : Fin.t (S n)) (i : Fin.t n)
+  : ~ Fin_omit z i == z.
+Proof.
+  revert i. pattern n, z. revert n z. eapply Fin.rectS.
+  - simpl; eauto.
+  - simpl; intros n. Fin.caseS z; simpl; intros IH; Fin.caseS i; eauto.
+Qed.
+
+#[refine]
+Fixpoint Fin_restore {n : nat} (z : Fin.t (S n)) {struct z} : { i : Fin.t (S n) | ~ i == z } -> Fin.t n :=
+  match z with
+  | @FZ n' => _
+  | @FS n' z' => _
+  end.
+Proof.
+  - intros [x Hx]. revert x Hx. Fin.caseS x'; ii.
+    + exfalso. contradiction Hx. econs.
+    + exact x'.
+  - intros [x Hx]. revert x Hx. Fin.caseS x'; ii.
+    + revert Hx. pattern z'. revert z'.
+      destruct n' as [ | m].
+      * Fin.case0.
+      * ii. exact FZ.
+    + revert Hx. pattern z'. revert z'.
+      destruct n' as [ | m].
+      * Fin.case0.
+      * ii. eapply FS. eapply Fin_restore with (z := z').
+        exists x'. exact Hx.
+Defined.
+
+Lemma Fin_restore_omit {n : nat} (z : Fin.t (S n)) (i : Fin.t n)
+  : Fin_restore z (@exist _ _ (Fin_omit z i) (Fin_omit_omit z i)) == i.
+Proof.
+  revert z. induction i as [n | n i IH]; Fin.caseS z.
+  - simpl; eauto.
+  - simpl; eauto.
+  - simpl. reflexivity.
+  - simpl. change (Fin_restore z (exist (fun x : Fin.t (S n) => ~ Fin.t_eqProp (S n) x z) (Fin_omit z i) (Fin_omit_omit (FS z) (FS i))) == i).
+    transitivity (Fin_restore z (exist (fun i : Fin.t (S n) => ~ i == z) (Fin_omit z i) (Fin_omit_omit z i))); eauto.
+    simpl. rewrite proof_irrelevance with (p1 := Fin_omit_omit (FS z) (FS i)) (p2 := Fin_omit_omit z i); eauto with *.
+Qed.
+
+Lemma Fin_omit_restore {n : nat} (z : Fin.t (S n)) (y : { x : Fin.t (S n) | ~ x == z })
+  : Fin_omit z (Fin_restore z y) == proj1_sig y.
+Proof.
+  destruct y as [y Hy]. simpl proj1_sig. revert y Hy. pattern n, z. revert n z. refine (Fin.rectS _ _ _).
+  - intros n; Fin.caseS y; simpl; ii; eauto with *.
+  - intros n; Fin.caseS x; intros IH; ii; revert y Hy; Fin.caseS y; ii; simpl in *; eauto.
+Qed.
+
+Lemma Fin_omit_inj {n : nat} (z : Fin.t (S n)) (i1 : Fin.t n) (i2 : Fin.t n)
+  (EQ : Fin_omit z i1 == Fin_omit z i2)
+  : i1 == i2.
+Proof.
+  revert i1 i2 EQ. pattern n, z. revert n z. refine (Fin.rectS _ _ _).
+  - intros n i1. destruct i1 as [ | i1']; Fin.caseS i2'; intros EQ; simpl in *; eauto.
+  - intros n i IH. Fin.caseS i1'; Fin.caseS i2'; intros EQ; simpl in *; eauto.
+Qed.
+
+Lemma Fin_woset_unique (n : nat) (R : Fin.t n -> Fin.t n -> Prop)
+  (R_wf : well_founded R)
+  (R_total : forall x x', x == x' \/ R x x' \/ R x' x)
+  (R_Transitive : Transitive R)
+  (R_eqPropCompatible2 : eqPropCompatible2 R)
+  : @fromWfSet (Fin.t n) R R_wf == Ord_of_nat n.
+Proof.
+  revert R R_wf R_total R_Transitive R_eqPropCompatible2. induction n as [ | n IH]; intros R; ii.
+  - eapply extensionality. intros z; split; intros Hz.
+    + destruct Hz as [x _]. simpl in *. exact (Fin.case0 x).
+    + now rewrite empty_spec in Hz.
+  - pose proof (Fin_choose_top n R R_total R_Transitive) as [top Htop].
+    assert (Hpred : forall x : Fin.t (S n), R x top <-> ~ x == top).
+    { intros x; split.
+      - intros Hlt Heq. refine (well_founded_implies_Irreflexive' R R_wf _ x top Heq Hlt).
+        ii. now rewrite <- H.
+      - intros Hneq. pose proof (Htop x) as [Heq | Hlt]; ss!.
+    }
+    set (A := { x : Fin.t (S n) | R x top }).
+    set (A_isSetoid := @subSetoid (Fin.t (S n)) (@Fin.t_isSetoid (S n)) (fun x => R x top)).
+    set (RA := binary_relation_on_image R (@proj1_sig _ (fun x : Fin.t (S n) => R x top))).
+    set (RA_wf := relation_on_image_liftsWellFounded R (@proj1_sig _ (fun x : Fin.t (S n) => R x top)) R_wf).
+    assert (RA_total : forall x : A, forall x' : A, x == x' \/ RA x x' \/ RA x' x).
+    { intros [x Hx] [x' Hx']; simpl. exact (R_total x x'). }
+    assert (RA_Transitive : Transitive RA).
+    { unfold RA, binary_relation_on_image. intros [x Hx] [y Hy] [z Hz] H1 H2; simpl in *. eapply R_Transitive; eauto. }
+    assert (RA_eqPropCompatible2 : eqPropCompatible2 RA).
+    { intros [x1 H1] [x2 H2] [y1 H3] [y2 H4] Hx Hy; simpl in *. eapply R_eqPropCompatible2; simpl; eauto. }
+    set (embed := fun i : Fin.t n => let y := Fin_omit top i in @exist _ (fun x : Fin.t (S n) => R x top) y (proj2 (Hpred y) (Fin_omit_omit top i))).
+    set (forget := fun y : A => Fin_restore top (@exist _ _ (proj1_sig y) (proj1 (Hpred (proj1_sig y)) (proj2_sig y)))).
+    set (Rn := binary_relation_on_image R (fun i : Fin.t n => proj1_sig (embed i))).
+    set (Rn_wf := relation_on_image_liftsWellFounded R (fun i : Fin.t n => proj1_sig (embed i)) R_wf).
+    assert (embed_cong : eqPropCompatible1 (fun i : Fin.t n => proj1_sig (embed i))).
+    { intros i i' H. rewrite Fin.Fin_eqProp_iff in H |- *. congruence. }
+    assert (Rn_total : forall x : Fin.t n, forall x' : Fin.t n, x == x' \/ Rn x x' \/ Rn x' x).
+    { intros x x'. pose proof (R_total (proj1_sig (embed x)) (proj1_sig (embed x'))) as [Heq | [Hlt | Hgt]].
+      - left. exact (Fin_omit_inj top x x' Heq).
+      - now right; left.
+      - now right; right.
+    }
+    assert (Rn_Transitive : Transitive Rn).
+    { intros x y z H1 H2; simpl in *. eapply R_Transitive; eauto. }
+    assert (Rn_eqPropCompatible2 : eqPropCompatible2 Rn).
+    { intros x1 x2 y1 y2 Hx Hy. eapply R_eqPropCompatible2; eauto. }
+    pose proof (IH Rn Rn_wf Rn_total Rn_Transitive Rn_eqPropCompatible2) as IHn.
+    set (WPOSETA := {| wltProp := RA; wltProp_well_founded := RA_wf; wltProp_Transitive := RA_Transitive; |}).
+    set (WPOSETn := {| wltProp := Rn; wltProp_well_founded := Rn_wf; wltProp_Transitive := Rn_Transitive; |}).
+    set (WOSETA := @O.WellfoundedToset_isWoset classic A A_isSetoid WPOSETA RA_eqPropCompatible2 RA_total).
+    set (WOSETn := @O.WellfoundedToset_isWoset classic (Fin.t n) (@Fin.t_isSetoid n) WPOSETn Rn_eqPropCompatible2 Rn_total).
+    assert (Hseg_eq : @fromWfSet A RA RA_wf == @fromWfSet (Fin.t n) Rn Rn_wf).
+    { eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+      - change (isOrdinal (@FromOrderType A A_isSetoid WOSETA)). exact FromOrderType_isOrdinal.
+      - change (isOrdinal (@FromOrderType (Fin.t n) (@Fin.t_isSetoid n) WOSETn)). exact FromOrderType_isOrdinal.
+      - split.
+        + eapply fromWfSet_cong with (f := forget).
+          intros y1 y2 Hlt. unfold Rn. eapply R_eqPropCompatible2.
+          * exact (Fin_omit_restore top (@exist _ _ (proj1_sig y1) ((proj1 (Hpred (proj1_sig y1))) (proj2_sig y1)))).
+          * exact (Fin_omit_restore top (@exist _ _ (proj1_sig y2) ((proj1 (Hpred (proj1_sig y2))) (proj2_sig y2)))).
+          * exact Hlt.
+        + eapply fromWfSet_cong with (f := embed); eauto.
+    }
+    assert (Htop_eq : @fromWfSet (Fin.t (S n)) R R_wf == succ (@fromWf (Fin.t (S n)) R R_wf top)).
+    { eapply extensionality. intros z; split; intros Hz.
+      - destruct Hz as [x Hz]. rewrite Hz. rewrite succ_spec. pose proof (Htop x) as [Hx | Hlt].
+        + right. rewrite Fin.Fin_eqProp_iff in Hx. now subst.
+        + left. rewrite fromWf_spec. exists x; eauto with *.
+      - rewrite succ_spec in Hz. destruct Hz as [Hz | Hz].
+        + rewrite fromWf_spec in Hz. destruct Hz as [x [Hz Hlt]]. rewrite Hz. now exists x.
+        + rewrite Hz. now exists top.
+    }
+    rewrite Htop_eq; simpl Ord_of_nat. eapply succ_eqPropCompatible1.
+    rewrite fromWfSet_InitialSegment with (R_Transitive := R_Transitive).
+    fold RA. fold RA_wf. transitivity (fromWfSet Rn Rn_wf); eauto.
+Qed.
+
+Theorem Fin_hasCardinality (n : nat)
+  : Cardinality.mk (Fin.t n) (@Fin.t_isSetoid n) `hasCardinality` Ord_of_nat n.
+Proof.
+  split.
+  - exists (@Fin.Fin_lt n), (Fin.Fin_lt_wf n). splits.
+    + exact (@Fin.Fin_lt_total n).
+    + exact (Fin.Fin_lt_Transitive n).
+    + exact (Fin.Fin_lt_eqPropCompatible2 n).
+    + exact (fromWfSet_Fin_lt_vs_Ord_of_nat n).
+  - intros alpha (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & Halpha).
+    rewrite <- Halpha. erewrite Fin_woset_unique with (R := R) (R_wf := R_wf); eauto with *.
+Qed.
+
+Lemma fromWfSet_vs_omega
+  : @fromWfSet nat Nat.lt lt_wf == omega.
+Proof.
+  eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+  { change (isOrdinal (@FromOrderType _ _ nat_isWoset)). eapply FromOrderType_isOrdinal. }
+  { eapply omega_isOrdinal. }
+  split.
+  - econs. simpl. intros n. rewrite -> fromWf_vs_Ord_of_nat.
+    eapply member_implies_rLt. unfold omega. rewrite indexed_union_spec.
+    exists (S n). simpl. rewrite succ_spec. now right.
+  - econs. simpl. intros [n c]; simpl in *.
+    transitivity (Ord_of_nat n).
+    { eapply member_implies_rLt. eauto with *. }
+    rewrite <- fromWf_vs_Ord_of_nat.
+    eapply member_implies_rLt. eauto with *.
+Qed.
+
+Theorem nat_hasCardinality
+  : Cardinality.ofType nat `hasCardinality` omega.
+Proof.
+  split.
+  - exists Nat.lt, lt_wf. splits.
+    + intros x x'. change (x = x' \/ x < x' \/ x' < x). lia.
+    + exact Nat_lt_Transitive.
+    + ii; simpl in *; lia.
+    + exact fromWfSet_vs_omega.
+  - intros alpha (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & Halpha).
+    rewrite <- Halpha. unfold omega. rewrite indexed_union_rLe_iff. intros n.
+    set (Rn := binary_relation_on_image R (@Fin.evalFin n)).
+    set (Rn_wf := relation_on_image_liftsWellFounded R (@Fin.evalFin n) R_wf).
+    assert (Rn_total : forall x : Fin.t n, forall x' : Fin.t n, x == x' \/ Rn x x' \/ Rn x' x).
+    { intros x x'. unfold Rn, binary_relation_on_image.
+      pose proof (R_total (Fin.evalFin x) (Fin.evalFin x')) as [H_eq | [H_lt | H_gt]].
+      - left. rewrite Fin.Fin_eqProp_iff. now apply Fin.evalFin_inj.
+      - now right; left.
+      - now right; right.
+    }
+    assert (Rn_Transitive : Transitive Rn).
+    { unfold Rn, binary_relation_on_image. intros x y z H1 H2. eapply R_Transitive; eauto. }
+    assert (Rn_eqPropCompatible2 : eqPropCompatible2 Rn).
+    { intros x1 x2 y1 y2 Hx Hy. unfold Rn, binary_relation_on_image in *. eapply R_eqPropCompatible2.
+      - rewrite Fin.Fin_eqProp_iff in Hx. now subst.
+      - rewrite Fin.Fin_eqProp_iff in Hy. now subst.
+    }
+    transitivity (@fromWfSet (Fin.t n) Rn Rn_wf).
+    + eapply (proj2 (Fin_hasCardinality n)). exists Rn, Rn_wf. splits.
+      * exact Rn_total.
+      * exact Rn_Transitive.
+      * exact Rn_eqPropCompatible2.
+      * reflexivity.
+    + eapply fromWfSet_cong with (f := @Fin.evalFin n); eauto.
+Qed.
+
+End COUNTABLE.
+
 Section ALEPH.
 
 Definition aleph0 : Tree :=
-  Cardinality.toTree (Cardinality.ofType nat).
+  omega.
 
 Lemma aleph0_isCardinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
   : isCardinal aleph0.
 Proof.
-  exists (Cardinality.ofType nat). eapply hasCardinality_intro.
+  exists (Cardinality.ofType nat). eapply nat_hasCardinality.
 Qed.
 
 Lemma aleph0_isOrdinal `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
@@ -3238,15 +3635,15 @@ Definition powerCard (o : Tree) : Cardinality.t :=
   card (power o).
 
 Definition beth0 : Tree :=
-  aleph0.
+  omega.
 
 Definition singleton_index (o : Tree) (c : children o) : children (power o) :=
   fun c' : children o => childnodes o c' == childnodes o c.
 
-Lemma singleton_index_spec (o : Tree) (c : children o) (z : Tree)
-  : z \in childnodes (power o) (singleton_index o c) <-> z == childnodes o c.
+Lemma singleton_index_spec (o : Tree) (c : children o)
+  : forall z, z \in childnodes (power o) (singleton_index o c) <-> z == childnodes o c.
 Proof.
-  unfold singleton_index. simpl childnodes. rewrite filterc_spec. split.
+  i. unfold singleton_index. simpl childnodes. rewrite filterc_spec. split.
   - intros [c' [EQ H]]. transitivity (childnodes o c'); eauto.
   - intros EQ. exists c. split; eauto with *.
 Qed.
@@ -3843,6 +4240,47 @@ Proof.
 Qed.
 
 End BETH.
+
+Theorem CantorSchröderBernstein `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (kappa : Cardinality.t) (lambda : Cardinality.t)
+  (LE1 : kappa =< lambda)
+  (LE2 : lambda =< kappa)
+  : exists f : kappa.(Cardinality.carrier) -> lambda.(Cardinality.carrier), ⟪ f_inj : forall x1, forall x2, x1 == x2 <-> f x1 == f x2 ⟫ /\ ⟪ f_surj : forall y, exists x, y == f x ⟫.
+Proof.
+  assert (H_EQ : kappa == lambda).
+  { destruct LE1 as [f f_cong f_inj], LE2 as [g g_cong g_inj]. now exists f g. }
+  assert (H_tree : Cardinality.toTree kappa =ᵣ Cardinality.toTree lambda).
+  { now rewrite <- Cardinality_eq_iff. }
+  pose proof (hasCardinality_intro kappa) as [(Rk & Rk_wf & Rk_total & Rk_Transitive & Rk_eqPropCompatible2 & Hk) _].
+  pose proof (hasCardinality_intro lambda) as [(Rl & Rl_wf & Rl_total & Rl_Transitive & Rl_eqPropCompatible2 & Hl) _].
+  set (WPOSET1 := {| wltProp := Rk; wltProp_well_founded := Rk_wf; wltProp_Transitive := Rk_Transitive; |}).
+  set (WPOSET2 := {| wltProp := Rl; wltProp_well_founded := Rl_wf; wltProp_Transitive := Rl_Transitive; |}).
+  set (WOSET1 := @O.WellfoundedToset_isWoset classic kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid) WPOSET1 Rk_eqPropCompatible2 Rk_total).
+  set (WOSET2 := @O.WellfoundedToset_isWoset classic lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) WPOSET2 Rl_eqPropCompatible2 Rl_total).
+  assert (H_fromWfSet : @fromWfSet kappa.(Cardinality.carrier) Rk Rk_wf == @fromWfSet lambda.(Cardinality.carrier) Rl Rl_wf).
+  { eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
+    - change (isOrdinal (@FromOrderType _ _ WOSET1)). eapply FromOrderType_isOrdinal.
+    - change (isOrdinal (@FromOrderType _ _ WOSET2)). eapply FromOrderType_isOrdinal.
+    - rewrite -> Hl, -> Hk. exact H_tree.
+  }
+  destruct H_fromWfSet as [H_left H_right].
+  exploit (Axiom_of_Choice kappa.(Cardinality.carrier) (fun _ => lambda.(Cardinality.carrier)) (fun x y => @fromWf _ Rl Rl_wf y == @fromWf _ Rk Rk_wf x)).
+  { intro x. pose proof (H_left x) as [y Hy]. exists y. eauto with *. }
+  intros [f Hf].
+  exploit (Axiom_of_Choice lambda.(Cardinality.carrier) (fun _ => kappa.(Cardinality.carrier)) (fun y x => @fromWf _ Rk Rk_wf x == @fromWf _ Rl Rl_wf y)).
+  { intro y. pose proof (H_right y) as [x Hx]. exists x. eauto with *. }
+  intros [g Hg].
+  exists f. split.
+  - intros x1 x2. split.
+    + intros Hxx. rewrite <- fromOrderType_eq_fromOrderType_iff in Hxx.
+      change (fromWf Rk Rk_wf x1 == fromWf Rk Rk_wf x2) in Hxx.
+      do 2 rewrite <- Hf in Hxx. now rewrite <- fromOrderType_eq_fromOrderType_iff.
+    + intros Hff. rewrite <- fromOrderType_eq_fromOrderType_iff in Hff.
+      change (fromWf Rl Rl_wf (f x1) == fromWf Rl Rl_wf (f x2)) in Hff.
+      do 2 rewrite -> Hf in Hff. now rewrite <- fromOrderType_eq_fromOrderType_iff.
+  - intro y. exists (g y). rewrite <- fromOrderType_eq_fromOrderType_iff.
+    change (fromWf Rl Rl_wf y == fromWf Rl Rl_wf (f (g y))).
+    now rewrite -> Hf, -> Hg.
+Qed.
 
 End CARDINALITY.
 

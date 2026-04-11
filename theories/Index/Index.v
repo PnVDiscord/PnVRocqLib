@@ -9,7 +9,6 @@ Require Import PnV.Math.ClassicalDomainTheory.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.
 Require Import PnV.Math.ClassicalSetTheory.
-Require Import PnV.Math.ClassicalSetTheory2.
 Require Import PnV.Math.SetTheory.
 Require Import PnV.Math.ThN.
 Require Import PnV.Data.Aczel.

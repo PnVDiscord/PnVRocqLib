@@ -133,6 +133,46 @@ Proof.
   destruct i; reflexivity.
 Defined.
 
+Fixpoint t_eqProp (n : nat) (lhs : Fin.t n) {struct lhs} : forall rhs : Fin.t n, Prop :=
+  match lhs with
+  | @FZ n' => caseS (n' := n') True (fun _ => False)
+  | @FS n' i' => caseS (n' := n') False (t_eqProp n' i')
+  end.
+
+#[global]
+Instance t_eqProp_Reflexive n
+  : Reflexive (t_eqProp n).
+Proof.
+  intros i. induction i; simpl; eauto with *.
+Qed.
+
+#[global]
+Instance t_eqProp_Symmetric n
+  : Symmetric (t_eqProp n).
+Proof.
+  intros i. induction i; caseS j; simpl; eauto with *.
+Qed.
+
+#[global]
+Instance t_eqProp_Transitive n
+  : Transitive (t_eqProp n).
+Proof.
+  intros i. induction i; caseS j; caseS k; simpl; eauto with *.
+Qed.
+
+#[global]
+Instance t_eqProp_Equivalence {n : nat}
+  : Equivalence (t_eqProp n).
+Proof.
+  split; eauto with *.
+Defined.
+
+#[global]
+Instance t_isSetoid {n : nat} : isSetoid (Fin.t n) :=
+  { eqProp := t_eqProp n
+  ; eqProp_Equivalence := t_eqProp_Equivalence
+  }.
+
 Lemma evalFin_inj {n : nat} (i1 : Fin.t n) (i2 : Fin.t n)
   (hyp_eq : evalFin i1 = evalFin i2)
   : i1 = i2.
@@ -143,6 +183,46 @@ Proof.
   destruct (runFin i1) as [m1 hyp_lt1].
   destruct (runFin i2) as [m2 hyp_lt2].
   cbn in *. subst m1. f_equal. eapply le_pirrel.
+Qed.
+
+Theorem Fin_eqProp_iff (n : nat) (i : Fin.t n) (i' : Fin.t n)
+  : i == i' <-> i = i'.
+Proof.
+  split.
+  - revert i'; induction i as [n | n i IH]; caseS j; ii; simpl in *; eauto with *. eapply f_equal; eauto.
+  - now intros ?; subst.
+Qed.
+
+Definition Fin_lt {n : nat} (i : Fin.t n) (i' : Fin.t n) : Prop :=
+  Fin.evalFin i < Fin.evalFin i'.
+
+Lemma Fin_lt_wf (n : nat)
+  : well_founded (@Fin_lt n).
+Proof.
+  exact (relation_on_image_liftsWellFounded (A := Fin.t n) (B := nat) Nat.lt evalFin lt_wf).
+Qed.
+
+Lemma Fin_lt_Transitive (n : nat)
+  : Transitive (@Fin_lt n).
+Proof.
+  unfold Fin_lt; red; lia.
+Qed.
+
+Lemma Fin_lt_eqPropCompatible2 (n : nat)
+  : eqPropCompatible2 (@Fin_lt n).
+Proof.
+  unfold Fin_lt; ii. rewrite Fin_eqProp_iff in *.
+  simpl in *. subst. eauto.
+Qed.
+
+Lemma Fin_lt_total {n : nat} (i : Fin.t n) (i' : Fin.t n)
+  : i == i' \/ Fin_lt i i' \/ Fin_lt i' i.
+Proof.
+  rewrite Fin_eqProp_iff. unfold Fin_lt.
+  pose proof (Nat.lt_trichotomy (Fin.evalFin i) (Fin.evalFin i')) as [Hlt|[Heq|Hgt]].
+  - now right; left.
+  - now left; eapply evalFin_inj.
+  - now right; right.
 Qed.
 
 Fixpoint incrFin {m : nat} (n : nat) (i : Fin.t m) {struct n} : Fin.t (n + m) :=

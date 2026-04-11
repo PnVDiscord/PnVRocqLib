@@ -60,6 +60,22 @@ Class isSetoid (A : Type) : Type :=
 
 Infix "==" := eqProp : type_scope.
 
+#[global] Notation void := Empty_set.
+
+#[global, program]
+Instance void_isSetoid : isSetoid void :=
+  { eqProp := @Empty_set_rect (fun lhs => forall rhs : void, Prop) }.
+Next Obligation.
+  split; ii; contradiction.
+Qed.
+
+#[global, program]
+Instance unit_isSetoid : isSetoid unit :=
+  { eqProp _ _ := True }.
+Next Obligation.
+  split; ii; exact I.
+Qed.
+
 #[global, program]
 Instance Prop_isSetoid : isSetoid Prop :=
   { eqProp := iff
