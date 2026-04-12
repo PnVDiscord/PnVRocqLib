@@ -123,6 +123,12 @@ Qed.
 Definition evalFin {n : nat} (i : Fin.t n) : nat :=
   proj1_sig (runFin i).
 
+Lemma Fin_evalFin_lt {n : nat} (x : Fin.t n)
+  : evalFin x < n.
+Proof.
+  exact (proj2_sig (Fin.runFin x)).
+Defined.
+
 Lemma evalFin_unfold {n : nat} (i : Fin.t n) :
   evalFin i =
   match i with
@@ -189,7 +195,8 @@ Theorem Fin_eqProp_iff (n : nat) (i : Fin.t n) (i' : Fin.t n)
   : i == i' <-> i = i'.
 Proof.
   split.
-  - revert i'; induction i as [n | n i IH]; caseS j; ii; simpl in *; eauto with *. eapply f_equal; eauto.
+  - revert i'; induction i as [n | n i IH]; simpl; caseS j; simpl; try tauto.
+    intros EQ; f_equal. eapply IH. exact EQ.
   - now intros ?; subst.
 Qed.
 

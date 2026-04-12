@@ -2795,7 +2795,7 @@ Proof.
       assert (c = n \/ c < n) as [EQ | LT] by lia.
       * econs. exists (@existT _ _ false true).
         subst n. simpl childnodes at 2. rewrite <- IH.
-        econs. intros [n Hn]. simpl in *.
+        econs. intros [n Hn]. simpl proj1_sig in *. simpl childnodes.
         rewrite fromAcc_pirrel with (ACC' := lt_wf n). eapply member_implies_rLt.
         eapply fromAcc_member_fromAcc_intro. exact Hn.
       * rewrite <- IH'. econs. exists (@existT _ _ true (@exist _ _ c LT)).
@@ -2813,54 +2813,90 @@ Proof.
         simpl in c. destruct c; simpl; eapply member_implies_rLt; unfold fromWf; rewrite fromAcc_unfold; exists (@exist _ _ n Hn); eapply fromAcc_pirrel.
 Qed.
 
+Lemma fromWf_Fin_lt_vs_fromWf_nat (n : nat) (x : Fin.t n)
+  : @fromWf (Fin.t n) (@Fin.Fin_lt n) (Fin.Fin_lt_wf n) x == @fromWf nat Nat.lt lt_wf (Fin.evalFin x).
+Proof.
+  eapply fromWf_eq_fromWf_intro with (f := @Fin.evalFin n).
+  intros x' y; split.
+  - intros [x0 [Hlt Hy]]. exists (Fin.evalFin x'). split.
+    + rewrite Hy. exact Hlt.
+    + reflexivity.
+  - intros [y' [Hy Hy']]. subst y'.
+    assert (Hy_n : y < n).
+    { pose proof (proj2_sig (Fin.runFin x')) as Hx'. unfold Fin.evalFin in Hy. lia. }
+    exists (Fin.getFin y Hy_n). split.
+    + unfold Fin.Fin_lt, Fin.evalFin. rewrite Fin.runFin_getFin_id. simpl. exact Hy.
+    + unfold Fin.evalFin. rewrite Fin.runFin_getFin_id. reflexivity.
+Qed.
+
 Lemma fromWfSet_Fin_lt_vs_Ord_of_nat (n : nat)
   : @fromWfSet (Fin.t n) (@Fin.Fin_lt n) (Fin.Fin_lt_wf n) == Ord_of_nat n.
 Proof.
-  set (A := @sig nat (gt n)).
-  pose (A_isWoset := O.subWoset (classic := classic) (A := nat) (SETOID := @mkSetoid_from_eq nat) nat_isWoset (gt n)).
-  set (RA := binary_relation_on_image Nat.lt (@proj1_sig nat (gt n))).
-  assert (claim1 : @fromWfSet (Fin.t n) (@Fin.Fin_lt n) (Fin.Fin_lt_wf n) == @fromWfSet A RA (relation_on_image_liftsWellFounded Nat.lt (@proj1_sig nat (gt n)) lt_wf)).
-  { eapply Ordinal1.Ordinal_rEq_Ordinal_elim.
-    - change (isOrdinal (@FromOrderType _ _ (@Fin_isWoset n))). eapply FromOrderType_isOrdinal.
-    - change (isOrdinal (@FromOrderType _ _ A_isWoset)). eapply FromOrderType_isOrdinal.
-    - split.
-      + eapply fromWfSet_cong with (f := Fin.runFin); eauto.
-      + eapply fromWfSet_cong with (f := fun z : A => Fin.getFin (proj1_sig z) (proj2_sig z)).
-        intros [x Hx] [y Hy] Hlt; simpl. do 2 red in Hlt. simpl in Hlt. red. unfold Fin.evalFin. now do 2 rewrite Fin.runFin_getFin_id.
-  }
-  rewrite claim1. transitivity (@fromWf nat Nat.lt lt_wf n).
-  - symmetry. eapply fromWfSet_InitialSegment; eauto.
-  - eapply fromWf_vs_Ord_of_nat.
+  transitivity (@fromWf nat Nat.lt lt_wf n).
+  - eapply extensionality. intros z; split; intros Hz.
+    + destruct Hz as [x Hz]. rewrite Hz. rewrite fromWf_unfold.
+      exists (Fin.evalFin x). split.
+      * exact (proj2_sig (Fin.runFin x)).
+      * exact (fromWf_Fin_lt_vs_fromWf_nat n x).
+    + rewrite fromWf_unfold in Hz. destruct Hz as [m [Hm_lt Hz]].
+      replace m with (Fin.evalFin (Fin.getFin m Hm_lt)) in Hz by now unfold Fin.evalFin; rewrite Fin.runFin_getFin_id.
+      rewrite Hz. exists (Fin.getFin m Hm_lt). simpl childnodes. symmetry. eapply fromWf_Fin_lt_vs_fromWf_nat.
+  - exact (fromWf_vs_Ord_of_nat n).
 Qed.
 
-Lemma Fin_choose_top (n : nat)
-  (R : Fin.t (S n) -> Fin.t (S n) -> Prop)
+Lemma Fin_choose_top_prefix (n : nat) (m : nat) (R : Fin.t (S n) -> Fin.t (S n) -> Prop)
+  (Hm : m < S n)
   (R_total : forall x : Fin.t (S n), forall x' : Fin.t (S n), x == x' \/ R x x' \/ R x' x)
   (R_Transitive : Transitive R)
-  : exists top : Fin.t (S n), forall x : Fin.t (S n), x == top \/ R x top.
+  : exists top : Fin.t (S n), Fin.evalFin top <= m /\ ⟪ TOP : forall x : Fin.t (S n), Fin.evalFin x <= m -> x == top \/ R x top ⟫.
 Proof.
-  induction n as [ | n IH].
-  - exists (@FZ 0). Fin.caseS x; simpl; eauto. inv x.
-  - set (R' := fun x : Fin.t (S n) => fun y : Fin.t (S n) => R (FS x) (FS y)).
-    assert (R'_total : forall x x', x == x' \/ R' x x' \/ R' x' x).
-    { intros x x'. unfold R'. pose proof (R_total (FS x) (FS x')) as [H | [H | H]].
-      - left. rewrite Fin.Fin_eqProp_iff in H |- *. congruence.
-      - now right; left.
-      - now right; right.
-    }
-    assert (R'_Transitive : Transitive R').
-    { intros x y z H1 H2. unfold R' in *. eapply R_Transitive; eauto. }
-    pose proof (IH R' R'_total R'_Transitive) as [top' Htop'].
-    pose proof (R_total FZ (FS top')) as [H | [H | H]].
-    + rewrite Fin.Fin_eqProp_iff in H. exfalso. congruence.
-    + exists (FS top'). Fin.caseS x; auto with *.
-      pose proof (Htop' x) as [Hx | Hx].
-      * left. rewrite Fin.Fin_eqProp_iff in Hx |- *. congruence.
-      * now right.
-    + exists FZ. Fin.caseS x; auto with *.
-      pose proof (Htop' x) as [Hx | Hx].
-      * right. rewrite Fin.Fin_eqProp_iff in Hx. congruence.
-      * right. eapply R_Transitive; eauto.
+  revert n Hm R R_total R_Transitive. induction m as [ | m IH]; intros ? ? R ? ?.
+  - exists (Fin.getFin 0 Hm). split.
+    + unfold Fin.evalFin. rewrite Fin.runFin_getFin_id. reflexivity.
+    + intros x Hx. left. rewrite -> Fin.Fin_eqProp_iff. eapply Fin.evalFin_inj.
+      unfold Fin.evalFin in *. rewrite Fin.runFin_getFin_id. simpl. lia.
+  - assert (Hm' : m < S n) by lia.
+    pose proof (IH n Hm' R R_total R_Transitive) as [top [Htop_le Htop]].
+    set (y := Fin.getFin (S m) Hm).
+    assert (Hy_eval : Fin.evalFin y = S m).
+    { unfold y, Fin.evalFin. rewrite Fin.runFin_getFin_id. reflexivity. }
+    pose proof (R_total top y) as [H_eq | [H_top_y | H_y_top]].
+    + exists top. split.
+      { lia. }
+      intros x Hx. pose proof (Nat.eq_dec (Fin.evalFin x) (S m)) as [Heq | Hneq].
+      * left. transitivity y; auto with *.
+        rewrite -> Fin.Fin_eqProp_iff. eapply Fin.evalFin_inj. now rewrite Hy_eval.
+      * assert (Hx_small : Fin.evalFin x <= m) by lia.
+        exact (Htop x Hx_small).
+    + exists y. split.
+      { lia. }
+      intros x Hx.
+      pose proof (Nat.eq_dec (Fin.evalFin x) (S m)) as [Heq | Hneq].
+      * left. rewrite -> Fin.Fin_eqProp_iff. eapply Fin.evalFin_inj.
+        rewrite Hy_eval. exact Heq.
+      * assert (Hx_small : Fin.evalFin x <= m) by lia.
+        destruct (Htop x Hx_small) as [Hx_eq_top | Hx_lt_top].
+        { right. rewrite -> Fin.Fin_eqProp_iff in Hx_eq_top. subst x. exact H_top_y. }
+        { right. transitivity top; eauto. }
+    + exists top. split.
+      { lia. }
+      intros x Hx.
+      pose proof (Nat.eq_dec (Fin.evalFin x) (S m)) as [Heq | Hneq].
+      * assert (Hx_eq_y : x == y).
+        { rewrite -> Fin.Fin_eqProp_iff. eapply Fin.evalFin_inj. rewrite Hy_eval. exact Heq. }
+        right. rewrite -> Fin.Fin_eqProp_iff in Hx_eq_y. subst x. exact H_y_top.
+      * assert (Hx_small : Fin.evalFin x <= m) by lia.
+        exact (Htop x Hx_small).
+Qed.
+
+Lemma Fin_choose_top (n : nat) (R : Fin.t (S n) -> Fin.t (S n) -> Prop)
+  (R_total : forall x : Fin.t (S n), forall x' : Fin.t (S n), x == x' \/ R x x' \/ R x' x)
+  (R_Transitive : Transitive R)
+  : exists top : Fin.t (S n), forall x, x == top \/ R x top.
+Proof.
+  exploit (Fin_choose_top_prefix n n R); eauto.
+  intros [top ?]; des. exists top. i. eapply TOP.
+  pose proof (Fin.Fin_evalFin_lt x). lia.
 Qed.
 
 #[refine]
@@ -2870,10 +2906,10 @@ Fixpoint Fin_omit {n : nat} (z : Fin.t (S n)) {struct z} : Fin.t n -> Fin.t (S n
   | @FS n' z' => _
   end.
 Proof.
-  - intros i. exact (FS i).
+  - intros i. exact (@FS n' i).
   - intros i. destruct i as [m | m i'].
-    + exact FZ.
-    + exact (FS (@Fin_omit m z' i')).
+    + exact (@FZ (S m)).
+    + exact (@FS (S m) (@Fin_omit m z' i')).
 Defined.
 
 Lemma Fin_omit_omit {n : nat} (z : Fin.t (S n)) (i : Fin.t n)
@@ -3042,7 +3078,7 @@ Theorem nat_hasCardinality
 Proof.
   split.
   - exists Nat.lt, lt_wf. splits.
-    + intros x x'. change (x = x' \/ x < x' \/ x' < x). lia.
+    + intros x x'. change (x = x' \/ x < x' \/ x' < x)%nat. lia.
     + exact Nat_lt_Transitive.
     + ii; simpl in *; lia.
     + exact fromWfSet_vs_omega.
@@ -3065,11 +3101,7 @@ Proof.
       - rewrite Fin.Fin_eqProp_iff in Hy. now subst.
     }
     transitivity (@fromWfSet (Fin.t n) Rn Rn_wf).
-    + eapply (proj2 (Fin_hasCardinality n)). exists Rn, Rn_wf. splits.
-      * exact Rn_total.
-      * exact Rn_Transitive.
-      * exact Rn_eqPropCompatible2.
-      * reflexivity.
+    + refine (proj2 (Fin_hasCardinality n) _ _). exists Rn, Rn_wf. splits; eauto with *.
     + eapply fromWfSet_cong with (f := @Fin.evalFin n); eauto.
 Qed.
 
