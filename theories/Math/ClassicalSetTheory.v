@@ -2871,7 +2871,7 @@ Fixpoint Fin_omit {n : nat} (z : Fin.t (S n)) {struct z} : Fin.t n -> Fin.t (S n
   end.
 Proof.
   - intros i. exact (FS i).
-  - intros i. revert z; destruct i as [m | m i']; intros z.
+  - intros i. destruct i as [m | m i'].
     + exact FZ.
     + exact (FS (@Fin_omit m z' i')).
 Defined.
@@ -2895,15 +2895,12 @@ Proof.
     + exfalso. contradiction Hx. econs.
     + exact x'.
   - intros [x Hx]. revert x Hx. Fin.caseS x'; ii.
-    + revert Hx. pattern z'. revert z'.
-      destruct n' as [ | m].
+    + revert Hx. pattern z'. revert z'. destruct n' as [ | m].
       * Fin.case0.
       * ii. exact FZ.
-    + revert Hx. pattern z'. revert z'.
-      destruct n' as [ | m].
+    + revert Hx. pattern z'. revert z'. destruct n' as [ | m].
       * Fin.case0.
-      * ii. eapply FS. eapply Fin_restore with (z := z').
-        exists x'. exact Hx.
+      * ii. eapply FS. eapply Fin_restore with (z := z'). exists x'. exact Hx.
 Defined.
 
 Lemma Fin_restore_omit {n : nat} (z : Fin.t (S n)) (i : Fin.t n)
@@ -2913,8 +2910,8 @@ Proof.
   - simpl; eauto.
   - simpl; eauto.
   - simpl. reflexivity.
-  - simpl. change (Fin_restore z (exist (fun x : Fin.t (S n) => ~ Fin.t_eqProp (S n) x z) (Fin_omit z i) (Fin_omit_omit (FS z) (FS i))) == i).
-    transitivity (Fin_restore z (exist (fun i : Fin.t (S n) => ~ i == z) (Fin_omit z i) (Fin_omit_omit z i))); eauto.
+  - simpl. change (Fin_restore z (@exist _ (fun x : Fin.t (S n) => ~ Fin.t_eqProp (S n) x z) (Fin_omit z i) (Fin_omit_omit (FS z) (FS i))) == i).
+    transitivity (Fin_restore z (@exist _ (fun i : Fin.t (S n) => ~ i == z) (Fin_omit z i) (Fin_omit_omit z i))); eauto.
     simpl. rewrite proof_irrelevance with (p1 := Fin_omit_omit (FS z) (FS i)) (p2 := Fin_omit_omit z i); eauto with *.
 Qed.
 
