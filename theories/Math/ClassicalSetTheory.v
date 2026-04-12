@@ -2937,7 +2937,7 @@ Qed.
 
 Lemma Fin_woset_unique (n : nat) (R : Fin.t n -> Fin.t n -> Prop)
   (R_wf : well_founded R)
-  (R_total : forall x x', x == x' \/ R x x' \/ R x' x)
+  (R_total : forall x, forall x', x == x' \/ R x x' \/ R x' x)
   (R_Transitive : Transitive R)
   (R_eqPropCompatible2 : eqPropCompatible2 R)
   : @fromWfSet (Fin.t n) R R_wf == Ord_of_nat n.
