@@ -148,8 +148,6 @@ End Ord.
 Definition Ord : Type@{Set_V} :=
   Ord.t.
 
-#[global] Typeclasses Opaque Ord.
-
 Definition _Ord_eq : Ord -> Ord -> Prop :=
   @rEq.
 
@@ -384,11 +382,16 @@ Section ORDINAL_ARITHMETIC.
 
 Import TypeTheoreticImplementation.
 
-#[local] Existing Instance rEq_asSetoid.
+#[local] Typeclasses Opaque Ord.t.
+
+Let Ord_isSetoid : isSetoid Ord.t :=
+  rEq_asSetoid.
+
+#[local] Existing Instance Ord_isSetoid.
 
 #[local]
-Instance rLe_asProset : isProset Tree :=
-  { Proset_isSetoid := rEq_asSetoid
+Instance Ord_isProset : isProset Ord.t :=
+  { Proset_isSetoid := Ord_isSetoid
   ; leProp := rLe
   ; leProp_PreOrder := rLe_PreOrder
   ; leProp_PartialOrder := rLe_PartialOrder
@@ -400,7 +403,7 @@ Fixpoint Ord_of_nat (n : nat) : Ord.t :=
   | S n' => succ (Ord_of_nat n')
   end.
 
-Lemma Ord_of_nat_isOrdinal n
+Lemma Ord_of_nat_isOrdinal (n : nat)
   : isOrdinal (Ord_of_nat n).
 Proof.
   induction n as [ | n IH]; simpl.
@@ -414,7 +417,7 @@ Definition omega : Ord.t :=
 Lemma omega_isOrdinal
   : isOrdinal omega.
 Proof.
-  eapply sup_isOrdinal. exact Ord_of_nat_isOrdinal.
+  unfold omega. eapply sup_isOrdinal. eapply Ord_of_nat_isOrdinal.
 Qed.
 
 End ORDINAL_ARITHMETIC.
