@@ -15,8 +15,8 @@ Record language : Type :=
   { function_symbols : Set
   ; constant_symbols : Set
   ; relation_symbols : Set
-  ; function_arity_table : function_symbols -> nat
-  ; relation_arity_table : relation_symbols -> nat
+  ; function_arity_table (f : function_symbols) : nat
+  ; relation_arity_table (R : relation_symbols) : nat
   ; function_arity_gt_0 : forall f : function_symbols, function_arity_table f > 0
   ; relation_arity_gt_0 : forall R : relation_symbols, relation_arity_table R > 0
   }.
@@ -2868,8 +2868,8 @@ Export InternalSyntax.
 
 #[local] Existing Instance V.vec_isSetoid.
 
-Class isStructureOf (L : language) : Type :=
-  { domain_of_discourse : Type
+Class isStructureOf (L : language) : Type@{U_cosmos} :=
+  { domain_of_discourse : Type@{U_discourse}
   ; equation_interpret :: isSetoid domain_of_discourse
   ; function_interpret (f : L.(function_symbols)) (vs : Vector.t domain_of_discourse (L.(function_arity_table) f)) : domain_of_discourse
   ; constant_interpret (c : L.(constant_symbols)) : domain_of_discourse

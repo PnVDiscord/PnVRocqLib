@@ -4333,6 +4333,20 @@ Proof.
     now rewrite -> Hf, -> Hg.
 Qed.
 
+Theorem makeOrdinalIndexedSequence `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (X : Type@{Set_u}) (SETOID : isSetoid X)
+  : { c : Ord.t | Cardinality.mk X SETOID `hasCardinality` c /\ exists f : children c -> X, ⟪ f_inj : forall x1, forall x2, eqProp (isSetoid := children_isSetoid c) x1 x2 <-> eqProp (isSetoid := SETOID) (f x1) (f x2) ⟫ /\ ⟪ f_surj : forall y, exists x, eqProp (isSetoid := SETOID) y (f x) ⟫ }.
+Proof.
+  exists (Cardinality.toTree (Cardinality.mk X SETOID)). split.
+  { eapply hasCardinality_intro. }
+  set (kappa := Cardinality.mk X SETOID).
+  set (lambda := card (Cardinality.toTree kappa)).
+  assert (kappa == lambda) as [h1 h2 h1_cong h2_cong h1_inj h2_inj].
+  { unfold kappa, lambda. exploit (isCardinal_elim (Cardinality.toTree kappa)); eauto; intros HCARD. rewrite <- Cardinality_toTree_eq_iff in HCARD. rewrite Cardinality_eq_iff. rewrite HCARD. reflexivity. }
+  assert (claim2 : kappa =< lambda) by now exists h1.
+  assert (claim3 : lambda =< kappa) by now exists h2.
+  now eapply CantorSchröderBernstein with (kappa := card (Cardinality.toTree kappa)) (lambda := Cardinality.mk X SETOID).
+Qed.
+
 End CARDINALITY.
 
 End Cardinal1.
@@ -4348,7 +4362,7 @@ Section ZORN.
 Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}.
 
 #[local, program]
-Instance Proset_fromStrictOrder (B : Type) (SETOID : isSetoid B) (LT : B -> B -> Prop) (LT_StrictOrder : StrictOrder LT) (LT_eqPropCompatible2 : eqPropCompatible2 LT) : isProset B :=
+Instance Proset_fromStrictOrder (B : Type@{U_discourse}) (SETOID : isSetoid B) (LT : B -> B -> Prop) (LT_StrictOrder : StrictOrder LT) (LT_eqPropCompatible2 : eqPropCompatible2 LT) : isProset B :=
   { leProp x y := LT x y \/ x == y
   ; Proset_isSetoid := SETOID
   }.
@@ -4373,7 +4387,7 @@ Qed.
 
 Section ZORNLT.
 
-Context {B : Type} {SETOID : isSetoid B} {LT : B -> B -> Prop}.
+Context {B : Type@{U_discourse}} {SETOID : isSetoid B} {LT : B -> B -> Prop}.
 
 Hypothesis LT_StrictOrder : StrictOrder LT.
 
@@ -4384,10 +4398,10 @@ Let B_isProset : isProset B :=
 
 #[local] Existing Instance B_isProset.
 
-Let chain : Type :=
+Let chain : Type@{U_discourse} :=
   ensemble B.
 
-Definition chain_le (c : chain) (c' : chain) : Prop :=
+Let chain_le (c : chain) (c' : chain) : Prop :=
   c \subseteq c' /\ (forall b, b \in c' -> b \in c \/ b \in upperboundsOf c).
 
 Lemma chain_le_refl (c : chain)
@@ -4459,10 +4473,6 @@ Qed.
 
 Section INCR.
 
-Variable f : chain -> B.
-
-Hypothesis INCR : forall c, isChain c -> forall b, b \in c -> LT b (f c).
-
 Definition chain_base : chain :=
   fun _ => False.
 
@@ -4472,8 +4482,12 @@ Proof.
   intros x y Hx. contradiction.
 Qed.
 
+Variable f : chain -> B.
+
 Definition chain_next (c : chain) : chain :=
   fun b => b \in c \/ b == f c.
+
+Hypothesis INCR : forall c, isChain c -> forall b, b \in c -> LT b (f c).
 
 Lemma chain_next_good (c : chain)
   (CHAIN : isChain c)
@@ -4532,11 +4546,11 @@ Theorem zorn_lemma_lt
   : exists b_m, forall b, ~ LT b_m b.
 Proof.
   eapply NNPP. intros H_contra.
-  assert (NOT_MAX : forall b : B, exists b', LT b b').
-  { intros b. pose proof (classic (exists b', LT b b')) as [H | H]; auto.
+  assert (NOT_MAX : forall b : B, exists b' : B, LT b b').
+  { intros b. pose proof (classic (exists b' : B, LT b b')) as [H | H]; auto.
     contradiction H_contra. exists b. intros b' Hb'; eauto.
   }
-  pose proof (upperbound_exists chain_base chain_base_good) as [b0 _].
+  pose proof (upperbound_exists chain_base chain_base_good) as [b0 IN0].
   assert (Hchoice : forall c : chain, exists b1 : B, forall GOOD : isChain c, forall b0' : B, b0' \in c -> LT b0' b1).
   { intros c. pose proof (classic (isChain c)) as [CHAIN | NCHAIN].
     - pose proof (upperbound_exists c CHAIN) as [b_u HUB].
@@ -4555,10 +4569,10 @@ End ZORNLT.
 
 Section ZORN_PREORDER.
 
-Context {B : Type} {PROSET : isProset B}.
+Context {B : Type@{U_discourse}} {PROSET : isProset B}.
 
-Definition lt (x : B) (y : B) : Prop :=
-  x =< y /\ ~ y =< x.
+Let lt (x : B) (y : B) : Prop :=
+  (x =< y) /\ ~ (y =< x).
 
 #[local]
 Instance lt_StrictOrder
@@ -4580,55 +4594,39 @@ Proof.
   - split; now rewrite -> Hx, -> Hy.
 Qed.
 
-Let B_isProset : isProset B :=
-  Proset_fromStrictOrder B PROSET.(Proset_isSetoid) lt lt_StrictOrder lt_eqPropCompatible2.
-
 Theorem zorn_lemma
   (upperbound_exists : forall c : ensemble B, forall GOOD : isChain c, exists b_u, b_u \in upperboundsOf c)
   : exists b_m, forall b, b_m =< b -> b =< b_m.
 Proof.
-  assert (upperbound_exists_strict : forall c : ensemble B, forall GOOD : @isChain B B_isProset c, exists b_u : B, b_u \in @upperboundsOf B (Proset_fromStrictOrder B PROSET.(Proset_isSetoid) lt lt_StrictOrder lt_eqPropCompatible2) c).
+  refine (let PROSET' : isProset B := Proset_fromStrictOrder B PROSET.(Proset_isSetoid) lt lt_StrictOrder lt_eqPropCompatible2 in _).
+  assert (upperbound_exists_strict : forall c : ensemble B, forall GOOD : @isChain B PROSET' c, exists b_u : B, b_u \in @upperboundsOf B PROSET' c).
   { intros c CHAIN. pose proof (upperbound_exists c) as [b_u HUB].
     - intros x y Hx Hy. pose proof (CHAIN x y Hx Hy) as [[Hlt | Heq] | [Hlt | Heq]].
       + left. exact (proj1 Hlt).
       + left. eapply eqProp_implies_leProp. exact Heq.
       + right. exact (proj1 Hlt).
       + right. eapply eqProp_implies_leProp. exact Heq.
-    - exists b_u. intros x Hx. pose proof (HUB x Hx) as HH. pose proof (classic (b_u =< x)) as [Hbx | Hbx].
+    - exists b_u. intros x Hx. pose proof (HUB x Hx) as HH. pose proof (classic (leProp (isProset := PROSET) b_u x)) as [Hbx | Hbx].
       + right. eapply leProp_antisymmetry; eauto.
       + left. split; eauto.
   }
   exploit (zorn_lemma_lt (LT := lt)).
   { ii. pose proof (upperbound_exists_strict c GOOD) as [b_u HH]. exists b_u. eauto. }
   intros [b_m Hm]. exists b_m. intros b Hle.
-  destruct (classic (b =< b_m)) as [YES | NO]; auto.
-  exfalso. contradiction (Hm b). split; eauto.
-Qed.
-
-Corollary zorn_lemma_antisym
-  (upperbound_exists : forall c : ensemble B, isChain c -> exists b_u, b_u \in upperboundsOf c)
-  : exists b_m, forall b, b_m =< b -> b =< b_m.
-Proof.
-  exact (zorn_lemma upperbound_exists).
+  pose proof (classic (leProp (isProset := PROSET) b b_m)) as [YES | NO]; auto.
+  contradiction (Hm b). split; eauto.
 Qed.
 
 End ZORN_PREORDER.
 
-Section ZORNWEAK.
-
-Context {B : Type} {PROSET : isProset B}.
-
-Hypothesis INHABITED : inhabited B.
-
-Theorem zorn_lemma_weak
-  (upperbound_exists : forall c : ensemble B, (exists b, b \in c) -> isChain c -> exists b_u, b_u \in upperboundsOf c)
-  : exists b_m : B, forall b, b_m =< b -> b =< b_m.
+Theorem Zorn's_lemma (D : Type@{U_discourse}) (PROSET : isProset D)
+  (INHABITED : inhabited D)
+  (upperbound_exists : forall C : ensemble D, ⟪ NONEMPTY : exists d : D, d \in C ⟫ -> ⟪ CHAIN : forall x1 : D, forall x2 : D, forall IN1 : x1 \in C, forall IN2 : x2 \in C, leProp (isProset := PROSET) x1 x2 \/ leProp (isProset := PROSET) x2 x1 ⟫ -> ⟪ upperbound_exists : exists u : D, forall d : D, forall IN : d \in C, leProp (isProset := PROSET) d u ⟫)
+  : exists d_m : D, ⟪ MAXIMAL : forall d : D, forall LE : leProp (isProset := PROSET) d_m d, leProp (isProset := PROSET) d d_m ⟫.
 Proof.
-  eapply zorn_lemma. intros c CHAIN. pose proof (classic (exists b : B, b \in c)) as [Hinh | Hempty].
+  unnw. eapply zorn_lemma. intros C CHAIN. pose proof (classic (exists d : D, d \in C)) as [Hin | Hempty].
   - eapply upperbound_exists; eauto.
-  - destruct INHABITED as [b0]. exists b0. intros b Hb. contradiction Hempty. now exists b.
+  - destruct INHABITED as [d0]. exists d0. intros d Hd. contradiction Hempty. now exists d.
 Qed.
-
-End ZORNWEAK.
 
 End ZORN.
