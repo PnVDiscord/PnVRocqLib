@@ -3,7 +3,8 @@ Require Import Stdlib.Logic.Eqdep_dec.
 Require Import Stdlib.Logic.EqdepFacts.
 Require Import Stdlib.Arith.Wf_nat.
 
-Lemma eq_pirrel_fromEqDec {A : Type} {hasEqDec : hasEqDec A} (lhs : A) (rhs : A)
+#[universes(polymorphic=yes)]
+Lemma eq_pirrel_fromEqDec@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (lhs : A) (rhs : A)
   (EQ1 : lhs = rhs)
   (EQ2 : lhs = rhs)
   : EQ1 = EQ2.
@@ -27,6 +28,21 @@ Proof.
   erewrite eq_sigT_iff_eq_dep in EQ. eapply eq_rect_eq__eq_dep1_eq.
   - ii. eapply eq_rect_eq_dec. exact hasEqDec.
   - eapply eq_dep_dep1. exact EQ.
+Defined.
+
+#[global]
+Instance sigT_hasEqDec {A : Type} {B : A -> Type}
+  (A_hasEqDec : hasEqDec A)
+  (B_hasEqDec : forall a : A, hasEqDec (B a))
+  : hasEqDec (@sigT A B).
+Proof.
+  intros [a b] [a' b']. pose proof (A_hasEqDec a a') as [a_EQ | a_NE].
+  - subst a'. pose proof (B_hasEqDec a b b') as [b_EQ | b_NE].
+    + subst b'. left. reflexivity.
+    + right. intros H_contra. eapply b_NE.
+      eapply projT2_eq_fromEqDec. exact H_contra.
+  - right. intros H_contra. eapply a_NE.
+    exact (f_equal (@projT1 A B) H_contra).
 Defined.
 
 Section SEARCH. (* Reference: "https://plv.mpi-sws.org/coqdoc/stdpp/stdpp.countable.html" *)

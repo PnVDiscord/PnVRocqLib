@@ -1926,3 +1926,229 @@ Proof.
 Qed.
 
 End HILBERT_PROOF_SYSTEM.
+
+Section HENKIN.
+
+Context {L : language}.
+
+#[local] Infix "=~=" := is_similar_to : type_scope.
+
+Infix "⊢" := HilbertFol.proves : type_scope.
+
+Section GENERAL_CASE.
+
+Context {Henkin_constants : Set}.
+
+Definition augmented_language (L : language) (Henkin_constants : Set) : language :=
+  {|
+    function_symbols := L.(function_symbols);
+    constant_symbols := L.(constant_symbols) + Henkin_constants;
+    relation_symbols := L.(relation_symbols);
+    function_arity_table := L.(function_arity_table);
+    relation_arity_table := L.(relation_arity_table);
+    function_arity_gt_0 := L.(function_arity_gt_0);
+    relation_arity_gt_0 := L.(relation_arity_gt_0);
+  |}.
+
+#[local] Notation L' := (augmented_language L Henkin_constants).
+
+#[local] Existing Instance constant_symbols_sim.
+
+#[local] Existing Instance trm_sim.
+
+#[local] Existing Instance trms_sim.
+
+#[local] Existing Instance frm_sim.
+
+#[local] Existing Instance frms_sim.
+
+Lemma embed_frm_Fun_eqAxm (f : L.(function_symbols))
+  : embed_frm (@Fun_eqAxm L f) = @Fun_eqAxm L' f.
+Proof.
+  enough (HACK : forall phi : trms L (function_arity_table L f) -> trms L (function_arity_table L f) -> frm L, forall phi' : trms L' (function_arity_table L' f) -> trms L' (function_arity_table L' f) -> frm L',
+    forall INVARIANT : forall a, forall b, embed_frm (phi a b) = phi' (embed_trms a) (embed_trms b),
+    embed_frm (eqns_imp (prod_rec (fun _ => frm L) phi (varcouples (function_arity_table L f))) (function_arity_table L f)) = eqns_imp (prod_rec (fun _ => frm L') phi' (varcouples (function_arity_table L f))) (function_arity_table L f)
+  ).
+  { unfold Fun_eqAxm. simpl. ii; eapply HACK. ii; reflexivity. }
+  simpl. generalize (function_arity_table L f) as n; clear f. induction n as [ | n IH]; simpl; ii.
+  - rewrite INVARIANT. reflexivity.
+  - exploit (IH (fun ts => fun ts' => phi (S_trms n (Var_trm (n + n)) ts) (S_trms n (Var_trm (S (n + n))) ts')) (fun ts => fun ts' => phi' (S_trms n (Var_trm (n + n)) ts) (S_trms n (Var_trm (S (n + n))) ts'))).
+    + ii. rewrite INVARIANT. reflexivity.
+    + intros claim. destruct (@varcouples L n) as [lhs rhs] eqn: H_OBS, (@varcouples L' n) as [lhs' rhs'] eqn: H_OBS'; simpl. f_equal; trivial.
+Qed.
+
+Lemma embed_frm_Rel_eqAxm (R : L.(relation_symbols))
+  : embed_frm (@Rel_eqAxm L R) = @Rel_eqAxm L' R.
+Proof.
+  enough (HACK : forall phi : trms L (relation_arity_table L R) -> trms L (relation_arity_table L R) -> frm L, forall phi' : trms L' (relation_arity_table L' R) -> trms L' (relation_arity_table L' R) -> frm L',
+    forall INVARIANT : forall a, forall b, embed_frm (phi a b) = phi' (embed_trms a) (embed_trms b),
+    embed_frm (eqns_imp (prod_rec (fun _ => frm L) phi (varcouples (relation_arity_table L R))) (relation_arity_table L R)) = eqns_imp (prod_rec (fun _ => frm L') phi' (varcouples (relation_arity_table L R))) (relation_arity_table L R)
+  ).
+  { unfold Rel_eqAxm. simpl. ii; eapply HACK. ii; reflexivity. }
+  simpl. generalize (relation_arity_table L R) as n; clear R. induction n as [ | n IH]; simpl; ii.
+  - rewrite INVARIANT. reflexivity.
+  - exploit (IH (fun ts => fun ts' => phi (S_trms n (Var_trm (n + n)) ts) (S_trms n (Var_trm (S (n + n))) ts')) (fun ts => fun ts' => phi' (S_trms n (Var_trm (n + n)) ts) (S_trms n (Var_trm (S (n + n))) ts'))).
+    + ii. rewrite INVARIANT. reflexivity.
+    + intros claim. destruct (@varcouples L n) as [lhs rhs] eqn: H_OBS, (@varcouples L' n) as [lhs' rhs'] eqn: H_OBS'; simpl. f_equal; trivial.
+Qed.
+
+Lemma embed_proves (Gamma : ensemble (frm L)) (p : frm L)
+  (PROVE : Gamma ⊢ p)
+  : E.image (embed_frm (Henkin_constants := Henkin_constants)) Gamma ⊢ embed_frm (Henkin_constants := Henkin_constants) p.
+Proof.
+  assert (empty_proof_intro : forall q : frm L', proof [] q -> E.empty ⊢ q).
+  { ii. exists []. split. intros ?. done. econstructor. eassumption. }
+  destruct PROVE as (ps&INCL&(PF)).
+  assert (PROVE : E.fromList ps ⊢ p).
+  { exists ps. split. done. econstructor. exact PF. }
+  clear PF. revert Gamma p INCL PROVE. induction ps as [ | q ps IH]; i.
+  - clear INCL. destruct PROVE as (ps&INCL&(PF)).
+    assert (ps_spec : forall q : frm L, ~ L.In q ps).
+    { intros q q_in. done!. }
+    clear INCL. eapply extend_proves with (Gamma := E.empty). done.
+    clear Gamma. induction PF; i.
+    + contradiction (ps_spec p (or_introl eq_refl)).
+    + eapply for_Imp_E; [eapply IHPF1 | eapply IHPF2]; intros q'; specialize ps_spec with (q := q'); ss!.
+    + simpl. eapply for_All_I. done. eapply IHPF. done.
+    + simpl. eapply empty_proof_intro. eapply IMP1.
+    + simpl. eapply empty_proof_intro. eapply IMP2.
+    + simpl. eapply empty_proof_intro. eapply CP.
+    + simpl. eapply empty_proof_intro. rewrite embed_subst_frm.
+      replace (subst_frm (embed_trm ∘ one_subst x t)%prg (embed_frm p)) with (subst_frm (one_subst x (embed_trm (Henkin_constants := Henkin_constants) t)) (embed_frm (Henkin_constants := Henkin_constants) p)).
+      * eapply FA1.
+      * eapply equiv_subst_in_frm_implies_subst_frm_same. ii. unfold one_subst, cons_subst, nil_subst. unfold "∘"%prg. destruct (eq_dec z x) as [EQ1 | NE1]; trivial.
+    + simpl. eapply empty_proof_intro. eapply FA2.
+      red in NOT_FREE |- *. rewrite <- NOT_FREE. eapply @embed_fvs_frm with (Henkin_constants := Henkin_constants) (z := x) (p := p).
+    + simpl. eapply empty_proof_intro. eapply FA3.
+    + eapply proves_reflexivity.
+    + eapply for_Imp_I. eapply proves_symmetry. eapply for_ByHyp. done!.
+    + eapply for_Imp_I. eapply for_Imp_I. eapply proves_transitivity with (t2 := embed_trm (Var_trm 1)); eapply for_ByHyp; done!.
+    + rewrite embed_frm_Fun_eqAxm. eapply empty_proof_intro. exact (@EQN_FUN L' f).
+    + rewrite embed_frm_Rel_eqAxm. eapply empty_proof_intro. exact (@EQN_REL L' R).
+  - eapply for_Imp_E with (p := embed_frm q).
+    + change (E.image (embed_frm (Henkin_constants := Henkin_constants)) Gamma ⊢ embed_frm (Henkin_constants := Henkin_constants) (Imp_frm q p)). eapply IH.
+      * intros p' H_in. done!.
+      * rewrite Deduction_theorem. eapply extend_proves with (Gamma := E.fromList (q :: ps)).
+        { intros p' H_in. done!. }
+        { exact PROVE. }
+    + eapply for_ByHyp. rewrite E.in_image_iff. exists q. split; trivial. eapply INCL. simpl. left. trivial.
+Qed.
+
+Lemma embed_proves_inv (Gamma : ensemble (frm L)) (p : frm L)
+  (PROVE : E.image (embed_frm (Henkin_constants := Henkin_constants)) Gamma ⊢ embed_frm (Henkin_constants := Henkin_constants) p)
+  : Gamma ⊢ p.
+Proof.
+  assert (empty_proof_intro : forall q : frm L, proof [] q -> E.empty ⊢ q).
+  { ii. exists []. split. intros ?. done. econstructor. eassumption. }
+  destruct PROVE as (ps&INCL&(PF)).
+  assert (claim : exists qs : list (frm L), ps = L.map embed_frm qs).
+  { clear PF p. revert Gamma INCL; induction ps as [ | p ps IH]; simpl; i.
+    - exists []. reflexivity.
+    - exploit (IH Gamma). done!. intros [qs ->]. exploit (INCL p). done!.
+      intros IN. s!. destruct IN as [q [-> IN]]. exists (q :: qs). reflexivity.
+  }
+  destruct claim as [qs claim]. subst ps.
+  assert (PROVE : E.fromList (L.map (embed_frm (Henkin_constants := Henkin_constants)) qs) ⊢ embed_frm (Henkin_constants := Henkin_constants) p).
+  { exists (L.map embed_frm qs). split. done!. econs. exact PF. }
+  clear PF. revert Gamma p INCL PROVE. induction qs as [ | q qs IH]; i.
+  - clear INCL. eapply extend_proves with (Gamma := E.empty). done.
+    assert (ALPHA : subst_frm (fun z : ivar => Var_trm (z - 1)) (shift_frm (embed_frm (Henkin_constants := Henkin_constants) p)) ≡ p) by eapply shift_frm_inv.
+    rewrite <- ALPHA. eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z - 1))) E.empty). done!. eapply proves_substitutivity.
+    clear ALPHA. remember (shift_frm (embed_frm p)) as p' eqn: INVARIANT. revert INVARIANT PROVE. generalize (embed_frm (Henkin_constants := Henkin_constants) p) as A.
+    clear p Gamma; i. destruct PROVE as (ps&INCL&(PF)).
+    assert (ps_spec : forall q : frm L', ~ L.In q ps).
+    { intros q q_in. done!. }
+    clear INCL. revert p' INVARIANT. induction PF; i.
+    + contradiction (ps_spec p (or_introl eq_refl)).
+    + eapply for_Imp_E with (p := shift_frm p).
+      * eapply IHPF1. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. simpl. congruence.
+      * eapply IHPF2. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. simpl. congruence.
+    + subst. simpl. eapply for_All_I with (p := shift_frm q). done!. eapply IHPF. intros q' CONTRA; eapply ps_spec with (q := q'); ss!. reflexivity.
+    + subst. simpl. eapply empty_proof_intro. eapply IMP1.
+    + subst. simpl. eapply empty_proof_intro. eapply IMP2.
+    + subst. simpl. eapply empty_proof_intro. eapply CP.
+    + subst. simpl.
+      enough (ALPHA : shift_frm (Henkin_constants := Henkin_constants) (subst_frm (one_subst x t) p) ≡ subst_frm (one_subst (x + 1) (shift_trm t)) (shift_frm p)).
+      { rewrite ALPHA. eapply empty_proof_intro. eapply FA1. }
+      eapply shift_frm_subst_frm_once.
+    + subst. simpl. eapply empty_proof_intro. eapply FA2. red in NOT_FREE |- *. rewrite <- NOT_FREE. eapply shift_frm_fv.
+    + subst. simpl. eapply empty_proof_intro. eapply FA3.
+    + subst. simpl. eapply proves_reflexivity.
+    + subst. eapply for_Imp_I. eapply proves_symmetry. eapply for_ByHyp. done!.
+    + subst. eapply for_Imp_I. eapply for_Imp_I. eapply proves_transitivity with (t2 := shift_trm (Henkin_constants := Henkin_constants) (Var_trm 1)); eapply for_ByHyp; done!.
+    + subst. rewrite <- embed_frm_Fun_eqAxm. rewrite shift_frm_embed_frm. eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z + 1))) E.empty). done!.
+      eapply proves_substitutivity. eapply empty_proof_intro. eapply EQN_FUN.
+    + subst. rewrite <- embed_frm_Rel_eqAxm. rewrite shift_frm_embed_frm. eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z + 1))) E.empty). done!.
+      eapply proves_substitutivity. eapply empty_proof_intro. eapply EQN_REL.
+  - eapply for_Imp_E with (p := q).
+    + eapply IH.
+      * intros p' H_in. exploit (INCL p'). ss!. intros IN. ss!.
+      * simpl. rewrite Deduction_theorem. eapply extend_proves with (Gamma := E.fromList (L.map embed_frm (q :: qs))).
+        { intros p' H_in. done!. }
+        { exact PROVE. }
+    + eapply for_ByHyp. exploit (INCL (embed_frm (Henkin_constants := Henkin_constants) q)). ss!. intros IN. ss!. apply embed_frm_inj in H; subst x; done.
+Qed.
+
+Theorem embed_frm_proves_iff (Gamma : ensemble (frm L)) (p : frm L)
+  : E.image (embed_frm (Henkin_constants := Henkin_constants)) Gamma ⊢ embed_frm (Henkin_constants := Henkin_constants) p <-> Gamma ⊢ p.
+Proof.
+  split; [eapply embed_proves_inv | eapply embed_proves].
+Qed.
+
+Lemma shift_Fun_eqAxm (f : L'.(function_symbols))
+  : E.empty ⊢ shift_frm (Fun_eqAxm f).
+Proof.
+  rewrite <- embed_frm_Fun_eqAxm. rewrite shift_frm_embed_frm.
+  eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z + 1))) E.empty). { done!. }
+  eapply proves_substitutivity. exists []. split. done. econstructor. eapply EQN_FUN.
+Qed.
+
+Lemma shift_Rel_eqAxm (R : L'.(relation_symbols))
+  : E.empty ⊢ shift_frm (Rel_eqAxm R).
+Proof.
+  rewrite <- embed_frm_Rel_eqAxm. rewrite shift_frm_embed_frm.
+  eapply extend_proves with (Gamma := E.image (subst_frm (fun z : ivar => Var_trm (z + 1))) E.empty). { done!. }
+  eapply proves_substitutivity. exists []. split. done. econstructor. eapply EQN_REL.
+Qed.
+
+Lemma proves_shift (Gamma : ensemble (frm L')) (p : frm L')
+  (PROVE : Gamma ⊢ p)
+  : E.image shift_frm Gamma ⊢ shift_frm p.
+Proof.
+  assert (empty_proof_intro : forall q : frm (mkL_with_constant_symbols (function_symbols L) (relation_symbols L) (function_arity_table L) (relation_arity_table L) (function_arity_gt_0 L) (relation_arity_gt_0 L) (constant_symbols L)), proof [] q -> E.empty ⊢ q).
+  { ii. exists []. split. intros ?. done. econstructor. eassumption. }
+  destruct PROVE as (ps&INCL&(PF)).
+  assert (PROVE : E.fromList ps ⊢ p).
+  { exists ps. split. done. econstructor. exact PF. }
+  clear PF. revert Gamma p INCL PROVE. induction ps as [ | q ps IH]; i.
+  - clear INCL. destruct PROVE as (ps&INCL&(PF)).
+    assert (ps_spec : forall q : frm L', ~ L.In q ps).
+    { intros q q_in. done!. }
+    clear INCL. eapply extend_proves with (Gamma := E.empty). done.
+    clear Gamma. induction PF; i.
+    + contradiction (ps_spec p (or_introl eq_refl)).
+    + eapply for_Imp_E; [eapply IHPF1 | eapply IHPF2]; intros q'; specialize ps_spec with (q := q'); ss!.
+    + simpl. eapply for_All_I. done. eapply IHPF. done.
+    + simpl. eapply empty_proof_intro. eapply IMP1.
+    + simpl. eapply empty_proof_intro. eapply IMP2.
+    + simpl. eapply empty_proof_intro. eapply CP.
+    + simpl. rewrite shift_frm_subst_frm_once. eapply empty_proof_intro. eapply FA1.
+    + simpl. eapply empty_proof_intro. eapply FA2. red in NOT_FREE |- *. rewrite shift_frm_fv; trivial.
+    + simpl. eapply empty_proof_intro. eapply FA3.
+    + eapply proves_reflexivity.
+    + eapply for_Imp_I. eapply proves_symmetry. eapply for_ByHyp. done!.
+    + eapply for_Imp_I. eapply for_Imp_I. eapply proves_transitivity with (t2 := shift_trm (Henkin_constants := Henkin_constants) (Var_trm 1)); eapply for_ByHyp; done!.
+    + eapply shift_Fun_eqAxm.
+    + eapply shift_Rel_eqAxm.
+  - eapply for_Imp_E with (p := shift_frm q).
+    + change (E.image shift_frm Gamma ⊢ shift_frm (Imp_frm q p)). eapply IH.
+      * intros p' H_in. done!.
+      * rewrite Deduction_theorem. eapply extend_proves with (Gamma := E.fromList (q :: ps)).
+        { intros p' H_in. done!. }
+        { exact PROVE. }
+    + eapply for_ByHyp. rewrite E.in_image_iff. exists q. split; trivial. eapply INCL. simpl. left. trivial.
+Qed.
+
+End GENERAL_CASE.
+
+End HENKIN.

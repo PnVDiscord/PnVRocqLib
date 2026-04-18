@@ -15,7 +15,7 @@ Delimit Scope name_scope with name.
 
 #[global]
 Instance name_hasEqDec
-  : hasEqDec name.
+  : hasEqDec@{Set} name.
 Proof.
   red; decide equality; eapply Nat.eq_dec.
 Defined.

@@ -170,14 +170,14 @@ Tactic Notation "frm_ind2" ident( p ) ident( p' ) :=
 Section EQ_DEC.
 
 #[global]
-Instance ivar_hasEqDec : hasEqDec ivar :=
+Instance ivar_hasEqDec : hasEqDec@{Set} ivar :=
   Nat.eq_dec.
 
 Context {L : language}.
 
-Hypothesis function_symbols_hasEqDec : hasEqDec L.(function_symbols).
+Hypothesis function_symbols_hasEqDec : hasEqDec@{Set} L.(function_symbols).
 
-Hypothesis constant_symbols_hasEqDec : hasEqDec L.(constant_symbols).
+Hypothesis constant_symbols_hasEqDec : hasEqDec@{Set} L.(constant_symbols).
 
 Lemma trm_eq_dec (t1 : trm L) (t2 : trm L)
   : {t1 = t2} + {t1 <> t2}
@@ -200,14 +200,14 @@ Proof with try first [now right; congruence | now left; congruence].
 Defined.
 
 #[global]
-Instance trm_hasEqDec : hasEqDec (trm L) :=
+Instance trm_hasEqDec : hasEqDec@{Set} (trm L) :=
   trm_eq_dec.
 
 #[global]
-Instance trms_hasEqDec (n : nat) : hasEqDec (trms L n) :=
+Instance trms_hasEqDec (n : nat) : hasEqDec@{Set} (trms L n) :=
   trms_eq_dec n.
 
-Hypothesis relation_symbols_hasEqDec : hasEqDec L.(relation_symbols).
+Hypothesis relation_symbols_hasEqDec : hasEqDec@{Set} L.(relation_symbols).
 
 Lemma frm_eq_dec (p : frm L) (p' : frm L)
   : {p = p'} + {p <> p'}.
@@ -226,7 +226,7 @@ Proof with try first [now right; congruence | now left; congruence].
 Defined.
 
 #[global]
-Instance frm_hasEqDec : hasEqDec (frm L) :=
+Instance frm_hasEqDec : hasEqDec@{Set} (frm L) :=
   frm_eq_dec.
 
 End EQ_DEC.
@@ -1097,7 +1097,7 @@ Proof.
       apply EQUIV in claim2. destruct claim2 as [y [FREE FREE']]. apply fv_is_free_in_frm in FREE. apply fv_is_free_in_trm in FREE'. exists y. done!.
   }
   apply maxs_ext in claim. unfold chi_frm. f_equal. unfold last_ivar_trm.
-      assert (ENOUGH : forall xs : list ivar, forall f : ivar -> list ivar, maxs (List.map (maxs ∘ f) xs) = maxs (List.flat_map f xs)).
+  assert (ENOUGH : forall xs : list ivar, forall f : ivar -> list ivar, maxs (List.map (maxs ∘ f) xs) = maxs (List.flat_map f xs)).
   { induction xs; simpl; i; eauto; rewrite maxs_app; ss!. }
   do 2 rewrite <- ENOUGH in claim. done!.
 Qed.
@@ -1457,7 +1457,7 @@ Proof.
   - assert (chi_fresh : is_free_in_frm (chi_frm s (All_frm y p)) (All_frm y p) = false).
     { pose proof (@chi_frm_is_fresh_in_subst (All_frm y p) s) as claim.
       unfold frm_is_fresh_in_subst in claim. rewrite forallb_forall in claim.
-      unfold "∘"%prg in claim. enough (ENOUGH: is_free_in_frm (chi_frm s (All_frm y p)) (All_frm y p) <> true) by now destruct (is_free_in_frm (chi_frm s (All_frm y p)) (All_frm y p)).
+      unfold "∘"%prg in claim. enough (ENOUGH : is_free_in_frm (chi_frm s (All_frm y p)) (All_frm y p) <> true) by now destruct (is_free_in_frm (chi_frm s (All_frm y p)) (All_frm y p)).
       intros CONTRA. rewrite <- fv_is_free_in_frm in CONTRA. specialize (claim (chi_frm s (All_frm y p)) CONTRA).
       rewrite negb_true_iff in claim. rewrite FRESH in claim.
       * rewrite is_free_in_trm_unfold in claim. rewrite Nat.eqb_neq in claim. done.

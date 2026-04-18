@@ -14,10 +14,10 @@ Inductive typ (basic_types : Type) : Type :=
   | bty (B : basic_types)
   | arr (D : typ basic_types) (C : typ basic_types).
 
-#[global]
-Instance typ_hasEqDec (basic_types : Type)
-  (bty_hasEqDec : hasEqDec basic_types)
-  : hasEqDec (typ basic_types).
+#[global, universes(polymorphic=yes)]
+Instance typ_hasEqDec@{u} (basic_types : Type@{u})
+  (bty_hasEqDec : hasEqDec@{u} basic_types)
+  : hasEqDec@{u} (typ basic_types).
 Proof.
   red in bty_hasEqDec |- *. decide equality.
 Defined.
@@ -27,7 +27,7 @@ Class language : Type :=
   { basic_types : Set
   ; constants : Set
   ; signature (c : constants) : typ basic_types
-  ; basic_types_hasEqDec :: hasEqDec basic_types
+  ; basic_types_hasEqDec :: hasEqDec@{Set} basic_types
   }.
 
 End StlcLang.
@@ -65,7 +65,7 @@ Context `{L : !language}.
 
 #[global]
 Instance typ_hasEqDec
-  : hasEqDec typ.
+  : hasEqDec@{Set} typ.
 Proof.
   exact (StlcLang.typ_hasEqDec L.(basic_types) StlcLang.basic_types_hasEqDec).
 Defined.
@@ -122,18 +122,18 @@ Section BASIC_THEORY1_ON_SYNTAX.
 
 Fixpoint is_free_in (x : Name.t) (e : trm) : bool :=
   match e with
-  | Var_trm x' => Prelude.eqb x x'
+  | Var_trm x' => Prelude.eqb (hasEqDec := name_hasEqDec) x x'
   | App_trm e1 e2 => is_free_in x e1 || is_free_in x e2
-  | Lam_trm x' ty e1 => negb (Prelude.eqb x x') && is_free_in x e1
+  | Lam_trm x' ty e1 => negb (Prelude.eqb (hasEqDec := name_hasEqDec) x x') && is_free_in x e1
   | Con_trm c => false
   end.
 
-#[local] Hint Rewrite @eqb_spec : simplication_hints.
+#[local] Hint Rewrite @eqb_spec@{Set} : simplication_hints.
 #[local] Hint Rewrite andb_true_iff : simplication_hints.
 #[local] Hint Rewrite orb_true_iff : simplication_hints.
 #[local] Hint Rewrite negb_true_iff : simplication_hints.
 #[local] Hint Rewrite Name.maxs_app : simplication_hints.
-#[local] Hint Rewrite @L.in_remove_iff : simplication_hints.
+#[local] Hint Rewrite @L.in_remove_iff@{Set} : simplication_hints.
 #[local] Hint Rewrite @L.in_concat : simplication_hints.
 
 Lemma is_free_in_iff x e
@@ -404,7 +404,7 @@ Proof.
   - intros. eapply Phi_S.
 Defined.
 
-Fixpoint Lookup_from_lookup_eq (Gamma : ctx) {struct Gamma} : forall x, forall ty, Some ty = L.lookup x Gamma -> Lookup x ty Gamma.
+Fixpoint Lookup_from_lookup_eq (Gamma : ctx) {struct Gamma} : forall x, forall ty, Some ty = L.lookup (EQ_DEC := name_hasEqDec) x Gamma -> Lookup x ty Gamma.
 Proof.
   destruct Gamma as [ | [x' ty'] Gamma]; simpl; intros ? ? E; [congruence | destruct (eq_dec x x') as [EQ | NE]].
   - pose proof (f_equal (B.fromMaybe ty') E) as E'. simpl in E'. econs 1; eassumption.
@@ -412,7 +412,7 @@ Proof.
 Defined.
 
 Theorem Lookup_iff x ty Gamma
-  : inhabited (Lookup x ty Gamma) <-> L.lookup x Gamma = Some ty.
+  : inhabited (Lookup x ty Gamma) <-> L.lookup (EQ_DEC := name_hasEqDec) x Gamma = Some ty.
 Proof.
   split.
   - intros [X]. induction X; simpl; destruct (eq_dec x x') as [EQ | NE]; try congruence.
@@ -626,7 +626,7 @@ Fixpoint TypeInfer (Gamma : ctx) (e : trm) {struct e} : option typ :=
   | Var_trm x => L.lookup x Gamma
   | App_trm e1 e2 =>
     match TypeInfer Gamma e1, TypeInfer Gamma e2 with
-    | Some (ty1 -> ty2)%typ, Some ty1' => if eqb ty1 ty1' then Some ty2 else None
+    | Some (ty1 -> ty2)%typ, Some ty1' => if eqb (hasEqDec := typ_hasEqDec) ty1 ty1' then Some ty2 else None
     | _, _ => None
     end
   | Lam_trm y ty1 e1 =>
@@ -655,7 +655,7 @@ Proof.
   - eapply Var_typ; eapply Lookup_from_lookup_eq; eassumption.
   - destruct (TypeInfer Gamma e1) as [[b | ty1' ty2'] | ] eqn: VIEW1; try congruence.
     destruct (TypeInfer Gamma e2) as [ty' | ] eqn: VIEW2; try congruence.
-    unfold eqb in E. destruct (eq_dec ty1' ty') as [EQ | NE]; try congruence.
+    unfold eqb in E. destruct (eq_dec _ _) as [EQ | NE]; try congruence.
     eapply App_typ with (ty1 := ty'); eapply IH; congruence.
   - destruct (TypeInfer ((y, ty1) :: Gamma) e1) as [ty2 | ] eqn: VIEW1; try congruence.
     apply f_equal with (f := B.fromMaybe ty) in E. simpl in E. subst ty.

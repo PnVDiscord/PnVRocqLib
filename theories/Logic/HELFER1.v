@@ -3,213 +3,507 @@ Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Math.ThN.
 Require Import PnV.Data.Vector.
 Require Import Stdlib.Arith.Wf_nat.
-Require Import PnV.Logic.BasicFol.
+Require Export PnV.Logic.BasicFol.
+Require Export PnV.Logic.BasicFol2.
+Require Export PnV.Logic.HilbertFol.
+Require Export PnV.Logic.HilbertFol2.
 
-#[local] Infix "\in" := E.In.
-#[local] Infix "\subseteq" := E.isSubsetOf.
-#[local] Notation In := L.In.
+#[local] Hint Rewrite @eqb_spec@{Set} : simplication_hints.
 
-#[local] Hint Rewrite @L.forallb_forall @Prelude.eqb_spec@{Set} : simplication_hints.
+Module HELFER1_i.
 
-Import FolNotations.
+#[universes(polymorphic=yes)]
+Definition eqProp_iff_eq@{u} {A : Type@{u}} (SETOID : isSetoid A) : Prop :=
+  forall x : A, forall x' : A, forall x_eq_x' : @eqProp A SETOID x x', @eq A x x'.
 
-Section HENKIN.
+Definition entails {L : language} (Gamma : ensemble (frm L)) (C : frm L) : Prop :=
+  forall STRUCTURE : isStructureOf L, @eqProp_iff_eq@{U_discourse} domain_of_discourse equation_interpret -> forall env : ivar -> domain_of_discourse, forall SATISFY : satisfies_frms STRUCTURE env Gamma, satisfies_frm STRUCTURE env C.
 
-Import ListNotations.
+Infix "⊨" := entails.
+
+Notation "Gamma ⊭ C" := (~ entails Gamma C).
+
+Section HELFER1_i_a.
+
+#[local] Notation "x ≠ y" := (~ eq x y) : type_scope.
+
+Section HELFER1_i_a_1.
+
+Class abstract_Henkin_contants (Henkin_constants : Set) (L : language) {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants} : Set :=
+  { hc_decode (hc : Henkin_constants) : ivar * frm (augmented_language L Henkin_constants)
+  ; hc_stage (hc : Henkin_constants) : nat
+  ; hc_decode_isSurjective (x : ivar) (theta : frm (augmented_language L Henkin_constants))
+    : { hc : Henkin_constants | hc_decode hc = (x, theta) }
+  ; hc_new (hcs : list Henkin_constants) (x : ivar) (theta : frm (augmented_language L Henkin_constants))
+    : exists hc, hc_decode hc = (x, theta) /\ (HC_occurs_in_frm hc theta = false) /\ (~ L.In hc hcs)
+  ; hc_stage_well_founded (hc_k : Henkin_constants) (x_k : ivar) (theta_k : frm (augmented_language L Henkin_constants))
+    (H_hc_k : hc_decode hc_k = (x_k, theta_k))
+    : forall hc_k', HC_occurs_in_frm hc_k' theta_k = true -> (hc_stage hc_k' < hc_stage hc_k)%nat
+  }.
+
+Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
+
+#[local] Notation L' := (augmented_language L Henkin_constants).
+
+Context {AHC : abstract_Henkin_contants Henkin_constants L}.
+
+Lemma hc_fresh (x_n : ivar) (theta_n : frm L')
+  (hc_n := proj1_sig (hc_decode_isSurjective x_n theta_n))
+  : HC_occurs_in_frm hc_n theta_n = false.
+Proof.
+  enough (HC_occurs_in_frm hc_n theta_n ≠ true) by now destruct (HC_occurs_in_frm _ _).
+  intros H_contra. enough (hc_stage hc_n < hc_stage hc_n)%nat by lia.
+  exact (hc_stage_well_founded hc_n x_n theta_n (proj2_sig (hc_decode_isSurjective x_n theta_n)) hc_n H_contra).
+Qed.
+
+End HELFER1_i_a_1.
 
 #[local] Infix "=~=" := is_similar_to : type_scope.
 
-Definition augmented_language (L : language) (Henkin_constants : Set) : language :=
-  {|
-    function_symbols := L.(function_symbols);
-    constant_symbols := L.(constant_symbols) + Henkin_constants;
-    relation_symbols := L.(relation_symbols);
-    function_arity_table := L.(function_arity_table);
-    relation_arity_table := L.(relation_arity_table);
-    function_arity_gt_0 := L.(function_arity_gt_0);
-    relation_arity_gt_0 := L.(relation_arity_gt_0);
-  |}.
+Section HELFER1_i_a_2.
 
-Context {L : language}.
+Context {L : language} {constant_symbols1 : Set} {constant_symbols2 : Set}.
 
-Section __.
+Variable constant_symbols_mapping : constant_symbols1 -> constant_symbols2.
 
-Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
+#[local] Notation L1 := (augmented_language L constant_symbols1).
 
-Notation L' := (augmented_language L Henkin_constants).
+#[local] Notation L2 := (augmented_language L constant_symbols2).
 
-Fixpoint HC_occurs_in_trm (hc : Henkin_constants) (t : trm L') : bool :=
+Fixpoint trm_mapping (t : trm L1) : trm L2 :=
   match t with
-  | Var_trm x => false
-  | Fun_trm f ts => HC_occurs_in_trms hc ts
-  | Con_trm c =>
-    match c with
-    | inl cc => false
-    | inr hc' => eqb hc hc'
+  | Var_trm x => @Var_trm L2 x
+  | Fun_trm f ts => @Fun_trm L2 f (@trms_mapping (function_arity_table L2 f) ts)
+  | Con_trm c' =>
+    match c' with
+    | inl c => @Con_trm L2 (inl c)
+    | inr hc => @Con_trm L2 (inr (constant_symbols_mapping hc))
     end
   end
-with HC_occurs_in_trms {n : nat} (hc : Henkin_constants) (ts : trms L' n) : bool :=
+with trms_mapping {n : nat} (ts : trms L1 n) : trms L2 n :=
   match ts with
-  | O_trms => false
-  | S_trms n t ts => HC_occurs_in_trm hc t || HC_occurs_in_trms (n := n) hc ts
+  | O_trms => @O_trms L2
+  | S_trms n t ts => @S_trms L2 n (trm_mapping t) (trms_mapping ts)
   end.
 
-#[local] Opaque HC_occurs_in_trm HC_occurs_in_trms.
-
-Lemma HC_occurs_in_trm_Var_trm hc x
-  : HC_occurs_in_trm hc (Var_trm x) = false.
-Proof.
-  reflexivity.
-Defined.
-
-Lemma HC_occurs_in_trm_Fun_trm hc f ts
-  : HC_occurs_in_trm hc (Fun_trm f ts) = HC_occurs_in_trms hc ts.
-Proof.
-  reflexivity.
-Defined.
-
-Lemma HC_occurs_in_trm_Con_trm hc c
-  : HC_occurs_in_trm hc (Con_trm c) = (match c with inl cc => false | inr hc' => eqb hc hc' end).
-Proof.
-  reflexivity.
-Defined.
-
-#[local] Hint Rewrite HC_occurs_in_trm_Var_trm HC_occurs_in_trm_Fun_trm HC_occurs_in_trm_Con_trm : simplication_hints.
-
-Lemma HC_occurs_in_trms_O_trms hc
-  : HC_occurs_in_trms hc O_trms = false.
-Proof.
-  reflexivity.
-Defined.
-
-Lemma HC_occurs_in_trms_S_trms hc n t ts
-  : HC_occurs_in_trms hc (S_trms n t ts) = HC_occurs_in_trm hc t || HC_occurs_in_trms hc ts.
-Proof.
-  reflexivity.
-Defined.
-
-#[local] Hint Rewrite HC_occurs_in_trms_O_trms HC_occurs_in_trms_S_trms : simplication_hints.
-
-Fixpoint HC_occurs_in_frm (hc : Henkin_constants) (p : frm L') : bool :=
+Fixpoint frm_mapping (p : frm L1) : frm L2 :=
   match p with
-  | Rel_frm R ts => HC_occurs_in_trms hc ts
-  | Eqn_frm t1 t2 => HC_occurs_in_trm hc t1 || HC_occurs_in_trm hc t2
-  | Neg_frm p1 => HC_occurs_in_frm hc p1
-  | Imp_frm p1 p2 => HC_occurs_in_frm hc p1 || HC_occurs_in_frm hc p2
-  | All_frm y p1 => HC_occurs_in_frm hc p1
+  | Eqn_frm t1 t2 => @Eqn_frm L2 (trm_mapping t1) (trm_mapping t2)
+  | Rel_frm R ts => @Rel_frm L2 R (@trms_mapping (relation_arity_table L2 R) ts)
+  | Neg_frm p1 => @Neg_frm L2 (frm_mapping p1)
+  | Imp_frm p1 p2 => @Imp_frm L2 (frm_mapping p1) (frm_mapping p2)
+  | All_frm y p1 => @All_frm L2 y (frm_mapping p1)
   end.
 
-Fixpoint accum_HCs_trm (t : trm L') : list Henkin_constants :=
-  match t with
-  | Var_trm x => []
-  | Fun_trm f ts => accum_HCs_trms ts
-  | Con_trm c =>
-    match c with
-    | inl cc => []
-    | inr hc => [hc]
-    end
-  end
-with accum_HCs_trms {n : nat} (ts : trms L' n) : list Henkin_constants :=
-  match ts with
-  | O_trms => []
-  | S_trms n t ts => accum_HCs_trm t ++ accum_HCs_trms (n := n) ts
+End HELFER1_i_a_2.
+
+Section HELFER1_i_a_3.
+
+Variable L : language.
+
+Fixpoint Henkin_constants_stage (k : nat) : Set :=
+  match k with
+  | O => void
+  | S k' => Henkin_constants_stage k' + (ivar * frm (augmented_language L (Henkin_constants_stage k')))
   end.
 
-#[local] Opaque accum_HCs_trm accum_HCs_trms.
-
-Lemma accum_HCs_trm_Var_trm x
-  : accum_HCs_trm (Var_trm x) = [].
-Proof.
-  reflexivity.
-Defined.
-
-Lemma accum_HCs_trm_Fun_trm f ts
-  : accum_HCs_trm (Fun_trm f ts) = accum_HCs_trms ts.
-Proof.
-  reflexivity.
-Defined.
-
-Lemma accum_HCs_trm_Con_trm c
-  : accum_HCs_trm (Con_trm c) = (match c with inl cc => [] | inr hc => [hc] end).
-Proof.
-  reflexivity.
-Defined.
-
-#[local] Hint Rewrite accum_HCs_trm_Var_trm accum_HCs_trm_Fun_trm accum_HCs_trm_Con_trm : simplication_hints.
-
-Lemma accum_HCs_trms_O_trms
-  : accum_HCs_trms O_trms = [].
-Proof.
-  reflexivity.
-Defined.
-
-Lemma accum_HCs_trms_S_trms n t ts
-  : accum_HCs_trms (S_trms n t ts) = accum_HCs_trm t ++ accum_HCs_trms ts.
-Proof.
-  reflexivity.
-Defined.
-
-#[local] Hint Rewrite accum_HCs_trms_O_trms accum_HCs_trms_S_trms : simplication_hints.
-
-Fixpoint accum_HCs_frm (p : frm L') : list Henkin_constants :=
-  match p with
-  | Rel_frm R ts => accum_HCs_trms ts
-  | Eqn_frm t1 t2 => accum_HCs_trm t1 ++ accum_HCs_trm t2
-  | Neg_frm p1 => accum_HCs_frm p1
-  | Imp_frm p1 p2 => accum_HCs_frm p1 ++ accum_HCs_frm p2
-  | All_frm y p1 => accum_HCs_frm p1
-  end.
-
-Lemma HC_occurs_in_trm_iff_in_accumHCs_trm (t : trm L')
-  : forall hc, HC_occurs_in_trm hc t = true <-> In hc (accum_HCs_trm t)
-with HC_occurs_in_trms_iff_in_accumHCs_trms n (ts : trms L' n)
-  : forall hc, HC_occurs_in_trms hc ts = true <-> In hc (accum_HCs_trms ts).
-Proof.
-  - clear HC_occurs_in_trm_iff_in_accumHCs_trm. trm_ind t; ss!; destruct c as [hc' | cc]; ss!.
-  - clear HC_occurs_in_trms_iff_in_accumHCs_trms. trms_ind ts; done!.
-Qed.
-
-#[local] Hint Rewrite <- HC_occurs_in_trm_iff_in_accumHCs_trm HC_occurs_in_trms_iff_in_accumHCs_trms : simplication_hints.
-
-Lemma HC_occurs_in_frm_iff_in_accumHCs_frm (p : frm L')
-  : forall hc, HC_occurs_in_frm hc p = true <-> In hc (accum_HCs_frm p).
-Proof.
-  frm_ind p; done!.
-Qed.
-
-#[local] Hint Rewrite <- HC_occurs_in_frm_iff_in_accumHCs_frm.
-
-End __.
+Definition L_stage (k : nat) : language :=
+  augmented_language L (Henkin_constants_stage k).
 
 Definition Henkin_constants : Set :=
-  nat.
+  { k : nat & ivar * frm (L_stage k) }.
 
-Notation L' := (augmented_language L Henkin_constants).
+#[local] Notation L_infty := (augmented_language L Henkin_constants).
 
-Lemma last_HC_gt_frm (hc : Henkin_constants)
-  : forall p : frm L', hc > maxs (accum_HCs_frm p) -> HC_occurs_in_frm hc p = false.
+Fixpoint hc_k_to_hc_infty (k : nat) : Henkin_constants_stage k -> Henkin_constants :=
+  match k as k return Henkin_constants_stage k -> Henkin_constants with
+  | O => Empty_set_rect _
+  | S k' => fun c =>
+    match c with
+    | inl old => hc_k_to_hc_infty k' old
+    | inr xp => @existT _ _ k' xp
+    end
+  end.
+
+Definition L_k_to_L_infty (k : nat) : frm (L_stage k) -> frm L_infty :=
+  frm_mapping (hc_k_to_hc_infty k).
+
+Definition hc_decode_impl (hc : Henkin_constants) : ivar * frm L_infty :=
+  let '(@existT _ _ k (x, theta)) := hc in
+  (x, L_k_to_L_infty k theta).
+
+Fixpoint max_hc_stage_trm (t : trm L_infty) : nat :=
+  match t with
+  | Var_trm x => O
+  | Fun_trm f ts => max_hc_stage_trms ts
+  | Con_trm c =>
+    match c with
+    | inl c' => O
+    | inr hc => S (projT1 hc)
+    end
+  end
+with max_hc_stage_trms {n : nat} (ts : trms L_infty n) : nat :=
+  match ts with
+  | O_trms => O
+  | S_trms n t ts => Nat.max (max_hc_stage_trm t) (max_hc_stage_trms ts)
+  end.
+
+Fixpoint max_hc_stage_frm (p : frm L_infty) : nat :=
+  match p with
+  | Rel_frm R ts => max_hc_stage_trms ts
+  | Eqn_frm t1 t2 => Nat.max (max_hc_stage_trm t1) (max_hc_stage_trm t2)
+  | Neg_frm p1 => max_hc_stage_frm p1
+  | Imp_frm p1 p2 => Nat.max (max_hc_stage_frm p1) (max_hc_stage_frm p2)
+  | All_frm y p1 => max_hc_stage_frm p1
+  end.
+
+Fixpoint max_hc_stage_list (hcs : list Henkin_constants) : nat :=
+  match hcs with
+  | nil => O
+  | hc :: hcs => Nat.max (projT1 hc + 1) (max_hc_stage_list hcs)
+  end.
+
+Variable Henkin_constants_hasEqDec : hasEqDec Henkin_constants.
+
+Fixpoint occurs_stage_le_trm (t : trm L_infty)
+  : forall hc : Henkin_constants, HC_occurs_in_trm hc t = true -> projT1 hc < max_hc_stage_trm t
+with occurs_stage_le_trms (n : nat) (ts : trms L_infty n)
+  : forall hc : Henkin_constants, HC_occurs_in_trms hc ts = true -> projT1 hc < max_hc_stage_trms ts.
 Proof.
-  intros p IN. destruct (HC_occurs_in_frm hc p) as [ | ] eqn : H_OBS; trivial.
-  rewrite HC_occurs_in_frm_iff_in_accumHCs_frm in H_OBS. enough (WTS : hc <= maxs (accum_HCs_frm p)) by lia.
-  eapply in_maxs_ge. exact H_OBS.
+  - destruct t as [x | f ts | c]; intros hc H; s!.
+    + congruence.
+    + exact (occurs_stage_le_trms _ ts hc H).
+    + destruct c as [c | hc'].
+      * congruence.
+      * s!. subst hc'. econs.
+  - destruct ts as [ | n t ts]; simpl; intros hc H; s!.
+    + congruence.
+    + destruct H as [H | H].
+      * enough (S (projT1 hc) <= max_hc_stage_trm t) by lia.
+        exact (occurs_stage_le_trm t hc H).
+      * enough (S (projT1 hc) <= max_hc_stage_trms ts) by lia.
+        exact (occurs_stage_le_trms n ts hc H).
+Defined.
+
+Fixpoint occurs_stage_le_frm (p : frm L_infty)
+  : forall hc : Henkin_constants, HC_occurs_in_frm hc p = true -> projT1 hc < max_hc_stage_frm p.
+Proof.
+  destruct p as [R ts | t1 t2 | p1 | p1 p2 | y p1]; intros hc H; s!.
+  - exact (occurs_stage_le_trms _ ts hc H).
+  - destruct H as [H | H].
+    + enough (S (projT1 hc) <= max_hc_stage_trm t1) by lia. exact (occurs_stage_le_trm t1 hc H).
+    + enough (S (projT1 hc) <= max_hc_stage_trm t2) by lia. exact (occurs_stage_le_trm t2 hc H).
+  - exact (occurs_stage_le_frm p1 hc H).
+  - destruct H as [H | H].
+    + enough (S (projT1 hc) <= max_hc_stage_frm p1) by lia. exact (occurs_stage_le_frm p1 hc H).
+    + enough (S (projT1 hc) <= max_hc_stage_frm p2) by lia. exact (occurs_stage_le_frm p2 hc H).
+  - exact (occurs_stage_le_frm p1 hc H).
+Defined.
+
+Lemma in_list_stage_le (hcs : list Henkin_constants)
+  : forall hc : Henkin_constants, L.In hc hcs -> projT1 hc < max_hc_stage_list hcs.
+Proof.
+  induction hcs as [ | hc' hcs IH]; simpl; intros hc.
+  - intros [].
+  - intros [<- | Hin].
+    + lia.
+    + pose proof (IH hc Hin) as HH. lia.
 Qed.
 
-Lemma last_HC_for_finite_formulae (ps : list (frm L')) (hc : Henkin_constants)
-  : forall p : frm L', In p ps -> hc > maxs (map (maxs ∘ accum_HCs_frm)%prg ps) -> HC_occurs_in_frm hc p = false.
+Fixpoint hc_k_to_hc_infty_stage_lt (k : nat)
+  : forall c : Henkin_constants_stage k, (projT1 (hc_k_to_hc_infty k c) < k)%nat.
 Proof.
-  unfold Henkin_constants in *.
-  induction ps as [ | p ps IH]; simpl in *.
-  - tauto.
-  - intros p' [<- | IN] H.
-    + eapply last_HC_gt_frm. unfold "∘"%prg in H. unfold Henkin_constants in *. lia.
-    + eapply IH; trivial. lia.
+  destruct k as [ | k']; intros c.
+  - destruct c.
+  - destruct c as [old | xp]; simpl.
+    + enough (projT1 (hc_k_to_hc_infty k' old) < k') by lia. exact (hc_k_to_hc_infty_stage_lt k' old).
+    + lia.
+Defined.
+
+Fixpoint max_stage_L_k_to_L_infty_trm_le (k : nat) (t : trm (L_stage k))
+  : max_hc_stage_trm (trm_mapping (hc_k_to_hc_infty k) t) <= k
+with max_stage_L_k_to_L_infty_trms_le (k : nat) (n : nat) (ts : trms (L_stage k) n)
+  : max_hc_stage_trms (trms_mapping (hc_k_to_hc_infty k) ts) <= k.
+Proof.
+  - destruct t as [x | f ts | c]; s!.
+    + lia.
+    + exact (max_stage_L_k_to_L_infty_trms_le k _ ts).
+    + destruct c as [c | hc]; simpl.
+      * lia.
+      * enough (projT1 (hc_k_to_hc_infty k hc) < k) by lia. exact (hc_k_to_hc_infty_stage_lt k hc).
+  - destruct ts as [ | n t ts]; s!.
+    + lia.
+    + pose proof (HH1 := max_stage_L_k_to_L_infty_trm_le k t).
+      pose proof (HH2 := max_stage_L_k_to_L_infty_trms_le k n ts).
+      lia.
+Defined.
+
+Fixpoint max_stage_L_k_to_L_infty_frm_le (k : nat) (p : frm (L_stage k))
+  : max_hc_stage_frm (L_k_to_L_infty k p) <= k.
+Proof.
+  destruct p as [R ts | t1 t2 | p1 | p1 p2 | y p1]; s!.
+  - exact (max_stage_L_k_to_L_infty_trms_le k _ ts).
+  - pose proof (HH1 := max_stage_L_k_to_L_infty_trm_le k t1).
+    pose proof (HH2 := max_stage_L_k_to_L_infty_trm_le k t2).
+    lia.
+  - exact (max_stage_L_k_to_L_infty_frm_le k p1).
+  - pose proof (HH1 := max_stage_L_k_to_L_infty_frm_le k p1).
+    pose proof (HH2 := max_stage_L_k_to_L_infty_frm_le k p2).
+    lia.
+  - exact (max_stage_L_k_to_L_infty_frm_le k p1).
+Defined.
+
+Fixpoint hc_infty_to_hc_k (k : nat) (hc : Henkin_constants) : option (Henkin_constants_stage k) :=
+  match k as k return option (Henkin_constants_stage k) with
+  | O => None
+  | S k' =>
+    let '(@existT _ _ j xp) := hc in
+    match Nat.eq_dec j k' with
+    | left H_EQ =>
+      match H_EQ with
+      | eq_refl => Some (inr xp)
+      end
+    | right _ =>
+      match hc_infty_to_hc_k k' hc with
+      | Some old => Some (inl old)
+      | None => None
+      end
+    end
+  end.
+
+Lemma hc_infty_to_hc_k_total (k : nat)
+  : forall hc : Henkin_constants, S (projT1 hc) <= k -> { c : Henkin_constants_stage k | hc_infty_to_hc_k k hc = Some c }.
+Proof.
+  destruct hc as [j xp]. revert j xp.
+  induction k as [ | k IH]; simpl; intros j xp Hle.
+  - lia.
+  - destruct (Nat.eq_dec j k) as [-> | Hneq].
+    + eexists. reflexivity.
+    + assert (HH : S j <= k) by lia.
+      apply IH with (j := j) (xp := xp) in HH.
+      destruct HH as [c Hc]. rewrite Hc. eauto.
 Qed.
+
+Lemma hc_infty_to_hc_k_sound (k : nat) (hc : Henkin_constants) (c : Henkin_constants_stage k)
+  (Hc : hc_infty_to_hc_k k hc = Some c)
+  : hc_k_to_hc_infty k c = hc.
+Proof.
+  destruct hc as [j xp]. revert j xp c Hc.
+  induction k as [ | k IH]; intros j xp c Hc; simpl in *; ss!.
+  destruct (Nat.eq_dec j k) as [Heq | Hneq].
+  - subst. now inv Hc.
+  - destruct (hc_infty_to_hc_k k (@existT _ _ j xp)) eqn: Hrec; try congruence.
+    inv Hc; eauto.
+Qed.
+
+Definition const_infty_to_k (k : nat) (c : constant_symbols L_infty) : option (constant_symbols (L_stage k)) :=
+  match c with
+  | inl c => Some (inl c)
+  | inr hc =>
+    match hc_infty_to_hc_k k hc with
+    | Some hc_k => Some (inr hc_k)
+    | None => None
+    end
+  end.
+
+Lemma const_infty_to_k_total (k : nat) (c : constant_symbols L_infty)
+  (Hc : match c with inl _ => True | inr hc => S (projT1 hc) <= k end)
+  : { c_k : constant_symbols (L_stage k) | const_infty_to_k k c = Some c_k }.
+Proof.
+  destruct c as [c0 | hc].
+  - exists (inl c0). reflexivity.
+  - simpl. pose proof (hc_infty_to_hc_k_total k hc Hc) as [hc_k Hhc].
+    exists (inr hc_k). now rewrite Hhc.
+Qed.
+
+Lemma const_infty_to_k_sound (k : nat) (c : constant_symbols L_infty) (c_k : constant_symbols (L_stage k))
+  (H_c_k : const_infty_to_k k c = Some c_k)
+  : match c_k with inl c0 => c = inl c0 | inr hc_k => c = inr (hc_k_to_hc_infty k hc_k) end.
+Proof.
+  destruct c as [c | hc].
+  - simpl in *. now inv H_c_k.
+  - simpl in *. destruct (hc_infty_to_hc_k k hc) eqn:Hhc; try congruence.
+    inv H_c_k. now rewrite (hc_infty_to_hc_k_sound k hc h Hhc).
+Qed.
+
+Fixpoint L_infty_to_L_k_trm_bound (t : trm L_infty) {struct t}
+  : forall k : nat, max_hc_stage_trm t <= k -> { t_k : trm (L_stage k) | t = trm_mapping (hc_k_to_hc_infty k) t_k }
+with L_infty_to_L_k_trms_bound (n : nat) (ts : trms L_infty n) {struct ts}
+  : forall k : nat, max_hc_stage_trms ts <= k -> { ts_k : trms (L_stage k) n | ts = trms_mapping (hc_k_to_hc_infty k) ts_k }.
+Proof.
+  - destruct t as [x | f ts | c]; simpl; intros k Hk.
+    + exists (@Var_trm (L_stage k) x). reflexivity.
+    + destruct (L_infty_to_L_k_trms_bound _ ts k Hk) as [ts_k Hts].
+      exists (@Fun_trm (L_stage k) f ts_k). simpl. subst ts. reflexivity.
+    + destruct c as [c | hc]; simpl.
+      * exists (@Con_trm (L_stage k) (inl c)). simpl. reflexivity.
+      * pose proof (const_infty_to_k_total k (inr hc) Hk) as [c_k Hc].
+        exists (@Con_trm (L_stage k) c_k). simpl.
+        pose proof (const_infty_to_k_sound k (inr hc) c_k Hc) as HH.
+        destruct c_k; congruence.
+  - destruct ts as [ | n t ts]; simpl; intros k Hk.
+    + exists (@O_trms (L_stage k)). reflexivity.
+    + assert (Ht : max_hc_stage_trm t <= k) by lia.
+      assert (Hts : max_hc_stage_trms ts <= k) by lia.
+      pose proof (L_infty_to_L_k_trm_bound t k Ht) as [t_k Ht_eq].
+      destruct (L_infty_to_L_k_trms_bound _ ts k Hts) as [ts_k Hts_eq].
+      exists (@S_trms (L_stage k) n t_k ts_k). simpl. congruence.
+Qed.
+
+Fixpoint L_infty_to_L_k_frm_bound (p : frm L_infty)
+  : forall k : nat, max_hc_stage_frm p <= k -> { p_k : frm (L_stage k) | p = L_k_to_L_infty k p_k }.
+Proof.
+  destruct p as [R ts | t1 t2 | p1 | p1 p2 | y p1]; simpl; intros k Hk.
+  - pose proof (L_infty_to_L_k_trms_bound _ ts k Hk) as [ts_k Hts].
+    exists (@Rel_frm (L_stage k) R ts_k). simpl. subst ts. reflexivity.
+  - assert (Ht1 : max_hc_stage_trm t1 <= k) by lia.
+    assert (Ht2 : max_hc_stage_trm t2 <= k) by lia.
+    pose proof (L_infty_to_L_k_trm_bound t1 k Ht1) as [t1_k H1].
+    pose proof (L_infty_to_L_k_trm_bound t2 k Ht2) as [t2_k H2].
+    exists (Eqn_frm t1_k t2_k). simpl. congruence.
+  - pose proof (L_infty_to_L_k_frm_bound p1 k Hk) as [p1_k H1].
+    exists (@Neg_frm (L_stage k) p1_k). simpl. congruence.
+  - assert (H1b : max_hc_stage_frm p1 <= k) by lia.
+    assert (H2b : max_hc_stage_frm p2 <= k) by lia.
+    pose proof (L_infty_to_L_k_frm_bound p1 k H1b) as [p1_k H1].
+    pose proof (L_infty_to_L_k_frm_bound p2 k H2b) as [p2_k H2].
+    exists (@Imp_frm (L_stage k) p1_k p2_k). simpl. congruence.
+  - pose proof (L_infty_to_L_k_frm_bound p1 k Hk) as [p1_k H1].
+    exists (@All_frm (L_stage k) y p1_k). simpl. congruence.
+Defined.
+
+Lemma L_infty_to_L_k_frm_above (k0 : nat) (theta : frm L_infty)
+  : exists k, k0 <= k /\ (exists theta_k : frm (L_stage k), theta = L_k_to_L_infty k theta_k).
+Proof.
+  exists (Nat.max k0 (max_hc_stage_frm theta)). split; [lia | ].
+  pose proof (L_infty_to_L_k_frm_bound theta _ (Nat.le_max_r k0 (max_hc_stage_frm theta))) as [theta_k Htheta].
+  now exists theta_k.
+Qed.
+
+End HELFER1_i_a_3.
+
+Section HELFER1_i_b_1.
+
+#[local] Obligation Tactic := idtac.
+
+Context {L : language} {function_symbols_hasEqDec : hasEqDec@{Set} L.(function_symbols)} {constant_symbols_hasEqDec : hasEqDec@{Set} L.(constant_symbols)} {relation_symbols_hasEqDec : hasEqDec@{Set} L.(relation_symbols)}.
+
+#[global]
+Instance Henkin_constants_stage_hasEqDec (n : nat)
+  : hasEqDec (Henkin_constants_stage L n).
+Proof.
+  induction n as [ | n IHn]; simpl.
+  - red; decide equality.
+  - eapply sum_hasEqDec.
+    + exact IHn.
+    + eapply pair_hasEqdec.
+      { exact ivar_hasEqDec. }
+      { eapply frm_hasEqDec.
+        - exact function_symbols_hasEqDec.
+        - eapply sum_hasEqDec.
+          + exact constant_symbols_hasEqDec.
+          + exact IHn.
+        - exact relation_symbols_hasEqDec.
+      }
+Defined.
+
+#[global]
+Instance Henkin_constants_hasEqDec
+  : hasEqDec (Henkin_constants L).
+Proof.
+  eapply sigT_hasEqDec.
+  - exact nat_hasEqDec.
+  - induction a as [ | n IHn].
+    + unfold L_stage. simpl. eapply pair_hasEqdec.
+      * exact ivar_hasEqDec.
+      * eapply frm_hasEqDec.
+        { unfold augmented_language. simpl. exact function_symbols_hasEqDec. }
+        { unfold augmented_language. simpl. eapply sum_hasEqDec; [exact constant_symbols_hasEqDec | red; decide equality]. }
+        { unfold augmented_language. simpl. exact relation_symbols_hasEqDec. }
+    + unfold L_stage in *. simpl. eapply pair_hasEqdec.
+      * exact ivar_hasEqDec.
+      * eapply frm_hasEqDec.
+        { unfold augmented_language. simpl. exact function_symbols_hasEqDec. }
+        { unfold augmented_language. simpl.
+          eapply sum_hasEqDec; [exact constant_symbols_hasEqDec | ].
+          eapply sum_hasEqDec; [eapply Henkin_constants_stage_hasEqDec | ].
+          exact IHn. 
+        }
+        { unfold augmented_language. simpl. exact relation_symbols_hasEqDec. }
+Defined.
+
+#[global, refine]
+Instance abstract_Henkin_contants_instance : abstract_Henkin_contants (Henkin_constants L) L :=
+  { hc_decode := hc_decode_impl L
+  ; hc_stage := @projT1 nat (fun k => ivar * frm (L_stage L k))%type
+  ; hc_decode_isSurjective := _
+  ; hc_new := _
+  ; hc_stage_well_founded := _
+  }.
+Proof.
+  - intros x theta. pose (k := max_hc_stage_frm L theta).
+    pose proof (L_infty_to_L_k_frm_bound L _ theta k (le_n _)) as [theta_k Htheta].
+    exists (@existT _ _ k (x, theta_k)). simpl. now rewrite Htheta.
+  - intros hcs x theta.
+    pose (k := Nat.max (max_hc_stage_frm L theta) (max_hc_stage_list L hcs)).
+    pose proof (L_infty_to_L_k_frm_bound L _ theta k) as [theta_k Htheta].
+    unfold k. lia.
+    + exists (@existT _ _ k (x, theta_k)); splits.
+      * simpl. now rewrite Htheta.
+      * rewrite <- not_true_iff_false. intros Hocc.
+        pose proof (occurs_stage_le_frm L _ theta (@existT _ _ k (x, theta_k)) Hocc) as H1.
+        simpl in H1. unfold k in H1. lia.
+      * intros Hin.
+        pose proof (in_list_stage_le L _ (@existT _ _ k (x, theta_k)) Hin) as H1.
+        simpl in H1. unfold k in H1. lia.
+  - intros hc_k x_k theta_k H_hc_k hc_k' Hocc.
+    destruct hc_k as [k [x theta]]. simpl in H_hc_k. inv H_hc_k.
+    pose proof (occurs_stage_le_frm L _ (L_k_to_L_infty L k theta) hc_k' Hocc) as H1.
+    pose proof (max_stage_L_k_to_L_infty_frm_le L _ theta) as H2.
+    simpl in *. lia.
+Qed.
+
+End HELFER1_i_b_1.
+
+End HELFER1_i_a.
+
+Section HELFER1_i_b.
+
+#[local] Notation "x ≠ y" := (~ eq x y) : type_scope.
+
+Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
+
+#[local] Notation L' := (augmented_language L Henkin_constants).
+
+Lemma HC_occurs_in_embed_trm_false (t : trm L)
+  : forall hc : Henkin_constants, HC_occurs_in_trm hc (embed_trm t) = false
+with HC_occurs_in_embed_trms_false n (ts : trms L n)
+  : forall hc : Henkin_constants, HC_occurs_in_trms hc (embed_trms ts) = false.
+Proof.
+  - destruct t as [x | f ts | c]; simpl; intros hc; s!.
+    + reflexivity.
+    + eapply HC_occurs_in_embed_trms_false.
+    + reflexivity.
+  - destruct ts as [ | n t ts]; simpl; intros hc; s!.
+    + reflexivity.
+    + split.
+      * eapply HC_occurs_in_embed_trm_false.
+      * eapply HC_occurs_in_embed_trms_false.
+Qed.
+
+#[local] Hint Rewrite HC_occurs_in_embed_trm_false HC_occurs_in_embed_trms_false : simplication_hints.
+
+Lemma HC_occurs_in_embed_frm_false (A : frm L)
+  : forall hc : Henkin_constants, HC_occurs_in_frm hc (embed_frm A) = false.
+Proof.
+  induction A; simpl; intros hc; ss!.
+Qed.
+
+#[local] Hint Rewrite HC_occurs_in_embed_frm_false : simplication_hints.
 
 #[local] Notation hatom := (ivar + Henkin_constants)%type.
 
 #[local] Notation hsubst := (hatom -> trm L').
-
-Section HSUBST.
 
 #[local] Open Scope list_scope.
 
@@ -249,7 +543,7 @@ Proof.
     + simpl. rewrite is_free_in_trm_unfold. eapply in_accum_hatom_in_trms_iff_is_free_in_trms.
     + destruct c as [cc | hc]; ss!.
   - clear in_accum_hatom_in_trms_iff_is_free_in_trms; revert x. trms_ind ts; intros z.
-    + s!. firstorder congruence.
+    + s!. clear. firstorder congruence.
     + simpl. rewrite is_free_in_trms_unfold. rewrite orb_true_iff. rewrite <- IH with (x := z). rewrite L.in_app_iff. rewrite in_accum_hatom_in_trm_iff_is_free_in_trm. reflexivity.
 Qed.
 
@@ -261,7 +555,7 @@ Proof.
   - clear in_accum_hatom_in_trm_iff_HC_occurs_in_trm; revert hc. trm_ind t; intros z.
     + s!. firstorder congruence.
     + s!. eapply in_accum_hatom_in_trms_iff_HC_occurs_in_trms.
-    + destruct c as [hc | cc]; ss!.
+    + clear. destruct c as [hc | cc]; ss!.
   - clear in_accum_hatom_in_trms_iff_HC_occurs_in_trms; revert hc. trms_ind ts; intros z.
     + s!. firstorder congruence.
     + s!. rewrite IH. rewrite in_accum_hatom_in_trm_iff_HC_occurs_in_trm. reflexivity.
@@ -273,7 +567,7 @@ Fixpoint accum_hatom_in_frm (p : frm L') : list hatom :=
   | Eqn_frm t1 t2 => accum_hatom_in_trm t1 ++ accum_hatom_in_trm t2
   | Neg_frm p1 => accum_hatom_in_frm p1
   | Imp_frm p1 p2 => accum_hatom_in_frm p1 ++ accum_hatom_in_frm p2
-  | All_frm y p1 => L.remove (eq_dec@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec)) (inl y) (accum_hatom_in_frm p1)
+  | All_frm y p1 => L.remove (eq_dec@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec)) (inl y) (accum_hatom_in_frm p1)
   end.
 
 Lemma in_accum_hatom_in_frm_iff_is_free_in_frm x (p : frm L')
@@ -314,7 +608,7 @@ Proof.
 Qed.
 
 Definition cons_hsubst (x : hatom) (t : trm L') (sigma : hsubst) : hsubst :=
-  fun z : hatom => if Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec) z x then t else sigma z.
+  fun z : hatom => if Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec) z x then t else sigma z.
 
 Lemma to_hsubst_cons_subst (x : ivar) (t : trm L') (s : subst L')
   : forall z, to_hsubst (cons_subst x t s) z = cons_hsubst (inl x) t (to_hsubst s) z.
@@ -406,12 +700,12 @@ Definition hsubst_compose (sigma : hsubst) (sigma' : hsubst) : hsubst :=
 
 Fixpoint occurs_free_in_trm (z : hatom) (t : trm L') : bool :=
   match t with
-  | Var_trm x => Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec) z (inl x)
+  | Var_trm x => Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec) z (inl x)
   | Fun_trm f ts => occurs_free_in_trms z ts
   | Con_trm c =>
     match c with
     | inl cc => false
-    | inr hc => Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec) z (inr hc)
+    | inr hc => Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec) z (inr hc)
     end
   end
 with occurs_free_in_trms {n : nat} (z : hatom) (ts : trms L' n) : bool :=
@@ -426,18 +720,18 @@ Fixpoint occurs_free_in_frm (z : hatom) (p : frm L') : bool :=
   | Eqn_frm t1 t2 => occurs_free_in_trm z t1 || occurs_free_in_trm z t2
   | Neg_frm p1 => occurs_free_in_frm z p1
   | Imp_frm p1 p2 => occurs_free_in_frm z p1 || occurs_free_in_frm z p2
-  | All_frm y p1 => occurs_free_in_frm z p1 && negb (Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec) z (inl y))
+  | All_frm y p1 => occurs_free_in_frm z p1 && negb (Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec) z (inl y))
   end.
 
 Lemma occurs_free_in_trm_unfold (z : hatom) (t : trm L') :
   occurs_free_in_trm z t =
   match t with
-  | Var_trm x => Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec) z (inl x)
+  | Var_trm x => Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec) z (inl x)
   | Fun_trm f ts => occurs_free_in_trms z ts
   | Con_trm c =>
     match c with
     | inl cc => false
-    | inr hc => Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec) z (inr hc)
+    | inr hc => Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec) z (inr hc)
     end
   end.
 Proof.
@@ -461,7 +755,7 @@ Lemma occurs_free_in_frm_unfold (z : hatom) (p : frm L') :
   | Eqn_frm t1 t2 => occurs_free_in_trm z t1 || occurs_free_in_trm z t2
   | Neg_frm p1 => occurs_free_in_frm z p1
   | Imp_frm p1 p2 => occurs_free_in_frm z p1 || occurs_free_in_frm z p2
-  | All_frm y p1 => occurs_free_in_frm z p1 && negb (Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec) z (inl y))
+  | All_frm y p1 => occurs_free_in_frm z p1 && negb (Prelude.eqb@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec) z (inl y))
   end.
 Proof.
   destruct p; reflexivity.
@@ -477,7 +771,7 @@ Proof.
     + eapply occurs_free_in_trms_iff.
     + destruct c as [cc | hc]; simpl.
       * firstorder congruence.
-      * rewrite eqb_eq. firstorder.
+      * rewrite eqb_eq. clear. firstorder.
   - clear occurs_free_in_trms_iff. revert z; trms_ind ts; simpl; i.
     + done!.
     + done!.
@@ -643,7 +937,7 @@ Proof.
 Qed.
 
 Lemma distr_hcompose_one (sigma1 : hsubst) (sigma2 : hsubst) (x : hatom) (y : ivar) (z : hatom) (t : trm L') (p : frm L')
-  (FRESH : forallb (negb ∘ occurs_free_in_trm (inl y) ∘ sigma1)%prg (remove (eq_dec@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec)) x (accum_hatom_in_frm p)) = true)
+  (FRESH : forallb (negb ∘ occurs_free_in_trm (inl y) ∘ sigma1)%prg (remove (eq_dec@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec)) x (accum_hatom_in_frm p)) = true)
   (FREE : occurs_free_in_frm z p = true)
   : cons_hsubst x t (hsubst_compose sigma1 sigma2) z = hsubst_compose (cons_hsubst x (Var_trm y) sigma1) (cons_hsubst (inl y) t sigma2) z.
 Proof.
@@ -674,7 +968,7 @@ with occurs_free_in_trms_wrt_iff n (ts : trms L' n) (z : hatom) (sigma : hsubst)
 Proof.
   - clear occurs_free_in_trm_wrt_iff. destruct t as [x | f ts | [cc | hc]]; simpl; i.
     + clear occurs_free_in_trms_wrt_iff. split.
-      * intros [y [FREE FREE']]. unfold Prelude.eqb in FREE. ss!.
+      * intros [y [FREE FREE']]. s!. destruct FREE; [subst y | contradiction]. exact FREE'.
       * unfold occurs_free_in_trm_wrt. intros FREE. exists (inl x). simpl. rewrite eqb_eq. done.
     + pose proof (occurs_free_in_trms_wrt_iff (L.(function_arity_table) f) ts z sigma) as H. clear occurs_free_in_trms_wrt_iff. split.
       * intros [y [FREE FREE']]. done.
@@ -806,7 +1100,7 @@ Proof.
       - pose proof (claim1 := hchi_frm_is_fresh_in_hsubst). unfold frm_is_fresh_in_hsubst in claim1.
         eapply forallb_forall. intros u u_in. rewrite L.in_remove_iff in u_in. destruct u_in as [u_in NE].
         unfold "∘"%prg. rewrite negb_true_iff.
-        enough (WTS : occurs_free_in_trm (inl x) (sigma u) <> true) by now destruct (occurs_free_in_trm (inl x) (sigma u)).
+        enough (WTS : occurs_free_in_trm (inl x) (sigma u) ≠ true) by now destruct (occurs_free_in_trm (inl x) (sigma u)).
         intros CONTRA. rewrite occurs_free_in_trm_iff in CONTRA. rewrite in_accum_hatom_in_trm_iff_is_free_in_trm in CONTRA.
         specialize claim1 with (p := All_frm y p1) (sigma := sigma). unfold "∘"%prg in claim1. rewrite forallb_forall in claim1.
         assert (claim2: In u (accum_hatom_in_frm (All_frm y p1))) by ss!.
@@ -964,7 +1258,7 @@ Proof.
 Qed.
 
 Lemma quick_draw_constant (c : Henkin_constants) (x : ivar) (t : trm L') (y : ivar) (p : frm L')
-  (NE : y <> x)
+  (NE : y ≠ x)
   : replace_constant_in_frm c (Var_trm y) (subst_frm (one_subst x t) p) = subst_frm (one_subst x (replace_constant_in_trm c (Var_trm y) t)) (replace_constant_in_frm c (Var_trm y) p).
 Proof.
   rewrite replace_constant_in_frm_compat_subst.
@@ -976,428 +1270,210 @@ Proof.
     destruct (eq_dec z x); try done.
 Qed.
 
-End HSUBST.
-
-Section TWILIGHT.
-
-Definition twilight (sigma : hsubst) : subst L' :=
-  fun z : ivar => sigma (enum (isEnumerable := @sum_isEnumerable ivar Henkin_constants nat_isEnumerable nat_isEnumerable) z).
-
-Fixpoint twilight_trm (t : trm L') : trm L' :=
-  match t with
-  | Var_trm x => Var_trm (x * 2)
-  | Fun_trm f ts => Fun_trm f (twilight_trms ts)
-  | Con_trm c =>
-    match c with
-    | inl cc => Con_trm c
-    | inr hc => Var_trm (hc * 2 + 1)
-    end
-  end
-with twilight_trms {n : nat} (ts : trms L' n) : trms L' n :=
-  match ts with
-  | O_trms => O_trms
-  | S_trms n t ts => S_trms n (twilight_trm t) (twilight_trms ts)
-  end.
-
-Lemma twilight_trm_unfold (t : trm L') :
-  twilight_trm t =
-  match t with
-  | Var_trm x => Var_trm (x * 2)
-  | Fun_trm f ts => Fun_trm f (twilight_trms ts)
-  | Con_trm c =>
-    match c with
-    | inl cc => Con_trm c
-    | inr hc => Var_trm (hc * 2 + 1)
-    end
-  end.
+Lemma embed_frm_Fun_eqAxm (f : L.(function_symbols))
+  : embed_frm (@Fun_eqAxm L f) = @Fun_eqAxm L' f.
 Proof.
-  destruct t; reflexivity.
-Defined.
-
-Lemma twilight_trms_unfold n (ts : trms L' n) :
-  twilight_trms ts =
-  match ts with
-  | O_trms => O_trms
-  | S_trms n t ts => S_trms n (twilight_trm t) (twilight_trms ts)
-  end.
-Proof.
-  destruct ts; reflexivity.
-Defined.
-
-#[local] Opaque Nat.mul Nat.div "mod".
-
-Lemma twilight_trm_fvs z (t : trm L')
-  : is_free_in_trm z t = is_free_in_trm (z * 2) (twilight_trm t)
-with twilight_trms_fvs n z (ts : trms L' n)
-  : is_free_in_trms z ts = is_free_in_trms (z * 2) (twilight_trms ts).
-Proof.
-  - trm_ind t; simpl.
-    + do 2 rewrite is_free_in_trm_unfold. obs_eqb x z; obs_eqb (x * 2) (z * 2); trivial; lia.
-    + do 2 rewrite is_free_in_trm_unfold. eapply twilight_trms_fvs.
-    + destruct c as [cc | hc]; do 2 rewrite is_free_in_trm_unfold; trivial.
-      obs_eqb (hc * 2 + 1) (z * 2); trivial. lia.
-  - trms_ind ts; simpl.
-    + do 2 rewrite is_free_in_trms_unfold. reflexivity.
-    + rewrite is_free_in_trms_unfold. rewrite twilight_trm_fvs. rewrite IH. reflexivity.
+  eapply embed_frm_Fun_eqAxm.
 Qed.
 
-Lemma twilight_trm_HC z (t : trm L')
-  : HC_occurs_in_trm z t = is_free_in_trm (z * 2 + 1) (twilight_trm t)
-with twilight_trms_HC n z (ts : trms L' n)
-  : HC_occurs_in_trms z ts = is_free_in_trms (z * 2 + 1) (twilight_trms ts).
+Lemma embed_frm_Rel_eqAxm (R : L.(relation_symbols))
+  : embed_frm (@Rel_eqAxm L R) = @Rel_eqAxm L' R.
 Proof.
-  - trm_ind t; simpl.
-    + rewrite is_free_in_trm_unfold. obs_eqb x z; obs_eqb (x * 2) (z * 2 + 1); trivial; lia.
-    + rewrite is_free_in_trm_unfold. eapply twilight_trms_HC.
-    + destruct c as [cc | hc]; rewrite is_free_in_trm_unfold; trivial. rewrite eqb_spec. obs_eqb z hc; obs_eqb (hc * 2 + 1) (z * 2 + 1); trivial; lia.
-  - trms_ind ts; simpl.
-    + rewrite is_free_in_trms_unfold. reflexivity.
-    + rewrite is_free_in_trms_unfold. rewrite twilight_trm_HC. rewrite IH. reflexivity.
+  eapply embed_frm_Rel_eqAxm.
 Qed.
 
-Lemma twilight_trm_lemma sigma (t : trm L')
-  : hsubst_trm sigma t = subst_trm (twilight sigma) (twilight_trm t)
-with twilight_trms_lemma n sigma (ts : trms L' n)
-  : hsubst_trms sigma ts = subst_trms (twilight sigma) (twilight_trms ts).
+Section HELFER1_i_b_ii.
+
+Import FolHilbert.
+
+End HELFER1_i_b_ii.
+
+End HELFER1_i_b.
+
+End HELFER1_i.
+
+Section MAPPING_EMBED.
+
+Import HELFER1_i.
+
+Context {L : language} {constant_symbols1 : Set} {constant_symbols2 : Set}.
+Variable constant_symbols_mapping : constant_symbols1 -> constant_symbols2.
+
+#[local] Notation L1 := (augmented_language L constant_symbols1).
+#[local] Notation L2 := (augmented_language L constant_symbols2).
+
+#[local] Notation h := constant_symbols_mapping.
+
+Definition subst_mapping (s : subst L1) : subst L2 :=
+  fun z => trm_mapping h (s z).
+
+Lemma trm_mapping_fvs_eq (t : trm L1)
+  : fvs_trm (trm_mapping h t) = fvs_trm t
+with trms_mapping_fvs_eq {n : nat} (ts : trms L1 n)
+  : fvs_trms (trms_mapping h ts) = fvs_trms ts.
 Proof.
-  - trm_ind t; simpl.
-    + rewrite subst_trm_unfold. unfold twilight. unfold enum. simpl.
-      exploit (@div_mod_uniqueness (x * 2) 2 x 0). rewrite Nat.mul_comm. lia. lia.
-      intros [-> ->]. simpl. reflexivity.
-    + rewrite subst_trm_unfold. f_equal. eapply twilight_trms_lemma.
-    + destruct c as [cc | hc].
-      * rewrite subst_trm_unfold. reflexivity.
-      * rewrite subst_trm_unfold. unfold twilight. unfold enum. simpl.
-        exploit (@div_mod_uniqueness (hc * 2 + 1) 2 hc 1). rewrite Nat.mul_comm. lia. lia.
-        intros [-> ->]. simpl. reflexivity.
-  - trms_ind ts; simpl.
-    + rewrite subst_trms_unfold. reflexivity.
-    + rewrite subst_trms_unfold. f_equal.
-      * eapply twilight_trm_lemma.
-      * eapply IH.
+  - trm_ind t; simpl; do 2 rewrite fvs_trm_unfold.
+    + reflexivity.
+    + exact (@trms_mapping_fvs_eq _ ts).
+    + destruct c as [c' | hc']; reflexivity.
+  - trms_ind ts; simpl; rewrite fvs_trms_unfold.
+    + reflexivity.
+    + now rewrite trm_mapping_fvs_eq, IH.
 Qed.
 
-Fixpoint twilight_frm (p : frm L') : frm L' :=
-  match p with
-  | Rel_frm R ts => Rel_frm R (twilight_trms ts)
-  | Eqn_frm t1 t2 => Eqn_frm (twilight_trm t1) (twilight_trm t2)
-  | Neg_frm p1 => Neg_frm (twilight_frm p1)
-  | Imp_frm p1 p2 => Imp_frm (twilight_frm p1) (twilight_frm p2)
-  | All_frm y p1 => All_frm (2 * y) (twilight_frm p1)
-  end.
-
-Lemma twilight_frm_fvs z (p : frm L')
-  : is_free_in_frm z p = is_free_in_frm (z * 2) (twilight_frm p).
+Lemma frm_mapping_fvs_eq (p : frm L1)
+  : fvs_frm (frm_mapping h p) = fvs_frm p.
 Proof.
   frm_ind p; simpl.
-  - eapply twilight_trms_fvs.
-  - f_equal; eapply twilight_trm_fvs.
-  - eapply IH1.
-  - f_equal; [eapply IH1 | eapply IH2].
-  - f_equal; [eapply IH1 | f_equal]. rewrite Nat.mul_comm. obs_eqb z y; obs_eqb (2 * z) (2 * y); trivial; lia.
+  - exact (trms_mapping_fvs_eq ts).
+  - now rewrite trm_mapping_fvs_eq, trm_mapping_fvs_eq.
+  - exact IH1.
+  - now rewrite IH1, IH2.
+  - now rewrite IH1.
 Qed.
 
-Lemma twilight_frm_HC z (p : frm L')
-  : HC_occurs_in_frm z p = is_free_in_frm (z * 2 + 1) (twilight_frm p).
-Proof.
-  frm_ind p; simpl.
-  - eapply twilight_trms_HC.
-  - f_equal; eapply twilight_trm_HC.
-  - eapply IH1.
-  - f_equal; [eapply IH1 | eapply IH2].
-  - rewrite IH1. clear IH1. replace (negb (z * 2 + 1 =? 2 * y)) with true.
-    + destruct (is_free_in_frm (z * 2 + 1) (twilight_frm p1)) as [ | ]; trivial.
-    + symmetry. s!. lia.
-Qed.
-
-Lemma twilight_chi_frm sigma (p : frm L')
-  : hchi_frm sigma p = chi_frm (twilight sigma) (twilight_frm p).
-Proof.
-  unfold hchi_frm, chi_frm, twilight. f_equal. f_equal. eapply maxs_ext. intros n. split.
-  - s!. intros [[x | hc] [EQ IN]].
-    + exists (x * 2). exploit (@div_mod_uniqueness (x * 2) 2 x 0). rewrite Nat.mul_comm. lia. lia.
-      intros [-> ->]. simpl. unfold id. rewrite EQ. split; trivial. s!. rewrite <- twilight_frm_fvs. now rewrite in_accum_hatom_in_frm_iff_is_free_in_frm in IN.
-    + exists (hc * 2 + 1). exploit (@div_mod_uniqueness (hc * 2 + 1) 2 hc 1). rewrite Nat.mul_comm. lia. lia.
-      intros [-> ->]. simpl. unfold id. rewrite EQ. split; trivial. s!. rewrite <- twilight_frm_HC. now rewrite in_accum_hatom_in_frm_iff_HC_occurs_in_frm in IN.
-  - s!. intros [x [EQ IN]]. exists (if x mod 2 =? 0 then inl (id (x / 2)) else inr (id (x / 2))). split; trivial. obs_eqb (x mod 2) 0.
-    + rewrite in_accum_hatom_in_frm_iff_is_free_in_frm. s!. rewrite twilight_frm_fvs. unfold id. replace (x / 2 * 2) with x; trivial. exploit (@Nat.div_mod x 2); lia.
-    + rewrite in_accum_hatom_in_frm_iff_HC_occurs_in_frm. s!. rewrite twilight_frm_HC. unfold id. replace (x / 2 * 2 + 1) with x; trivial. exploit (@Nat.div_mod x 2). lia. enough (WTS : x mod 2 = 1) by lia. exploit (Nat.mod_bound_pos x 2); lia.
-Qed.
-
-Lemma twilight_frm_lemma sigma (p : frm L')
-  : hsubst_frm sigma p = subst_frm (twilight sigma) (twilight_frm p).
-Proof.
-  revert sigma. frm_ind p; simpl; i.
-  - f_equal; eapply twilight_trms_lemma.
-  - f_equal; eapply twilight_trm_lemma.
-  - f_equal; eapply IH1.
-  - f_equal; [eapply IH1 | eapply IH2].
-  - rewrite IH1. rewrite twilight_chi_frm. f_equal. eapply equiv_subst_in_frm_implies_subst_frm_same.
-    intros u u_free. unfold twilight, cons_hsubst, cons_subst. simpl. obs_eqb (u mod 2) 0.
-    + destruct (eqb _ _) as [ | ] eqn: H_OBS'; rewrite eqb_spec in H_OBS'.
-      * destruct (eq_dec _ _) as [EQ | NE]; trivial. contradiction NE. hinv H_OBS'. unfold id. transitivity (2 * (u / 2) + u mod 2). eapply Nat.div_mod. lia. lia.
-      * destruct (eq_dec _ _) as [EQ | NE]; trivial. contradiction H_OBS'. f_equal. unfold id. rewrite EQ. symmetry. eapply Nat.div_unique with (r := 0). lia. lia.
-    + destruct (eqb _ _) as [ | ] eqn: H_OBS'; rewrite eqb_spec in H_OBS'.
-      * destruct (eq_dec _ _) as [EQ | NE]; trivial. congruence.
-      * destruct (eq_dec _ _) as [EQ | NE]; trivial. contradiction H_OBS. rewrite EQ. symmetry. eapply Nat.mod_unique with (q := y). lia. lia.
-Qed.
-
-Lemma untwilight_trm (t : trm L')
-  (HENKIN_FREE : forall c, HC_occurs_in_trm c t = false)
-  : twilight_trm t = subst_trm (fun z : ivar => Var_trm (z * 2)) t
-with untwilight_trms n (ts : trms L' n)
-  (HENKIN_FREE : forall c, HC_occurs_in_trms c ts = false)
-  : twilight_trms ts = subst_trms (fun z : ivar => Var_trm (z * 2)) ts.
-Proof.
-  - trm_ind t; simpl; ii.
-    + rewrite subst_trm_unfold. reflexivity.
-    + rewrite subst_trm_unfold. f_equal. eapply untwilight_trms. exact HENKIN_FREE.
-    + destruct c as [cc | hc].
-      * rewrite subst_trm_unfold. reflexivity.
-      * pose proof (HENKIN_FREE hc) as claim. rewrite HC_occurs_in_trm_Con_trm in claim. rewrite eqb_spec in claim. contradiction.
-  - trms_ind ts; simpl; ii.
-    + rewrite subst_trms_unfold. reflexivity.
-    + rewrite subst_trms_unfold. f_equal.
-      * eapply untwilight_trm. intros c. specialize HENKIN_FREE with (c := c). s!. exact (proj1 HENKIN_FREE).
-      * eapply IH. intros c. specialize HENKIN_FREE with (c := c). s!. exact (proj2 HENKIN_FREE).
-Qed.
-
-Lemma untwilight_frm (p : frm L')
-  (HENKIN_FREE : forall c, HC_occurs_in_frm c p = false)
-  : twilight_frm p ≡ subst_frm (fun z : ivar => Var_trm (z * 2)) p.
-Proof.
-  frm_ind p.
-  - simpl. econs. eapply untwilight_trms. intros c. exact (HENKIN_FREE c).
-  - simpl. econs; eapply untwilight_trm; intros c; specialize HENKIN_FREE with (c := c); ss!.
-  - simpl. econs. eapply IH1; intros c; exact (HENKIN_FREE c).
-  - simpl. econs; [eapply IH1 | eapply IH2]; intros c; specialize HENKIN_FREE with (c := c); ss!.
-  - simpl. rewrite IH1. 2:{ intros c. exact (HENKIN_FREE c). } eapply alpha_All_frm with (z := 2 * y).
-    + rewrite Nat.mul_comm. eapply alpha_equiv_eq_intro. do 2 rewrite <- subst_compose_frm_spec. eapply equiv_subst_in_frm_implies_subst_frm_same.
-      intros u u_free. unfold subst_compose, one_subst, cons_subst, nil_subst. rewrite subst_trm_unfold with (t := Var_trm _). destruct (eq_dec u y) as [EQ1 | NE1].
-      * destruct (eq_dec _ _) as [EQ2 | NE2]; try lia. rewrite subst_trm_unfold. destruct (eq_dec _ _); done.
-      * destruct (eq_dec _ _) as [EQ2 | NE2]; try lia. rewrite subst_trm_unfold. destruct (eq_dec _ _) as [EQ3 | NE3]; try done.
-        exploit (@chi_frm_not_free L' (fun z : ivar => Var_trm (z * 2)) (All_frm y p1) u).
-        { s!. split; trivial. }
-        intros claim. rewrite <- EQ3 in claim. rewrite is_free_in_trm_unfold in claim. rewrite Nat.eqb_neq in claim. contradiction.
-    + ss!.
-    + set (s := fun z : ivar => Var_trm (z * 2)). set (chi := (chi_frm s (All_frm y p1))). s!. destruct (eq_dec (2 * y) chi) as [EQ1 | NE1]; [right | left]; trivial.
-      eapply frm_is_fresh_in_subst_iff. unfold frm_is_fresh_in_subst. s!. intros u u_free. destruct (eq_dec u y) as [EQ2 | NE2]; s!; lia.
-Qed.
-
-Lemma twilight_trm_spec (t : trm L')
-  : twilight_trm t = hsubst_trm (fun z : hatom => match z with inl x => Var_trm (x * 2) | inr hc => Var_trm (hc * 2 + 1) end) t
-with twilight_trms_spec n (ts : trms L' n)
-  : twilight_trms ts = hsubst_trms (fun z : hatom => match z with inl x => Var_trm (x * 2) | inr hc => Var_trm (hc * 2 + 1) end) ts.
+Lemma trm_mapping_fv (z : ivar) (t : trm L1)
+  : is_free_in_trm z (trm_mapping h t) = is_free_in_trm z t
+with trms_mapping_fv {n : nat} (z : ivar) (ts : trms L1 n)
+  : is_free_in_trms z (trms_mapping h ts) = is_free_in_trms z ts.
 Proof.
   - trm_ind t; simpl.
     + reflexivity.
-    + f_equal. eapply twilight_trms_spec.
-    + destruct c as [cc | hc]; reflexivity.
+    + do 2 rewrite is_free_in_trm_unfold. exact (@trms_mapping_fv _ z ts).
+    + destruct c as [ | ]; reflexivity.
   - trms_ind ts; simpl.
     + reflexivity.
-    + f_equal.
-      * eapply twilight_trm_spec.
-      * eapply IH.
+    + rewrite is_free_in_trms_unfold. now rewrite trm_mapping_fv, IH.
 Qed.
 
-#[local] Hint Rewrite twilight_trm_spec twilight_trms_spec : simplication_hints.
-#[local] Hint Constructors alpha_equiv : core.
-
-Lemma twilight_frm_spec (p : frm L')
-  : twilight_frm p ≡ hsubst_frm (fun z : hatom => match z with inl x => Var_trm (x * 2) | inr hc => Var_trm (hc * 2 + 1) end) p.
+Lemma frm_mapping_fv (z : ivar) (p : frm L1)
+  : is_free_in_frm z (frm_mapping h p) = is_free_in_frm z p.
 Proof.
-  set (s := fun z : hatom => match z with inl x => Var_trm (x * 2) | inr hc => Var_trm (hc * 2 + 1) end).
   frm_ind p; simpl.
-  - unfold s in *; ss!.
-  - unfold s in *; ss!.
-  - ss!.
-  - ss!.
-  - simpl. rewrite IH1. eapply alpha_All_frm with (z := 2 * y).
-    + rewrite Nat.mul_comm. rewrite subst_nil_frm with (s := one_subst (y * 2) (Var_trm (y * 2))).
-      2:{ ii. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec x (y * 2)); done!. }
-      erewrite subst_hsubst_compat_in_frm. 2: ii; reflexivity. symmetry. eapply alpha_equiv_eq_intro.
-      rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. intros u u_free.
-      unfold hsubst_compose, one_subst, cons_hsubst, cons_subst, nil_subst. destruct (eqb _ _) as [ | ] eqn: H_OBS1.
-      * rewrite eqb_eq in H_OBS1. rewrite hsubst_trm_unfold. subst u. simpl. destruct (eq_dec _ _) as [EQ1 | NE1]; done!.
-      * rewrite eqb_neq in H_OBS1. erewrite <- subst_hsubst_compat_in_trm. 2: ii; reflexivity.
-        eapply subst_nil_trm. intros x x_free. destruct (eq_dec _ _) as [EQ1 | NE1]; trivial.
-        subst x. exploit (hchi_frm_not_free s (All_frm y p1) u).
-        { simpl. rewrite andb_true_iff, negb_true_iff, eqb_neq. split; trivial. }
-        intros claim. rewrite claim in x_free. discriminate.
-    + ss!.
-    + s!. set (hchi := hchi_frm s (All_frm y p1)). destruct (eq_dec (2 * y) hchi) as [EQ1 | NE1]; [right | left]; trivial.
-      eapply frm_is_fresh_in_hsubst_iff. unfold frm_is_fresh_in_hsubst. s!. intros u u_free. rewrite negb_true_iff.
-      unfold cons_hsubst. destruct (eqb _ _) as [ | ] eqn: H_OBS.
-      * ss!.
-      * rewrite eqb_neq in H_OBS. unfold s. destruct u as [x | hc]; ss!.
+  - exact (trms_mapping_fv z ts).
+  - now rewrite trm_mapping_fv, trm_mapping_fv.
+  - exact IH1.
+  - now rewrite IH1, IH2.
+  - now rewrite IH1.
 Qed.
 
-Lemma twilight_frm_one_hsubst (x : ivar) (t : trm L') (p : frm L')
-  : twilight_frm (hsubst_frm (one_hsubst (inl x) t) p) ≡ subst_frm (one_subst (2 * x) (twilight_trm t)) (twilight_frm p).
+Lemma trm_mapping_last_ivar (t : trm L1)
+  : last_ivar_trm (trm_mapping h t) = last_ivar_trm t.
 Proof.
-  rewrite twilight_frm_spec. set (fun z : hatom => match z with inl x => Var_trm (x * 2) | inr hc => Var_trm (hc * 2 + 1) end) as eta.
-  rewrite twilight_frm_spec. fold eta. erewrite subst_hsubst_compat_in_frm. 2: ii; reflexivity.
-  rewrite twilight_trm_spec. fold eta. do 2 rewrite <- hsubst_compose_frm_spec. eapply alpha_equiv_eq_intro. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same.
-  ii. unfold hsubst_compose, to_hsubst, one_hsubst, cons_hsubst, nil_subst. destruct z as [z | z]; simpl.
-  - destruct (eqb _ _) as [ | ] eqn: H_OBS1; rewrite eqb_spec in H_OBS1.
-    + hinv H_OBS1. unfold one_subst, cons_subst, nil_subst. rewrite Nat.mul_comm. destruct (eq_dec _ _) as [EQ2 | NE2]; done.
-    + unfold one_subst, cons_subst, nil_subst. rewrite Nat.mul_comm. destruct (eq_dec _ _) as [EQ2 | NE2].
-      * assert (EQ : x = z) by lia. congruence.
-      * simpl. rewrite Nat.mul_comm. reflexivity.
-  - unfold one_subst, cons_subst, nil_subst. destruct (eq_dec _ _) as [EQ2 | NE2]; trivial. lia.
+  unfold last_ivar_trm.
+  now rewrite trm_mapping_fvs_eq.
 Qed.
 
-End TWILIGHT.
-
-Lemma embed_trm_HC_free (t : trm L)
-  : forall c : Henkin_constants, HC_occurs_in_trm c (embed_trm t) = false
-with embed_trms_HC_free n (ts : trms L n)
-  : forall c : Henkin_constants, HC_occurs_in_trms c (embed_trms ts) = false.
+Lemma frm_mapping_chi (s : subst L1) (p : frm L1)
+  : chi_frm (subst_mapping s) (frm_mapping h p) = chi_frm s p.
 Proof.
-  - trm_ind t; simpl; i.
+  unfold chi_frm, subst_mapping.
+  rewrite frm_mapping_fvs_eq.
+  f_equal. f_equal. eapply maxs_ext.
+  intro x. unfold compose. s!. split; i; des.
+  - exists x0. now rewrite trm_mapping_last_ivar in H.
+  - exists x0. now rewrite trm_mapping_last_ivar.
+Qed.
+
+Lemma trm_mapping_subst_trm (s : subst L1) (t : trm L1)
+  : trm_mapping h (subst_trm s t) = subst_trm (subst_mapping s) (trm_mapping h t)
+with trms_mapping_subst_trms {n : nat} (s : subst L1) (ts : trms L1 n)
+  : trms_mapping h (subst_trms s ts) = subst_trms (subst_mapping s) (trms_mapping h ts).
+Proof.
+  - trm_ind t; simpl.
     + reflexivity.
-    + s!. eapply embed_trms_HC_free.
+    + do 2 rewrite subst_trm_unfold. simpl. f_equal. eapply trms_mapping_subst_trms.
+    + do 2 rewrite subst_trm_unfold. destruct c as [c' | hc']; reflexivity.
+  - trms_ind ts; simpl.
     + reflexivity.
-  - trms_ind ts; simpl; i.
+    + rewrite subst_trms_unfold. simpl. rewrite subst_trms_unfold with (ts := S_trms _ _ _).
+      now rewrite trm_mapping_subst_trm, IH.
+Qed.
+
+Lemma frm_mapping_subst_frm (s : subst L1) (p : frm L1)
+  : frm_mapping h (subst_frm s p) = subst_frm (subst_mapping s) (frm_mapping h p).
+Proof.
+  revert s.
+  frm_ind p; intro s; simpl.
+  - now rewrite trms_mapping_subst_trms.
+  - now rewrite trm_mapping_subst_trm, trm_mapping_subst_trm.
+  - now rewrite IH1.
+  - now rewrite IH1, IH2.
+  - rewrite <- (frm_mapping_chi s (All_frm y p1)). f_equal.
+    rewrite IH1. eapply equiv_subst_in_frm_implies_subst_frm_same.
+    intros z z_free. unfold subst_mapping, cons_subst. simpl.
+    destruct (eq_dec z y); reflexivity.
+Qed.
+
+Lemma frm_mapping_not_free (x : ivar) (p : frm L1)
+  : is_not_free_in_frm x (frm_mapping h p) <-> is_not_free_in_frm x p.
+Proof.
+  unfold is_not_free_in_frm.
+  now rewrite frm_mapping_fv.
+Qed.
+
+Lemma trm_mapping_embed_trm (t : trm L)
+  : trm_mapping constant_symbols_mapping (embed_trm t) = embed_trm t
+with trms_mapping_embed_trms (n : nat) (ts : trms L n)
+  : trms_mapping constant_symbols_mapping (embed_trms ts) = embed_trms ts.
+Proof.
+  - trm_ind t; simpl.
     + reflexivity.
-    + s!. split.
-      * eapply embed_trm_HC_free.
-      * eapply IH.
+    + now rewrite trms_mapping_embed_trms.
+    + reflexivity.
+  - trms_ind ts; simpl.
+    + reflexivity.
+    + now rewrite trm_mapping_embed_trm, IH.
 Qed.
 
-#[local] Hint Rewrite embed_trm_HC_free embed_trms_HC_free : simplication_hints.
-
-Lemma embed_frm_HC_free (p : frm L)
-  : forall c : Henkin_constants, HC_occurs_in_frm c (embed_frm p) = false.
+Lemma frm_mapping_embed_frm (p : frm L)
+  : frm_mapping constant_symbols_mapping (embed_frm p) = embed_frm p.
 Proof.
-  frm_ind p; done!.
+  frm_ind p; simpl.
+  - now rewrite trms_mapping_embed_trms.
+  - now rewrite trm_mapping_embed_trm, trm_mapping_embed_trm.
+  - now rewrite IH1.
+  - now rewrite IH1, IH2.
+  - now rewrite IH1.
 Qed.
 
-#[local] Hint Rewrite embed_frm_HC_free : simplication_hints.
-
-Context {enum_frm_L' : isEnumerable (frm L')}.
-
-Fixpoint Henkin (n : nat) {struct n} : Vector.t (frm L') n -> Vector.t Henkin_constants n -> Prop :=
-  match n with
-  | O => fun thetas => fun cs => thetas = VNil /\ cs = VNil
-  | S n' => fun thetas => fun cs =>
-    let x : ivar := fst (cp n') in
-    let phi : frm L' := enum (snd (cp n')) in
-    let PROP (c : Henkin_constants) : Prop := HC_occurs_in_frm c phi = false /\ V.forallb (fun theta_k => negb (HC_occurs_in_frm c theta_k)) (V.tail thetas) = true in
-    V.head thetas = (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr (V.head cs)))) phi) (All_frm x phi)) /\ Henkin n' (V.tail thetas) (V.tail cs) /\ PROP (V.head cs) /\ ⟪ MIN : forall c, PROP c -> c >= V.head cs ⟫
-  end.
-
-#[local] Opaque enum.
-#[local] Opaque cp.
-
-Lemma Henkin_unique n thetas thetas' cs cs'
-  (HENKIN : Henkin n thetas cs)
-  (HENKIN' : Henkin n thetas' cs')
-  : thetas = thetas' /\ cs = cs'.
+Fixpoint proof_mapping (ps : list (frm L1)) (p : frm L1)
+  (PF : @proof L1 ps p)
+  : @proof L2 (map (frm_mapping constant_symbols_mapping) ps) (frm_mapping constant_symbols_mapping p).
 Proof.
-  revert thetas thetas' cs cs' HENKIN HENKIN'. induction n as [ | n IH].
-  - introVNil; introVNil; introVNil; introVNil; trivial.
-  - introVCons theta thetas; introVCons theta' thetas'; introVCons c cs; introVCons c' cs'; intros HENKIN HENKIN'. exploit (IH thetas thetas' cs cs').
-    + simpl Henkin in HENKIN. tauto.
-    + simpl Henkin in HENKIN'. tauto.
-    + intros [<- <-]. simpl Henkin in HENKIN, HENKIN'.
-      assert (claim : c = c').
-      { enough (WTS : c >= c' /\ c' >= c) by lia. split.
-        - des. eapply MIN. split; trivial.
-        - des. eapply MIN0. split; trivial.
-      }
-      split.
-      * f_equal. destruct HENKIN as [-> ?], HENKIN' as [-> ?]. congruence.
-      * congruence.
+  destruct PF.
+  - simpl. constructor.
+  - simpl. rewrite map_app. econstructor.
+    + exact (proof_mapping _ _ PF1).
+    + exact (proof_mapping _ _ PF2).
+  - simpl. econstructor.
+    + intros p Hp. rewrite in_map_iff in Hp.
+      destruct Hp as [q0 [<- Hq0]].
+      rewrite -> frm_mapping_not_free; eapply NOT_FREE; exact Hq0.
+    + exact (proof_mapping _ _ PF).
+  - simpl. constructor.
+  - simpl. constructor.
+  - simpl. constructor.
+  - simpl. rewrite frm_mapping_subst_frm.
+    replace (subst_frm (subst_mapping (one_subst x t)) (frm_mapping h p)) with (subst_frm (one_subst x (trm_mapping h t)) (frm_mapping h p)).
+    + constructor.
+    + eapply equiv_subst_in_frm_implies_subst_frm_same. intros z z_free.
+      unfold subst_mapping, one_subst, cons_subst, nil_subst.
+      destruct (eq_dec z x); reflexivity.
+  - simpl. constructor.
+    rewrite -> frm_mapping_not_free. exact NOT_FREE.
+  - simpl. constructor.
+  - simpl. constructor.
+  - simpl. constructor.
+  - simpl. constructor.
+  - simpl. rewrite <- embed_frm_Fun_eqAxm.
+    rewrite frm_mapping_embed_frm.
+    rewrite -> embed_frm_Fun_eqAxm.
+    econstructor.
+  - simpl. rewrite <- embed_frm_Rel_eqAxm.
+    rewrite frm_mapping_embed_frm.
+    rewrite -> embed_frm_Rel_eqAxm.
+    econstructor.
 Qed.
 
-Lemma Henkin_exists n
-  : { RET : Vector.t (frm L') n * Vector.t Henkin_constants n | Henkin n (fst RET) (snd RET) }.
-Proof.
-  induction n as [ | n [[thetas cs] IH]].
-  - exists (VNil, VNil). simpl; split; trivial.
-  - simpl in *. set (x := fst (cp n)). set (phi := enum (snd (cp n))).
-    exploit (@dec_finds_minimum_if_exists (fun c : Henkin_constants => andb (negb (HC_occurs_in_frm c phi)) (V.forallb (fun theta_k => negb (HC_occurs_in_frm c theta_k)) thetas) = true)).
-    { intros m. destruct (_ && _) as [ | ]; [left | right]; done!. }
-    { exists (1 + 36 * max (maxs (accum_HCs_frm phi)) (maxs (map (maxs ∘ accum_HCs_frm)%prg (V.to_list thetas)))). s!. split.
-      - eapply last_HC_gt_frm. lia.
-      - rewrite V.forallb_forall. intros i. s!. eapply last_HC_for_finite_formulae with (ps := V.to_list thetas).
-        + eapply V.to_list_In.
-        + unfold "∘"%prg. lia.
-    }
-    intros [c c_spec]. exists (VCons n (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr c))) phi) (All_frm x phi)) thetas, VCons n c cs); simpl. split; trivial. split; trivial.
-    s!. destruct c_spec as [[NOT_OCCUR NOT_OCCUR'] MIN]; unnw. split.
-    + split; trivial.
-    + intros c' [NOT_OCCUR1 NOT_OCCUR1']. eapply MIN; trivial. s!. split; trivial.
-Qed.
-
-#[local] Open Scope vec_scope.
-
-Lemma Henkin_seq (k : nat) (n : nat) theta_k theta_n c_k c_n
-  (LE : S k <= n)
-  (HENKIN_k : Henkin (S k) theta_k c_k)
-  (HENKIN_n : Henkin n theta_n c_n)
-  : nth_error (V.to_list theta_n) (n - S k) = Some (V.head theta_k) /\ nth_error (V.to_list c_n) (n - S k) = Some (V.head c_k).
-Proof.
-  remember (n - S k) as i eqn: H_i. assert (i_spec : S i + k = n) by lia. clear H_i.
-  revert theta_k theta_n c_k c_n i HENKIN_k HENKIN_n i_spec. induction LE as [ | n LE IH].
-  - introVCons theta' thetas'; introVCons theta thetas; introVCons c' cs'; introVCons c cs. i.
-    pose proof (Henkin_unique _ _ _ _ _ HENKIN_k HENKIN_n) as [theta_eq c_eq]. simpl.
-    assert (EQ : i = 0) by lia. subst i. split; simpl; congruence.
-  - introVCons theta' thetas'; introVCons theta thetas; introVCons c' cs'; introVCons c cs. i.
-    simpl. exploit (IH (theta' :: thetas') thetas (c' :: cs') cs (pred i)); trivial.
-    + simpl in HENKIN_n. des; trivial.
-    + assert (GT : i > 0) by lia. destruct i as [ | i']; lia.
-    + assert (GT : i > 0) by lia. destruct i as [ | i']; [lia | simpl; intros [EQ1 EQ2]]. split; trivial.
-Qed.
-
-Definition nth_Henkin_axiom (n : nat) : frm L' :=
-  V.head (fst (proj1_sig (Henkin_exists (S n)))).
-
-Definition nth_Henkin_constant (n : nat) : Henkin_constants :=
-  V.head (snd (proj1_sig (Henkin_exists (S n)))).
-
-Lemma Henkin_constant_does_not_occur_in_any_former_Henkin_axioms k n
-  (LT : k < n)
-  : HC_occurs_in_frm (nth_Henkin_constant n) (nth_Henkin_axiom k) = false.
-Proof.
-  unfold nth_Henkin_constant, nth_Henkin_axiom. destruct (Henkin_exists (S n)) as [[theta_n c_n] H_n]. destruct (Henkin_exists (S k)) as [[theta_k c_k] H_k].
-  simpl fst in *; simpl snd in *. pose proof H_k as [? [? [[? ?] ?]]]; unnw. rewrite <- negb_true_iff. revert theta_n c_n H_n. introVCons theta thetas; introVCons c cs.
-  intros [? [HENKIN_n [[? ?] ?]]]. simpl in *. rewrite V.forallb_forall in H6. pose proof (Henkin_seq k n theta_k thetas c_k cs LT H_k HENKIN_n) as [IN _].
-  assert (LT1 : n - S k < n) by lia. erewrite V.nth_error_to_list with (LT := LT1) in IN. apply f_equal with (f := B.fromMaybe (V.head theta_k)) in IN. simpl in IN. rewrite <- IN. eapply H6.
-Qed.
-
-Lemma Henkin_constant_does_not_occur_in_enum n
-  : HC_occurs_in_frm (nth_Henkin_constant n) (enum (snd (cp n))) = false.
-Proof.
-  unfold nth_Henkin_constant. destruct (Henkin_exists (S n)) as [[theta_n c_n] HENKIN_n]; simpl in *. des; trivial.
-Qed.
-
-Lemma Henkin_axiom_is_of_form n
-  (x := fst (cp n))
-  (phi := enum (snd (cp n)))
-  : nth_Henkin_axiom n = (Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr (nth_Henkin_constant n)))) phi) (All_frm x phi)).
-Proof.
-  unfold nth_Henkin_axiom, nth_Henkin_constant. destruct (Henkin_exists (S n)) as [[theta c] HENKIN]; simpl in *.
-  destruct HENKIN as [-> [HENKIN [[NOT_OCCUR NOT_OCCUR'] MIN]]]. reflexivity.
-Qed.
-
-End HENKIN.
-
-#[global] Opaque HC_occurs_in_trm.
-
-#[global] Hint Rewrite @HC_occurs_in_trm_Var_trm @HC_occurs_in_trm_Fun_trm @HC_occurs_in_trm_Con_trm : simplication_hints.
-
-#[global] Opaque HC_occurs_in_trms.
-
-#[global] Hint Rewrite @HC_occurs_in_trms_O_trms @HC_occurs_in_trms_S_trms : simplication_hints.
-
-#[global] Opaque accum_HCs_trm.
-
-#[global] Hint Rewrite @accum_HCs_trm_Var_trm @accum_HCs_trm_Fun_trm @accum_HCs_trm_Con_trm : simplication_hints.
-
-#[global] Opaque accum_HCs_trms.
-
-#[global] Hint Rewrite @accum_HCs_trms_O_trms @accum_HCs_trms_S_trms : simplication_hints.
-
-#[global] Hint Rewrite <- @HC_occurs_in_trm_iff_in_accumHCs_trm @HC_occurs_in_trms_iff_in_accumHCs_trms @HC_occurs_in_frm_iff_in_accumHCs_frm : simplication_hints.
+End MAPPING_EMBED.

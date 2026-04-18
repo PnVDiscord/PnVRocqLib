@@ -613,7 +613,7 @@ Proof.
     | vec_ext_heq_refl _ _ => @eq_refl (@sigT nat (Vector.t A)) (@existT nat (Vector.t A) n xs)
     end
   ) as EQ.
-  apply projT2_eq_fromEqDec in EQ. exact EQ.
+  unshelve eapply projT2_eq_fromEqDec in EQ; [exact nat_hasEqDec | exact EQ].
 Defined.
 
 Lemma from_list_to_list (n : nat) (xs : Vector.t A n)

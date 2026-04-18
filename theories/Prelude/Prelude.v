@@ -1357,63 +1357,68 @@ Infix "$" := B.dollar.
 Infix ">>=" := bind.
 Infix ">=>" := B.kcompose : program_scope.
 
-Class hasEqDec (A : Type) : Type :=
+#[universes(polymorphic=yes)]
+Class hasEqDec@{u} (A : Type@{u}) : Type@{u} :=
   eq_dec (x : A) (y : A) : {x = y} + {x <> y}.
 
-Definition eqb {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A) : bool :=
-  if eq_dec x y then true else false.
+#[universes(polymorphic=yes)]
+Definition eqb@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (x : A) (y : A) : bool :=
+  if eq_dec@{u} (hasEqDec := hasEqDec) x y then true else false.
 
-Lemma eqb_eq {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A)
-  : eqb x y = true <-> x = y.
+#[universes(polymorphic=yes)]
+Lemma eqb_eq@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (x : A) (y : A)
+  : eqb@{u} x y = true <-> x = y.
 Proof.
   unfold eqb. destruct (eq_dec x y) as [H_yes | H_no]; done!.
 Qed.
 
-Lemma eqb_neq {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A)
-  : eqb x y = false <-> x <> y.
+#[universes(polymorphic=yes)]
+Lemma eqb_neq@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (x : A) (y : A)
+  : eqb@{u} x y = false <-> x <> y.
 Proof.
   unfold eqb. destruct (eq_dec x y) as [H_yes | H_no]; done!.
 Qed.
 
-Theorem eqb_spec {A : Type} {hasEqDec : hasEqDec A} (x : A) (y : A) (b : bool)
-  : eqb x y = b <-> (if b then x = y else x <> y).
+#[universes(polymorphic=yes)]
+Theorem eqb_spec@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (x : A) (y : A) (b : bool)
+  : eqb@{u} x y = b <-> (if b then x = y else x <> y).
 Proof.
   destruct b; [eapply eqb_eq | eapply eqb_neq].
 Qed.
 
 #[global]
-Instance nat_hasEqDec : hasEqDec nat :=
+Instance nat_hasEqDec : hasEqDec@{Set} nat :=
   Nat.eq_dec.
 
-#[global]
-Instance pair_hasEqdec {A : Type} {B : Type}
-  (A_hasEqDec : hasEqDec A)
-  (B_hasEqDec : hasEqDec B)
-  : hasEqDec (A * B).
+#[global, universes(polymorphic=yes)]
+Instance pair_hasEqdec@{u1 u2 u3} {A : Type@{u1}} {B : Type@{u2}}
+  (A_hasEqDec : hasEqDec@{u1} A)
+  (B_hasEqDec : hasEqDec@{u2} B)
+  : hasEqDec@{u3} (A * B).
 Proof.
   red in A_hasEqDec, B_hasEqDec. red. decide equality.
 Defined.
 
 #[global]
 Instance bool_hasEqDec
-  : hasEqDec bool.
+  : hasEqDec@{Set} bool.
 Proof.
   red. decide equality.
 Defined.
 
 #[global]
-Instance sum_hasEqDec {A : Type} {B : Type}
-  (A_hasEqDec : hasEqDec A)
-  (B_hasEqDec : hasEqDec B)
-  : hasEqDec (A + B).
+Instance sum_hasEqDec@{u1 u2 u3} {A : Type@{u1}} {B : Type@{u2}}
+  (A_hasEqDec : hasEqDec@{u1} A)
+  (B_hasEqDec : hasEqDec@{u2} B)
+  : hasEqDec@{u3} (A + B).
 Proof.
   red in A_hasEqDec, B_hasEqDec. red. decide equality.
 Defined.
 
 #[global]
-Instance option_hasEqDec {A : Type}
-  `(EQ_DEC : hasEqDec A)
-  : hasEqDec (option A).
+Instance option_hasEqDec@{u1} {A : Type@{u1}}
+  `(EQ_DEC : hasEqDec@{u1} A)
+  : hasEqDec@{u1} (option A).
 Proof.
   exact (fun x : option A => fun y : option A =>
     match x as a, y as b return {a = b} + {a <> b} with
@@ -1565,13 +1570,16 @@ Qed.
 
 #[global] Hint Rewrite null_spec in_map_iff in_app_iff : simplication_hints.
 
-Lemma in_remove_iff (A : Type) `(EQ_DEC : hasEqDec A) (x1 : A) (xs2 : list A)
+#[universes(polymorphic=yes)]
+Lemma in_remove_iff@{u} (A : Type@{u}) `(EQ_DEC : hasEqDec@{u} A) (x1 : A) (xs2 : list A)
   : forall z, In z (remove Prelude.eq_dec x1 xs2) <-> (In z xs2 /\ z <> x1).
 Proof.
   i; split.
   { intros H_IN. eapply in_remove. exact H_IN. }
   { intros [H_IN H_NE]. eapply in_in_remove; [exact H_NE | exact H_IN]. }
 Qed.
+
+#[global] Hint Rewrite in_remove_iff@{Set} : simplication_hints.
 
 #[global] Hint Rewrite in_remove_iff : simplication_hints.
 
@@ -1720,7 +1728,8 @@ Proof.
     + eapply IH.
 Qed.
 
-Fixpoint lookup {A : Type} {B : Type} {EQ_DEC : hasEqDec A} (x : A) (zs : list (A * B)) : option B :=
+#[universes(polymorphic=yes)]
+Fixpoint lookup@{u1 u2} {A : Type@{u1}} {B : Type@{u2}} {EQ_DEC : hasEqDec@{u1} A} (x : A) (zs : list (A * B)) : option B :=
   match zs with
   | [] => None
   | (x', y) :: zs' => if eq_dec x x' then Some y else lookup x zs'
