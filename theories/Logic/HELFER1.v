@@ -469,7 +469,7 @@ End HELFER1_i_a.
 
 Section HELFER1_i_b.
 
-#[local] Notation "x ≠ y" := (~ eq x y) : type_scope.
+#[local] Notation "x ≠ y" := (~ eq x y).
 
 Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
 
@@ -1768,7 +1768,7 @@ Proof.
     + destruct z2 as [x | c2]; simpl in ZSIM; try contradiction.
       subst x.
       destruct (eq_dec (inl y) (inl y)); [reflexivity | congruence].
-    + assert (NE2 : z2 ≠ inl y).
+    + assert (NE2 : ~ z2 = inl y).
       { intro EZ.
         destruct z1 as [x1 | c1], z2 as [x2 | c2];
           simpl in ZSIM; try contradiction; congruence. }
