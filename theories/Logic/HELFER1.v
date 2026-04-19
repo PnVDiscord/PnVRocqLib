@@ -1768,7 +1768,7 @@ Proof.
     + destruct z2 as [x | c2]; simpl in ZSIM; try contradiction.
       subst x.
       destruct (eq_dec (inl y) (inl y)); [reflexivity | congruence].
-    + assert (NE2 : z2 <> inl y).
+    + assert (NE2 : z2 ≠ inl y).
       { intro EZ.
         destruct z1 as [x1 | c1], z2 as [x2 | c2];
           simpl in ZSIM; try contradiction; congruence. }
@@ -2404,7 +2404,7 @@ Proof.
     assert (chi_fresh : is_free_in_frm (hchi_frm s (All_frm y p1)) (All_frm y p1) = false).
     { pose proof (hchi_frm_is_fresh_in_hsubst (All_frm y p1) s) as claim.
       unfold frm_is_fresh_in_hsubst in claim. rewrite forallb_forall in claim.
-      unfold "∘"%prg in claim. enough (ENOUGH : is_free_in_frm (hchi_frm s (All_frm y p1)) (All_frm y p1) <> true) by now destruct (is_free_in_frm (hchi_frm s (All_frm y p1)) (All_frm y p1)).
+      unfold "∘"%prg in claim. enough (ENOUGH : is_free_in_frm (hchi_frm s (All_frm y p1)) (All_frm y p1) ≠ true) by now destruct (is_free_in_frm (hchi_frm s (All_frm y p1)) (All_frm y p1)).
       intros CONTRA. rewrite <- in_accum_hatom_in_frm_iff_is_free_in_frm in CONTRA. specialize (claim (inl (hchi_frm s (All_frm y p1))) CONTRA).
       rewrite negb_true_iff in claim. unfold s in claim. unfold one_hsubst, cons_hsubst, nil_hsubst in claim. simpl in claim.
       rewrite is_free_in_trm_unfold in claim. rewrite Nat.eqb_neq in claim. contradiction.
@@ -2457,7 +2457,7 @@ Proof.
   destruct (hc_decode hc') as [x phi] eqn:Hdec.
   rewrite <- not_true_iff_false.
   intro Hocc.
-  assert (Hneq : hc <> hc').
+  assert (Hneq : hc ≠ hc').
   { intro Heq. subst hc'. lia. }
   pose proof (occurs_in_other_HenkinAxiom_inv hc hc' x phi Hdec Hneq Hocc) as Hphi.
   pose proof (hc_stage_well_founded hc' x phi Hdec hc Hphi) as Hlt'.
