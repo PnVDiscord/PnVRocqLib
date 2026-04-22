@@ -110,13 +110,13 @@ Proof.
 Qed.
 
 Lemma exists_MCS
-  : exists Delta : ensemble (frm L'), Hbase \subseteq Delta /\ Delta ⊢ Bot_frm /\ (forall Delta' : ensemble (frm L'), Delta \subseteq Delta' -> ~ Delta' ⊢ Bot_frm -> Delta' \subseteq Delta).
+  : exists Delta : ensemble (frm L'), Hbase \subseteq Delta /\ (~ Delta ⊢ Bot_frm) /\ (forall Delta' : ensemble (frm L'), Delta \subseteq Delta' -> (~ Delta' ⊢ Bot_frm) -> Delta' \subseteq Delta).
 Proof.
   pose proof (Zorn's_lemma ConsistentExtension ConsistentExtension_isProset (inhabits ConsistentExtension_base)) as ZORN.
   exploit ZORN; unnw.
   { intros C NONEMPTY CHAIN. eapply chain_upperbound; eauto. }
   intros [d_m MAX]. destruct d_m as [Delta [HBd HCd]]. exists Delta.
-  split; [| split]; trivial.
+  split; [| split]; eauto.
   intros Delta' SUB CONS'.
   specialize (MAX (@exist _ _ Delta' (conj (transitivity HBd SUB) CONS')) SUB).
   simpl in MAX. exact MAX.
