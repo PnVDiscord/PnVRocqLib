@@ -361,7 +361,7 @@ Context {L : language} {function_symbols_hasEqDec : hasEqDec L.(function_symbols
 
 #[local] Existing Instance abstract_Henkin_constants_instance.
 
-Theorem HilbertCalculus_hasEqDec_complete (X : ensemble (frm L)) (b : frm L)
+Theorem HilbertCalculus_complete (X : ensemble (frm L)) (b : frm L)
   (CONSEQUENCE : X ⊨ b)
   : X ⊢ b.
 Proof with eauto with *.
