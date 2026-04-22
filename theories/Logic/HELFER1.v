@@ -23,13 +23,13 @@ Infix "⊨" := entails.
 
 Notation "Gamma ⊭ C" := (~ entails Gamma C).
 
-Section HELFER1_i_a.
+Section HENKIN_INFRASTRUCTURE.
 
 #[local] Notation "x ≠ y" := (~ eq x y) : type_scope.
 
-Section HELFER1_i_a_1.
+Section ABSTRACT_HENKIN_CONSTANTS.
 
-Class abstract_Henkin_contants (Henkin_constants : Set) (L : language) {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants} : Set :=
+Class abstract_Henkin_constants (Henkin_constants : Set) (L : language) {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants} : Set :=
   { hc_decode (hc : Henkin_constants) : ivar * frm (augmented_language L Henkin_constants)
   ; hc_stage (hc : Henkin_constants) : nat
   ; hc_decode_isSurjective (x : ivar) (theta : frm (augmented_language L Henkin_constants))
@@ -45,7 +45,7 @@ Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : has
 
 #[local] Notation L' := (augmented_language L Henkin_constants).
 
-Context {AHC : abstract_Henkin_contants Henkin_constants L}.
+Context {AHC : abstract_Henkin_constants Henkin_constants L}.
 
 Lemma hc_fresh (x_n : ivar) (theta_n : frm L')
   (hc_n := proj1_sig (hc_decode_isSurjective x_n theta_n))
@@ -56,11 +56,11 @@ Proof.
   exact (hc_stage_well_founded hc_n x_n theta_n (proj2_sig (hc_decode_isSurjective x_n theta_n)) hc_n H_contra).
 Qed.
 
-End HELFER1_i_a_1.
+End ABSTRACT_HENKIN_CONSTANTS.
 
 #[local] Infix "=~=" := is_similar_to : type_scope.
 
-Section HELFER1_i_a_2.
+Section CONSTANT_MAPPING.
 
 Context {L : language} {constant_symbols1 : Set} {constant_symbols2 : Set}.
 
@@ -95,9 +95,9 @@ Fixpoint frm_mapping (p : frm L1) : frm L2 :=
   | All_frm y p1 => @All_frm L2 y (frm_mapping p1)
   end.
 
-End HELFER1_i_a_2.
+End CONSTANT_MAPPING.
 
-Section HELFER1_i_a_3.
+Section STAGED_HENKIN_CONSTANTS.
 
 Variable L : language.
 
@@ -380,9 +380,9 @@ Proof.
   now exists theta_k.
 Qed.
 
-End HELFER1_i_a_3.
+End STAGED_HENKIN_CONSTANTS.
 
-Section HELFER1_i_b_1.
+Section EQDEC_INSTANCES.
 
 #[local] Obligation Tactic := idtac.
 
@@ -433,7 +433,7 @@ Proof.
 Defined.
 
 #[global, refine]
-Instance abstract_Henkin_contants_instance : abstract_Henkin_contants (Henkin_constants L) L :=
+Instance abstract_Henkin_constants_instance : abstract_Henkin_constants (Henkin_constants L) L :=
   { hc_decode := hc_decode_impl L
   ; hc_stage := @projT1 nat (fun k => ivar * frm (L_stage L k))%type
   ; hc_decode_isSurjective := _
@@ -463,11 +463,11 @@ Proof.
     simpl in *. lia.
 Qed.
 
-End HELFER1_i_b_1.
+End EQDEC_INSTANCES.
 
-End HELFER1_i_a.
+End HENKIN_INFRASTRUCTURE.
 
-Section HELFER1_i_b.
+Section HSUBST.
 
 #[local] Notation "x ≠ y" := (~ eq x y).
 
@@ -818,7 +818,7 @@ Proof.
         { rewrite andb_true_iff. intros [H _]. rewrite negb_true_iff in H. done!. }
         { rewrite andb_true_iff. rewrite negb_true_iff. done!. }
   - unfold trms_is_fresh_in_hsubst. clear trms_is_fresh_in_hsubst_iff. revert z sigma. trms_ind ts; simpl; i.
-    + done.
+    + done!.
     + rewrite forallb_app. rewrite is_free_in_trms_unfold. rewrite orb_false_iff. rewrite andb_true_iff. rewrite IH. rewrite <- trm_is_fresh_in_hsubst_iff. reflexivity.
 Qed.
 
@@ -828,13 +828,13 @@ Proof.
   revert z sigma. unfold frm_is_fresh_in_hsubst. frm_ind p; simpl; ii.
   - eapply trms_is_fresh_in_hsubst_iff.
   - rewrite orb_false_iff. do 2 rewrite <- trm_is_fresh_in_hsubst_iff.
-    unfold "∘"%prg. rewrite forallb_app. rewrite andb_true_iff. done.
-  - done.
-  - rewrite forallb_app. rewrite orb_false_iff. rewrite andb_true_iff. rewrite IH1, IH2. done.
+    unfold "∘"%prg. rewrite forallb_app. rewrite andb_true_iff. done!.
+  - done!.
+  - rewrite forallb_app. rewrite orb_false_iff. rewrite andb_true_iff. rewrite IH1, IH2. done!.
   - split.
     + intros H_forallb. rewrite andb_false_iff.
       destruct (z =? hchi_frm sigma (All_frm y p1))%nat as [ | ] eqn : OBS.
-      { simpl. right. done. }
+      { simpl. right. done!. }
       { left. rewrite Nat.eqb_neq in OBS. eapply IH1. rewrite forallb_forall.
         intros x x_in. unfold "∘"%prg. rewrite negb_true_iff. unfold cons_hsubst.
         unfold Prelude.eqb. destruct (Prelude.eq_dec x (inl y)) as [H_eq | H_ne].
@@ -843,17 +843,17 @@ Proof.
             simpl in EQ. done!.
           + done!.
         - rewrite forallb_forall in H_forallb. unfold "∘"%prg in H_forallb.
-          rewrite <- negb_true_iff. eapply H_forallb. eapply L.in_remove_iff. done.
+          rewrite <- negb_true_iff. eapply H_forallb. eapply L.in_remove_iff. done!.
       }
     + rewrite andb_false_iff. rewrite negb_false_iff. rewrite Nat.eqb_eq. unfold "∘"%prg in *. intros [NOT_FREE | ->].
       { eapply IH1 in NOT_FREE. rewrite forallb_forall in NOT_FREE. rewrite forallb_forall.
         intros x x_in. rewrite negb_true_iff. rewrite L.in_remove_iff in x_in. destruct x_in as [x_in x_ne_y].
         apply NOT_FREE in x_in. rewrite negb_true_iff in x_in. unfold cons_hsubst in x_in.
-        unfold Prelude.eqb in *. destruct (Prelude.eq_dec x (inl y)) as [H_eq | H_ne]; try done.
+        unfold Prelude.eqb in *. destruct (Prelude.eq_dec x (inl y)) as [H_eq | H_ne]; try done!.
       }
       { rewrite forallb_forall. intros x x_in. apply L.in_remove_iff in x_in. destruct x_in as [x_in x_ne_y].
         rewrite negb_true_iff. eapply hchi_frm_not_free. simpl. rewrite andb_true_iff.
-        split; [rewrite <- occurs_free_in_frm_iff in x_in | rewrite negb_true_iff; unfold Prelude.eqb; destruct (eq_dec x (inl y))]; try done.
+        split; [rewrite <- occurs_free_in_frm_iff in x_in | rewrite negb_true_iff; unfold Prelude.eqb; destruct (eq_dec x (inl y))]; try done!.
       }
 Qed.
 
@@ -862,7 +862,7 @@ Theorem hchi_frm_is_fresh_in_hsubst (p : frm L') (sigma : hsubst)
 Proof.
   unfold frm_is_fresh_in_hsubst. rewrite forallb_forall. ii.
   unfold "∘"%prg. rewrite negb_true_iff. eapply hchi_frm_not_free.
-  rewrite occurs_free_in_frm_iff. done.
+  rewrite occurs_free_in_frm_iff. done!.
 Qed.
 
 Lemma hchi_frm_nil (p : frm L')
@@ -901,7 +901,7 @@ with equiv_hsubst_in_trms_implies_hsubst_trms_same n (sigma1 : hsubst) (sigma2 :
   : hsubst_trms sigma1 ts = hsubst_trms sigma2 ts.
 Proof.
   - clear equiv_hsubst_in_trm_implies_hsubst_trm_same. revert sigma1 sigma2 EQUIV. trm_ind t; simpl; ii.
-    + eapply EQUIV. rewrite eqb_eq. done.
+    + eapply EQUIV. rewrite eqb_eq. done!.
     + f_equal. eapply equiv_hsubst_in_trms_implies_hsubst_trms_same. exact EQUIV.
     + destruct c as [cc | hc].
       * reflexivity.
@@ -925,7 +925,7 @@ Proof.
       eapply EQUIV. rewrite orb_true_iff. done!.
     + eapply equiv_hsubst_in_trm_implies_hsubst_trm_same. ii.
       eapply EQUIV. rewrite orb_true_iff. done!.
-  - f_equal. eapply IH1. done.
+  - f_equal. eapply IH1. done!.
   - f_equal.
     + eapply IH1. ii. eapply EQUIV. rewrite orb_true_iff. done!.
     + eapply IH2. ii. eapply EQUIV. rewrite orb_true_iff. done!.
@@ -942,7 +942,7 @@ Lemma distr_hcompose_one (sigma1 : hsubst) (sigma2 : hsubst) (x : hatom) (y : iv
   : cons_hsubst x t (hsubst_compose sigma1 sigma2) z = hsubst_compose (cons_hsubst x (Var_trm y) sigma1) (cons_hsubst (inl y) t sigma2) z.
 Proof.
   unfold hsubst_compose, cons_hsubst. unfold Prelude.eqb. destruct (eq_dec z x) as [H_eq | H_ne].
-  - subst z. simpl. destruct (eq_dec (inl y) (inl y)); done.
+  - subst z. simpl. destruct (eq_dec (inl y) (inl y)); done!.
   - rewrite forallb_forall in FRESH. unfold "∘"%prg in FRESH.
     assert (NOT_FREE : occurs_free_in_trm (inl y) (sigma1 z) = false).
     { rewrite <- negb_true_iff. eapply FRESH. rewrite L.in_remove_iff. rewrite <- occurs_free_in_frm_iff. done!. }
@@ -994,45 +994,45 @@ Proof.
   revert z sigma. unfold occurs_free_in_frm_wrt. frm_ind p; simpl; i.
   - split.
     + intros [y [FREE FREE']]. eapply occurs_free_in_trms_wrt_iff. done.
-    + intros FREE. apply occurs_free_in_trms_wrt_iff in FREE. done.
+    + intros FREE. apply occurs_free_in_trms_wrt_iff in FREE. done!.
   - split.
     + intros [y [FREE FREE']]. rewrite orb_true_iff in FREE. rewrite orb_true_iff. destruct FREE as [FREE | FREE].
       * left. eapply occurs_free_in_trm_wrt_iff. done.
       * right. eapply occurs_free_in_trm_wrt_iff. done.
     + intros FREE. rewrite orb_true_iff in FREE. destruct FREE as [FREE | FREE].
       * apply occurs_free_in_trm_wrt_iff in FREE. destruct FREE as [y [FREE FREE']].
-        exists y. rewrite orb_true_iff. done.
+        exists y. rewrite orb_true_iff. done!.
       * apply occurs_free_in_trm_wrt_iff in FREE. destruct FREE as [y [FREE FREE']].
-        exists y. rewrite orb_true_iff. done.
-  - done.
+        exists y. rewrite orb_true_iff. done!.
+  - done!.
   - split.
     + intros [y [FREE FREE']]. rewrite orb_true_iff in FREE. rewrite orb_true_iff. destruct FREE as [FREE | FREE].
       * left. eapply IH1. done.
       * right. eapply IH2. done.
     + intros FREE. rewrite orb_true_iff in FREE. destruct FREE as [FREE | FREE].
       * apply IH1 in FREE. destruct FREE as [y [FREE FREE']].
-        exists y. rewrite orb_true_iff. done.
+        exists y. rewrite orb_true_iff. done!.
       * apply IH2 in FREE. destruct FREE as [y [FREE FREE']].
-        exists y. rewrite orb_true_iff. done.
+        exists y. rewrite orb_true_iff. done!.
   - split.
     + intros [w [FREE FREE']]. rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite eqb_neq in FREE.
       destruct FREE as [FREE w_ne_y]. rewrite andb_true_iff. rewrite negb_true_iff. split.
       * eapply IH1. exists w. split; trivial. unfold cons_hsubst.
-        unfold Prelude.eqb. destruct (eq_dec w (inl y)) as [EQ | NE]; done.
+        unfold Prelude.eqb. destruct (eq_dec w (inl y)) as [EQ | NE]; done!.
       * rewrite eqb_neq. intros CONTRA.
         assert (claim1 : frm_is_fresh_in_hsubst (hchi_frm sigma (All_frm y p1)) sigma (All_frm y p1) = true).
         { exact (hchi_frm_is_fresh_in_hsubst (All_frm y p1) sigma). }
         unfold frm_is_fresh_in_hsubst in claim1. rewrite forallb_forall in claim1.
         assert (claim2 : In w (accum_hatom_in_frm (All_frm y p1))).
-        { rewrite <- occurs_free_in_frm_iff. simpl. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. done. }
+        { rewrite <- occurs_free_in_frm_iff. simpl. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. done!. }
         apply claim1 in claim2. unfold "∘"%prg in claim2. rewrite negb_true_iff in claim2.
-        subst z. rewrite occurs_free_in_trm_iff in FREE'. rewrite in_accum_hatom_in_trm_iff_is_free_in_trm in FREE'. done.
+        subst z. rewrite occurs_free_in_trm_iff in FREE'. rewrite in_accum_hatom_in_trm_iff_is_free_in_trm in FREE'. done!.
     + rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq.
       set (w := hchi_frm sigma (All_frm y p1)). intros [FREE NE].
       apply IH1 in FREE. destruct FREE as [x [FREE FREE']].
       unfold cons_hsubst in FREE'. unfold eqb in FREE'. destruct (eq_dec x (inl y)) as [x_eq_y | x_ne_y].
-      * subst x. contradiction NE. apply occurs_free_in_trm_iff in FREE'. simpl in FREE'. done.
-      * exists x. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. done.
+      * subst x. contradiction NE. apply occurs_free_in_trm_iff in FREE'. simpl in FREE'. done!.
+      * exists x. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. done!.
 Qed.
 
 Lemma hchi_frm_ext (sigma1 : hsubst) (sigma2 : hsubst) (p1 : frm L') (p2 : frm L')
@@ -1048,19 +1048,19 @@ Proof.
   - assert (claim : occurs_free_in_frm_wrt (inl z) sigma1 p1).
     { exists y. split.
       - rewrite occurs_free_in_frm_iff; trivial.
-      - rewrite occurs_free_in_trm_iff, in_accum_hatom_in_trm_iff_is_free_in_trm; done.
+      - rewrite occurs_free_in_trm_iff, in_accum_hatom_in_trm_iff_is_free_in_trm; done!.
     }
     rewrite -> EQUIV in claim. destruct claim as (x&OCCURS&OCCURS'). exists x. split.
-    + rewrite occurs_free_in_frm_iff in OCCURS. done.
-    + rewrite fv_is_free_in_trm, <- in_accum_hatom_in_trm_iff_is_free_in_trm, <- occurs_free_in_trm_iff. done.
+    + rewrite occurs_free_in_frm_iff in OCCURS. done!.
+    + rewrite fv_is_free_in_trm, <- in_accum_hatom_in_trm_iff_is_free_in_trm, <- occurs_free_in_trm_iff. done!.
   - assert (claim : occurs_free_in_frm_wrt (inl z) sigma2 p2).
     { exists y. split.
       - rewrite occurs_free_in_frm_iff; trivial.
-      - rewrite occurs_free_in_trm_iff, in_accum_hatom_in_trm_iff_is_free_in_trm; done.
+      - rewrite occurs_free_in_trm_iff, in_accum_hatom_in_trm_iff_is_free_in_trm; done!.
     }
     rewrite <- EQUIV in claim. destruct claim as (x&OCCURS&OCCURS'). exists x. split.
-    + rewrite occurs_free_in_frm_iff in OCCURS. done.
-    + rewrite fv_is_free_in_trm, <- in_accum_hatom_in_trm_iff_is_free_in_trm, <- occurs_free_in_trm_iff. done.
+    + rewrite occurs_free_in_frm_iff in OCCURS. done!.
+    + rewrite fv_is_free_in_trm, <- in_accum_hatom_in_trm_iff_is_free_in_trm, <- occurs_free_in_trm_iff. done!.
 Qed.
 
 Theorem hsubst_compose_trm_spec (t : trm L') (sigma : hsubst) (sigma': hsubst)
@@ -1069,11 +1069,11 @@ with hsubst_compose_trms_spec n (ts : trms L' n) (sigma : hsubst) (sigma': hsubs
   : hsubst_trms (hsubst_compose sigma sigma') ts = hsubst_trms sigma' (hsubst_trms sigma ts).
 Proof.
   - revert sigma sigma'. trm_ind t; simpl; i.
-    + done.
+    + done!.
     + f_equal. eapply hsubst_compose_trms_spec.
-    + destruct c as [cc | hc]; done.
+    + destruct c as [cc | hc]; done!.
   - revert sigma sigma'. trms_ind ts; simpl; i.
-    + done.
+    + done!.
     + f_equal.
       * eapply hsubst_compose_trm_spec.
       * eapply IH.
@@ -1085,14 +1085,14 @@ Proof.
   revert sigma sigma'. frm_ind p; simpl; i.
   - f_equal; eapply hsubst_compose_trms_spec.
   - f_equal; eapply hsubst_compose_trm_spec.
-  - done.
-  - done.
+  - done!.
+  - done!.
   - enough (ENOUGH : hchi_frm sigma' (hsubst_frm sigma (All_frm y p1)) = hchi_frm (hsubst_compose sigma sigma') (All_frm y p1)).
     { revert ENOUGH.
       set (x := hchi_frm sigma (All_frm y p1)).
       set (z := hchi_frm (hsubst_compose sigma sigma') (All_frm y p1)).
       set (w := hchi_frm sigma' (All_frm x (hsubst_frm (cons_hsubst (inl y) (Var_trm x) sigma) p1))).
-      i. rewrite <- IH1. assert (EQ : z = w) by done. subst z. f_equal; trivial.
+      i. rewrite <- IH1. assert (EQ : z = w) by done!. subst z. f_equal; trivial.
       eapply equiv_hsubst_in_frm_implies_hsubst_frm_same.
       unfold equiv_hsubst_in_frm. ii.
       rewrite <- distr_hcompose_one with (p := p1).
@@ -1112,21 +1112,21 @@ Proof.
       rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite eqb_neq in FREE.
       destruct FREE as [FREE NE]. apply occurs_free_in_frm_wrt_iff in FREE. unfold free_in_frm_wrt in FREE.
       destruct FREE as [w [FREE1 FREE2]]. unfold cons_hsubst in FREE2. unfold eqb in FREE2. destruct (eq_dec w (inl y)) as [w_eq_y | w_ne_y].
-      * unfold occurs_free_in_trm in FREE2. rewrite eqb_eq in FREE2. subst. done.
+      * unfold occurs_free_in_trm in FREE2. rewrite eqb_eq in FREE2. subst. done!.
       * exists w. simpl. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. split; try tauto.
         eapply occurs_free_in_trm_wrt_iff. done.
     + intros [x [FREE FREE']]. simpl in FREE. rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite eqb_neq in FREE. destruct FREE as [FREE NE].
       apply occurs_free_in_trm_wrt_iff in FREE'. destruct FREE' as [u [FREE' FREE'']]. exists u. split.
-      * eapply occurs_free_in_frm_wrt_iff. exists x. simpl. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. done.
-      * done.
+      * eapply occurs_free_in_frm_wrt_iff. exists x. simpl. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. done!.
+      * done!.
 Qed.
 
 Lemma hcompose_one_hsubst_frm (x1 : hatom) (t1 : trm L') (sigma : hsubst) (p : frm L')
   : hsubst_frm sigma (hsubst_frm (one_hsubst x1 t1) p) = hsubst_frm (cons_hsubst x1 (hsubst_trm sigma t1) sigma) p.
 Proof.
   unfold one_hsubst. rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. ii.
-  unfold cons_hsubst, hsubst_compose, eqb. destruct (eq_dec z x1) as [z_eq_x1 | z_ne_x1]; try done.
-  unfold nil_hsubst. destruct z; try done.
+  unfold cons_hsubst, hsubst_compose, eqb. destruct (eq_dec z x1) as [z_eq_x1 | z_ne_x1]; try done!.
+  unfold nil_hsubst. destruct z; try done!.
 Qed.
 
 Lemma cons_hsubst_hsubst_frm (x1 : hatom) (t1 : trm L') (y : hatom) (p : frm L') (sigma : hsubst)
@@ -1136,11 +1136,11 @@ Proof.
   unfold one_hsubst. rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same.
   ii. unfold cons_hsubst, hsubst_compose, eqb. destruct (eq_dec z x1) as [z_eq_x1 | z_ne_x1].
   - subst z. unfold nil_hsubst. destruct y as [x | c]; simpl.
-    + destruct (eq_dec (inl x) (inl x)); try done.
-    + destruct (eq_dec (inr c) (inr c)); try done.
+    + destruct (eq_dec (inl x) (inl x)); try done!.
+    + destruct (eq_dec (inr c) (inr c)); try done!.
   - destruct z as [x | c]; simpl.
-    + destruct (eq_dec (inl x) y) as [z_eq_y | z_ne_y]; try done.
-    + destruct (eq_dec (inr c) y) as [z_eq_y | z_ne_y]; try done.
+    + destruct (eq_dec (inl x) y) as [z_eq_y | z_ne_y]; try done!.
+    + destruct (eq_dec (inr c) y) as [z_eq_y | z_ne_y]; try done!.
 Qed.
 
 Lemma nil_hsubst_trm (t : trm L')
@@ -1163,7 +1163,7 @@ Lemma trivial_hsubst (x : hatom) (p : frm L')
   : hsubst_frm (one_hsubst x (nil_hsubst x)) p = hsubst_frm nil_hsubst p.
 Proof.
   eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. ii. unfold one_hsubst, cons_hsubst.
-  unfold eqb. destruct (eq_dec z x); try done.
+  unfold eqb. destruct (eq_dec z x); try done!.
 Qed.
 
 Theorem subst_hsubst_compat_in_trm (s : subst L') (sigma : hsubst) (t : trm L')
@@ -1190,10 +1190,10 @@ Proof.
   assert (LEMMA : forall A : Set, forall xs : list A, forall f: A -> list ivar, maxs (L.map (maxs ∘ f)%prg xs) = maxs (L.flat_map f xs)).
   { intros A. induction xs; simpl; i; eauto. unfold "∘"%prg. rewrite maxs_app. f_equal. eauto. }
   frm_ind p; simpl; i.
-  - f_equal. eapply subst_hsubst_compat_in_trms. done.
-  - f_equal; eapply subst_hsubst_compat_in_trm; done.
-  - f_equal. done.
-  - f_equal; done.
+  - f_equal. eapply subst_hsubst_compat_in_trms. done!.
+  - f_equal; eapply subst_hsubst_compat_in_trm; done!.
+  - f_equal. done!.
+  - f_equal; done!.
   - assert (claim : chi_frm s (All_frm y p1) = hchi_frm sigma (All_frm y p1)).
     { unfold hchi_frm, chi_frm. f_equal. f_equal.
       change (maxs (L.map (maxs ∘ (fvs_trm ∘ s))%prg (fvs_frm (All_frm y p1))) = maxs (L.map (maxs ∘ (fvs_trm ∘ sigma))%prg (accum_hatom_in_frm (All_frm y p1)))).
@@ -1202,17 +1202,17 @@ Proof.
       - rewrite fv_is_free_in_frm in IN. simpl in IN. rewrite andb_true_iff, negb_true_iff, Nat.eqb_neq in IN. destruct IN as [IN NE].
         specialize SIM with (z := inl x). simpl in SIM.
         exists (inl x). rewrite <- SIM. split; trivial.
-        rewrite in_accum_hatom_in_frm_iff_is_free_in_frm. done.
+        rewrite in_accum_hatom_in_frm_iff_is_free_in_frm. done!.
       - destruct x as [x | c].
         + rewrite in_accum_hatom_in_frm_iff_is_free_in_frm in IN. specialize SIM with (z := inl x). simpl in SIM.
-          exists x. rewrite SIM. split; done.
+          exists x. rewrite SIM. split; done!.
         + specialize SIM with (z := inr c). simpl in SIM.
-          rewrite <- SIM in IN'. simpl in IN'. done. 
+          rewrite <- SIM in IN'. simpl in IN'. done!. 
     }
     f_equal; trivial. rewrite claim. eapply IH1. intros [x | c]; simpl.
     + unfold cons_hsubst, cons_subst. destruct (eqb (inl x) (inl y)) as [ | ] eqn : H_OBS.
-      { rewrite eqb_eq in H_OBS. inv H_OBS. destruct (eq_dec y y); try done. }
-      { rewrite eqb_neq in H_OBS. destruct (eq_dec x y); try done. eapply SIM with (z := inl x). }
+      { rewrite eqb_eq in H_OBS. inv H_OBS. destruct (eq_dec y y); try done!. }
+      { rewrite eqb_neq in H_OBS. destruct (eq_dec x y); try done!. eapply SIM with (z := inl x). }
     + unfold cons_hsubst, cons_subst. unfold eqb.
       destruct (eq_dec (inr c) (inl y)) as [EQ | NE].
       { inv EQ. }
@@ -1243,8 +1243,8 @@ Proof.
     + rewrite eqb_eq in H_OBS. inv H_OBS. unfold replace_constant_in_trm.
       rewrite <- nil_hsubst_trm. eapply equiv_hsubst_in_trm_implies_hsubst_trm_same.
       intros [x | c'] OCCURS.
-      * apply occurs_free_in_trm_iff, in_accum_hatom_in_trm_iff_is_free_in_trm, fv_is_free_in_trm in OCCURS. simpl. eapply FRESH. done.
-      * done.
+      * apply occurs_free_in_trm_iff, in_accum_hatom_in_trm_iff_is_free_in_trm, fv_is_free_in_trm in OCCURS. simpl. eapply FRESH. done!.
+      * done!.
     + simpl. reflexivity.
 Qed.
 
@@ -1264,10 +1264,10 @@ Proof.
   rewrite replace_constant_in_frm_compat_subst.
   - eapply equiv_subst_in_frm_implies_subst_frm_same. unfold "∘"%prg. ii.
     unfold replace_constant_in_trm, one_hsubst, one_subst, cons_hsubst, cons_subst.
-    destruct (eq_dec z x); try done.
+    destruct (eq_dec z x); try done!.
   - intros z FREE. apply fv_is_free_in_trm in FREE. simpl in FREE. destruct FREE as [-> | []].
     unfold one_subst, nil_subst, cons_subst. unfold one_hsubst, cons_hsubst, nil_hsubst.
-    destruct (eq_dec z x); try done.
+    destruct (eq_dec z x); try done!.
 Qed.
 
 Lemma embed_frm_Fun_eqAxm (f : L.(function_symbols))
@@ -1282,13 +1282,7 @@ Proof.
   eapply embed_frm_Rel_eqAxm.
 Qed.
 
-Section HELFER1_i_b_ii.
-
-Import FolHilbert.
-
-End HELFER1_i_b_ii.
-
-End HELFER1_i_b.
+End HSUBST.
 
 End HELFER1_i.
 
@@ -1443,10 +1437,10 @@ Fixpoint proof_mapping (ps : list (frm L1)) (p : frm L1)
 Proof.
   destruct PF.
   - simpl. constructor.
-  - simpl. rewrite map_app. econstructor.
+  - simpl. rewrite map_app. econs.
     + exact (proof_mapping _ _ PF1).
     + exact (proof_mapping _ _ PF2).
-  - simpl. econstructor.
+  - simpl. econs.
     + intros p Hp. rewrite in_map_iff in Hp.
       destruct Hp as [q0 [<- Hq0]].
       rewrite -> frm_mapping_not_free; eapply NOT_FREE; exact Hq0.
@@ -1469,11 +1463,11 @@ Proof.
   - simpl. rewrite <- embed_frm_Fun_eqAxm.
     rewrite frm_mapping_embed_frm.
     rewrite -> embed_frm_Fun_eqAxm.
-    econstructor.
+    econs.
   - simpl. rewrite <- embed_frm_Rel_eqAxm.
     rewrite frm_mapping_embed_frm.
     rewrite -> embed_frm_Rel_eqAxm.
-    econstructor.
+    econs.
 Qed.
 
 End MAPPING_EMBED.
@@ -1542,13 +1536,13 @@ with trms_mapping_similarity n (ts : trms L1 n)
   : ts =~= trms_mapping h ts.
 Proof.
 - destruct t as [x | f ts | [x | c]]; simpl.
-  + econstructor.
-  + econstructor. eapply trms_mapping_similarity.
-  + econstructor. econstructor.
-  + econstructor. econstructor.
+  + econs.
+  + econs. eapply trms_mapping_similarity.
+  + econs. econs.
+  + econs. econs.
 - destruct ts as [ | n t ts]; simpl.
   + constructor.
-  + econstructor.
+  + econs.
     * eapply trm_mapping_similarity.
     * eapply trms_mapping_similarity.
 Qed.
@@ -1556,12 +1550,12 @@ Qed.
 Lemma frm_mapping_similarity (p : frm L1)
   : p =~= frm_mapping h p.
 Proof.
-  induction p; simpl.
-  - econstructor. eapply trms_mapping_similarity.
-  - econstructor; eapply trm_mapping_similarity.
-  - econstructor. exact IHp.
-  - econstructor; assumption.
-  - econstructor. exact IHp.
+  frm_ind p; simpl.
+  - econs. eapply trms_mapping_similarity.
+  - econs; eapply trm_mapping_similarity.
+  - econs. exact IH1.
+  - econs; assumption.
+  - econs. exact IH1.
 Qed.
 
 Context {K1_hasEqDec : hasEqDec K1} {K2_hasEqDec : hasEqDec K2}.
@@ -1632,23 +1626,23 @@ Qed.
 
 Lemma HC_occurs_in_frm_map (c : K1) (p : frm L1) : HC_occurs_in_frm c p = true -> HC_occurs_in_frm (h c) (frm_mapping h p) = true.
 Proof.
-  induction p as [R ts | t1 t2 | p1 IHp1 | p1 IHp1 p2 IHp2 | y p1 IHp1]; simpl; intro H.
+  frm_ind p; simpl; intro H.
   - exact (HC_occurs_in_trms_map c _ ts H).
   - rewrite orb_true_iff in H |- *.
     destruct H as [H | H].
     + left. exact (HC_occurs_in_trm_map c t1 H).
     + right. exact (HC_occurs_in_trm_map c t2 H).
-  - exact (IHp1 H).
+  - exact (IH1 H).
   - rewrite orb_true_iff in H |- *.
     destruct H as [H | H].
-    + left. exact (IHp1 H).
-    + right. exact (IHp2 H).
-  - exact (IHp1 H).
+    + left. exact (IH1 H).
+    + right. exact (IH2 H).
+  - exact (IH1 H).
 Qed.
 
 Lemma HC_occurs_in_frm_map_inv (c2 : K2) (p : frm L1) : HC_occurs_in_frm c2 (frm_mapping h p) = true -> (exists c1, HC_occurs_in_frm c1 p = true /\ h c1 = c2).
 Proof.
-  induction p as [R ts | t1 t2 | p1 IHp1 | p1 IHp1 p2 IHp2 | y p1 IHp1]; simpl; intro H.
+  frm_ind p; simpl; intro H.
   - exact (HC_occurs_in_trms_map_inv c2 _ ts H).
   - rewrite orb_true_iff in H.
     destruct H as [H | H].
@@ -1660,18 +1654,18 @@ Proof.
       exists c1. split.
       { rewrite orb_true_iff. now right. }
       exact H2.
-  - exact (IHp1 H).
+  - exact (IH1 H).
   - rewrite orb_true_iff in H.
     destruct H as [H | H].
-    + destruct (IHp1 H) as [c1 [H1 H2]].
+    + destruct (IH1 H) as [c1 [H1 H2]].
       exists c1. split.
       { rewrite orb_true_iff. now left. }
       exact H2.
-    + destruct (IHp2 H) as [c1 [H1 H2]].
+    + destruct (IH2 H) as [c1 [H1 H2]].
       exists c1. split.
       { rewrite orb_true_iff. now right. }
       exact H2.
-  - exact (IHp1 H).
+  - exact (IH1 H).
 Qed.
 
 Lemma hchi_frm_graph_eq (sigma1 : hatom1 -> trm L1) (sigma2 : hatom2 -> trm L2) (p : frm L1)
@@ -1748,30 +1742,25 @@ Lemma hsubst_frm_graph_eq (sigma1 : hatom1 -> trm L1) (sigma2 : hatom2 -> trm L2
   : frm_mapping h (hsubst_frm sigma1 p) = hsubst_frm sigma2 (frm_mapping h p).
 Proof.
   revert sigma1 sigma2 SIG.
-  induction p as [R ts | t1 t2 | p1 IHp1 | p1 IHp1 p2 IHp2 | y p1 IHp1];
-    intros sigma1 sigma2 SIG; simpl.
+  frm_ind p; intros sigma1 sigma2 SIG; simpl.
   - f_equal. eapply hsubst_trms_graph_eq. exact SIG.
   - f_equal.
     + eapply hsubst_trm_graph_eq. exact SIG.
     + eapply hsubst_trm_graph_eq. exact SIG.
-  - f_equal. eapply IHp1. exact SIG.
+  - f_equal. eapply IH1. exact SIG.
   - f_equal.
-    + eapply IHp1. exact SIG.
-    + eapply IHp2. exact SIG.
+    + eapply IH1. exact SIG.
+    + eapply IH2. exact SIG.
   - pose proof (hchi_frm_graph_eq sigma1 sigma2 (All_frm y p1) SIG) as HH.
     simpl in HH. rewrite <- HH.
-    f_equal.
-    eapply IHp1.
-    intros z1 z2 ZSIM.
+    f_equal. eapply IH1. intros z1 z2 ZSIM.
     unfold cons_hsubst. unfold eqb.
     destruct (eq_dec z1 (inl y)) as [-> | NE1].
     + destruct z2 as [x | c2]; simpl in ZSIM; try contradiction.
       subst x.
       destruct (eq_dec (inl y) (inl y)); [reflexivity | congruence].
     + assert (NE2 : ~ z2 = inl y).
-      { intro EZ.
-        destruct z1 as [x1 | c1], z2 as [x2 | c2];
-          simpl in ZSIM; try contradiction; congruence. }
+      { intro EZ. destruct z1 as [x1 | c1], z2 as [x2 | c2]; simpl in ZSIM; try contradiction; congruence. }
       destruct (eq_dec z2 (inl y)) as [EZ1 | _]; [contradiction|].
       exact (SIG z1 z2 ZSIM).
 Qed.
@@ -1803,7 +1792,7 @@ Module HELFER1_ii.
 Import FolHilbert.
 Import HELFER1_i.
 
-Section HELFER1_ii_a.
+Section DEDUCTION.
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
@@ -1862,7 +1851,7 @@ Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_co
 #[local] Notation L' := (augmented_language L Henkin_constants).
 #[local] Infix "≡" := alpha_equiv.
 
-Section GOOD.
+Section BOUNDED_HC.
 
 Definition hcs_of_ps_p (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L') : list Henkin_constants :=
   L.nodup eq_dec (hc0 :: flat_map accum_HCs_frm ps ++ accum_HCs_frm p).
@@ -2050,20 +2039,6 @@ Proof.
     - left. now eapply exist_eq_bool.
     - right. congruence.
   }
-  (*
-    1. destruct PROVE as [ps [INCL [PF]]].
-    2. set (hcs := hcs_of_ps_p hc0 ps p).
-    3. use proof_mapping (f hc0 ps p) to move PF to (augmented_language L (Kf hc0 ps p)).
-    4. obtain g, g_back from finite_HC_type_nat_embed.
-    5. use proof_mapping g to move further to (augmented_language L nat).
-    6. apply proves_hsubstitutivity with sigma := one_hsubst (inr (g (f hc0 ps p hc0))) (Var_trm y0).
-    7. pull the proof back with proof_mapping g_back, then proof_mapping proj1_sig.
-    8. simplify with
-      - frm_mapping_g_back_g_fix
-      - frm_mapping_proj1_sig_f_fix
-      - frm_mapping_replace_constant_in_frm
-    9. extend from E.fromList ps to Gamma using INCL.
-  *)
   set (K := Kf hc0 ps p).
   set (f0 := fun k => (f hc0 ps p k)).
   pose proof (proof_mapping f0 ps p PF) as PF0.
@@ -2088,7 +2063,7 @@ Proof.
         do 2 red in Hr.
         rewrite in_map_iff in Hr.
         destruct Hr as [q [<- INq]].
-        assert (Hin : q \in E.fromList qs) by done.
+        assert (Hin : q \in E.fromList qs) by done!.
         pose proof (INCL2 _ Hin) as H.
         rewrite E.in_image_iff in H.
         destruct H as [r [-> INr]].
@@ -2098,127 +2073,90 @@ Proof.
         rewrite E.in_image_iff.
         rewrite L.in_map_iff in INr0.
         destruct INr0 as [r' [<- Hr']].
-        exists (replace_constant_in_frm
-                  (Henkin_constants_hasEqDec := Kf_hasEqDec)
-                  (f0 hc0) (Var_trm y0) (frm_mapping f0 r')).
+        exists (replace_constant_in_frm (Henkin_constants_hasEqDec := Kf_hasEqDec) (f0 hc0) (Var_trm y0) (frm_mapping f0 r')).
         split; cycle 1.
         * eapply E.in_image_iff with (X := E.fromList _). exists (frm_mapping f0 r'). split.
           { reflexivity. }
           { eapply in_map_iff. exists r'. split; eauto. }
-        * rewrite <- frm_mapping_g_back_g_fix with
-                        (g := g) (g_back := g_back)
-                        (q := replace_constant_in_frm
-                                (Henkin_constants_hasEqDec := Kf_hasEqDec)
-                                (f0 hc0) (Var_trm y0) (frm_mapping f0 r')); eauto.
+        * rewrite <- frm_mapping_g_back_g_fix with (g := g) (g_back := g_back) (q := replace_constant_in_frm (Henkin_constants_hasEqDec := Kf_hasEqDec) (f0 hc0) (Var_trm y0) (frm_mapping f0 r')); eauto.
           erewrite @frm_mapping_replace_constant_in_frm_inj
             with (h := g); eauto. instantiate (1 := id). reflexivity.
-      + econs. change
-  (proof (map (frm_mapping g_back) qs)
-     (frm_mapping g_back
-        (replace_constant_in_frm
-           (Henkin_constants_hasEqDec := nat_hasEqDec)
-           (g (f0 hc0)) (Var_trm y0)
-           (frm_mapping g (frm_mapping f0 p))))) in PF3.
-replace
-  (frm_mapping g_back
-     (replace_constant_in_frm
-        (Henkin_constants_hasEqDec := nat_hasEqDec)
-        (g (f0 hc0)) (Var_trm y0)
-        (frm_mapping g (frm_mapping f0 p))))
-with
-  (replace_constant_in_frm
-     (Henkin_constants_hasEqDec := Kf_hasEqDec)
-     (f0 hc0) (Var_trm y0) (frm_mapping f0 p))
-in PF3.
-2:{
-  pose proof (@frm_mapping_replace_constant_in_frm_inj L _ _ _ _ _ g_inj (f0 hc0) (Var_trm y0) (frm_mapping f0 p)) as HH.
-  simpl trm_mapping  in HH. set (X := 
-(replace_constant_in_frm (g (f0 hc0)) (Var_trm y0)
-(frm_mapping g (frm_mapping f0 p)))). change (frm_mapping g (replace_constant_in_frm (f0 hc0) (Var_trm y0) (frm_mapping f0 p)) = X) in HH.
-  rewrite <- HH. symmetry. eapply frm_mapping_g_back_g_fix; exact G_BACK_G.
-}
-  eauto.
-  - ii. rewrite E.in_image_iff in H. destruct H as [y [-> H]].
-    unfold id. eauto.
+      + econs.
+        change (proof (map (frm_mapping g_back) qs) (frm_mapping g_back (replace_constant_in_frm (Henkin_constants_hasEqDec := nat_hasEqDec) (g (f0 hc0)) (Var_trm y0) (frm_mapping g (frm_mapping f0 p))))) in PF3.
+        replace (frm_mapping g_back (replace_constant_in_frm (Henkin_constants_hasEqDec := nat_hasEqDec) (g (f0 hc0)) (Var_trm y0) (frm_mapping g (frm_mapping f0 p))))
+        with (replace_constant_in_frm (Henkin_constants_hasEqDec := Kf_hasEqDec) (f0 hc0) (Var_trm y0) (frm_mapping f0 p))
+        in PF3.
+        2:{ pose proof (@frm_mapping_replace_constant_in_frm_inj L _ _ _ _ _ g_inj (f0 hc0) (Var_trm y0) (frm_mapping f0 p)) as HH.
+            simpl trm_mapping in HH.
+            set (X := replace_constant_in_frm (g (f0 hc0)) (Var_trm y0) (frm_mapping g (frm_mapping f0 p))).
+            change (frm_mapping g (replace_constant_in_frm (f0 hc0) (Var_trm y0) (frm_mapping f0 p)) = X) in HH.
+            rewrite <- HH. symmetry. eapply frm_mapping_g_back_g_fix; exact G_BACK_G. }
+        eauto.
+    - ii. rewrite E.in_image_iff in H. destruct H as [y [-> H]].
+      unfold id. eauto.
   }
   destruct PROVE3 as [rs [INCL3 [PF3']]].
   pose proof (proof_mapping (@proj1_sig _ _) _ _ PF3') as PF4.
   assert (HC0_FIX : proj1_sig (f0 hc0) = hc0).
   { eapply f_id_on_hcs_of_ps_p. eapply in_hcs_of_ps_p_hc0. }
-  replace (frm_mapping (@proj1_sig _ _) (replace_constant_in_frm (f0 hc0) (Var_trm y0) (frm_mapping f0 p))) with (replace_constant_in_frm hc0 (Var_trm y0) p) in PF4; cycle 1.
+  replace (frm_mapping (@proj1_sig _ _) (replace_constant_in_frm (f0 hc0) (Var_trm y0) (frm_mapping f0 p)))
+  with (replace_constant_in_frm hc0 (Var_trm y0) p) in PF4; cycle 1.
   { symmetry.
-erewrite @frm_mapping_replace_constant_in_frm_inj
-  with (h := @proj1_sig _ _)
-       (c := f0 hc0)
-       (ct := Var_trm y0)
-       (q := frm_mapping f0 p); eauto.
-rewrite HC0_FIX.
-simpl.
-exploit (frm_mapping_proj1_sig_f_fix hc0 ps p p).
-- intros hc OCC.
-  eapply in_hcs_of_ps_p_of_p.
-  exact OCC.
-- intros X. set (XX := (frm_mapping
-(proj1_sig
-(P:=fun hc : Henkin_constants =>
-(if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) =
-true)) (frm_mapping f0 p))). change (XX = p) in X. congruence.
+    erewrite @frm_mapping_replace_constant_in_frm_inj with (h := @proj1_sig _ _) (c := f0 hc0) (ct := Var_trm y0) (q := frm_mapping f0 p); eauto.
+    rewrite HC0_FIX. simpl.
+    exploit (frm_mapping_proj1_sig_f_fix hc0 ps p p).
+    - intros hc OCC. eapply in_hcs_of_ps_p_of_p. exact OCC.
+    - intros X.
+      set (XX := frm_mapping
+             (@proj1_sig _ (fun hc => (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) = true))
+             (frm_mapping f0 p)).
+      change (XX = p) in X. congruence.
   }
- eapply extend_proves; cycle 1.
-{
-  exists (map (frm_mapping (@proj1_sig _ _)) rs). split.
-  - intros r Hr.
-    do 2 red in Hr.
-    rewrite L.in_map_iff in Hr.
-    destruct Hr as [q [<- INq]].
-    pose proof (INCL3 q INq) as HH.
-    rewrite E.in_image_iff in HH.
-    destruct HH as [q0 [-> INq0]].
-    rewrite E.in_image_iff.
-    exists q0. split.
-    + reflexivity.
-    + exact INq0.
-  - econs; eauto.
-}
-intros r Hr.
-rewrite E.in_image_iff in Hr.
-destruct Hr as [q0 [-> INq0]].
-do 2 red in INq0.
-rewrite L.in_map_iff in INq0.
-destruct INq0 as [q' [<- INq']].
-rewrite E.in_image_iff.
-exists q'. split.
-- symmetry.
-  erewrite @frm_mapping_replace_constant_in_frm_inj
-    with (h := @proj1_sig _ _)
-         (c := f0 hc0)
-         (ct := Var_trm y0)
-         (q := frm_mapping f0 q'); eauto.
-  rewrite HC0_FIX.
-  simpl.
-  exploit (frm_mapping_proj1_sig_f_fix hc0 ps p q').
-  + intros hc OCC.
-    eapply in_hcs_of_ps_p_of_ps; eauto.
-  + intros X. set ((frm_mapping
-(proj1_sig
-(P:=fun hc : Henkin_constants =>
-(if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) =
-true)) (frm_mapping f0 q'))) as XX.
-change (XX = q') in X. congruence.
-- eapply INCL.
-  do 2 red.
-  exact INq'.
+  eapply extend_proves; cycle 1.
+  { exists (map (frm_mapping (@proj1_sig _ _)) rs). split.
+    - intros r Hr.
+      do 2 red in Hr.
+      rewrite L.in_map_iff in Hr.
+      destruct Hr as [q [<- INq]].
+      pose proof (INCL3 q INq) as HH.
+      rewrite E.in_image_iff in HH.
+      destruct HH as [q0 [-> INq0]].
+      rewrite E.in_image_iff.
+      exists q0. split.
+      + reflexivity.
+      + exact INq0.
+    - econs; eauto.
+  }
+  intros r Hr.
+  rewrite E.in_image_iff in Hr.
+  destruct Hr as [q0 [-> INq0]].
+  do 2 red in INq0.
+  rewrite L.in_map_iff in INq0.
+  destruct INq0 as [q' [<- INq']].
+  rewrite E.in_image_iff.
+  exists q'. split.
+  - symmetry.
+    erewrite @frm_mapping_replace_constant_in_frm_inj with (h := @proj1_sig _ _) (c := f0 hc0) (ct := Var_trm y0) (q := frm_mapping f0 q'); eauto.
+    rewrite HC0_FIX. simpl.
+    exploit (frm_mapping_proj1_sig_f_fix hc0 ps p q').
+    + intros hc OCC. eapply in_hcs_of_ps_p_of_ps; eauto.
+    + intros X.
+      set (XX := frm_mapping
+             (@proj1_sig _ (fun hc => (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) = true))
+             (frm_mapping f0 q')).
+      change (XX = q') in X. congruence.
+  - eapply INCL. do 2 red. exact INq'.
 Qed.
 
-End GOOD.
+End BOUNDED_HC.
 
-Context {AHC : abstract_Henkin_contants Henkin_constants L (Henkin_constants_hasEqDec := Henkin_constants_hasEqDec)}.
+Context {AHC : abstract_Henkin_constants Henkin_constants L (Henkin_constants_hasEqDec := Henkin_constants_hasEqDec)}.
 
 Definition HenkinAxiom (hc : Henkin_constants) : frm L' :=
   let '(x, phi) := hc_decode hc in
   Imp_frm (subst_frm (one_subst x (@Con_trm L' (inr hc))) phi) (All_frm x phi).
 
-Section HELFER1_ii_a_1.
+Section HC_SUBST_INV.
 
 Lemma HC_occurs_in_subst_trm_inv (t : trm L') :
   forall s, forall hc, forall hc',
@@ -2328,7 +2266,7 @@ Proof.
   lia.
 Qed.
 
-End HELFER1_ii_a_1.
+End HC_SUBST_INV.
 
 #[local] Infix "≡" := alpha_equiv.
 
@@ -2358,7 +2296,7 @@ Qed.
 
 #[local] Hint Rewrite embed_frm_HC_free : simplication_hints.
 
-Section HELFER1_ii_a_2.
+Section HENKIN_STAGES.
 
 #[local] Notation hatom := (ivar + Henkin_constants)%type.
 
@@ -2509,7 +2447,7 @@ Proof.
   rewrite Hdec in PROVE1.
   fold c in PROVE1.
   assert (PROVE2 : Gamma ⊢ subst_frm (one_subst x c) phi).
-  { eapply for_Imp_E. exists []. split. done. econs. eapply proof_dne. eapply for_Imp_E. 2: eapply PROVE1. eapply for_CP1. exists []. split. done. econs. eapply proof_ex_falso. }
+  { eapply for_Imp_E. exists []. split. done!. econs. eapply proof_dne. eapply for_Imp_E. 2: eapply PROVE1. eapply for_CP1. exists []. split. done!. econs. eapply proof_ex_falso. }
   assert (PROVE3 : Gamma ⊢ Neg_frm (All_frm x phi)).
   { eapply for_Imp_E. 2: exact PROVE1. eapply for_CP1. eapply for_Imp_I. eapply for_Imp_I.  eapply for_ByHyp. done!. }
   eapply ContradictionI with (A := All_frm x phi).
@@ -2553,12 +2491,11 @@ Proof.
               congruence.
             + reflexivity.
         }
-        rewrite ALPHA. eapply proves_replace_constant_in_frm. exists ps. split; done.
+        rewrite ALPHA. eapply proves_replace_constant_in_frm. exists ps. split; done!.
   - exact PROVE3.
 Qed.
 
-Fixpoint AddHenkin_stage_list (X : ensemble (frm L)) (n : nat) (hcs : list Henkin_constants)
-  : ensemble (frm L') :=
+Fixpoint AddHenkin_stage_list (X : ensemble (frm L)) (n : nat) (hcs : list Henkin_constants) : ensemble (frm L') :=
   match hcs with
   | nil => AddHenkin_stage X n
   | hc :: hcs => E.insert (HenkinAxiom hc) (AddHenkin_stage_list X n hcs)
@@ -2751,7 +2688,8 @@ Proof.
     { rewrite inconsistent_iff.
       exists ps. split.
       - intros p Hp. eapply Hn. exact Hp.
-      - exact PF. }
+      - exact PF.
+    }
     destruct (AddHenkin_stage_all_equiconsistent X n) as [_ Hback].
     exact (Hback Hstage).
 Qed.
@@ -2764,12 +2702,12 @@ Proof.
   - set (f := embed_frm). change (E.image f X ⊢ f Bot_frm). unfold f.
     erewrite -> @embed_frm_proves_iff with (Henkin_constants := Henkin_constants).
     now rewrite inconsistent_iff in H.
-  - set (f := embed_frm) in H. erewrite <- @embed_frm_proves_iff with (Henkin_constants := Henkin_constants).
+  - erewrite <- @embed_frm_proves_iff with (Henkin_constants := Henkin_constants).
     rewrite inconsistent_iff in H. exact H.
 Qed.
 
-End HELFER1_ii_a_2.
+End HENKIN_STAGES.
 
-End HELFER1_ii_a.
+End DEDUCTION.
 
 End HELFER1_ii.
