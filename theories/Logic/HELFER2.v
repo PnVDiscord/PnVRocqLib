@@ -104,9 +104,9 @@ Proof.
     - intros p Hp. eapply E.in_fromList_iff in Hp. eapply Hps_in. exact Hp.
     - econs. exact PF.
   }
-  exists (exist _ U (conj HSUB HCONS)).
+  exists (@exist _ _ U (conj HSUB HCONS)).
   intros d Hd. destruct d as [Delta [HBd HCd]]. simpl.
-  intros p Hp. exists (exist _ Delta (conj HBd HCd)). split; simpl; trivial.
+  intros p Hp. exists (@exist _ _ Delta (conj HBd HCd)). split; simpl; trivial.
 Qed.
 
 Lemma exists_MCS
@@ -118,7 +118,7 @@ Proof.
   intros [d_m MAX]. destruct d_m as [Delta [HBd HCd]]. exists Delta.
   split; [| split]; trivial.
   intros Delta' SUB CONS'.
-  specialize (MAX (exist _ Delta' (conj (transitivity HBd SUB) CONS')) SUB).
+  specialize (MAX (@exist _ _ Delta' (conj (transitivity HBd SUB) CONS')) SUB).
   simpl in MAX. exact MAX.
 Qed.
 
