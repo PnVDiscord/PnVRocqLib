@@ -71,7 +71,7 @@ Let ConsistentExtension_base : ConsistentExtension :=
 
 Lemma chain_upperbound (C : ensemble ConsistentExtension)
   (NONEMPTY : exists d : ConsistentExtension, d \in C)
-  (CHAIN : forall x1 x2 : ConsistentExtension, x1 \in C -> x2 \in C -> leProp x1 x2 \/ leProp x2 x1)
+  (CHAIN : forall x1, forall x2 : ConsistentExtension, x1 \in C -> x2 \in C -> leProp x1 x2 \/ leProp x2 x1)
   : exists u : ConsistentExtension, forall d : ConsistentExtension, d \in C -> leProp d u.
 Proof.
   set (U := fun p : frm L' => exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
@@ -89,8 +89,8 @@ Proof.
       - assert (IHok : forall p, In p ps -> exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
         { intros p Hp. eapply EACH. right. exact Hp. }
         specialize (IH IHok). destruct IH as [d_tail [Hd_tail Htail]].
-        destruct (EACH q ltac:(left; reflexivity)) as [d_q [Hd_q Hq_in]].
-        destruct (CHAIN d_q d_tail Hd_q Hd_tail) as [LE | LE].
+        pose proof (EACH q (or_introl eq_refl)) as [d_q [Hd_q Hq_in]].
+        pose proof (CHAIN d_q d_tail Hd_q Hd_tail) as [LE | LE].
         + exists d_tail. split; trivial. intros p [-> | Hp].
           * eapply LE. exact Hq_in.
           * eapply Htail. exact Hp.
