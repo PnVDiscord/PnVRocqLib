@@ -2076,6 +2076,8 @@ Qed.
 
 End SUBSPACE_TOPOLOGY.
 
+Module Quot.
+
 #[universes(template)]
 Class isQuotientOf (Q : Type) (X : Type) {SETOID : isSetoid X} : Type :=
   { prj : X -> Q
@@ -2087,23 +2089,7 @@ Class isQuotientOf (Q : Type) (X : Type) {SETOID : isSetoid X} : Type :=
     : forall rec', (forall x, rec' (prj x) = f x) -> (forall q, rec' q = rec f f_cong q)
   }.
 
-Module Quot.
-
-Section QuotientTopology.
-
-Context {X : Type} {TOPOLOGY : topology X} {SETOID : isSetoid X} {Q : Type} {QUOTIENT : isQuotientOf Q X}.
-
-#[global]
-Instance QuotientTopology : topology Q :=
-  { isOpen := OpenSets_in_COD prj
-  ; AxiomsForTopology := OpenSets_in_COD_satisfiesAxiomsForOpenSets prj
-  }.
-
-End QuotientTopology.
-
 End Quot.
-
-(** End BASIC_TOPOLOGY. *)
 
 #[universes(template), projections(primitive)]
 Class Equipotent (A : Type) (B : Type) : Type :=
@@ -2149,6 +2135,12 @@ Next Obligation.
 Defined.
 
 End Equipotent_instances.
+
+#[global]
+Instance QuotientTopology {X : Type} {TOPOLOGY : topology X} {SETOID : isSetoid X} {Q : Type} {QUOTIENT : Quot.isQuotientOf Q X} : topology Q :=
+  { isOpen := OpenSets_in_COD Quot.prj
+  ; AxiomsForTopology := OpenSets_in_COD_satisfiesAxiomsForOpenSets Quot.prj
+  }.
 
 #[universes(polymorphic=yes)]
 Class equipotent@{u} (A : Type@{u}) (B : Type@{u}) : Prop :=

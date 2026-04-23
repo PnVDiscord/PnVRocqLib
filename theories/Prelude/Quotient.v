@@ -2,7 +2,9 @@ Require Export PnV.Prelude.Prelude.
 Require Export PnV.Prelude.ClassicalFacts.
 Require Export Stdlib.Logic.EqdepFacts.
 
-Module Quot.
+Module Quotient.
+
+Export Quot.
 
 Section INDUCTION.
 
@@ -37,13 +39,21 @@ Qed.
 
 End INDUCTION.
 
-#[universes(polymorphic)]
+#[universes(polymorphic=yes)]
 Parameter t@{u} : forall X : Type@{u}, isSetoid X -> Type@{u}.
 
-Axiom Quotient_always_exists : forall X : Type, forall SETOID : isSetoid X, isQuotientOf (Quot.t X SETOID) X (SETOID := SETOID).
+#[universes(polymorphic=yes)]
+Axiom Quotient_always_exists : forall X : Type, forall SETOID : isSetoid X, isQuotientOf (Quotient.t@{U_discourse} X SETOID) X (SETOID := SETOID).
 
 #[global] Existing Instance Quotient_always_exists.
 
-End Quot.
+End Quotient.
 
-Notation Quot := Quot.t.
+Notation Quot := Quotient.t@{_}.
+
+Section UNIVERSE_TEST.
+
+Let Quot_nat : Set :=
+  Quot nat (@mkSetoid_from_eq nat).
+
+End UNIVERSE_TEST.
