@@ -2080,16 +2080,22 @@ Module Quot.
 
 #[universes(template)]
 Class isQuotientOf (Q : Type) (X : Type) {SETOID : isSetoid X} : Type :=
-  { prj : X -> Q
-  ; prj_eq (x1 : X) (x2 : X) (EQUIV : x1 == x2) : prj x1 = prj x2
-  ; rec {Y : Type} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2) : Q -> Y
-  ; rec_compute {Y : Type} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
-    : forall x, rec f f_cong (prj x) = f x
-  ; rec_unique {Y : Type} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
-    : forall rec', (forall x, rec' (prj x) = f x) -> (forall q, rec' q = rec f f_cong q)
+  { mk : X -> Q
+  ; sound (x1 : X) (x2 : X) (EQUIV : x1 == x2) : mk x1 = mk x2
+  ; lift {Y : Type} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2) : Q -> Y
+  ; lift_compute {Y : Type} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
+    : forall x, lift f f_cong (mk x) = f x
+  ; lift_unique {Y : Type} (f : X -> Y) (f_cong : forall x1, forall x2, x1 == x2 -> f x1 = f x2)
+    : forall lift', (forall x, lift' (mk x) = f x) -> (forall q, lift' q = lift f f_cong q)
   }.
 
 End Quot.
+
+#[global]
+Instance QuotientTopology {X : Type} {TOPOLOGY : topology X} {SETOID : isSetoid X} {Q : Type} {QUOTIENT : Quot.isQuotientOf Q X} : topology Q :=
+  { isOpen := OpenSets_in_COD Quot.mk
+  ; AxiomsForTopology := OpenSets_in_COD_satisfiesAxiomsForOpenSets Quot.mk
+  }.
 
 #[universes(template), projections(primitive)]
 Class Equipotent (A : Type) (B : Type) : Type :=
@@ -2124,8 +2130,8 @@ Instance Equipotent_Symmetric {A : Type} {B : Type} (A_eq_B : Equipotent A B) : 
 
 #[local, program]
 Instance Equipotent_Transitive {A : Type} {B : Type} {C : Type} (A_eq_B : Equipotent A B) (B_eq_C : Equipotent B C) : Equipotent A C :=
-  { _rarr (x : A) := _rarr (_rarr x)
-  ; _larr (z : C) := _larr (_larr z)
+  { _rarr (x : A) := B_eq_C.(_rarr) (A_eq_B.(_rarr) x)
+  ; _larr (z : C) := A_eq_B.(_larr) (B_eq_C.(_larr) z)
   }.
 Next Obligation.
   rewrite _rarr_larr with (y := _larr y). eapply _rarr_larr.
@@ -2135,12 +2141,6 @@ Next Obligation.
 Defined.
 
 End Equipotent_instances.
-
-#[global]
-Instance QuotientTopology {X : Type} {TOPOLOGY : topology X} {SETOID : isSetoid X} {Q : Type} {QUOTIENT : Quot.isQuotientOf Q X} : topology Q :=
-  { isOpen := OpenSets_in_COD Quot.prj
-  ; AxiomsForTopology := OpenSets_in_COD_satisfiesAxiomsForOpenSets Quot.prj
-  }.
 
 #[universes(polymorphic=yes)]
 Class equipotent@{u} (A : Type@{u}) (B : Type@{u}) : Prop :=
