@@ -12,17 +12,6 @@ Require Export PnV.Logic.HilbertFol2.
 
 Module HELFER1_i.
 
-#[universes(polymorphic=yes)]
-Definition eqProp_iff_eq@{u} {A : Type@{u}} (SETOID : isSetoid A) : Prop :=
-  forall x : A, forall x' : A, forall x_eq_x' : @eqProp A SETOID x x', @eq A x x'.
-
-Definition entails {L : language} (Gamma : ensemble (frm L)) (C : frm L) : Prop :=
-  forall STRUCTURE : isStructureOf L, @eqProp_iff_eq@{U_discourse} domain_of_discourse equation_interpret -> forall env : ivar -> domain_of_discourse, forall SATISFY : satisfies_frms STRUCTURE env Gamma, satisfies_frm STRUCTURE env C.
-
-Infix "⊨" := entails.
-
-Notation "Gamma ⊭ C" := (~ entails Gamma C).
-
 Section HENKIN_INFRASTRUCTURE.
 
 #[local] Notation "x ≠ y" := (~ eq x y) : type_scope.

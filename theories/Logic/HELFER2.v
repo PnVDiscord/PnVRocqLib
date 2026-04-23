@@ -20,6 +20,27 @@ Import FolNotations.
 
 Import FolHilbert.
 
+Lemma pairwise_equal_reflexive {L : language} {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n)
+  : pairwise_equal Gamma ts ts.
+Proof.
+  induction ts; simpl; econs; eauto. eapply proves_reflexivity.
+Qed.
+
+Lemma pairwise_equal_symmetric {L : language} {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n)
+  (H1 : pairwise_equal Gamma ts ts')
+  : pairwise_equal Gamma ts' ts.
+Proof.
+  revert ts' H1. induction ts; simpl; eauto; intros. des; split; eauto. now eapply proves_symmetry.
+Qed.
+
+Lemma pairwise_equal_transitive {L : language} {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n) (ts'' : trms L n)
+  (H1 : pairwise_equal Gamma ts ts')
+  (H2 : pairwise_equal Gamma ts' ts'')
+  : pairwise_equal Gamma ts ts''.
+Proof.
+  revert ts' ts'' H1 H2. induction ts; simpl; econs; des; eauto. now eapply proves_transitivity with (t2 := head ts').
+Qed.
+
 #[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
 
 Section COMPLETENESS_OF_HilbertCalculus.
@@ -64,7 +85,7 @@ Let ConsistentExtension : Type :=
 
 #[local]
 Instance ConsistentExtension_isProset : isProset ConsistentExtension :=
-  subProset _.
+  @subProset (ensemble (frm L')) E.ensemble_isProset (fun Delta => Hbase \subseteq Delta /\ ~ Delta ⊢ Bot_frm).
 
 Let ConsistentExtension_base : ConsistentExtension :=
   @exist _ _ Hbase (conj (reflexivity Hbase) Hbase_consistent).
@@ -228,92 +249,157 @@ Proof.
     + eapply UNIV.
 Qed.
 
+(** Intention:
+  * Do NOT use a setoid (trm L', ~), where lhs ~ rhs :<=> MaxCS ⊢ Eqn_frm lhs rhs.
+  * D := { [lhs] | lhs \in trm L' }, where [lhs] := { rhs \in frm L' | lhs ~ rhs }.
+  * Use `Propositional_Extensionality`, `Functional_Extensionality`, and `proof_irrelevance`.
+*)
 Let D : Type@{U_discourse} :=
-  trm L'.
+  { X : ensemble@{U_discourse} (trm L') | exists lhs, forall rhs, rhs \in X <-> MaxCS ⊢ Eqn_frm lhs rhs }.
 
-Definition interpret_equation (lhs : D) (rhs : D) : Prop :=
-  MaxCS ⊢ Eqn_frm lhs rhs.
+Let vecD (n : nat) : Type@{U_discourse} :=
+  { X : ensemble@{U_discourse} (trms L' n) | exists lhs, forall rhs, rhs \in X <-> pairwise_equal MaxCS lhs rhs }.
+
+#[refine]
+Fixpoint to_vecD (n : nat) (ds : Vector.t D n) {struct ds} : vecD n :=
+  match ds in Vector.t _ n return vecD n with
+  | Vector.VNil => @exist _ _ (pure (isMonad := E.t_isMonad) (@O_trms L')) _
+  | Vector.VCons n v vs => @exist _ _ (liftM2 (MONAD := E.t_isMonad) (@S_trms L' n) (proj1_sig v) (proj1_sig (to_vecD n vs))) _
+  end.
+Proof.
+  - clear n ds. exists (@O_trms L').
+    intros rhs; pattern rhs; revert rhs; eapply trms_case0.
+    simpl; split; econs.
+  - clear n0 ds. destruct v as [v1 [lhs1 H_lhs1]]; simpl. destruct (to_vecD n vs) as [vs2 [lhs2 H_lhs2]]; simpl. exists (@S_trms L' n lhs1 lhs2).
+    intros rhs; pattern rhs; revert rhs; eapply trms_caseS. unfold "\in".
+    intros t' ts'. split; [intros (t & Ht & ts & Hts & EQ) | intros [PROVE1 PROVE2]].
+    + inv EQ. apply projT2_eq in H1. subst ts'. split; simpl.
+      * rewrite <- H_lhs1. eauto.
+      * rewrite <- H_lhs2. eauto.
+    + simpl in *. exists t'. split. { change (t' \in v1). rewrite -> H_lhs1. eauto. }
+      exists ts'. split. { change (ts' \in vs2). rewrite -> H_lhs2. eauto. }
+      reflexivity.
+Defined.
+
+#[program]
+Definition constant_interpret (c' : L'.(constant_symbols)) : D :=
+  @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Con_trm c') t) _.
+Next Obligation.
+  exists (@Con_trm L' c'). intros rhs; reflexivity.
+Qed.
+
+#[program]
+Definition function_interpret (f' : L'.(function_symbols)) (vs : Vector.t D (L.(function_arity_table) f')) : D :=
+  @exist _ _ (fun t => exists ts, ts \in proj1_sig (to_vecD _ vs) /\ MaxCS ⊢ Eqn_frm (Fun_trm f' ts) t) _.
+Next Obligation.
+  destruct (to_vecD (function_arity_table L f') vs) as [vs' [lhs H_lhs]]; simpl.
+  unfold "\in" at 1. exists (@Fun_trm L' f' lhs). intros rhs. split; [intros (ts' & Hvs' & Hrhs) | intros Hrhs].
+  - eapply proves_transitivity with (t2 := @Fun_trm L' f' ts'); trivial.
+    eapply proves_eqn_fun. rewrite <- H_lhs. exact Hvs'.
+  - exists lhs. split; trivial. rewrite -> H_lhs. eapply pairwise_equal_reflexive.
+Qed.
+
+Definition relation_interpret (R : L'.(relation_symbols)) (vs : Vector.t D (L.(relation_arity_table) R)) : Prop :=
+  exists ts, ts \in proj1_sig (to_vecD _ vs) /\ MaxCS ⊢ Rel_frm R ts.
+
+Definition interpret_equation : forall lhs : D, forall rhs : D, Prop :=
+  @eq D.
+
+Lemma interpret_equation_intro (lhs : D) (rhs : D)
+  (EQ : forall t : trm L', t \in proj1_sig lhs <-> t \in proj1_sig rhs)
+  : interpret_equation lhs rhs.
+Proof.
+  destruct lhs as [lhs H_lhs], rhs as [rhs H_rhs]; simpl in *.
+  red. eapply exist_eq_iff.
+  refine (@Functional_Extensionality _ _ _ Axms (trm L') (fun _ => Prop) lhs rhs _).
+  intros t.
+  refine (@Propositional_Extensionality _ _ _ Axms (lhs t) (rhs t) _).
+  exact (EQ t).
+Qed.
 
 #[global]
-Instance interpret_equation_Equivalence
-  : Equivalence interpret_equation.
-Proof with eauto.
-  unfold interpret_equation. split.
-  - intros x. eapply proves_reflexivity...
-  - intros x y EQ. eapply proves_symmetry...
-  - intros x y z EQ EQ'. eapply proves_transitivity...
-Qed.
+Instance interpret_equation_Equivalence : Equivalence interpret_equation :=
+  eq_equivalence.
 
-Lemma pairwise_equal_intro n vs1 vs2
-  (EQ : forall i : Fin.t n, interpret_equation (vs1 !! i) (vs2 !! i))
-  : pairwise_equal MaxCS (vec_to_trms vs1) (vec_to_trms vs2).
-Proof.
-  revert vs2 EQ. induction vs1 as [ | n v1 vs1 IH].
-  - introVNil; simpl; i. econs.
-  - introVCons v2 vs2; simpl; i. econs.
-    + eapply EQ with (i := FZ).
-    + eapply IH. intros i. eapply EQ with (i := FS i).
-Qed.
-
-Lemma pairwise_equal_symmetry n (vs1 : Vector.t (trm L') n) (vs2 : Vector.t (trm L') n)
-  (EQUAL : pairwise_equal MaxCS (vec_to_trms vs1) (vec_to_trms vs2))
-  : pairwise_equal MaxCS (vec_to_trms vs2) (vec_to_trms vs1).
-Proof.
-  revert vs2 EQUAL. induction vs1 as [ | n v1 vs1 IH].
-  - introVNil; simpl; i. econs.
-  - introVCons v2 vs2; simpl; intros [EQ EQUAL]. econs.
-    + eapply proves_symmetry; trivial.
-    + eapply IH; trivial.
+#[program]
+Definition ivar_interpret (x : ivar) : D :=
+  @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Var_trm x) t) _.
+Next Obligation.
+  unfold "\in". exists (Var_trm x). intros rhs; reflexivity.
 Qed.
 
 #[local, program]
 Instance trmModel : isStructureOf L' :=
   { domain_of_discourse := D
   ; equation_interpret := {| eqProp := interpret_equation; eqProp_Equivalence := interpret_equation_Equivalence |}
-  ; function_interpret f vs := Fun_trm f (vec_to_trms vs)
-  ; constant_interpret c := Con_trm c
-  ; relation_interpret R vs := MaxCS ⊢ Rel_frm R (vec_to_trms vs)
+  ; function_interpret := function_interpret
+  ; constant_interpret := constant_interpret
+  ; relation_interpret := relation_interpret
   }.
 Next Obligation.
-  econs. exact (Var_trm 0).
+  econs. exact (ivar_interpret O).
 Qed.
 Next Obligation.
-  red. eapply proves_eqn_fun. eapply pairwise_equal_intro; trivial.
+  red in EQ |- *. f_equal.
+  now rewrite V.vec_ext_eq.
 Qed.
 Next Obligation.
-  split; intros INFERS.
-  - eapply for_Imp_E. eapply proves_eqn_rel. 2: exact INFERS. eapply pairwise_equal_intro; trivial.
-  - eapply for_Imp_E. eapply proves_eqn_rel. 2: exact INFERS.
-    eapply pairwise_equal_symmetry; eapply pairwise_equal_intro; trivial.
+  unfold interpret_equation in EQ.
+  rewrite <- V.vec_ext_eq in EQ. subst vs2.
+  reflexivity.
 Qed.
-
-Definition ivar_interpret : ivar -> domain_of_discourse :=
-  Var_trm.
 
 Lemma interpret_trm_trmModel (t : trm L')
-  : interpret_trm trmModel ivar_interpret t = t
-with interpret_trms_trmModel n (ts : trms L' n)
-  : vec_to_trms (interpret_trms trmModel ivar_interpret ts) = ts.
+  : t \in proj1_sig (interpret_trm trmModel ivar_interpret t)
+with interpret_trms_trmModel (n : nat) (ts : trms L' n)
+  : ts \in proj1_sig (to_vecD n (interpret_trms trmModel ivar_interpret ts)).
 Proof.
-  - trm_ind t; simpl.
+  - destruct t as [x | f ts | c]; simpl; unfold "\in".
+    + eapply proves_reflexivity.
+    + exists ts. split; [eapply interpret_trms_trmModel | eapply proves_reflexivity].
+    + eapply proves_reflexivity.
+  - destruct ts as [ | n t ts]; simpl; unfold "\in".
     + reflexivity.
-    + f_equal. eapply interpret_trms_trmModel.
-    + reflexivity.
-  - trms_ind ts.
-    + reflexivity.
-    + rewrite interpret_trms_unfold. simpl. f_equal.
-      * eapply interpret_trm_trmModel.
-      * eapply IH.
+    + exists t. split.
+      { eapply interpret_trm_trmModel. }
+      exists ts. split.
+      { eapply interpret_trms_trmModel. }
+      reflexivity.
 Qed.
 
 Theorem trmModel_isModel (p : frm L')
   : p \in MaxCS <-> interpret_frm trmModel ivar_interpret p.
-Proof with eauto with *.
+Proof.
   rewrite <- MaxCS_infers_iff. pattern p. revert p. eapply @frm_depth_lt_ind.
   intros [R ts | t1 t2 | p1 | p1 p2 | y p1]; simpl; i.
-  - rewrite interpret_trms_trmModel. reflexivity.
-  - unfold interpret_equation. do 2 rewrite interpret_trm_trmModel. reflexivity.
-  - rewrite <- IH with (p' := p1). 2: lia. split.
+  - unfold relation_interpret. pose proof (interpret_trms_trmModel _ ts) as HH.
+    simpl in HH. destruct (to_vecD _ _) as [vs [ts' Hts']]; simpl in *. split.
+    + intros INFERS. exists ts; split; eauto.
+    + intros (vs' & Hvs' & INFERS). rewrite Hts' in HH, Hvs'. eapply for_Imp_E with (p := @Rel_frm L' R vs'); eauto.
+      eapply @proves_eqn_rel. eapply pairwise_equal_transitive; [eapply pairwise_equal_symmetric | eapply HH]; eauto.
+  - unfold interpret_equation. split; [intros INFERS | intros EQ].
+    + eapply interpret_equation_intro. intros t; split.
+      * pose proof (interpret_trm_trmModel t1) as HH1. pose proof (interpret_trm_trmModel t2) as HH2.
+        destruct (interpret_trm _ _ _) as [t1' [v1 Ht1']]; simpl in *; destruct (interpret_trm _ _ _) as [t2' [v2 Ht2']]; simpl in *. intros H_in. 
+        rewrite Ht1' in HH1, H_in. rewrite Ht2' in HH2 |- *.
+        eapply proves_transitivity with (t2 := t2); eauto.
+        eapply proves_symmetry.
+        eapply proves_transitivity with (t2 := t1); eauto.
+        eapply proves_transitivity with (t2 := v1); eauto.
+        eapply proves_symmetry; eauto.
+      * pose proof (interpret_trm_trmModel t1) as HH1. pose proof (interpret_trm_trmModel t2) as HH2.
+        destruct (interpret_trm _ _ _) as [t1' [v1 Ht1']]; simpl in *; destruct (interpret_trm _ _ _) as [t2' [v2 Ht2']]; simpl in *. intros H_in. 
+        rewrite Ht2' in HH2, H_in. rewrite -> Ht1' in HH1 |- *.
+        eapply proves_transitivity with (t2 := t1); eauto.
+        eapply proves_transitivity with (t2 := t2); eauto.
+        eapply proves_transitivity with (t2 := v2); eauto.
+        eapply proves_symmetry; eauto.
+    + pose proof (interpret_trm_trmModel t1) as HH1. pose proof (interpret_trm_trmModel t2) as HH2.
+      destruct (interpret_trm _ _ _) as [t1' [v1 Ht1']]; simpl in *; destruct (interpret_trm _ _ _) as [t2' [v2 Ht2']]; simpl in *. 
+      apply exist_eq_iff in EQ. subst t2'. rewrite Ht1' in HH1, HH2.
+      eapply proves_transitivity with (t2 := v1); eauto.
+      eapply proves_symmetry; eauto.
+  - rewrite <- IH with (p' := p1) by lia. split.
     + intros INFERS1 INFERS2. eapply MaxCS_consistent.
       eapply ContradictionI with (A := p1); trivial.
     + intros NO. rewrite MaxCS_infers_iff. eapply MaxCS_META_DN. intros YES.
@@ -321,28 +407,43 @@ Proof with eauto with *.
       eapply NegationE. eapply ContradictionI with (A := Neg_frm p1).
       * eapply ByAssumption; done!.
       * eapply extend_infers with (Gamma := MaxCS); try done!.
-  - rewrite <- IH with (p' := p1). 2: lia. rewrite <- IH with (p' := p2). 2: lia. split.
+  - rewrite <- IH with (p' := p1) by lia. rewrite <- IH with (p' := p2) by lia. split.
     + intros INFERS1 INFERS2. eapply ImplicationE with (A := p1); trivial.
     + intros INFERS. rewrite MaxCS_infers_iff.
       eapply MaxCS_IMPLICATION_FAITHFUL. intros IN. rewrite <- MaxCS_infers_iff.
       eapply INFERS. rewrite MaxCS_infers_iff. exact IN.
   - unfold D. split.
-    + intros INFERS t. rename y into x. set (s := one_subst x t).
-      assert (IFF : interpret_frm trmModel ivar_interpret (subst_frm s p1) <-> interpret_frm trmModel (upd_env x t ivar_interpret) p1).
+    + intros INFERS [P [t Ht]]. rename y into x. set (s := one_subst x t). set (d := @exist _ _ _ _).
+      assert (IFF : interpret_frm trmModel ivar_interpret (subst_frm s p1) <-> interpret_frm trmModel (upd_env x d ivar_interpret) p1).
       { rewrite <- substitution_lemma_frm. eapply interpret_frm_ext. ii. unfold compose, upd_env, s, one_subst, cons_subst, nil_subst.
-        destruct (eq_dec z x) as [EQ1 | NE1]; trivial. eapply interpret_trm_trmModel.
+        destruct (eq_dec z x) as [EQ1 | NE1]; trivial. subst z. eapply interpret_equation_intro. simpl. intros t'.
+        rewrite -> Ht. pose proof (interpret_trm_trmModel t) as HH. split.
+        - destruct (interpret_trm trmModel ivar_interpret t) as [P'' [t'' IFF]]; simpl in *; intros Ht''.
+          rewrite -> IFF in HH, Ht''. eapply proves_symmetry. eapply proves_transitivity with (t2 := t''); eauto. eapply proves_symmetry; eauto.
+        - destruct (interpret_trm trmModel ivar_interpret t) as [P'' [t'' IFF]]; simpl in *; intros Ht''.
+          rewrite -> IFF in HH |- *. simpl. eapply proves_transitivity with (t2 := t); eauto.
       }
-      rewrite <- IFF. rewrite <- IH with (p' := subst_frm s p1). 2: rewrite subst_preserves_rank; lia.
+      rewrite <- IFF. rewrite <- IH with (p' := subst_frm s p1) by now rewrite subst_preserves_rank; lia.
       unfold s. eapply UniversalE. exact INFERS.
     + intros INTERPRET. rewrite MaxCS_infers_iff. eapply MaxCS_FORALL_FAITHFUL.
-      intros t. rewrite <- MaxCS_infers_iff. rewrite -> IH with (p' := subst_frm (one_subst y t) p1). 2: rewrite subst_preserves_rank; lia.
-      rewrite <- substitution_lemma_frm. eapply interpret_frm_ext with (env' := upd_env y (interpret_trm trmModel ivar_interpret t) ivar_interpret). ii. unfold compose, upd_env, one_subst, cons_subst, nil_subst.
-      destruct (eq_dec z y) as [EQ1 | NE1]; trivial. eapply INTERPRET.
+      intros t. rewrite <- MaxCS_infers_iff. rewrite -> IH with (p' := subst_frm (one_subst y t) p1) by now rewrite subst_preserves_rank; lia.
+      rewrite <- substitution_lemma_frm. eapply interpret_frm_ext with (env' := upd_env y (interpret_trm trmModel ivar_interpret t) ivar_interpret); eauto.
+      ii. unfold compose, upd_env, one_subst, cons_subst, nil_subst. destruct (eq_dec z y) as [EQ1 | NE1]; trivial.
 Qed.
 
 End WITH_MCS.
 
 End COMPLETENESS_OF_HilbertCalculus.
+
+#[universes(polymorphic=yes)]
+Definition eqProp_iff_eq@{u} {A : Type@{u}} (SETOID : isSetoid A) : Prop :=
+  forall x : A, forall x' : A, forall x_eq_x' : @eqProp A SETOID x x', @eq A x x'.
+
+Definition entails {L : language} (Gamma : ensemble (frm L)) (C : frm L) : Prop :=
+  forall STRUCTURE : isStructureOf L, @eqProp_iff_eq@{U_discourse} domain_of_discourse equation_interpret -> forall env : ivar -> domain_of_discourse, forall SATISFY : satisfies_frms STRUCTURE env Gamma, satisfies_frm STRUCTURE env C.
+
+Infix "⊨" := HELFER2.entails : program_scope.
+Notation "Gamma ⊭ C" := (~ HELFER2.entails Gamma C) : program_scope.
 
 Section COMPLETENESS_THEOREM.
 
@@ -351,9 +452,7 @@ Import HELFER1_ii.
 
 #[local] Existing Instance V.vec_isSetoid.
 
-Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}.
-
-Context {L : language} {function_symbols_hasEqDec : hasEqDec L.(function_symbols)} {constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)} {relation_symbols_hasEqDec : hasEqDec L.(relation_symbols)}.
+Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {L : language} {function_symbols_hasEqDec : hasEqDec L.(function_symbols)} {constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)} {relation_symbols_hasEqDec : hasEqDec L.(relation_symbols)}.
 
 #[local] Notation L' := (augmented_language L (Henkin_constants L)).
 
@@ -362,28 +461,31 @@ Context {L : language} {function_symbols_hasEqDec : hasEqDec L.(function_symbols
 #[local] Existing Instance abstract_Henkin_constants_instance.
 
 Theorem HilbertCalculus_complete (X : ensemble (frm L)) (b : frm L)
-  (CONSEQUENCE : X ⊨ b)
+  (CONSEQUENCE : (X ⊨ b)%prg)
   : X ⊢ b.
-Proof with eauto with *.
+Proof.
   eapply NNPP. intros NO.
   set (Gamma := E.insert (Neg_frm b) X).
   assert (CONSISTENT : Gamma ⊬ Bot_frm).
-  { intros INCONSISTENT. contradiction NO. eapply NegationE... }
+  { intros INCONSISTENT. contradiction NO. eapply NegationE; eauto. }
   pose proof (exists_MCS Gamma CONSISTENT) as [MCS [HBsub [HCons HMax]]].
-  assert (claim : Gamma ⊭ Bot_frm).
-  { intros SAT. contradiction (SAT (restrict_structure (trmModel MCS)) (ivar_interpret MCS)).
+  assert (claim : (Gamma ⊭ Bot_frm)%prg).
+  { intros SAT. eapply @SAT with (STRUCTURE := restrict_structure (trmModel MCS)) (env := ivar_interpret MCS).
+    - ii. cbv in x_eq_x'. exact x_eq_x'.
     - red. set (STRUCTURE := trmModel MCS). set (env := ivar_interpret MCS).
       assert (MODEL : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
       { intros p. eapply restrict_structure_frm. }
       intros A AIN. red. rewrite <- MODEL. unfold STRUCTURE, env.
       rewrite <- (trmModel_isModel Gamma MCS HBsub HCons HMax); trivial.
       eapply HBsub. right. eapply E.in_image_iff. exists A. split; trivial.
-    - simpl. intros t. unfold interpret_equation. eapply proves_reflexivity.
+    - simpl. intros t. unfold interpret_equation. reflexivity.
   }
-  contradiction claim. intros ? ? ? SAT. unfold Gamma in SATISFY.
+  contradiction claim. intros ? H_eqProp_iff_eq ? ? SAT. unfold Gamma in SATISFY.
   red in SATISFY. pose proof (SATISFY (Neg_frm b)) as CONTRA. simpl in CONTRA. contradiction CONTRA.
   - left. reflexivity.
-  - eapply CONSEQUENCE. ii. eapply SATISFY. right. trivial.
+  - eapply CONSEQUENCE.
+    + ii. eapply H_eqProp_iff_eq. exact x_eq_x'.
+    + ii. eapply SATISFY. right. exact H_IN.
 Qed.
 
 End COMPLETENESS_THEOREM.
