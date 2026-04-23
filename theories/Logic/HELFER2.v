@@ -249,11 +249,6 @@ Proof.
     + eapply UNIV.
 Qed.
 
-(** Intention:
-  * Do NOT use a setoid (trm L', ~), where lhs ~ rhs :<=> MaxCS ⊢ Eqn_frm lhs rhs.
-  * D := { [lhs] | lhs \in trm L' }, where [lhs] := { rhs \in frm L' | lhs ~ rhs }.
-  * Use `Propositional_Extensionality`, `Functional_Extensionality`, and `proof_irrelevance`.
-*)
 Let D : Type@{U_discourse} :=
   { X : ensemble@{U_discourse} (trm L') | exists lhs, forall rhs, rhs \in X <-> MaxCS ⊢ Eqn_frm lhs rhs }.
 
