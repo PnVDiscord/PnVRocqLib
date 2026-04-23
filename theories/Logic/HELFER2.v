@@ -231,21 +231,21 @@ Qed.
 Let D : Type@{U_discourse} :=
   trm L'.
 
-Definition HELFER_interpret_equation (lhs : D) (rhs : D) : Prop :=
+Definition interpret_equation (lhs : D) (rhs : D) : Prop :=
   MaxCS ⊢ Eqn_frm lhs rhs.
 
 #[global]
-Instance HELFER_interpret_equation_Equivalence
-  : Equivalence HELFER_interpret_equation.
+Instance interpret_equation_Equivalence
+  : Equivalence interpret_equation.
 Proof with eauto.
-  unfold HELFER_interpret_equation. split.
+  unfold interpret_equation. split.
   - intros x. eapply proves_reflexivity...
   - intros x y EQ. eapply proves_symmetry...
   - intros x y z EQ EQ'. eapply proves_transitivity...
 Qed.
 
-Lemma HELFER_pairwise_equal_intro n vs1 vs2
-  (EQ : forall i : Fin.t n, HELFER_interpret_equation (vs1 !! i) (vs2 !! i))
+Lemma pairwise_equal_intro n vs1 vs2
+  (EQ : forall i : Fin.t n, interpret_equation (vs1 !! i) (vs2 !! i))
   : pairwise_equal MaxCS (vec_to_trms vs1) (vec_to_trms vs2).
 Proof.
   revert vs2 EQ. induction vs1 as [ | n v1 vs1 IH].
@@ -255,7 +255,7 @@ Proof.
     + eapply IH. intros i. eapply EQ with (i := FS i).
 Qed.
 
-Lemma HELFER_pairwise_equal_symmetry n (vs1 : Vector.t (trm L') n) (vs2 : Vector.t (trm L') n)
+Lemma pairwise_equal_symmetry n (vs1 : Vector.t (trm L') n) (vs2 : Vector.t (trm L') n)
   (EQUAL : pairwise_equal MaxCS (vec_to_trms vs1) (vec_to_trms vs2))
   : pairwise_equal MaxCS (vec_to_trms vs2) (vec_to_trms vs1).
 Proof.
@@ -267,9 +267,9 @@ Proof.
 Qed.
 
 #[local, program]
-Instance HELFER_trmModel : isStructureOf L' :=
+Instance trmModel : isStructureOf L' :=
   { domain_of_discourse := D
-  ; equation_interpret := {| eqProp := HELFER_interpret_equation; eqProp_Equivalence := HELFER_interpret_equation_Equivalence |}
+  ; equation_interpret := {| eqProp := interpret_equation; eqProp_Equivalence := interpret_equation_Equivalence |}
   ; function_interpret f vs := Fun_trm f (vec_to_trms vs)
   ; constant_interpret c := Con_trm c
   ; relation_interpret R vs := MaxCS ⊢ Rel_frm R (vec_to_trms vs)
@@ -278,41 +278,41 @@ Next Obligation.
   econs. exact (Var_trm 0).
 Qed.
 Next Obligation.
-  red. eapply proves_eqn_fun. eapply HELFER_pairwise_equal_intro; trivial.
+  red. eapply proves_eqn_fun. eapply pairwise_equal_intro; trivial.
 Qed.
 Next Obligation.
   split; intros INFERS.
-  - eapply for_Imp_E. eapply proves_eqn_rel. 2: exact INFERS. eapply HELFER_pairwise_equal_intro; trivial.
+  - eapply for_Imp_E. eapply proves_eqn_rel. 2: exact INFERS. eapply pairwise_equal_intro; trivial.
   - eapply for_Imp_E. eapply proves_eqn_rel. 2: exact INFERS.
-    eapply HELFER_pairwise_equal_symmetry; eapply HELFER_pairwise_equal_intro; trivial.
+    eapply pairwise_equal_symmetry; eapply pairwise_equal_intro; trivial.
 Qed.
 
-Definition HELFER_ivar_interpret : ivar -> domain_of_discourse :=
+Definition ivar_interpret : ivar -> domain_of_discourse :=
   Var_trm.
 
-Lemma HELFER_interpret_trm_trmModel (t : trm L')
-  : interpret_trm HELFER_trmModel HELFER_ivar_interpret t = t
-with HELFER_interpret_trms_trmModel n (ts : trms L' n)
-  : vec_to_trms (interpret_trms HELFER_trmModel HELFER_ivar_interpret ts) = ts.
+Lemma interpret_trm_trmModel (t : trm L')
+  : interpret_trm trmModel ivar_interpret t = t
+with interpret_trms_trmModel n (ts : trms L' n)
+  : vec_to_trms (interpret_trms trmModel ivar_interpret ts) = ts.
 Proof.
   - trm_ind t; simpl.
     + reflexivity.
-    + f_equal. eapply HELFER_interpret_trms_trmModel.
+    + f_equal. eapply interpret_trms_trmModel.
     + reflexivity.
   - trms_ind ts.
     + reflexivity.
     + rewrite interpret_trms_unfold. simpl. f_equal.
-      * eapply HELFER_interpret_trm_trmModel.
+      * eapply interpret_trm_trmModel.
       * eapply IH.
 Qed.
 
-Theorem HELFER_trmModel_isModel (p : frm L')
-  : p \in MaxCS <-> interpret_frm HELFER_trmModel HELFER_ivar_interpret p.
+Theorem trmModel_isModel (p : frm L')
+  : p \in MaxCS <-> interpret_frm trmModel ivar_interpret p.
 Proof with eauto with *.
   rewrite <- MaxCS_infers_iff. pattern p. revert p. eapply @frm_depth_lt_ind.
   intros [R ts | t1 t2 | p1 | p1 p2 | y p1]; simpl; i.
-  - rewrite HELFER_interpret_trms_trmModel. reflexivity.
-  - unfold HELFER_interpret_equation. do 2 rewrite HELFER_interpret_trm_trmModel. reflexivity.
+  - rewrite interpret_trms_trmModel. reflexivity.
+  - unfold interpret_equation. do 2 rewrite interpret_trm_trmModel. reflexivity.
   - rewrite <- IH with (p' := p1). 2: lia. split.
     + intros INFERS1 INFERS2. eapply MaxCS_consistent.
       eapply ContradictionI with (A := p1); trivial.
@@ -328,15 +328,15 @@ Proof with eauto with *.
       eapply INFERS. rewrite MaxCS_infers_iff. exact IN.
   - unfold D. split.
     + intros INFERS t. rename y into x. set (s := one_subst x t).
-      assert (IFF : interpret_frm HELFER_trmModel HELFER_ivar_interpret (subst_frm s p1) <-> interpret_frm HELFER_trmModel (upd_env x t HELFER_ivar_interpret) p1).
+      assert (IFF : interpret_frm trmModel ivar_interpret (subst_frm s p1) <-> interpret_frm trmModel (upd_env x t ivar_interpret) p1).
       { rewrite <- substitution_lemma_frm. eapply interpret_frm_ext. ii. unfold compose, upd_env, s, one_subst, cons_subst, nil_subst.
-        destruct (eq_dec z x) as [EQ1 | NE1]; trivial. eapply HELFER_interpret_trm_trmModel.
+        destruct (eq_dec z x) as [EQ1 | NE1]; trivial. eapply interpret_trm_trmModel.
       }
       rewrite <- IFF. rewrite <- IH with (p' := subst_frm s p1). 2: rewrite subst_preserves_rank; lia.
       unfold s. eapply UniversalE. exact INFERS.
     + intros INTERPRET. rewrite MaxCS_infers_iff. eapply MaxCS_FORALL_FAITHFUL.
       intros t. rewrite <- MaxCS_infers_iff. rewrite -> IH with (p' := subst_frm (one_subst y t) p1). 2: rewrite subst_preserves_rank; lia.
-      rewrite <- substitution_lemma_frm. eapply interpret_frm_ext with (env' := upd_env y (interpret_trm HELFER_trmModel HELFER_ivar_interpret t) HELFER_ivar_interpret). ii. unfold compose, upd_env, one_subst, cons_subst, nil_subst.
+      rewrite <- substitution_lemma_frm. eapply interpret_frm_ext with (env' := upd_env y (interpret_trm trmModel ivar_interpret t) ivar_interpret). ii. unfold compose, upd_env, one_subst, cons_subst, nil_subst.
       destruct (eq_dec z y) as [EQ1 | NE1]; trivial. eapply INTERPRET.
 Qed.
 
@@ -371,14 +371,14 @@ Proof with eauto with *.
   { intros INCONSISTENT. contradiction NO. eapply NegationE... }
   pose proof (exists_MCS Gamma CONSISTENT) as [MCS [HBsub [HCons HMax]]].
   assert (claim : Gamma ⊭ Bot_frm).
-  { intros SAT. contradiction (SAT (restrict_structure (HELFER_trmModel MCS)) (HELFER_ivar_interpret MCS)).
-    - red. set (STRUCTURE := HELFER_trmModel MCS). set (env := HELFER_ivar_interpret MCS).
+  { intros SAT. contradiction (SAT (restrict_structure (trmModel MCS)) (ivar_interpret MCS)).
+    - red. set (STRUCTURE := trmModel MCS). set (env := ivar_interpret MCS).
       assert (MODEL : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
       { intros p. eapply restrict_structure_frm. }
       intros A AIN. red. rewrite <- MODEL. unfold STRUCTURE, env.
-      rewrite <- (HELFER_trmModel_isModel Gamma MCS HBsub HCons HMax); trivial.
+      rewrite <- (trmModel_isModel Gamma MCS HBsub HCons HMax); trivial.
       eapply HBsub. right. eapply E.in_image_iff. exists A. split; trivial.
-    - simpl. intros t. unfold HELFER_interpret_equation. eapply proves_reflexivity.
+    - simpl. intros t. unfold interpret_equation. eapply proves_reflexivity.
   }
   contradiction claim. intros ? ? ? SAT. unfold Gamma in SATISFY.
   red in SATISFY. pose proof (SATISFY (Neg_frm b)) as CONTRA. simpl in CONTRA. contradiction CONTRA.
