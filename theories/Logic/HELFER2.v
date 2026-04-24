@@ -414,7 +414,7 @@ Proof.
     }
     destruct UB_IN_CHAIN as [d [Hd Hps_in]].
     destruct d as [Delta [HBd HCd]]. simpl in Hps_in.
-    apply HCd. exists ps. split.
+    eapply HCd. exists ps. split.
     - intros p Hp. eapply E.in_fromList_iff in Hp. eapply Hps_in. exact Hp.
     - econs. exact PF.
   }
