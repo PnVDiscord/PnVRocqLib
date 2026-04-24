@@ -467,14 +467,14 @@ Proof.
   set (Gamma := E.insert (Neg_frm b) X).
   assert (CONSISTENT : Gamma ⊬ Bot_frm).
   { intros INCONSISTENT. contradiction NO. eapply NegationE; eauto. }
-  pose proof (exists_MCS Gamma CONSISTENT) as [MCS [HBsub [HCons HMax]]].
+  pose proof (exists_MCS Gamma CONSISTENT) as (MCS & HBsub & HCons & HMax).
+  set (STRUCTURE := trmModel MCS). set (env := ivar_interpret MCS).
+  assert (MODEL : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
+  { intros p. eapply restrict_structure_frm. }
   assert (claim : Gamma ⊭ Bot_frm).
   { intros SAT. eapply @SAT with (STRUCTURE := restrict_structure (trmModel MCS)) (env := ivar_interpret MCS).
     - ii. cbv in x_eq_x'. exact x_eq_x'.
-    - red. set (STRUCTURE := trmModel MCS). set (env := ivar_interpret MCS).
-      assert (MODEL : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
-      { intros p. eapply restrict_structure_frm. }
-      intros A AIN. red. rewrite <- MODEL. unfold STRUCTURE, env.
+    - red. fold env. fold STRUCTURE. intros A AIN. red. rewrite <- MODEL with (p := A). unfold STRUCTURE, env.
       rewrite <- (trmModel_isModel Gamma MCS HBsub HCons HMax); trivial.
       eapply HBsub. right. eapply E.in_image_iff. exists A. split; trivial.
     - simpl. intros t. unfold interpret_equation. reflexivity.
