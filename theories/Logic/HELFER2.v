@@ -83,7 +83,7 @@ Proof.
   rewrite <- AddHenkin_embed_equiconsistent in INC.
   rewrite inconsistent_iff in INC.
   erewrite @embed_frm_proves_iff with (Henkin_constants := Henkin_constants L) (p := Bot_frm) in INC.
-  apply CONSISTENT. exact INC.
+  eapply CONSISTENT. exact INC.
 Qed.
 
 Section WITH_MCS.
@@ -100,7 +100,7 @@ Lemma MaxCS_closed (p : frm L')
   (PROVE : MaxCS ⊢ p)
   : p \in MaxCS.
 Proof.
-  assert (CONS : ~ E.insert p MaxCS ⊢ Bot_frm).
+  assert (CONS : E.insert p MaxCS ⊬ Bot_frm).
   { intros INC. eapply MaxCS_consistent.
     assert (MaxCS ⊢ Imp_frm p Bot_frm).
     { eapply ImplicationI. exact INC. }
@@ -126,9 +126,9 @@ Proof.
   pose proof (classic (p \in MaxCS)) as [YES | NO]; [left; trivial |].
   right. eapply MaxCS_closed.
   eapply NegationI.
-  assert (INC : E.insert p MaxCS ⊢ Bot_frm \/ ~ E.insert p MaxCS ⊢ Bot_frm) by eapply classic.
+  assert (INC : E.insert p MaxCS ⊢ Bot_frm \/ E.insert p MaxCS ⊬ Bot_frm) by eapply classic.
   destruct INC as [INC | NOINC]; trivial.
-  exfalso. apply NO. eapply MaxCS_maximal with (Delta' := E.insert p MaxCS).
+  exfalso. eapply NO. eapply MaxCS_maximal with (Delta' := E.insert p MaxCS).
   - intros q Hq. right. exact Hq.
   - exact NOINC.
   - left. reflexivity.
@@ -149,7 +149,7 @@ Lemma MaxCS_META_DN (p : frm L')
   : p \in MaxCS.
 Proof.
   pose proof (MaxCS_complete p) as [YES | NO]; trivial.
-  exfalso. apply MaxCS_consistent.
+  exfalso. eapply MaxCS_consistent.
   eapply ByAssumption. eapply NEGATION. exact NO.
 Qed.
 
@@ -167,7 +167,7 @@ Proof.
       * eapply ByAssumption. eapply IMP. exact YES.
     + eapply MaxCS_closed.
       assert (NEG : Neg_frm p \in MaxCS).
-      { pose proof (MaxCS_complete p) as [ |NEG]; [contradiction | exact NEG]. }
+      { pose proof (MaxCS_complete p) as [YES | NO']; [contradiction | exact NO']. }
       eapply ImplicationI. eapply ContradictionE.
       eapply ContradictionI with (A := p).
       * eapply ByAssumption. left. reflexivity.
@@ -219,23 +219,33 @@ Proof.
       reflexivity.
 Defined.
 
-#[program]
-Definition constant_interpret (c' : L'.(constant_symbols)) : D :=
-  @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Con_trm c') t) _.
-Next Obligation.
+Lemma ivar_interpret_aux (x : ivar)
+  : exists lhs : trm L', forall rhs : trm L', MaxCS ⊢ Eqn_frm (Var_trm x) rhs <-> MaxCS ⊢ Eqn_frm lhs rhs.
+Proof.
+  exists (@Var_trm L' x). intros rhs; reflexivity.
+Qed.
+
+Lemma constant_interpret_aux (c' : L'.(constant_symbols))
+  : exists lhs : trm L', forall rhs : trm L', MaxCS ⊢ Eqn_frm (Con_trm c') rhs <-> MaxCS ⊢ Eqn_frm lhs rhs.
+Proof.
   exists (@Con_trm L' c'). intros rhs; reflexivity.
 Qed.
 
-#[program]
-Definition function_interpret (f' : L'.(function_symbols)) (vs : Vector.t D (L.(function_arity_table) f')) : D :=
-  @exist _ _ (fun t => exists ts, ts \in proj1_sig (to_vecD _ vs) /\ MaxCS ⊢ Eqn_frm (Fun_trm f' ts) t) _.
-Next Obligation.
+Lemma function_interpret_aux (f' : L'.(function_symbols)) (vs : Vector.t D (function_arity_table L' f'))
+  : exists lhs : trm L', forall rhs : trm L', (exists ts : trms L' (function_arity_table L f'), (` (to_vecD (function_arity_table L f') vs))%prg ts /\ MaxCS ⊢ Eqn_frm (Fun_trm f' ts) rhs) <-> MaxCS ⊢ Eqn_frm lhs rhs.
+Proof.
   destruct (to_vecD (function_arity_table L f') vs) as [vs' [lhs H_lhs]]; simpl.
-  unfold "\in" at 1. exists (@Fun_trm L' f' lhs). intros rhs. split; [intros (ts' & Hvs' & Hrhs) | intros Hrhs].
+  exists (@Fun_trm L' f' lhs). intros rhs. split; [intros (ts' & Hvs' & Hrhs) | intros Hrhs].
   - eapply proves_transitivity with (t2 := @Fun_trm L' f' ts'); trivial.
     eapply proves_eqn_fun. rewrite <- H_lhs. exact Hvs'.
-  - exists lhs. split; trivial. rewrite -> H_lhs. eapply pairwise_equal_reflexive.
+  - exists lhs. split; trivial. change (lhs \in vs'). rewrite -> H_lhs. eapply pairwise_equal_reflexive.
 Qed.
+
+Definition constant_interpret (c' : L'.(constant_symbols)) : D :=
+  @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Con_trm c') t) (constant_interpret_aux c').
+
+Definition function_interpret (f' : L'.(function_symbols)) (vs : Vector.t D (L.(function_arity_table) f')) : D :=
+  @exist _ _ (fun t => exists ts, ts \in proj1_sig (to_vecD _ vs) /\ MaxCS ⊢ Eqn_frm (Fun_trm f' ts) t) (function_interpret_aux f' vs).
 
 Definition relation_interpret (R : L'.(relation_symbols)) (vs : Vector.t D (L.(relation_arity_table) R)) : Prop :=
   exists ts, ts \in proj1_sig (to_vecD _ vs) /\ MaxCS ⊢ Rel_frm R ts.
@@ -255,12 +265,8 @@ Proof.
   exact (EQ t).
 Qed.
 
-#[program]
 Definition ivar_interpret (x : ivar) : D :=
-  @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Var_trm x) t) _.
-Next Obligation.
-  unfold "\in". exists (Var_trm x). intros rhs; reflexivity.
-Qed.
+  @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Var_trm x) t) (ivar_interpret_aux x).
 
 #[local, program]
 Instance trmModel : isStructureOf L' :=
@@ -390,7 +396,7 @@ Proof.
   assert (HCONS : U ⊬ Bot_frm).
   { intros PROV. destruct PROV as [ps [INCL [PF]]].
     assert (EACH : forall p, In p ps -> (exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d)).
-    { intros p Hp. apply INCL. eapply E.in_fromList_iff. exact Hp. }
+    { intros p Hp. eapply INCL. eapply E.in_fromList_iff. exact Hp. }
     assert (UB_IN_CHAIN : exists d : ConsistentExtension, d \in C /\ (forall p, In p ps -> p \in proj1_sig d)).
     { clear INCL PF. induction ps as [ | q ps IH]; simpl in *.
       - destruct NONEMPTY as [d0 Hd0]. exists d0. split; trivial. intros p [].
