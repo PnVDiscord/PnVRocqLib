@@ -56,8 +56,6 @@ Import HELFER1_ii.
 
 #[local] Existing Instance V.vec_isSetoid.
 
-Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}.
-
 Context {L : language} {function_symbols_hasEqDec : hasEqDec L.(function_symbols)} {constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)} {relation_symbols_hasEqDec : hasEqDec L.(relation_symbols)}.
 
 #[local] Notation L' := (augmented_language L (Henkin_constants L)).
@@ -232,7 +230,7 @@ Proof.
 Qed.
 
 Lemma function_interpret_aux (f' : L'.(function_symbols)) (vs : Vector.t D (function_arity_table L' f'))
-  : exists lhs : trm L', forall rhs : trm L', (exists ts : trms L' (function_arity_table L f'), (` (to_vecD (function_arity_table L f') vs))%prg ts /\ MaxCS ⊢ Eqn_frm (Fun_trm f' ts) rhs) <-> MaxCS ⊢ Eqn_frm lhs rhs.
+  : exists lhs : trm L', forall rhs : trm L', (exists ts : trms L' (function_arity_table L f'), (proj1_sig (to_vecD (function_arity_table L f') vs)) ts /\ MaxCS ⊢ Eqn_frm (Fun_trm f' ts) rhs) <-> MaxCS ⊢ Eqn_frm lhs rhs.
 Proof.
   destruct (to_vecD (function_arity_table L f') vs) as [vs' [lhs H_lhs]]; simpl.
   exists (@Fun_trm L' f' lhs). intros rhs. split; [intros (ts' & Hvs' & Hrhs) | intros Hrhs].
@@ -241,32 +239,20 @@ Proof.
   - exists lhs. split; trivial. change (lhs \in vs'). rewrite -> H_lhs. eapply pairwise_equal_reflexive.
 Qed.
 
+Definition ivar_interpret (x : ivar) : D :=
+  @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Var_trm x) t) (ivar_interpret_aux x).
+
 Definition constant_interpret (c' : L'.(constant_symbols)) : D :=
   @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Con_trm c') t) (constant_interpret_aux c').
 
 Definition function_interpret (f' : L'.(function_symbols)) (vs : Vector.t D (L.(function_arity_table) f')) : D :=
   @exist _ _ (fun t => exists ts, ts \in proj1_sig (to_vecD _ vs) /\ MaxCS ⊢ Eqn_frm (Fun_trm f' ts) t) (function_interpret_aux f' vs).
 
-Definition relation_interpret (R : L'.(relation_symbols)) (vs : Vector.t D (L.(relation_arity_table) R)) : Prop :=
-  exists ts, ts \in proj1_sig (to_vecD _ vs) /\ MaxCS ⊢ Rel_frm R ts.
+Definition relation_interpret (R' : L'.(relation_symbols)) (vs : Vector.t D (L.(relation_arity_table) R')) : Prop :=
+  exists ts, ts \in proj1_sig (to_vecD _ vs) /\ MaxCS ⊢ Rel_frm R' ts.
 
 Definition interpret_equation : forall lhs : D, forall rhs : D, Prop :=
   @eq D.
-
-Lemma interpret_equation_intro (lhs : D) (rhs : D)
-  (EQ : forall t : trm L', t \in proj1_sig lhs <-> t \in proj1_sig rhs)
-  : interpret_equation lhs rhs.
-Proof.
-  destruct lhs as [lhs H_lhs], rhs as [rhs H_rhs]; simpl in *.
-  red. eapply exist_eq_iff.
-  refine (@Functional_Extensionality _ _ _ Axms (trm L') (fun _ => Prop) lhs rhs _).
-  intros t.
-  refine (@Propositional_Extensionality _ _ _ Axms (lhs t) (rhs t) _).
-  exact (EQ t).
-Qed.
-
-Definition ivar_interpret (x : ivar) : D :=
-  @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Var_trm x) t) (ivar_interpret_aux x).
 
 #[local, program]
 Instance trmModel : isStructureOf L' :=
@@ -300,11 +286,23 @@ Proof.
     + eapply proves_reflexivity.
   - destruct ts as [ | n t ts]; simpl; unfold "\in".
     + reflexivity.
-    + exists t. split.
-      { eapply interpret_trm_trmModel. }
-      exists ts. split.
-      { eapply interpret_trms_trmModel. }
+    + exists t. split. { eapply interpret_trm_trmModel. }
+      exists ts. split. { eapply interpret_trms_trmModel. }
       reflexivity.
+Qed.
+
+Context `{Axms : ClassicalAxioms (b_fun_ext := true) (b_prop_ext := true)}.
+
+Lemma interpret_equation_intro (lhs : D) (rhs : D)
+  (EQ : forall t : trm L', t \in proj1_sig lhs <-> t \in proj1_sig rhs)
+  : interpret_equation lhs rhs.
+Proof.
+  destruct lhs as [lhs H_lhs], rhs as [rhs H_rhs]; simpl in *.
+  red. eapply exist_eq_iff.
+  refine (@Functional_Extensionality _ _ _ Axms (trm L') (fun _ => Prop) lhs rhs _).
+  intros t.
+  refine (@Propositional_Extensionality _ _ _ Axms (lhs t) (rhs t) _).
+  exact (EQ t).
 Qed.
 
 Theorem trmModel_isModel (p : frm L')
@@ -354,7 +352,7 @@ Proof.
       eapply INFERS. rewrite MaxCS_infers_iff. exact IN.
   - unfold D. split.
     + intros INFERS [P [t Ht]]. rename y into x. set (s := one_subst x t). set (d := @exist _ _ _ _).
-      assert (IFF : interpret_frm trmModel ivar_interpret (subst_frm s p1) <-> interpret_frm trmModel (upd_env x d ivar_interpret) p1).
+      assert (claim : interpret_frm trmModel ivar_interpret (subst_frm s p1) <-> interpret_frm trmModel (upd_env x d ivar_interpret) p1).
       { rewrite <- substitution_lemma_frm. eapply interpret_frm_ext. ii. unfold compose, upd_env, s, one_subst, cons_subst, nil_subst.
         destruct (eq_dec z x) as [EQ1 | NE1]; trivial. subst z. eapply interpret_equation_intro. simpl. intros t'.
         rewrite -> Ht. pose proof (interpret_trm_trmModel t) as HH. split.
@@ -363,7 +361,7 @@ Proof.
         - destruct (interpret_trm trmModel ivar_interpret t) as [P'' [t'' IFF]]; simpl in *; intros Ht''.
           rewrite -> IFF in HH |- *. simpl. eapply proves_transitivity with (t2 := t); eauto.
       }
-      rewrite <- IFF. rewrite <- IH with (p' := subst_frm s p1) by now rewrite subst_preserves_rank; lia.
+      rewrite <- claim. rewrite <- IH with (p' := subst_frm s p1) by now rewrite subst_preserves_rank; lia.
       unfold s. eapply UniversalE. exact INFERS.
     + intros INTERPRET. rewrite MaxCS_infers_iff. eapply MaxCS_FORALL_FAITHFUL.
       intros t. rewrite <- MaxCS_infers_iff. rewrite -> IH with (p' := subst_frm (one_subst y t) p1) by now rewrite subst_preserves_rank; lia.
@@ -393,56 +391,54 @@ Proof.
   { intros p Hp. destruct NONEMPTY as [d0 Hd0]. exists d0. split; trivial.
     destruct d0 as [Delta0 [HB0 HC0]]. simpl. eapply HB0. exact Hp.
   }
-  assert (HCONS : U ⊬ Bot_frm).
-  { intros PROV. destruct PROV as [ps [INCL [PF]]].
-    assert (EACH : forall p, In p ps -> (exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d)).
-    { intros p Hp. eapply INCL. eapply E.in_fromList_iff. exact Hp. }
-    assert (UB_IN_CHAIN : exists d : ConsistentExtension, d \in C /\ (forall p, In p ps -> p \in proj1_sig d)).
-    { clear INCL PF. induction ps as [ | q ps IH]; simpl in *.
-      - destruct NONEMPTY as [d0 Hd0]. exists d0. split; trivial. intros p [].
-      - assert (IHok : forall p, In p ps -> exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
-        { intros p Hp. eapply EACH. right. exact Hp. }
-        pose proof (IH IHok) as [d_tail [Hd_tail Htail]].
-        pose proof (EACH q (or_introl eq_refl)) as [d_q [Hd_q Hq_in]].
-        pose proof (CHAIN d_q d_tail Hd_q Hd_tail) as [LE | LE].
-        + exists d_tail. split; trivial. intros p [-> | Hp].
-          * eapply LE. exact Hq_in.
-          * eapply Htail. exact Hp.
-        + exists d_q. split; trivial. intros p [-> | Hp].
-          * exact Hq_in.
-          * eapply LE. eapply Htail. exact Hp.
-    }
-    destruct UB_IN_CHAIN as [d [Hd Hps_in]].
-    destruct d as [Delta [HBd HCd]]. simpl in Hps_in.
-    eapply HCd. exists ps. split.
+  enough (HCONS : U ⊬ Bot_frm).
+  { exists (@exist _ _ U (conj HSUB HCONS)).
+    intros d Hd. destruct d as [Delta [HBd HCd]]. simpl.
+    intros p Hp. exists (@exist _ _ Delta (conj HBd HCd)). split; simpl; trivial.
+  }
+  intros PROV. destruct PROV as [ps [INCL [PF]]].
+  assert (EACH : forall p : frm L', In p ps -> (exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d)).
+  { intros p Hp. eapply INCL. eapply E.in_fromList_iff. exact Hp. }
+  enough (exists d : ConsistentExtension, d \in C /\ (forall p : frm L', In p ps -> p \in proj1_sig d)) as [d [Hd Hps_in]].
+  { destruct d as [Delta [HBd HCd]]. simpl in Hps_in. eapply HCd. exists ps. split.
     - intros p Hp. eapply E.in_fromList_iff in Hp. eapply Hps_in. exact Hp.
     - econs. exact PF.
   }
-  exists (@exist _ _ U (conj HSUB HCONS)).
-  intros d Hd. destruct d as [Delta [HBd HCd]]. simpl.
-  intros p Hp. exists (@exist _ _ Delta (conj HBd HCd)). split; simpl; trivial.
+  clear INCL PF. induction ps as [ | q ps IH]; simpl in *.
+  - destruct NONEMPTY as [d0 Hd0]. exists d0. split; trivial. intros p [].
+  - assert (IHok : forall p : frm L', In p ps -> exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
+    { intros p Hp. eapply EACH. right. exact Hp. }
+    pose proof (IH IHok) as [d_tail [Hd_tail Htail]].
+    pose proof (EACH q (or_introl eq_refl)) as [d_q [Hd_q Hq_in]].
+    pose proof (CHAIN d_q d_tail Hd_q Hd_tail) as [LE | LE].
+    + exists d_tail. split; trivial. intros p [-> | Hp].
+      * eapply LE. exact Hq_in.
+      * eapply Htail. exact Hp.
+    + exists d_q. split; trivial. intros p [-> | Hp].
+      * exact Hq_in.
+      * eapply LE. eapply Htail. exact Hp.
 Qed.
+
+Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}.
 
 Lemma exists_MCS
   : exists Delta : ensemble (frm L'), Hbase \subseteq Delta /\ Delta ⊬ Bot_frm /\ (forall Delta' : ensemble (frm L'), Delta \subseteq Delta' -> Delta' ⊬ Bot_frm -> Delta' \subseteq Delta).
 Proof.
-  exploit (Zorn's_lemma ConsistentExtension ConsistentExtension_isProset (inhabits ConsistentExtension_base)); unnw.
+  exploit (Zorn's_lemma ConsistentExtension ConsistentExtension_isProset); unnw.
+  { econs. exact ConsistentExtension_base. }
   { intros C NONEMPTY CHAIN. eapply chain_upperbound; eauto. }
-  intros [d_m MAX]. destruct d_m as [Delta [HBd HCd]]. exists Delta. splits; eauto.
+  intros [d_m MAX]. destruct d_m as (Delta & HBd & HCd). exists Delta. splits; eauto.
   intros Delta' SUB CONS'. exact (MAX (@exist _ _ Delta' (conj (transitivity HBd SUB) CONS')) SUB).
 Qed.
 
 End COMPLETENESS_OF_HilbertCalculus.
 
-#[universes(polymorphic=yes)]
-Definition eqProp_iff_eq@{u} {A : Type@{u}} (SETOID : isSetoid A) : Prop :=
-  forall x : A, forall x' : A, forall x_eq_x' : @eqProp A SETOID x x', @eq A x x'.
+Definition entails' {L : language} (Gamma : ensemble (frm L)) (C : frm L) : Prop :=
+  forall STRUCTURE : isStructureOf L, (forall x : domain_of_discourse, forall x' : domain_of_discourse, equation_interpret.(eqProp) x x' -> x = x') -> forall env : ivar -> domain_of_discourse, forall SATISFY : satisfies_frms STRUCTURE env Gamma, satisfies_frm STRUCTURE env C.
 
-Definition entails {L : language} (Gamma : ensemble (frm L)) (C : frm L) : Prop :=
-  forall STRUCTURE : isStructureOf L, @eqProp_iff_eq@{U_discourse} domain_of_discourse equation_interpret -> forall env : ivar -> domain_of_discourse, forall SATISFY : satisfies_frms STRUCTURE env Gamma, satisfies_frm STRUCTURE env C.
+Infix "⊨" := entails' : type_scope.
 
-Infix "⊨" := HELFER2.entails : type_scope.
-Notation "Gamma ⊭ C" := (~ HELFER2.entails Gamma C) : type_scope.
+Notation "Gamma ⊭ C" := (~ entails' Gamma C) : type_scope.
 
 Section COMPLETENESS_THEOREM.
 
@@ -459,32 +455,30 @@ Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext 
 
 #[local] Existing Instance abstract_Henkin_constants_instance.
 
+#[local] Hint Unfold E.In E.insert : core.
+
 Theorem HilbertCalculus_complete (X : ensemble (frm L)) (b : frm L)
   (CONSEQUENCE : X ⊨ b)
   : X ⊢ b.
-Proof.
-  eapply NNPP. intros NO.
-  set (Gamma := E.insert (Neg_frm b) X).
+Proof with eauto.
+  eapply NNPP. intros NO. set (Gamma := E.insert (Neg_frm b) X).
   assert (CONSISTENT : Gamma ⊬ Bot_frm).
-  { intros INCONSISTENT. contradiction NO. eapply NegationE; eauto. }
+  { intros INCONSISTENT. contradiction NO. eapply NegationE... }
   pose proof (exists_MCS Gamma CONSISTENT) as (MCS & HBsub & HCons & HMax).
   set (STRUCTURE := trmModel MCS). set (env := ivar_interpret MCS).
   assert (MODEL : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
-  { intros p. eapply restrict_structure_frm. }
+  { ii. eapply restrict_structure_frm. }
   assert (claim : Gamma ⊭ Bot_frm).
-  { intros SAT. eapply @SAT with (STRUCTURE := restrict_structure (trmModel MCS)) (env := ivar_interpret MCS).
-    - ii. cbv in x_eq_x'. exact x_eq_x'.
-    - red. fold env. fold STRUCTURE. intros A AIN. red. rewrite <- MODEL with (p := A). unfold STRUCTURE, env.
-      rewrite <- (trmModel_isModel Gamma MCS HBsub HCons HMax); trivial.
-      eapply HBsub. right. eapply E.in_image_iff. exists A. split; trivial.
+  { intros SAT. eapply SAT with (STRUCTURE := restrict_structure (trmModel MCS)) (env := ivar_interpret MCS).
+    - ii...
+    - red. fold env. fold STRUCTURE. intros A AIN. red. rewrite <- MODEL with (p := A).
+      unfold STRUCTURE, env. rewrite <- trmModel_isModel with (X := Gamma) (MaxCS := MCS)...
+      eapply HBsub. right. rewrite E.in_image_iff. exists A...
     - simpl. intros t. unfold interpret_equation. reflexivity.
   }
-  contradiction claim. intros ? H_eqProp_iff_eq ? ? SAT. unfold Gamma in SATISFY.
-  red in SATISFY. pose proof (SATISFY (Neg_frm b)) as CONTRA. simpl in CONTRA. contradiction CONTRA.
-  - left. reflexivity.
-  - eapply CONSEQUENCE.
-    + ii. eapply H_eqProp_iff_eq. exact x_eq_x'.
-    + ii. eapply SATISFY. right. exact H_IN.
+  contradiction claim. subst STRUCTURE env. intros ? H_eqProp_iff_eq ? ? SAT. unfold Gamma in SATISFY.
+  red in SATISFY. pose proof (SATISFY (Neg_frm b)) as CONTRA. simpl in CONTRA.
+  contradiction CONTRA... eapply CONSEQUENCE... ii. eapply SATISFY...
 Qed.
 
 End COMPLETENESS_THEOREM.
