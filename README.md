@@ -37,7 +37,7 @@ Our main results are:
 
 - [x] The Bourbaki-Witt fixed-point theorem, the geneneralised Kleene fixed-point theorem, and Zorn's Lemma (`Theorem BourbakiWittFixedpointTheorem`, `Theorem generalised_Kleene_fixedpoint_theorem`, and `Theorem Zorn's_lemma`) in [`ClassicalSetTheory.v`](https://github.com/PnVDiscord/PnVRocqLib/blob/main/theories/Math/ClassicalSetTheory.v)
 
-- [x] The completeness of first-order logic (`Theorem HilbertCalculus_complete` in [HELFER2.v](theories/Logic/HELFER2.v))
+- [x] The completeness of first-order logic (`Theorem HilbertCalculus_complete`) in [HELFER2.v](theories/Logic/HELFER2.v)
 
 ### [theories/Control/](theories/Control)
 
