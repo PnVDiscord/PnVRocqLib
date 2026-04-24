@@ -20,26 +20,32 @@ Import FolNotations.
 
 Import FolHilbert.
 
-Lemma pairwise_equal_reflexive {L : language} {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n)
+Section PAIRWISE.
+
+Context {L : language}.
+
+Lemma pairwise_equal_reflexive {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n)
   : pairwise_equal Gamma ts ts.
 Proof.
   induction ts; simpl; econs; eauto. eapply proves_reflexivity.
 Qed.
 
-Lemma pairwise_equal_symmetric {L : language} {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n)
+Lemma pairwise_equal_symmetric {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n)
   (H1 : pairwise_equal Gamma ts ts')
   : pairwise_equal Gamma ts' ts.
 Proof.
   revert ts' H1. induction ts; simpl; eauto; intros. des; split; eauto. now eapply proves_symmetry.
 Qed.
 
-Lemma pairwise_equal_transitive {L : language} {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n) (ts'' : trms L n)
+Lemma pairwise_equal_transitive {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n) (ts'' : trms L n)
   (H1 : pairwise_equal Gamma ts ts')
   (H2 : pairwise_equal Gamma ts' ts'')
   : pairwise_equal Gamma ts ts''.
 Proof.
   revert ts' ts'' H1 H2. induction ts; simpl; econs; des; eauto. now eapply proves_transitivity with (t2 := head ts').
 Qed.
+
+End PAIRWISE.
 
 #[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
 
@@ -68,7 +74,7 @@ Let Hbase : ensemble (frm L') :=
   E.union HenkinAxiomSet (E.image embed_frm X).
 
 Lemma Hbase_consistent
-  : ~ Hbase ⊢ Bot_frm.
+  : Hbase ⊬ Bot_frm.
 Proof.
   intros H.
   assert (INC : inconsistent Hbase).
@@ -80,78 +86,15 @@ Proof.
   apply CONSISTENT. exact INC.
 Qed.
 
-Let ConsistentExtension : Type :=
-  { Delta : ensemble (frm L') | Hbase \subseteq Delta /\ ~ Delta ⊢ Bot_frm }.
-
-#[local]
-Instance ConsistentExtension_isProset : isProset ConsistentExtension :=
-  @subProset (ensemble (frm L')) E.ensemble_isProset (fun Delta => Hbase \subseteq Delta /\ ~ Delta ⊢ Bot_frm).
-
-Let ConsistentExtension_base : ConsistentExtension :=
-  @exist _ _ Hbase (conj (reflexivity Hbase) Hbase_consistent).
-
-Lemma chain_upperbound (C : ensemble ConsistentExtension)
-  (NONEMPTY : exists d : ConsistentExtension, d \in C)
-  (CHAIN : forall x1, forall x2 : ConsistentExtension, x1 \in C -> x2 \in C -> leProp x1 x2 \/ leProp x2 x1)
-  : exists u : ConsistentExtension, forall d : ConsistentExtension, d \in C -> leProp d u.
-Proof.
-  set (U := fun p : frm L' => exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
-  assert (HSUB : Hbase \subseteq U).
-  { intros p Hp. destruct NONEMPTY as [d0 Hd0]. exists d0. split; trivial.
-    destruct d0 as [Delta0 [HB0 HC0]]. simpl. eapply HB0. exact Hp.
-  }
-  assert (HCONS : ~ U ⊢ Bot_frm).
-  { intros PROV. destruct PROV as [ps [INCL [PF]]].
-    assert (EACH : forall p, In p ps -> exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
-    { intros p Hp. apply INCL. eapply E.in_fromList_iff. exact Hp. }
-    assert (UB_IN_CHAIN : exists d : ConsistentExtension, d \in C /\ forall p, In p ps -> p \in proj1_sig d).
-    { clear INCL PF. induction ps as [ | q ps IH]; simpl in *.
-      - destruct NONEMPTY as [d0 Hd0]. exists d0. split; trivial. intros p [].
-      - assert (IHok : forall p, In p ps -> exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
-        { intros p Hp. eapply EACH. right. exact Hp. }
-        specialize (IH IHok). destruct IH as [d_tail [Hd_tail Htail]].
-        pose proof (EACH q (or_introl eq_refl)) as [d_q [Hd_q Hq_in]].
-        pose proof (CHAIN d_q d_tail Hd_q Hd_tail) as [LE | LE].
-        + exists d_tail. split; trivial. intros p [-> | Hp].
-          * eapply LE. exact Hq_in.
-          * eapply Htail. exact Hp.
-        + exists d_q. split; trivial. intros p [-> | Hp].
-          * exact Hq_in.
-          * eapply LE. eapply Htail. exact Hp.
-    }
-    destruct UB_IN_CHAIN as [d [Hd Hps_in]].
-    destruct d as [Delta [HBd HCd]]. simpl in Hps_in.
-    apply HCd. exists ps. split.
-    - intros p Hp. eapply E.in_fromList_iff in Hp. eapply Hps_in. exact Hp.
-    - econs. exact PF.
-  }
-  exists (@exist _ _ U (conj HSUB HCONS)).
-  intros d Hd. destruct d as [Delta [HBd HCd]]. simpl.
-  intros p Hp. exists (@exist _ _ Delta (conj HBd HCd)). split; simpl; trivial.
-Qed.
-
-Lemma exists_MCS
-  : exists Delta : ensemble (frm L'), Hbase \subseteq Delta /\ (~ Delta ⊢ Bot_frm) /\ (forall Delta' : ensemble (frm L'), Delta \subseteq Delta' -> (~ Delta' ⊢ Bot_frm) -> Delta' \subseteq Delta).
-Proof.
-  pose proof (Zorn's_lemma ConsistentExtension ConsistentExtension_isProset (inhabits ConsistentExtension_base)) as ZORN.
-  exploit ZORN; unnw.
-  { intros C NONEMPTY CHAIN. eapply chain_upperbound; eauto. }
-  intros [d_m MAX]. destruct d_m as [Delta [HBd HCd]]. exists Delta.
-  split; [| split]; eauto.
-  intros Delta' SUB CONS'.
-  specialize (MAX (@exist _ _ Delta' (conj (transitivity HBd SUB) CONS')) SUB).
-  simpl in MAX. exact MAX.
-Qed.
-
 Section WITH_MCS.
 
 Variable MaxCS : ensemble (frm L').
 
 Hypothesis MaxCS_incl_Hbase : Hbase \subseteq MaxCS.
 
-Hypothesis MaxCS_consistent : ~ MaxCS ⊢ Bot_frm.
+Hypothesis MaxCS_consistent : MaxCS ⊬ Bot_frm.
 
-Hypothesis MaxCS_maximal : forall Delta' : ensemble (frm L'), MaxCS \subseteq Delta' -> ~ Delta' ⊢ Bot_frm -> Delta' \subseteq MaxCS.
+Hypothesis MaxCS_maximal : forall Delta' : ensemble (frm L'), MaxCS \subseteq Delta' -> Delta' ⊬ Bot_frm -> Delta' \subseteq MaxCS.
 
 Lemma MaxCS_closed (p : frm L')
   (PROVE : MaxCS ⊢ p)
@@ -180,15 +123,15 @@ Qed.
 Lemma MaxCS_complete (p : frm L')
   : p \in MaxCS \/ Neg_frm p \in MaxCS.
 Proof.
-  destruct (classic (p \in MaxCS)) as [YES | NO]; [left; trivial |].
+  pose proof (classic (p \in MaxCS)) as [YES | NO]; [left; trivial |].
   right. eapply MaxCS_closed.
   eapply NegationI.
   assert (INC : E.insert p MaxCS ⊢ Bot_frm \/ ~ E.insert p MaxCS ⊢ Bot_frm) by eapply classic.
   destruct INC as [INC | NOINC]; trivial.
   exfalso. apply NO. eapply MaxCS_maximal with (Delta' := E.insert p MaxCS).
-  + intros q Hq. right. exact Hq.
-  + exact NOINC.
-  + left. reflexivity.
+  - intros q Hq. right. exact Hq.
+  - exact NOINC.
+  - left. reflexivity.
 Qed.
 
 Lemma MaxCS_neg_iff (p : frm L')
@@ -198,14 +141,14 @@ Proof.
   - intros IN NEG. eapply MaxCS_consistent. eapply ContradictionI with (A := p).
     + eapply ByAssumption. exact IN.
     + eapply ByAssumption. exact NEG.
-  - intros NNEG. destruct (MaxCS_complete p) as [YES | NO]; trivial. contradiction.
+  - intros NNEG. pose proof (MaxCS_complete p) as [YES | NO]; trivial. contradiction.
 Qed.
 
 Lemma MaxCS_META_DN (p : frm L')
   (NEGATION : Neg_frm p \in MaxCS -> Bot_frm \in MaxCS)
   : p \in MaxCS.
 Proof.
-  destruct (MaxCS_complete p) as [YES | NO]; trivial.
+  pose proof (MaxCS_complete p) as [YES | NO]; trivial.
   exfalso. apply MaxCS_consistent.
   eapply ByAssumption. eapply NEGATION. exact NO.
 Qed.
@@ -218,13 +161,13 @@ Proof.
     eapply ImplicationE with (A := p).
     + eapply ByAssumption. exact IMP.
     + eapply ByAssumption. exact IN.
-  - intros IMP. destruct (classic (p \in MaxCS)) as [YES | NO].
+  - intros IMP. pose proof (classic (p \in MaxCS)) as [YES | NO].
     + eapply MaxCS_closed. eapply ImplicationI. eapply extend_proves with (Gamma := MaxCS).
       * intros r Hr. right. exact Hr.
       * eapply ByAssumption. eapply IMP. exact YES.
     + eapply MaxCS_closed.
       assert (NEG : Neg_frm p \in MaxCS).
-      { destruct (MaxCS_complete p) as [|NEG]; [contradiction | exact NEG]. }
+      { pose proof (MaxCS_complete p) as [ |NEG]; [contradiction | exact NEG]. }
       eapply ImplicationI. eapply ContradictionE.
       eapply ContradictionI with (A := p).
       * eapply ByAssumption. left. reflexivity.
@@ -312,10 +255,6 @@ Proof.
   exact (EQ t).
 Qed.
 
-#[global]
-Instance interpret_equation_Equivalence : Equivalence interpret_equation :=
-  eq_equivalence.
-
 #[program]
 Definition ivar_interpret (x : ivar) : D :=
   @exist _ _ (fun t => MaxCS ⊢ Eqn_frm (Var_trm x) t) _.
@@ -326,7 +265,7 @@ Qed.
 #[local, program]
 Instance trmModel : isStructureOf L' :=
   { domain_of_discourse := D
-  ; equation_interpret := {| eqProp := interpret_equation; eqProp_Equivalence := interpret_equation_Equivalence |}
+  ; equation_interpret := {| eqProp := interpret_equation; eqProp_Equivalence := eq_equivalence |}
   ; function_interpret := function_interpret
   ; constant_interpret := constant_interpret
   ; relation_interpret := relation_interpret
@@ -428,6 +367,65 @@ Qed.
 
 End WITH_MCS.
 
+Let ConsistentExtension : Type@{U_discourse} :=
+  { Delta : ensemble@{U_discourse} (frm L') | Hbase \subseteq Delta /\ Delta ⊬ Bot_frm }.
+
+#[local]
+Instance ConsistentExtension_isProset : isProset ConsistentExtension :=
+  @subProset (ensemble (frm L')) E.ensemble_isProset (fun Delta => Hbase \subseteq Delta /\ Delta ⊬ Bot_frm).
+
+Let ConsistentExtension_base : ConsistentExtension :=
+  @exist _ _ Hbase (conj (reflexivity Hbase) Hbase_consistent).
+
+Lemma chain_upperbound (C : ensemble ConsistentExtension)
+  (NONEMPTY : exists d : ConsistentExtension, d \in C)
+  (CHAIN : forall x1, forall x2, x1 \in C -> x2 \in C -> (x1 =< x2 \/ x2 =< x1))
+  : exists u : ConsistentExtension, forall d, d \in C -> d =< u.
+Proof.
+  pose (U := fun p : frm L' => exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
+  assert (HSUB : Hbase \subseteq U).
+  { intros p Hp. destruct NONEMPTY as [d0 Hd0]. exists d0. split; trivial.
+    destruct d0 as [Delta0 [HB0 HC0]]. simpl. eapply HB0. exact Hp.
+  }
+  assert (HCONS : U ⊬ Bot_frm).
+  { intros PROV. destruct PROV as [ps [INCL [PF]]].
+    assert (EACH : forall p, In p ps -> (exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d)).
+    { intros p Hp. apply INCL. eapply E.in_fromList_iff. exact Hp. }
+    assert (UB_IN_CHAIN : exists d : ConsistentExtension, d \in C /\ (forall p, In p ps -> p \in proj1_sig d)).
+    { clear INCL PF. induction ps as [ | q ps IH]; simpl in *.
+      - destruct NONEMPTY as [d0 Hd0]. exists d0. split; trivial. intros p [].
+      - assert (IHok : forall p, In p ps -> exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
+        { intros p Hp. eapply EACH. right. exact Hp. }
+        pose proof (IH IHok) as [d_tail [Hd_tail Htail]].
+        pose proof (EACH q (or_introl eq_refl)) as [d_q [Hd_q Hq_in]].
+        pose proof (CHAIN d_q d_tail Hd_q Hd_tail) as [LE | LE].
+        + exists d_tail. split; trivial. intros p [-> | Hp].
+          * eapply LE. exact Hq_in.
+          * eapply Htail. exact Hp.
+        + exists d_q. split; trivial. intros p [-> | Hp].
+          * exact Hq_in.
+          * eapply LE. eapply Htail. exact Hp.
+    }
+    destruct UB_IN_CHAIN as [d [Hd Hps_in]].
+    destruct d as [Delta [HBd HCd]]. simpl in Hps_in.
+    apply HCd. exists ps. split.
+    - intros p Hp. eapply E.in_fromList_iff in Hp. eapply Hps_in. exact Hp.
+    - econs. exact PF.
+  }
+  exists (@exist _ _ U (conj HSUB HCONS)).
+  intros d Hd. destruct d as [Delta [HBd HCd]]. simpl.
+  intros p Hp. exists (@exist _ _ Delta (conj HBd HCd)). split; simpl; trivial.
+Qed.
+
+Lemma exists_MCS
+  : exists Delta : ensemble (frm L'), Hbase \subseteq Delta /\ Delta ⊬ Bot_frm /\ (forall Delta' : ensemble (frm L'), Delta \subseteq Delta' -> Delta' ⊬ Bot_frm -> Delta' \subseteq Delta).
+Proof.
+  exploit (Zorn's_lemma ConsistentExtension ConsistentExtension_isProset (inhabits ConsistentExtension_base)); unnw.
+  { intros C NONEMPTY CHAIN. eapply chain_upperbound; eauto. }
+  intros [d_m MAX]. destruct d_m as [Delta [HBd HCd]]. exists Delta. splits; eauto.
+  intros Delta' SUB CONS'. exact (MAX (@exist _ _ Delta' (conj (transitivity HBd SUB) CONS')) SUB).
+Qed.
+
 End COMPLETENESS_OF_HilbertCalculus.
 
 #[universes(polymorphic=yes)]
@@ -437,8 +435,8 @@ Definition eqProp_iff_eq@{u} {A : Type@{u}} (SETOID : isSetoid A) : Prop :=
 Definition entails {L : language} (Gamma : ensemble (frm L)) (C : frm L) : Prop :=
   forall STRUCTURE : isStructureOf L, @eqProp_iff_eq@{U_discourse} domain_of_discourse equation_interpret -> forall env : ivar -> domain_of_discourse, forall SATISFY : satisfies_frms STRUCTURE env Gamma, satisfies_frm STRUCTURE env C.
 
-Infix "⊨" := HELFER2.entails : program_scope.
-Notation "Gamma ⊭ C" := (~ HELFER2.entails Gamma C) : program_scope.
+Infix "⊨" := HELFER2.entails : type_scope.
+Notation "Gamma ⊭ C" := (~ HELFER2.entails Gamma C) : type_scope.
 
 Section COMPLETENESS_THEOREM.
 
@@ -456,7 +454,7 @@ Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext 
 #[local] Existing Instance abstract_Henkin_constants_instance.
 
 Theorem HilbertCalculus_complete (X : ensemble (frm L)) (b : frm L)
-  (CONSEQUENCE : (X ⊨ b)%prg)
+  (CONSEQUENCE : X ⊨ b)
   : X ⊢ b.
 Proof.
   eapply NNPP. intros NO.
@@ -464,7 +462,7 @@ Proof.
   assert (CONSISTENT : Gamma ⊬ Bot_frm).
   { intros INCONSISTENT. contradiction NO. eapply NegationE; eauto. }
   pose proof (exists_MCS Gamma CONSISTENT) as [MCS [HBsub [HCons HMax]]].
-  assert (claim : (Gamma ⊭ Bot_frm)%prg).
+  assert (claim : Gamma ⊭ Bot_frm).
   { intros SAT. eapply @SAT with (STRUCTURE := restrict_structure (trmModel MCS)) (env := ivar_interpret MCS).
     - ii. cbv in x_eq_x'. exact x_eq_x'.
     - red. set (STRUCTURE := trmModel MCS). set (env := ivar_interpret MCS).

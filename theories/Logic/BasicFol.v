@@ -3192,8 +3192,8 @@ Definition entails {L : language} (Gamma : ensemble (frm L)) (C : frm L) : Prop 
 Module FolNotations.
 
 Infix "≡" := alpha_equiv : type_scope.
-Infix "⊨" := entails : type_scope.
-Notation "Gamma ⊭ C" := (~ Gamma ⊨ C) : type_scope.
+Infix "⊨" := entails.
+Notation "Gamma ⊭ C" := (~ Gamma ⊨ C).
 
 End FolNotations.
 
