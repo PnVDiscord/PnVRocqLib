@@ -148,7 +148,7 @@ Fixpoint max_hc_stage_frm (p : frm L_infty) : nat :=
 
 Fixpoint max_hc_stage_list (hcs : list Henkin_constants) : nat :=
   match hcs with
-  | nil => O
+  | [] => O
   | hc :: hcs => Nat.max (projT1 hc + 1) (max_hc_stage_list hcs)
   end.
 
@@ -1903,8 +1903,8 @@ Proof.
   pose (
     fix index_of (hc : Henkin_constants) (xs : list Henkin_constants) : nat :=
       match xs with
-      | nil => 0
-      | hc' :: xs' => if eq_dec hc hc' then 0 else S (index_of hc xs')
+      | [] => O
+      | hc' :: xs' => if eq_dec hc hc' then O else S (index_of hc xs')
       end
   ) as index_of.
   rename xs into hcs.
@@ -2454,7 +2454,7 @@ Qed.
 
 Fixpoint AddHenkin_stage_list (X : ensemble (frm L)) (n : nat) (hcs : list Henkin_constants) : ensemble (frm L') :=
   match hcs with
-  | nil => AddHenkin_stage X n
+  | [] => AddHenkin_stage X n
   | hc :: hcs => E.insert (HenkinAxiom hc) (AddHenkin_stage_list X n hcs)
   end.
 
@@ -2507,8 +2507,8 @@ Lemma collect_stage_axioms (X : ensemble (frm L)) (n : nat)
     (forall p, p \in E.fromList ps -> p \in AddHenkin_stage X (S n)) ->
     exists hcs : list Henkin_constants, L.NoDup hcs /\ (forall hc, L.In hc hcs -> hc_stage hc = n) /\ (forall p, p \in E.fromList ps -> p \in AddHenkin_stage_list X n hcs).
 Proof.
-  induction ps as [|p ps IH]; intros INCL.
-  - exists nil. repeat split.
+  induction ps as [ | p ps IH]; intros INCL.
+  - exists []. splits.
     + constructor.
     + intros hc Hin. contradiction.
     + intros q Hq. contradiction.
@@ -2539,7 +2539,7 @@ Proof.
             + left. reflexivity.
             + right. eapply Hsub. exact Hq.
         }
-    + exists hcs. repeat split; try exact Hnodup; try exact Hstage.
+    + exists hcs. splits; try eassumption.
       intros q Hq. destruct Hq as [-> | Hq].
       * eapply AddHenkin_stage_list_contains_base. right. exact Hp.
       * eapply Hsub. exact Hq.
@@ -2574,7 +2574,7 @@ Qed.
 #[local] Notation embed_frm := (embed_frm (Henkin_constants := Henkin_constants)).
 
 Lemma AddHenkin_stage0_equiconsistent (X : ensemble (frm L))
-  : inconsistent (E.image embed_frm X) <-> inconsistent (AddHenkin_stage X 0).
+  : inconsistent (E.image embed_frm X) <-> inconsistent (AddHenkin_stage X O).
 Proof.
   split; intro H.
   - rewrite inconsistent_iff in *. eapply extend_proves; eauto.
@@ -2617,7 +2617,7 @@ Lemma collect_AddHenkin_stage (X : ensemble (frm L))
     exists n, forall p, p \in E.fromList ps -> p \in AddHenkin_stage X n.
 Proof.
   induction ps as [|p ps IH]; intros INCL.
-  - exists 0. intros q Hq. contradiction.
+  - exists O. intros q Hq. contradiction.
   - assert (INCL_ps : forall q, q \in E.fromList ps -> q \in E.union HenkinAxiomSet (E.image embed_frm X)).
     { intros q Hq. eapply INCL. right. exact Hq. }
     destruct (IH INCL_ps) as [n IHn].
