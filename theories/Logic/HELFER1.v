@@ -1658,7 +1658,7 @@ Proof.
 Qed.
 
 Lemma hchi_frm_graph_eq (sigma1 : hatom1 -> trm L1) (sigma2 : hatom2 -> trm L2) (p : frm L1)
-  (SIG : forall z1 z2, hatom_similarity z1 z2 -> trm_mapping h (sigma1 z1) = sigma2 z2)
+  (SIG : forall z1, forall z2, hatom_similarity z1 z2 -> trm_mapping h (sigma1 z1) = sigma2 z2)
   : hchi_frm sigma1 p = hchi_frm sigma2 (frm_mapping h p).
 Proof.
   unfold hchi_frm. f_equal. f_equal.
@@ -1708,10 +1708,10 @@ Proof.
 Qed.
 
 Lemma hsubst_trm_graph_eq (sigma1 : hatom1 -> trm L1) (sigma2 : hatom2 -> trm L2) (t : trm L1)
-  (SIG : forall z1 z2, hatom_similarity z1 z2 -> trm_mapping h (sigma1 z1) = sigma2 z2)
+  (SIG : forall z1, forall z2, hatom_similarity z1 z2 -> trm_mapping h (sigma1 z1) = sigma2 z2)
   : trm_mapping h (hsubst_trm sigma1 t) = hsubst_trm sigma2 (trm_mapping h t)
 with hsubst_trms_graph_eq (sigma1 : hatom1 -> trm L1) (sigma2 : hatom2 -> trm L2) (n : nat) (ts : trms L1 n)
-  (SIG : forall z1 z2, hatom_similarity z1 z2 -> trm_mapping h (sigma1 z1) = sigma2 z2)
+  (SIG : forall z1, forall z2, hatom_similarity z1 z2 -> trm_mapping h (sigma1 z1) = sigma2 z2)
   : trms_mapping h (hsubst_trms sigma1 ts) = hsubst_trms sigma2 (trms_mapping h ts).
 Proof.
 - destruct t as [x | f ts | [cc | c]]; simpl.
@@ -1727,7 +1727,7 @@ Proof.
 Qed.
 
 Lemma hsubst_frm_graph_eq (sigma1 : hatom1 -> trm L1) (sigma2 : hatom2 -> trm L2) (p : frm L1)
-  (SIG : forall z1 z2, hatom_similarity z1 z2 -> trm_mapping h (sigma1 z1) = sigma2 z2)
+  (SIG : forall z1, forall z2, hatom_similarity z1 z2 -> trm_mapping h (sigma1 z1) = sigma2 z2)
   : frm_mapping h (hsubst_frm sigma1 p) = hsubst_frm sigma2 (frm_mapping h p).
 Proof.
   revert sigma1 sigma2 SIG.
@@ -1769,7 +1769,7 @@ Proof.
     + inversion E1. subst c1.
       destruct (eq_dec (inr (h c)) (inr (h c))); [reflexivity | congruence].
     + destruct (eq_dec (inr (h c1)) (inr (h c))) as [E2 | NE2].
-      * exfalso. apply NE1. f_equal.
+      * exfalso. eapply NE1. f_equal.
         eapply h_inj. now inversion E2.
       * reflexivity.
 Qed.
@@ -2130,9 +2130,7 @@ Proof.
     exploit (frm_mapping_proj1_sig_f_fix hc0 ps p q').
     + intros hc OCC. eapply in_hcs_of_ps_p_of_ps; eauto.
     + intros X.
-      set (XX := frm_mapping
-             (@proj1_sig _ (fun hc => (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) = true))
-             (frm_mapping f0 q')).
+      set (XX := frm_mapping (@proj1_sig _ (fun hc => (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) = true)) (frm_mapping f0 q')).
       change (XX = q') in X. congruence.
   - eapply INCL. do 2 red. exact INq'.
 Qed.
@@ -2240,8 +2238,7 @@ Proof.
   - exact Hphi.
 Qed.
 
-Lemma same_stage_other_axiom_hc_free
-  (hc hc' : Henkin_constants) (n : nat)
+Lemma same_stage_other_axiom_hc_free hc hc' n
   (Hneq : hc ≠ hc')
   (Hst : hc_stage hc = n)
   (Hst' : hc_stage hc' = n)
@@ -2631,12 +2628,12 @@ Lemma AddHenkin_stage_all_equiconsistent (X : ensemble (frm L)) (n : nat)
   : inconsistent (E.image embed_frm X) <-> inconsistent (AddHenkin_stage X n).
 Proof.
   induction n as [|n IH].
-  - apply AddHenkin_stage0_equiconsistent.
+  - eapply AddHenkin_stage0_equiconsistent.
   - destruct IH as [IH1 IH2].
     destruct (AddHenkin_stage_equiconsistent X n) as [H1 H2].
     split; intro H.
-    + apply H1. apply IH1. exact H.
-    + apply IH2. apply H2. exact H.
+    + eapply H1. eapply IH1. exact H.
+    + eapply IH2. eapply H2. exact H.
 Qed.
 
 Inductive HenkinAxiomSet : ensemble (frm L') :=

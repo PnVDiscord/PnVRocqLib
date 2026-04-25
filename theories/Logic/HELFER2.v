@@ -123,7 +123,7 @@ Proof.
   eapply ByAssumption. eapply NEGATION. exact NO.
 Qed.
 
-Lemma MaxCS_IMPLICATION_FAITHFUL (p q : frm L')
+Lemma MaxCS_IMPLICATION_FAITHFUL (p : frm L') (q : frm L')
   : Imp_frm p q \in MaxCS <-> (p \in MaxCS -> q \in MaxCS).
 Proof.
   split.
