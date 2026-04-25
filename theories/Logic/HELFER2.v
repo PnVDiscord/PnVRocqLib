@@ -20,33 +20,6 @@ Import FolNotations.
 
 Import FolHilbert.
 
-Section PAIRWISE.
-
-Context {L : language}.
-
-Lemma pairwise_equal_reflexive {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n)
-  : pairwise_equal Gamma ts ts.
-Proof.
-  induction ts; simpl; econs; eauto. eapply proves_reflexivity.
-Qed.
-
-Lemma pairwise_equal_symmetric {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n)
-  (H1 : pairwise_equal Gamma ts ts')
-  : pairwise_equal Gamma ts' ts.
-Proof.
-  revert ts' H1. induction ts; simpl; eauto; intros. des; split; eauto. now eapply proves_symmetry.
-Qed.
-
-Lemma pairwise_equal_transitive {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n) (ts'' : trms L n)
-  (H1 : pairwise_equal Gamma ts ts')
-  (H2 : pairwise_equal Gamma ts' ts'')
-  : pairwise_equal Gamma ts ts''.
-Proof.
-  revert ts' ts'' H1 H2. induction ts; simpl; econs; des; eauto. now eapply proves_transitivity with (t2 := head ts').
-Qed.
-
-End PAIRWISE.
-
 #[local] Hint Resolve fact1_of_1_2_8 fact2_of_1_2_8 fact3_of_1_2_8 fact4_of_1_2_8 fact5_of_1_2_8 lemma1_of_1_2_11 : core.
 
 Section COMPLETENESS_OF_HilbertCalculus.
@@ -100,9 +73,9 @@ Lemma MaxCS_closed (p : frm L')
 Proof.
   assert (CONS : E.insert p MaxCS ⊬ Bot_frm).
   { intros INC. eapply MaxCS_consistent.
-    assert (MaxCS ⊢ Imp_frm p Bot_frm).
-    { eapply ImplicationI. exact INC. }
-    eapply for_Imp_E; eauto.
+    enough (MaxCS ⊢ Imp_frm p Bot_frm).
+    { eapply for_Imp_E; eauto. }
+    eapply ImplicationI. exact INC.
   }
   eapply MaxCS_maximal with (Delta' := E.insert p MaxCS).
   - intros q Hq. right. exact Hq.
@@ -121,14 +94,13 @@ Qed.
 Lemma MaxCS_complete (p : frm L')
   : p \in MaxCS \/ Neg_frm p \in MaxCS.
 Proof.
-  pose proof (classic (p \in MaxCS)) as [YES | NO]; [left; trivial |].
-  right. eapply MaxCS_closed.
-  eapply NegationI.
+  pose proof (classic (p \in MaxCS)) as [YES | NO]; [left; trivial | right].
+  eapply MaxCS_closed. eapply NegationI.
   assert (INC : E.insert p MaxCS ⊢ Bot_frm \/ E.insert p MaxCS ⊬ Bot_frm) by eapply classic.
-  destruct INC as [INC | NOINC]; trivial.
+  destruct INC as [IN | NOT_IN]; trivial.
   exfalso. eapply NO. eapply MaxCS_maximal with (Delta' := E.insert p MaxCS).
   - intros q Hq. right. exact Hq.
-  - exact NOINC.
+  - exact NOT_IN.
   - left. reflexivity.
 Qed.
 
@@ -257,7 +229,7 @@ Definition interpret_equation : forall lhs : D, forall rhs : D, Prop :=
 #[local, program]
 Instance trmModel : isStructureOf L' :=
   { domain_of_discourse := D
-  ; equation_interpret := {| eqProp := interpret_equation; eqProp_Equivalence := eq_equivalence |}
+  ; equation_interpret := {| eqProp := interpret_equation; eqProp_Equivalence := eq_equivalence; |}
   ; function_interpret := function_interpret
   ; constant_interpret := constant_interpret
   ; relation_interpret := relation_interpret

@@ -1220,6 +1220,27 @@ Proof.
     do 2 rewrite is_free_in_trm_unfold with (t := Var_trm _). obs_eqb (n + n) z; obs_eqb (S (n + n)) z; try done.
 Qed.
 
+Lemma pairwise_equal_reflexive {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n)
+  : pairwise_equal Gamma ts ts.
+Proof.
+  induction ts; simpl; econs; eauto. eapply proves_reflexivity.
+Qed.
+
+Lemma pairwise_equal_symmetric {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n)
+  (H1 : pairwise_equal Gamma ts ts')
+  : pairwise_equal Gamma ts' ts.
+Proof.
+  revert ts' H1. induction ts; simpl; eauto; intros ? [? ?]. split; eauto. now eapply proves_symmetry.
+Qed.
+
+Lemma pairwise_equal_transitive {n : nat} (Gamma : ensemble (frm L)) (ts : trms L n) (ts' : trms L n) (ts'' : trms L n)
+  (H1 : pairwise_equal Gamma ts ts')
+  (H2 : pairwise_equal Gamma ts' ts'')
+  : pairwise_equal Gamma ts ts''.
+Proof.
+  revert ts' ts'' H1 H2. induction ts; simpl; eauto; intros ? ? [? ?] [? ?]; econs; eauto. now eapply proves_transitivity with (t2 := head ts').
+Qed.
+
 Lemma proves_eqn_fun (Gamma : ensemble (frm L)) (f : L.(function_symbols)) ts ts'
   (PROVE : pairwise_equal Gamma ts ts')
   : Gamma \proves Eqn_frm (Fun_trm f ts) (Fun_trm f ts').
