@@ -30,7 +30,7 @@ Class abstract_Henkin_constants (Henkin_constants : Set) (L : language) {Henkin_
     : forall hc_k', HC_occurs_in_frm hc_k' theta_k = true -> (hc_stage hc_k' < hc_stage hc_k)%nat
   }.
 
-Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
+Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
 
 #[local] Notation L' := (augmented_language L Henkin_constants).
 
@@ -460,7 +460,7 @@ Section HSUBST.
 
 #[local] Notation "x ≠ y" := (~ eq x y).
 
-Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
+Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
 
 #[local] Notation L' := (augmented_language L Henkin_constants).
 
@@ -1547,7 +1547,7 @@ Proof.
   - econs. exact IH1.
 Qed.
 
-Context {K1_hasEqDec : hasEqDec K1} {K2_hasEqDec : hasEqDec K2}.
+Context {K1_hasEqDec : hasEqDec@{Set} K1} {K2_hasEqDec : hasEqDec@{Set} K2}.
 
 Lemma trm_similarity_graph_eq (t1 : trm L1) (t2 : trm L2)
   (SIM : t1 =~= t2)
@@ -1719,7 +1719,7 @@ Proof.
   + f_equal. eapply hsubst_trms_graph_eq. exact SIG.
   + reflexivity.
   + exact (SIG (inr c) (inr (h c)) eq_refl).
-- destruct ts as [| n t ts]; simpl.
+- destruct ts as [ | n t ts]; simpl.
   + reflexivity.
   + f_equal.
     * eapply hsubst_trm_graph_eq. exact SIG.
@@ -1765,12 +1765,12 @@ Proof.
   - subst x2. unfold eqb.
     destruct (eq_dec (inl x1) (inr c)); [congruence | reflexivity].
   - subst c2. unfold eqb.
-    destruct (eq_dec (inr c1) (inr c)) as [E1 | NE1].
-    + inversion E1. subst c1.
+    destruct (eq_dec (inr c1) (inr c)) as [EQ1 | NE1].
+    + inversion EQ1. subst c1.
       destruct (eq_dec (inr (h c)) (inr (h c))); [reflexivity | congruence].
-    + destruct (eq_dec (inr (h c1)) (inr (h c))) as [E2 | NE2].
+    + destruct (eq_dec (inr (h c1)) (inr (h c))) as [EQ2 | NE2].
       * exfalso. eapply NE1. f_equal.
-        eapply h_inj. now inversion E2.
+        eapply h_inj. now inversion EQ2.
       * reflexivity.
 Qed.
 
@@ -1793,7 +1793,7 @@ Context {L : language}.
 
 Section MAPPING_REPLACE_CONSTANT.
 
-Context {K1 : Set} {K2 : Set} {K1_hasEqDec : hasEqDec K1} {K2_hasEqDec : hasEqDec K2}.
+Context {K1 : Set} {K2 : Set} {K1_hasEqDec : hasEqDec@{Set} K1} {K2_hasEqDec : hasEqDec@{Set} K2}.
 
 Variable h : K1 -> K2.
 
@@ -1835,7 +1835,7 @@ Qed.
 
 End MAPPING_REPLACE_CONSTANT.
 
-Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
+Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
 
 #[local] Notation L' := (augmented_language L Henkin_constants).
 #[local] Infix "≡" := alpha_equiv.
@@ -1851,7 +1851,7 @@ Proof.
   unfold hcs_of_ps_p. rewrite L.nodup_In. simpl. left. reflexivity.
 Qed.
 
-Lemma in_hcs_of_ps_p_of_ps (hc0 : Henkin_constants) (ps : list (frm L')) (p q : frm L') (hc : Henkin_constants)
+Lemma in_hcs_of_ps_p_of_ps (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L') (q : frm L') (hc : Henkin_constants)
   (IN : In q ps)
   (OCC : HC_occurs_in_frm hc q = true)
   : In hc (hcs_of_ps_p hc0 ps p).
@@ -1959,7 +1959,8 @@ Proof.
         eapply SUPPORT. s!. now right.
 Qed.
 
-Lemma frm_mapping_proj1_sig_f_fix (hc0 : Henkin_constants) (ps : list (frm L')) (p q : frm L') (SUPPORT : forall hc, HC_occurs_in_frm hc q = true -> In hc (hcs_of_ps_p hc0 ps p))
+Lemma frm_mapping_proj1_sig_f_fix (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L') (q : frm L')
+  (SUPPORT : forall hc, HC_occurs_in_frm hc q = true -> In hc (hcs_of_ps_p hc0 ps p))
   : frm_mapping (@proj1_sig _ _) (frm_mapping (f hc0 ps p) q) = q.
 Proof.
   frm_ind q; simpl.
@@ -1988,11 +1989,9 @@ Variable g : K -> nat.
 Variable g_back : nat -> K.
 Hypothesis G_BACK_G : forall k, g_back (g k) = k.
 
-Lemma trm_mapping_g_back_g_fix
-  (t : trm LK)
+Lemma trm_mapping_g_back_g_fix (t : trm LK)
   : trm_mapping g_back (trm_mapping g t) = t
-with trms_mapping_g_back_g_fix
-  (n : nat) (ts : trms LK n)
+with trms_mapping_g_back_g_fix (n : nat) (ts : trms LK n)
   : trms_mapping g_back (trms_mapping g ts) = ts.
 Proof.
   - trm_ind t.
@@ -2048,39 +2047,26 @@ Proof.
   assert (PROVE3 : E.image (replace_constant_in_frm (f0 hc0) (Var_trm y0)) (E.fromList (map (frm_mapping f0) ps)) ⊢ replace_constant_in_frm (f0 hc0) (Var_trm y0) (frm_mapping f0 p)).
   { eapply extend_proves; cycle 1.
     - exists (map (frm_mapping g_back) qs). split.
-      + intros r Hr.
-        do 2 red in Hr.
-        rewrite in_map_iff in Hr.
-        destruct Hr as [q [<- INq]].
+      + intros r Hr. do 2 red in Hr. rewrite in_map_iff in Hr. destruct Hr as [q [<- INq]].
         assert (Hin : q \in E.fromList qs) by done!.
-        pose proof (INCL2 _ Hin) as H.
-        rewrite E.in_image_iff in H.
-        destruct H as [r [-> INr]].
-        do 2 red in INr.
-        rewrite in_map_iff in INr.
-        destruct INr as [r0 [<- INr0]].
-        rewrite E.in_image_iff.
-        rewrite L.in_map_iff in INr0.
-        destruct INr0 as [r' [<- Hr']].
+        pose proof (INCL2 _ Hin) as H. rewrite E.in_image_iff in H. destruct H as [r [-> INr]].
+        do 2 red in INr. rewrite in_map_iff in INr. destruct INr as [r0 [<- INr0]].
+        rewrite E.in_image_iff. rewrite L.in_map_iff in INr0. destruct INr0 as [r' [<- Hr']].
         exists (replace_constant_in_frm (Henkin_constants_hasEqDec := Kf_hasEqDec) (f0 hc0) (Var_trm y0) (frm_mapping f0 r')).
         split; cycle 1.
         * eapply E.in_image_iff with (X := E.fromList _). exists (frm_mapping f0 r'). split.
           { reflexivity. }
           { eapply in_map_iff. exists r'. split; eauto. }
         * rewrite <- frm_mapping_g_back_g_fix with (g := g) (g_back := g_back) (q := replace_constant_in_frm (Henkin_constants_hasEqDec := Kf_hasEqDec) (f0 hc0) (Var_trm y0) (frm_mapping f0 r')); eauto.
-          erewrite @frm_mapping_replace_constant_in_frm_inj
-            with (h := g); eauto. instantiate (1 := id). reflexivity.
+          erewrite @frm_mapping_replace_constant_in_frm_inj with (h := g); eauto. instantiate (1 := id). reflexivity.
       + econs.
         change (proof (map (frm_mapping g_back) qs) (frm_mapping g_back (replace_constant_in_frm (Henkin_constants_hasEqDec := nat_hasEqDec) (g (f0 hc0)) (Var_trm y0) (frm_mapping g (frm_mapping f0 p))))) in PF3.
-        replace (frm_mapping g_back (replace_constant_in_frm (Henkin_constants_hasEqDec := nat_hasEqDec) (g (f0 hc0)) (Var_trm y0) (frm_mapping g (frm_mapping f0 p))))
-        with (replace_constant_in_frm (Henkin_constants_hasEqDec := Kf_hasEqDec) (f0 hc0) (Var_trm y0) (frm_mapping f0 p))
-        in PF3.
-        2:{ pose proof (@frm_mapping_replace_constant_in_frm_inj L _ _ _ _ _ g_inj (f0 hc0) (Var_trm y0) (frm_mapping f0 p)) as HH.
-            simpl trm_mapping in HH.
-            set (X := replace_constant_in_frm (g (f0 hc0)) (Var_trm y0) (frm_mapping g (frm_mapping f0 p))).
-            change (frm_mapping g (replace_constant_in_frm (f0 hc0) (Var_trm y0) (frm_mapping f0 p)) = X) in HH.
-            rewrite <- HH. symmetry. eapply frm_mapping_g_back_g_fix; exact G_BACK_G. }
-        eauto.
+        replace (frm_mapping g_back (replace_constant_in_frm (Henkin_constants_hasEqDec := nat_hasEqDec) (g (f0 hc0)) (Var_trm y0) (frm_mapping g (frm_mapping f0 p)))) with (replace_constant_in_frm (Henkin_constants_hasEqDec := Kf_hasEqDec) (f0 hc0) (Var_trm y0) (frm_mapping f0 p)) in PF3; eauto.
+        pose proof (@frm_mapping_replace_constant_in_frm_inj L _ _ _ _ _ g_inj (f0 hc0) (Var_trm y0) (frm_mapping f0 p)) as HH.
+        simpl trm_mapping in HH.
+        set (X := replace_constant_in_frm (g (f0 hc0)) (Var_trm y0) (frm_mapping g (frm_mapping f0 p))).
+        change (frm_mapping g (replace_constant_in_frm (f0 hc0) (Var_trm y0) (frm_mapping f0 p)) = X) in HH.
+        rewrite <- HH. symmetry. eapply frm_mapping_g_back_g_fix; exact G_BACK_G.
     - ii. rewrite E.in_image_iff in H. destruct H as [y [-> H]].
       unfold id. eauto.
   }
@@ -2095,35 +2081,20 @@ Proof.
     rewrite HC0_FIX. simpl.
     exploit (frm_mapping_proj1_sig_f_fix hc0 ps p p).
     - intros hc OCC. eapply in_hcs_of_ps_p_of_p. exact OCC.
-    - intros X.
-      set (XX := frm_mapping
-             (@proj1_sig _ (fun hc => (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) = true))
-             (frm_mapping f0 p)).
+    - intros X. set (XX := frm_mapping (@proj1_sig _ (fun hc => (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) = true)) (frm_mapping f0 p)).
       change (XX = p) in X. congruence.
   }
   eapply extend_proves; cycle 1.
   { exists (map (frm_mapping (@proj1_sig _ _)) rs). split.
-    - intros r Hr.
-      do 2 red in Hr.
-      rewrite L.in_map_iff in Hr.
-      destruct Hr as [q [<- INq]].
-      pose proof (INCL3 q INq) as HH.
-      rewrite E.in_image_iff in HH.
-      destruct HH as [q0 [-> INq0]].
-      rewrite E.in_image_iff.
-      exists q0. split.
+    - intros r Hr. do 2 red in Hr. rewrite L.in_map_iff in Hr. destruct Hr as [q [<- INq]].
+      pose proof (INCL3 q INq) as HH. rewrite E.in_image_iff in HH. destruct HH as [q0 [-> INq0]].
+      rewrite E.in_image_iff. exists q0. split.
       + reflexivity.
       + exact INq0.
     - econs; eauto.
   }
-  intros r Hr.
-  rewrite E.in_image_iff in Hr.
-  destruct Hr as [q0 [-> INq0]].
-  do 2 red in INq0.
-  rewrite L.in_map_iff in INq0.
-  destruct INq0 as [q' [<- INq']].
-  rewrite E.in_image_iff.
-  exists q'. split.
+  intros r Hr. rewrite E.in_image_iff in Hr. destruct Hr as [q0 [-> INq0]].  do 2 red in INq0.
+  rewrite L.in_map_iff in INq0. destruct INq0 as [q' [<- INq']]. rewrite E.in_image_iff. exists q'. split.
   - symmetry.
     erewrite @frm_mapping_replace_constant_in_frm_inj with (h := @proj1_sig _ _) (c := f0 hc0) (ct := Var_trm y0) (q := frm_mapping f0 q'); eauto.
     rewrite HC0_FIX. simpl.
