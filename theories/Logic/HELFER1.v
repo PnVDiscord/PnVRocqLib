@@ -1909,13 +1909,12 @@ Proof.
   ) as index_of.
   rename xs into hcs.
   assert (INDEX_OF_OK : forall hc, forall xs, In hc xs -> nth (index_of hc xs) xs hc = hc).
-  { intros hc xs.
-    induction xs as [ | hc' xs IH]; simpl; intros IN.
+  { intros hc. induction xs as [ | hc' xs IH]; simpl; intros IN.
     - contradiction.
     - destruct (eq_dec hc hc') as [-> | NE]; ss!.
   }
   assert (HH : forall n : nat, In (L.nth n hcs hc0) hcs).
-  { intros n. assert (length hcs <= n \/ n < length hcs)%nat as [ | ] by lia.
+  { intros n. assert (length hcs <= n \/ n < length hcs)%nat as [? | ?] by lia.
     - rewrite L.nth_overflow; eauto.
     - eapply nth_In; eauto.
   }
@@ -1926,13 +1925,13 @@ Proof.
     - contradiction NOT_IN1. fold hcs. eapply HH.
   }
   exists (fun n => @exist _ _ (nth n hcs hc0) (H_nth n)). intros [k Hk]; simpl.
-  eapply exist_eq_bool. destruct (in_dec _ _ _) as [ | ]; try congruence.
+  eapply exist_eq_bool. destruct (in_dec _ _ _) as [? | ?]; try congruence.
   pose proof (INDEX_OF_OK k hcs i). rewrite <- H at 2. eapply L.nth_indep.
   revert i. fold hcs. clearbody hcs. clear. revert k. induction hcs as [ | h hcs IH]; simpl; intros.
   - lia.
   - destruct i as [? | ?].
-    + subst. destruct (eq_dec _ _) as [ | ]; ss!.
-    + destruct (eq_dec _ _) as [ | ]; ss!.
+    + subst. destruct (eq_dec _ _) as [? | ?]; ss!.
+    + destruct (eq_dec _ _) as [? | ?]; ss!.
 Qed.
 
 Lemma trm_mapping_proj1_sig_f_fix (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L') (t : trm L')
