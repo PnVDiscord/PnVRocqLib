@@ -148,7 +148,7 @@ Fixpoint max_hc_stage_frm (p : frm L_infty) : nat :=
 
 Fixpoint max_hc_stage_list (hcs : list Henkin_constants) : nat :=
   match hcs with
-  | nil => O
+  | [] => O
   | hc :: hcs => Nat.max (projT1 hc + 1) (max_hc_stage_list hcs)
   end.
 
@@ -1903,19 +1903,18 @@ Proof.
   pose (
     fix index_of (hc : Henkin_constants) (xs : list Henkin_constants) : nat :=
       match xs with
-      | nil => 0
-      | hc' :: xs' => if eq_dec hc hc' then 0 else S (index_of hc xs')
+      | [] => O
+      | hc' :: xs' => if eq_dec hc hc' then O else S (index_of hc xs')
       end
   ) as index_of.
   rename xs into hcs.
   assert (INDEX_OF_OK : forall hc, forall xs, In hc xs -> nth (index_of hc xs) xs hc = hc).
-  { intros hc xs.
-    induction xs as [ | hc' xs IH]; simpl; intros IN.
+  { intros hc. induction xs as [ | hc' xs IH]; simpl; intros IN.
     - contradiction.
     - destruct (eq_dec hc hc') as [-> | NE]; ss!.
   }
   assert (HH : forall n : nat, In (L.nth n hcs hc0) hcs).
-  { intros n. assert (length hcs <= n \/ n < length hcs)%nat as [ | ] by lia.
+  { intros n. assert (length hcs <= n \/ n < length hcs)%nat as [? | ?] by lia.
     - rewrite L.nth_overflow; eauto.
     - eapply nth_In; eauto.
   }
@@ -1926,13 +1925,13 @@ Proof.
     - contradiction NOT_IN1. fold hcs. eapply HH.
   }
   exists (fun n => @exist _ _ (nth n hcs hc0) (H_nth n)). intros [k Hk]; simpl.
-  eapply exist_eq_bool. destruct (in_dec _ _ _) as [ | ]; try congruence.
+  eapply exist_eq_bool. destruct (in_dec _ _ _) as [? | ?]; try congruence.
   pose proof (INDEX_OF_OK k hcs i). rewrite <- H at 2. eapply L.nth_indep.
   revert i. fold hcs. clearbody hcs. clear. revert k. induction hcs as [ | h hcs IH]; simpl; intros.
   - lia.
   - destruct i as [? | ?].
-    + subst. destruct (eq_dec _ _) as [ | ]; ss!.
-    + destruct (eq_dec _ _) as [ | ]; ss!.
+    + subst. destruct (eq_dec _ _) as [? | ?]; ss!.
+    + destruct (eq_dec _ _) as [? | ?]; ss!.
 Qed.
 
 Lemma trm_mapping_proj1_sig_f_fix (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L') (t : trm L')
@@ -2454,7 +2453,7 @@ Qed.
 
 Fixpoint AddHenkin_stage_list (X : ensemble (frm L)) (n : nat) (hcs : list Henkin_constants) : ensemble (frm L') :=
   match hcs with
-  | nil => AddHenkin_stage X n
+  | [] => AddHenkin_stage X n
   | hc :: hcs => E.insert (HenkinAxiom hc) (AddHenkin_stage_list X n hcs)
   end.
 
@@ -2507,8 +2506,8 @@ Lemma collect_stage_axioms (X : ensemble (frm L)) (n : nat)
     (forall p, p \in E.fromList ps -> p \in AddHenkin_stage X (S n)) ->
     exists hcs : list Henkin_constants, L.NoDup hcs /\ (forall hc, L.In hc hcs -> hc_stage hc = n) /\ (forall p, p \in E.fromList ps -> p \in AddHenkin_stage_list X n hcs).
 Proof.
-  induction ps as [|p ps IH]; intros INCL.
-  - exists nil. repeat split.
+  induction ps as [ | p ps IH]; intros INCL.
+  - exists []. splits.
     + constructor.
     + intros hc Hin. contradiction.
     + intros q Hq. contradiction.
@@ -2539,7 +2538,7 @@ Proof.
             + left. reflexivity.
             + right. eapply Hsub. exact Hq.
         }
-    + exists hcs. repeat split; try exact Hnodup; try exact Hstage.
+    + exists hcs. splits; try eassumption.
       intros q Hq. destruct Hq as [-> | Hq].
       * eapply AddHenkin_stage_list_contains_base. right. exact Hp.
       * eapply Hsub. exact Hq.
@@ -2574,7 +2573,7 @@ Qed.
 #[local] Notation embed_frm := (embed_frm (Henkin_constants := Henkin_constants)).
 
 Lemma AddHenkin_stage0_equiconsistent (X : ensemble (frm L))
-  : inconsistent (E.image embed_frm X) <-> inconsistent (AddHenkin_stage X 0).
+  : inconsistent (E.image embed_frm X) <-> inconsistent (AddHenkin_stage X O).
 Proof.
   split; intro H.
   - rewrite inconsistent_iff in *. eapply extend_proves; eauto.
@@ -2617,7 +2616,7 @@ Lemma collect_AddHenkin_stage (X : ensemble (frm L))
     exists n, forall p, p \in E.fromList ps -> p \in AddHenkin_stage X n.
 Proof.
   induction ps as [|p ps IH]; intros INCL.
-  - exists 0. intros q Hq. contradiction.
+  - exists O. intros q Hq. contradiction.
   - assert (INCL_ps : forall q, q \in E.fromList ps -> q \in E.union HenkinAxiomSet (E.image embed_frm X)).
     { intros q Hq. eapply INCL. right. exact Hq. }
     destruct (IH INCL_ps) as [n IHn].

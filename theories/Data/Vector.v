@@ -51,6 +51,18 @@ Proof.
   ).
 Defined.
 
+Lemma rectS_unfold_FZ phi phiFZ phiFS (n : nat) :
+  rectS phi phiFZ phiFS n FZ = phiFZ n.
+Proof.
+  reflexivity.
+Defined.
+
+Lemma rectS_unfold_FS phi phiFZ phiFS (n : nat) (i : Fin.t n) :
+  rectS phi phiFZ phiFS n (FS i) = (match n as m return forall i : Fin.t m, phi m (@FS m i) with O => Fin.case0 | S m' => fun i => phiFS m' i (rectS phi phiFZ phiFS m' i) end) i.
+Proof.
+  reflexivity.
+Defined.
+
 Ltac case0 :=
   let i := fresh "i" in
   intro i; pattern i; revert i;
@@ -347,6 +359,22 @@ Proof.
     | VCons n' x' xs' => (match n' as m return forall x : A, forall xs : vec m, phi m (VCons m x xs) with O => fun x => case0 (fun xs => phi 0 (VCons 0 x xs)) (phiOnce x) | S m' => fun x => fun xs => phiCons m' x xs (rectS_fix m' xs) end) x' xs'
     end
   ).
+Defined.
+
+Lemma rectS_unfold_1 (phi : forall n, vec (S n) -> Type)
+  (phi1 : forall x : A, phi O (VCons O x VNil))
+  (phiS : forall n : nat, forall x : A, forall xs : vec (S n), phi n xs -> phi (S n) (VCons (S n) x xs))
+  : forall x, rectS phi phi1 phiS O (VCons O x VNil) = phi1 x.
+Proof.
+  reflexivity.
+Defined.
+
+Lemma rectS_unfold_S (phi : forall n, vec (S n) -> Type)
+  (phi1 : forall x : A, phi O (VCons O x VNil))
+  (phiS : forall n : nat, forall x : A, forall xs : vec (S n), phi n xs -> phi (S n) (VCons (S n) x xs))
+  : forall n : nat, forall x : A, forall xs : vec (S n), rectS phi phi1 phiS (S n) (VCons (S n) x xs) = phiS n x xs (rectS phi phi1 phiS n xs).
+Proof.
+  reflexivity.
 Defined.
 
 Definition head {n : nat} (xs : vec (S n)) : A :=
