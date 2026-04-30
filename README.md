@@ -57,12 +57,6 @@ Our main results are:
 
 - `Vector.v` : Replaces `Stdlib.Vectors.VectorDef.t`.
 
-### [theories/Flower/](theories/Flower)
-
-- `FlowerAxioms.v` : Axioms for the sublibrary `Flower`.
-
-- `FlowerPrelude.v` : The prelude of the sublibrary `Flower`.
-
 ### [theories/Index/](theories/Index)
 
 - `Index.v` : Accumulates all source files and check their consistency.
@@ -78,6 +72,10 @@ Our main results are:
 - `ClassicalPropositionalLogic.v` : The Soundness, Completeness, and Compactness Theorem for PropositionalLogic.
 
 - `ExtraFol.v` : Extra def/thm about First-Order Logic.
+
+- `HELFER1.v` : The first part of the `HELFER` project.
+
+- `HELFER2.v` : The second part of the `HELFER` project.
 
 - `HilbertFol.v` : Basic facts about Hilbert calculus for First-Order Logic.
 
@@ -125,7 +123,13 @@ Our main results are:
 
 - `Lambda1.v` : Basic definitions for Church-style stlc.
 
+- `Lang.v` : Some formal languages.
+
+- `LGS.v` : A lexer generator.
+
 - `P.v` : Provides a function `nat -> option string` by base 36.
+
+- `PGS.v` : A parser generator.
 
 - `Regex.v` : A theory on regular expression.
 
