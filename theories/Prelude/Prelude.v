@@ -442,7 +442,7 @@ Qed.
 (** Section MONAD. *)
 
 #[universes(polymorphic=yes), projections(primitive)]
-Class isMonad@{d c} (M : Type@{d} -> Type@{c}) : Type :=
+Class isMonad@{d c | } (M : Type@{d} -> Type@{c}) : Type@{max(d + 1, c)} :=
   { bind {A : Type@{d}} {B : Type@{d}} (m : M A) (k : A -> M B) : M B
   ; pure {A : Type@{d}} (x : A) : M A
   }.
@@ -475,7 +475,7 @@ Proof.
 Qed.
 
 #[global, universes(polymorphic=yes)]
-Instance mkFunctorFromMonad@{d c} {M : Type@{d} -> Type@{c}} `(MONAD : isMonad@{d c} M) : isFunctor@{d c} M :=
+Instance mkFunctorFromMonad@{d c | } {M : Type@{d} -> Type@{c}} `(MONAD : isMonad@{d c} M) : isFunctor@{d c} M :=
   fun A : Type@{d} => fun B : Type@{d} => fun f : A -> B => fun m : M A => bind m (fun x : A => pure (f x)).
 
 Lemma mkFunctorFromMonad_good {M : Type -> Type} `{SETOID1 : isSetoid1 M} `{MONAD : isMonad M}
@@ -1053,6 +1053,13 @@ Inductive transitiveClosure {A : Type} (R : A -> A -> Prop) (x : A) (y : A) : Pr
 
 #[local] Hint Constructors transitiveClosure : core.
 
+#[global]
+Instance transitiveClosure_Transitive {A : Type} (R : A -> A -> Prop)
+  : Transitive (transitiveClosure R).
+Proof.
+  intros x y z H1 H2. econs 2; [exact H1 | exact H2].
+Defined.
+
 Lemma transitiveClosure_lifts_well_founded {A : Type} (R : A -> A -> Prop)
   (R_wf : well_founded R)
   : well_founded (transitiveClosure R).
@@ -1063,32 +1070,32 @@ Proof.
   eapply IH2; eauto.
 Qed.
 
-#[global]
-Instance transitiveClosure_Transitive {A : Type} (R : A -> A -> Prop)
-  : Transitive (transitiveClosure R).
+Theorem transitiveClosure_well_founded_iff {A : Type} (R : A -> A -> Prop)
+  : well_founded (transitiveClosure R) <-> well_founded R.
 Proof.
-  intros x y z H1 H2.
-  econs 2; eauto.
+  split; [intros H_wf x | eapply transitiveClosure_lifts_well_founded].
+  pose proof (H_wf x) as H_ACC. induction H_ACC as [x H_ACC_inv IH].
+  econs. intros y R_y_x. eapply IH. econs 1. exact R_y_x.
 Qed.
 
 Definition Prop_to_Set (P : Prop) : Set :=
   P.
 
-#[universes(polymorphic=yes)]
-Definition isSome@{u} {A : Type@{u}} (m : option A) : bool :=
+Definition isSome {A : Type@{option.u0}} (m : option A) : bool :=
   match m with
   | Some _ => true
   | None => false
   end.
 
 #[universes(polymorphic=yes)]
-Definition dollar@{u v} {A : Type@{u}} {B : A -> Type@{v}} (f : forall x : A, B x) (x : A) : B x :=
+Definition dollar@{u v | } {A : Type@{u}} {B : A -> Type@{v}} (f : forall x : A, B x) (x : A) : B x :=
   f x.
 
 #[local] Infix "$" := dollar.
 #[local] Infix ">>=" := bind.
 
-Definition kcompose {M} {MONAD : isMonad M} {A} {B} {C} (k1 : A -> M B) (k2 : B -> M C) : A -> M C :=
+#[universes(polymorphic=yes)]
+Definition kcompose@{d c | } {M : Type@{d} -> Type@{c}} {MONAD : isMonad@{d c} M} {A : Type@{d}} {B : Type@{d}} {C : Type@{d}} (k1 : A -> M B) (k2 : B -> M C) : A -> M C :=
   fun x => k1 x >>= k2.
 
 #[local] Infix ">=>" := kcompose : program_scope.
@@ -1106,11 +1113,11 @@ Instance stateT_isMonad {S} {M} `(M_isMonad : isMonad M) : isMonad (B.stateT S M
   ; bind {A} {B} (m : B.stateT S M A) (k : A -> B.stateT S M B) := B.StateT (B.runStateT m >=> uncurry (B.runStateT ∘ k))
   }.
 
-Definition stateT_isSetoid {S} {M} `{SETOID1 : isSetoid1 M} X : isSetoid (B.stateT S M X) :=
-  {|
-    eqProp lhs rhs := forall s, B.runStateT lhs s == B.runStateT rhs s;
-    eqProp_Equivalence := relation_on_image_liftsEquivalence (pi_isSetoid (fun _ => fromSetoid1 SETOID1)).(eqProp_Equivalence) B.runStateT;
-  |}.
+#[global]
+Instance stateT_isSetoid {S} {M} `{SETOID1 : isSetoid1 M} X : isSetoid (B.stateT S M X) :=
+  { eqProp lhs rhs := forall s : S, B.runStateT lhs s == B.runStateT rhs s
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence (pi_isSetoid (fun _ => fromSetoid1 SETOID1)).(eqProp_Equivalence) B.runStateT
+  }.
 
 #[local]
 Instance stateT_isSetoid1 {S} {M} `{SETOID1 : isSetoid1 M} : isSetoid1 (B.stateT S M) :=
@@ -1251,15 +1258,17 @@ Definition Rel_flip@{u} {A : Type@{u}} {B : Type@{u}} (R1 : ensemble@{u} (A * B)
 Definition Rel_compose@{u} {A : Type@{u}} {B : Type@{u}} {C : Type@{u}} (R1 : ensemble@{u} (B * C)) (R2 : ensemble@{u} (A * B)) : ensemble@{u} (A * C) :=
   fun '(x1, x2) => exists x, R2 (x1, x) /\ R1 (x, x2).
 
+#[universes(template)]
 Inductive sum1 (X : Type -> Type) (Y : Type -> Type) (A : Type) : Type :=
   | inl1 (INL : X A) : sum1 X Y A
   | inr1 (INR : Y A) : sum1 X Y A.
 
-#[global] Arguments sum1 X%_type Y%_type.
+#[global] Arguments sum1 X%_type_scope Y%_type_scope.
 #[global] Arguments inl1 {X} {Y} {A}.
 #[global] Arguments inr1 {X} {Y} {A}.
 
-Inductive void1 (A : Type) : Type :=.
+#[universes(template)]
+Inductive void1 (A : Type) : Type := .
 
 #[universes(template), projections(primitive)]
 Record sig {A : Type} {P : A -> Prop} : Type :=
@@ -1346,6 +1355,9 @@ Proof.
 Qed.
 
 End STEP_ACC.
+
+Class well_founded {A : Type} (R : A -> A -> Prop) : Prop :=
+  mk_Acc (x : A) : @Acc A R x.
 
 End B.
 

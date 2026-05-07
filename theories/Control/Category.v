@@ -240,4 +240,4 @@ Instance toCayleyCategory_isCovariantFunctor@{u v w} (CAT : isCategory@{u v}) : 
 
 End CAYLEY.
 
-Notation "E '~~>' F" := (forall X : Type, E X -> F X) : type_scope.
+#[global] Notation "E '~~>' F" := (forall X : Type, E X -> F X).

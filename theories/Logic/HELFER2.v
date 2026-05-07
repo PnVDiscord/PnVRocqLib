@@ -427,7 +427,9 @@ Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext 
 
 #[local] Existing Instance abstract_Henkin_constants_instance.
 
-#[local] Hint Unfold E.In E.insert : core.
+#[local] Hint Unfold E.In : core.
+
+#[local] Hint Unfold E.insert : core.
 
 Theorem HilbertCalculus_complete (X : ensemble (frm L)) (b : frm L)
   (CONSEQUENCE : X ⊨ b)

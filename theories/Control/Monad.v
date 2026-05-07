@@ -1,17 +1,18 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Control.Category.
 
-Module DoNotations.
-
-#[universes(polymorphic=yes)]
-Definition monad@{u v} {M : Type@{u} -> Type@{v}} {MONAD : isMonad@{u v} M} {A : Type@{u}} : Type@{v} :=
-  M A.
-
 Declare Scope monad_scope.
 Declare Custom Entry do_notation.
 
-Delimit Scope monad_scope with monad.
-Bind Scope monad_scope with monad.
+Module DoNotations.
+
+#[universes(polymorphic=yes)]
+Definition monad@{u v | } {M : Type@{u} -> Type@{v}} {MONAD : isMonad@{u v} M} {A : Type@{u}} : Type@{v} :=
+  M A.
+
+#[global] Delimit Scope monad_scope with monad.
+#[global] Bind Scope monad_scope with monad.
+
 Open Scope monad_scope.
 
 Reserved Notation "'do' m 'end'" (m custom do_notation at level 10, at level 0, format "'do' '//' '[hv' m ']'  '//' 'end'  '//'").
@@ -44,7 +45,7 @@ End DoNotations.
 Class isMonadIter (M : Type -> Type) {MONAD : isMonad M} : Type :=
   monad_iter (I : Type) (R : Type) (step : I -> M (I + R)%type) (i0 : I) : M R.
 
-#[global] Arguments monad_iter {M}%_type {MONAD} {isMonadIter} {I}%_type {R}%_type step%_monad_scope i0.
+#[global] Arguments monad_iter {M}%_type_scope {MONAD} {isMonadIter} {I}%_type_scope {R}%_type_scope step%_monad_scope i0.
 
 Class MonadIterSpec (M : Type -> Type) {MONAD : isMonad M} {MONADITER : isMonadIter M} {SETOID1 : isSetoid1 M} : Prop :=
   monad_iter_unfold (I : Type) (R : Type) (step : I -> M (I + R)%type)

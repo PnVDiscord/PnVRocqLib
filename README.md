@@ -6,7 +6,7 @@ A Rocq library written by members of [PnV Discord Server](https://github.com/PnV
 
 ## 1. How to build
 
-```
+```bash
 git clone https://github.com/PnVDiscord/PnVRocqLib.git
 cd PnVRocqLib
 eval `opam env`
@@ -164,7 +164,7 @@ Our main results are:
 - [Hanul Jeon](https://hanuljeon95.github.io)
 - [Clare Jang](https://ailrun.github.io)
 
-## 5. Goals 
+## 5. Goals
 
 ### Established at 2024-10-16
 
