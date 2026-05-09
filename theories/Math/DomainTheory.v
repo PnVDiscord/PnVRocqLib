@@ -330,7 +330,8 @@ Proof.
   - intros H_IN x x_in. inversion x_in.
 Qed.
 
-Let D : Type := ensemble A.
+Let D : Type :=
+  ensemble A.
 
 #[local]
 Instance ensemble_isUpperSemilattice : isUpperSemilattice D :=
