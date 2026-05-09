@@ -308,7 +308,7 @@ Section PACO.
 
 #[local] Hint Resolve le_join_lattice_introl le_join_lattice_intror join_lattice_le_intro bot_lattice_le_intro : core.
 
-Context {A : Type}.
+Context {A : Type@{U_discourse}}.
 
 Lemma union_join_lattice_spec (X1 : ensemble A) (X2 : ensemble A)
   : is_supremum_of (@E.union A X1 X2) (E.fromList [X1; X2]).
@@ -330,7 +330,7 @@ Proof.
   - intros H_IN x x_in. inversion x_in.
 Qed.
 
-Let D : Type :=
+Let D : Type@{U_discourse} :=
   ensemble A.
 
 #[local]
@@ -347,10 +347,10 @@ Variant paco' {paco_F : D -> D} (F : D -> D) (X : D) : D :=
     : F WITNESS \subseteq paco' F X.
 
 Lemma inv_paco' {paco_F : D -> D} {F : D -> D} {X : D} (z : A)
-  (H_paco' : z \in paco' (paco_F := paco_F) F X)
+  (z_in : z \in paco' (paco_F := paco_F) F X)
   : exists W, W \subseteq join_lattice X (paco_F X) /\ z \in F W.
 Proof.
-  cbv in *. destruct H_paco' as [W INCL z z_in].
+  cbv in *. destruct z_in as [W INCL z z_in].
   exists W. split; [exact INCL | exact z_in].
 Defined.
 
@@ -426,18 +426,18 @@ Proof.
   symmetry. eapply initPaco with (f := @exist (D -> D) isMonotonic1 F F_monotonic).
 Qed.
 
-Lemma unfoldPaco (f : `[D -> D])
-  : forall X : D, proj1_sig (Paco f) X == proj1_sig f (join_lattice X (proj1_sig (Paco f) X)).
+Lemma unfoldPaco (f : `[D -> D]) (X : D)
+  : proj1_sig (Paco f) X == proj1_sig f (join_lattice X (proj1_sig (Paco f) X)).
 Proof.
-  intros X. eapply @leProp_antisymmetry with (A_isProset := E.ensemble_isProset).
+  eapply @leProp_antisymmetry with (A_isProset := E.ensemble_isProset).
   - eapply paco_unfold. exact (proj2_sig f).
   - eapply paco_fold.
 Qed.
 
-Lemma accumPaco (f : `[D -> D])
-  : forall X : D, forall Y : D, Y =< proj1_sig (Paco f) X <-> Y =< proj1_sig (Paco f) (join_lattice X Y).
+Lemma accumPaco (f : `[D -> D]) (X : D) (Y : D)
+  : Y =< proj1_sig (Paco f) X <-> Y =< proj1_sig (Paco f) (join_lattice X Y).
 Proof with eauto with *.
-  intros X Y. pose (proj1_sig f) as F. split.
+  pose (proj1_sig f) as F. split.
   - intros Y_le_paco_f_X z z_in. apply Y_le_paco_f_X in z_in.
     revert z z_in. change (proj1_sig (Paco f) X =< proj1_sig (Paco f) (join_lattice X Y)).
     eapply paco_preserves_monotonicity; [exact (proj2_sig f) | eapply le_join_lattice_introl]...
@@ -516,44 +516,44 @@ Proof with eauto.
   eapply G_compositionality... all: rewrite <- paco_eq_G...
 Qed.
 
-Theorem paco_yoneda (F : D -> D) (x : D) (y : D)
-  : x =< paco F y <-> (forall r : D, y =< r -> x =< paco F r).
-Proof.
-  split.
-  - intros x_le_paco_y r y_le_r. transitivity (paco F y); [exact x_le_paco_y | revert r y_le_r].
-    cofix CIH. intros r y_le_r z z_in.
-    apply unfold_paco in z_in. apply inv_paco' in z_in.
-    destruct z_in as (W & W_le & z_in_FW). econs.
-    eapply mk_paco' with (WITNESS := W); auto. intros a a_in_W.
-    pose proof (W_le a a_in_W) as [a_in_y | a_in_paco_y].
-    + left. exact (y_le_r a a_in_y).
-    + right. exact (CIH r y_le_r a a_in_paco_y).
-  - ss!.
-Qed.
-
 Theorem pcofix1 (F : D -> D) (x : D) (y : D)
-  (COFIX1 : forall r : D, y =< r -> x =< r -> x =< paco F r)
+  (COFIX1 : forall r, y =< r -> x =< r -> x =< paco F r)
   : x =< paco F y.
 Proof.
   set (Z := join_lattice x (paco F (join_lattice y x))).
   enough (CLAIM : Z =< paco F y).
   { intros z z_in_x. eapply CLAIM. left. exact z_in_x. }
   cofix CIH. intros z z_in_Z.
-  assert (z_in_paco_yx : z \in paco F (join_lattice y x)).
-  { destruct z_in_Z as [z_in_x | z_in_paco].
-    - eapply COFIX1.
-      + eapply le_join_lattice_introl. reflexivity.
-      + eapply le_join_lattice_intror. reflexivity.
-      + eapply z_in_x.
-    - exact z_in_paco.
+  enough (z_in_paco_yx : z \in paco F (join_lattice y x)).
+  { apply unfold_paco in z_in_paco_yx. apply inv_paco' in z_in_paco_yx.
+    destruct z_in_paco_yx as (W & W_le & z_in). econs.
+    eapply mk_paco' with (WITNESS := W); [intros a a_in_W | exact z_in].
+    pose proof (W_le a a_in_W) as [[a_in_y | a_in_x] | a_in_paco].
+    - left. exact a_in_y.
+    - right. eapply CIH. left. exact a_in_x.
+    - right. eapply CIH. right. exact a_in_paco.
   }
-  apply unfold_paco in z_in_paco_yx. apply inv_paco' in z_in_paco_yx.
-  destruct z_in_paco_yx as (W & W_le & z_in_FW). econs.
-  eapply mk_paco' with (WITNESS := W); auto. intros a a_in_W.
-  pose proof (W_le a a_in_W) as [[a_in_y | a_in_x] | a_in_paco].
-  - left. exact a_in_y.
-  - right. eapply CIH. left. exact a_in_x.
-  - right. eapply CIH. right. exact a_in_paco.
+  destruct z_in_Z as [z_in_x | z_in_paco].
+  - eapply COFIX1.
+    + eapply le_join_lattice_introl. reflexivity.
+    + eapply le_join_lattice_intror. reflexivity.
+    + eapply z_in_x.
+  - exact z_in_paco.
+Qed.
+
+Theorem paco_yoneda (F : D -> D) (x : D) (y : D)
+  : x =< paco F y <-> (forall r, y =< r -> x =< paco F r).
+Proof.
+  split.
+  - intros x_le_paco_y r y_le_r. transitivity (paco F y); [exact x_le_paco_y | revert r y_le_r].
+    cofix CIH. intros r y_le_r z z_in.
+    apply unfold_paco in z_in. apply inv_paco' in z_in.
+    destruct z_in as (W & W_le & z_in). econs.
+    eapply mk_paco' with (WITNESS := W); [intros a a_in_W | exact z_in].
+    pose proof (W_le a a_in_W) as [a_in_y | a_in_paco_y].
+    + left. exact (y_le_r a a_in_y).
+    + right. exact (CIH r y_le_r a a_in_paco_y).
+  - ss!.
 Qed.
 
 End PACO.
