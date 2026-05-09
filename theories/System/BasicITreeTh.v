@@ -939,7 +939,7 @@ Section EUTT.
 
 #[local, program]
 Instance equality_upto_tau (R : Type) (R_isSetoid : isSetoid R) : isSetoid (itree E R) :=
-  { eqProp := eqit (R_sim := @eqProp R R_isSetoid) true true }.
+  { eqProp := is_similar_to (Similarity := eqit (R_sim := @eqProp R R_isSetoid) true true) }.
 Next Obligation.
   split; ii.
   - eapply eqit_reflexivity; eauto. ii; reflexivity; eauto.
@@ -1064,9 +1064,9 @@ Instance itree_MonadIterSpec_eutt
 Proof with eauto with *.
   intros I R step i.
   change (is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= B.either (monad_iter step) pure)).
-  assert (STEP1 : is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= (fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end))).
+  assert (STEP1 : is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end)).
   { eapply observe_eq_observe_implies_eqit... }
-  assert (STEP2 : is_similar_to (Similarity := @eqit E R R eq true true) (step i >>= (fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end)) (step i >>= B.either (monad_iter step) pure)).
+  assert (STEP2 : is_similar_to (Similarity := @eqit E R R eq true true) (step i >>= fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end) (step i >>= B.either (monad_iter step) pure)).
   { eapply bind_compatWith_eqProp_r_eutt. intros [arg' | r].
     - eapply Tau_t_eutt_t_intro.
     - eapply observe_eq_observe_implies_eqit...
