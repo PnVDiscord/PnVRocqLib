@@ -951,7 +951,7 @@ Proof.
   destruct t0.(observe); reflexivity.
 Defined.
 
-Lemma Tau_eutt_aux {R : Type} (t : itree E R)
+Lemma Tau_t_eutt_t_intro {R : Type} (t : itree E R)
   : is_similar_to (Similarity := @eqit E R R eq true true) (Tau t) t.
 Proof.
   eapply eqit_fold. simpl. eapply EqTauL with (t1 := t) (ot2 := observe t); auto. eapply eqit_unfold.
@@ -1069,7 +1069,7 @@ Proof with eauto with *.
   { eapply observe_eq_observe_implies_eqit... }
   assert (STEP2 : is_similar_to (Similarity := @eqit E R R eq true true) (step i >>= (fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end)) (step i >>= B.either (monad_iter step) pure)).
   { eapply bind_compatWith_eqProp_r_eutt. intros [arg' | r].
-    - eapply Tau_eutt_aux.
+    - eapply Tau_t_eutt_t_intro.
     - eapply observe_eq_observe_implies_eqit...
   }
   eapply eqit_transitivity; cycle 1... cbv; ii; congruence.
