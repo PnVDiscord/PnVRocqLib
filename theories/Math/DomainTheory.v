@@ -346,9 +346,9 @@ Variant paco' {paco_F : D -> D} (F : D -> D) (X : D) : D :=
     (INCL : WITNESS \subseteq join_lattice X (paco_F X))
     : F WITNESS \subseteq paco' F X.
 
-Lemma inv_paco' {paco_F : D -> D} {F : D -> D} {Y : D} {z : A}
-  (H_paco' : z \in paco' (paco_F := paco_F) F Y)
-  : exists W, W \subseteq join_lattice Y (paco_F Y) /\ z \in F W.
+Lemma inv_paco' {paco_F : D -> D} {F : D -> D} {X : D} (z : A)
+  (H_paco' : z \in paco' (paco_F := paco_F) F X)
+  : exists W, W \subseteq join_lattice X (paco_F X) /\ z \in F W.
 Proof.
   cbv in *. destruct H_paco' as [W INCL z z_in].
   exists W. split; [exact INCL | exact z_in].
