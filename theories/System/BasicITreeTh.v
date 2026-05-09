@@ -872,7 +872,7 @@ Proof with eauto.
   revert t1 t2 t3 H_12 H_23. set (Y := fun p : itree E R1 * itree E R3 => exists s2 : itree E R2, is_similar_to (Similarity := @eqit E R1 R2 R12 b b') (fst p) s2 /\ is_similar_to (Similarity := @eqit E R2 R3 R23 b b') s2 (snd p)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := R13) b b') bot_lattice).
   { intros t1 t2 t3 H_12 H_23. eapply CLAIM. exists t2... }
-  change (Y =< paco (eqit_op b b') bot_lattice). eapply pcofix1.
+  change (Y =< paco (eqit_op b b') bot_lattice). eapply pcofix.
   intros K _ CIH [t1 t3] (t2 & H_12 & H_23); simpl in H_12, H_23. eapply paco_fold. do 4 red.
   apply eqit_unfold in H_12, H_23. revert H_12 H_23. generalize t3.(observe) as ot3. generalize t2.(observe) as ot2. generalize t1.(observe) as ot1.
   clear t1 t2 t3. intros ot1 ot2 ot3 H H_23. revert ot3 H_23. induction H.
@@ -964,7 +964,7 @@ Proof with eauto with *.
   set (Y := fun p : itree E R * itree E R => exists t : itree E R, p = (t >>= pure, t)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R) true true) bot_lattice).
   { intros t. eapply CLAIM. exists t... }
-  change (Y =< paco (eqit_op (R_sim := @eq R) true true) bot_lattice). eapply pcofix1.
+  change (Y =< paco (eqit_op (R_sim := @eq R) true true) bot_lattice). eapply pcofix.
   intros K _ CIH p H_in. destruct H_in as (t & ?); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
   cbn beta iota. simpl bind. rewrite itree_bind_obs_eq. destruct t.(observe); simpl.
   - econs 1...
@@ -979,7 +979,7 @@ Proof with eauto with *.
   set (Y := fun p : itree E R3 * itree E R3 => exists m : itree E R1, p = (m >>= (fun x : R1 => k1 x >>= k2), (m >>= k1) >>= k2)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R3) true true) bot_lattice).
   { intros m. eapply CLAIM. exists m... }
-  change (Y =< paco (eqit_op (R_sim := @eq R3) true true) bot_lattice). eapply pcofix1.
+  change (Y =< paco (eqit_op (R_sim := @eq R3) true true) bot_lattice). eapply pcofix.
   intros K _ CIH p H_in. destruct H_in as (m & ?); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
   cbn beta iota. simpl bind. rewrite !itree_bind_obs_eq. destruct m.(observe) as [r | u | X e k0]; simpl.
   - destruct (k1 r).(observe) as [r' | u' | X' e' k']; simpl.
@@ -1008,7 +1008,7 @@ Proof with eauto with *.
   set (Y := fun p : itree E R2 * itree E R2 => exists s1 s2 : itree E R1, p = (s1 >>= k0, s2 >>= k0) /\ is_similar_to (Similarity := @eqit E R1 R1 eq true true) s1 s2).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R2) true true) bot_lattice).
   { intros t1 t2 H. eapply CLAIM. exists t1, t2... }
-  change (Y =< paco (eqit_op (R_sim := @eq R2) true true) bot_lattice). eapply pcofix1.
+  change (Y =< paco (eqit_op (R_sim := @eq R2) true true) bot_lattice). eapply pcofix.
   intros K _ CIH p H_in. destruct H_in as (s1 & s2 & ? & H_eutt); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
   cbn beta iota. apply eqit_unfold in H_eutt. simpl bind. rewrite !itree_bind_obs_eq.
   induction H_eutt as [r1 r2 REL | u1 u2 REL | X e k1 k2 REL | u1 ot2_inner SK_l REL IH | ot1_inner u2 SK_r REL IH]; simpl.
@@ -1032,7 +1032,7 @@ Proof with eauto with *.
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R2) true true) bot_lattice).
   { intros m. eapply CLAIM. exists m... }
   change (Y =< paco (eqit_op (R_sim := @eq R2) true true) bot_lattice).
-  eapply pcofix1. intros K _ CIH p H_in. destruct H_in as (m & ?); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
+  eapply pcofix. intros K _ CIH p H_in. destruct H_in as (m & ?); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
   cbn beta iota. simpl bind. rewrite !itree_bind_obs_eq. destruct m.(observe) as [r | u | X e k0]; simpl.
   - eapply eqitF_id_monotonic; cycle -1.
     + eapply eqit_unfold...

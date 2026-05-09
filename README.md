@@ -39,7 +39,7 @@ Our main results are:
 
 - [x] The completeness of first-order logic. (`Theorem HilbertCalculus_complete` in [`HELFER2.v`](theories/Logic/HELFER2.v))
 
-- [x] A simple replica of `pcofix`. (`Theorem pcofix1` in [`DomainTheory.v`](theories/Math/DomainTheory.v))
+- [x] A simple replica of `pcofix`. (`Theorem pcofix` in [`DomainTheory.v`](theories/Math/DomainTheory.v))
 
 - [x] A simple replica of `eutt`. (`Instance eutt`, `Instance itree_MonadLaws_eutt`, and `Instance itree_MonadIterSpec_eutt` in [`BasicITreeTh.v`](theories/System/BasicITreeTh.v))
 

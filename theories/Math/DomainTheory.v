@@ -516,8 +516,8 @@ Proof with eauto.
   eapply G_compositionality... all: rewrite <- paco_eq_G...
 Qed.
 
-Theorem pcofix1 (F : D -> D) (x : D) (y : D)
-  (COFIX1 : forall r, y =< r -> x =< r -> x =< paco F r)
+Theorem pcofix (F : D -> D) (x : D) (y : D)
+  (COFIX : forall r : D, y =< r -> forall CIH : x =< r, x =< paco F r)
   : x =< paco F y.
 Proof.
   set (Z := join_lattice x (paco F (join_lattice y x))).
@@ -534,7 +534,7 @@ Proof.
     - right. eapply CIH. right. exact a_in_paco.
   }
   destruct z_in_Z as [z_in_x | z_in_paco].
-  - eapply COFIX1.
+  - eapply COFIX.
     + eapply le_join_lattice_introl. reflexivity.
     + eapply le_join_lattice_intror. reflexivity.
     + eapply z_in_x.
@@ -554,6 +554,31 @@ Proof.
     + left. exact (y_le_r a a_in_y).
     + right. exact (CIH r y_le_r a a_in_paco_y).
   - ss!.
+Qed.
+
+Corollary pcofix1 (F : D -> D) (x : D) (y1 : D)
+  (COFIX : forall r : D, y1 =< r -> forall CIH : x =< r, x =< paco F r)
+  : forall r, y1 =< r -> x =< paco F r.
+Proof.
+  rewrite <- paco_yoneda. now eapply pcofix.
+Qed.
+
+Corollary pcofix2 (F : D -> D) (x : D) (y1 : D) (y2 : D)
+  (COFIX : forall r, y1 =< r -> y2 =< r -> forall CIH : x =< r, x =< paco F r)
+  : forall r, y1 =< r -> y2 =< r -> x =< paco F r.
+Proof.
+  pose proof (pcofix1 F x (join_lattice y1 y2)) as claim.
+  intros r y1_le_r y2_le_r. eapply claim; eauto. clear r y1_le_r y2_le_r.
+  intros r y1_le_r y2_le_r. eapply COFIX; ss!.
+Qed.
+
+Corollary pcofix3 (F : D -> D) (x : D) (y1 : D) (y2 : D) (y3 : D)
+  (COFIX : forall r : D, y1 =< r -> y2 =< r -> y3 =< r -> forall CIH : x =< r, x =< paco F r)
+  : forall r, y1 =< r -> y2 =< r -> y3 =< r -> x =< paco F r.
+Proof.
+  pose proof (pcofix2 F x (join_lattice y1 y2) y3) as claim.
+  intros r y1_le_r y2_le_r y3_le_r. eapply claim; eauto. clear r y1_le_r y2_le_r y3_le_r.
+  intros r y1_le_r y2_le_r y3_le_r. eapply COFIX; ss!.
 Qed.
 
 End PACO.
