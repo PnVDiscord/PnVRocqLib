@@ -367,7 +367,7 @@ Instance ensemble_isCoLa : isCola D :=
 
 #[projections(primitive)]
 CoInductive paco (F : D -> D) (X : D) (z : A) : Prop :=
-  Fold_paco { unfold_paco : z \in paco' (paco_F := paco F) F X }.
+  Fold_paco { unfold_paco : z \in paco' (paco_F := paco F) F X } as paco.
 
 Theorem paco_fold (F : D -> D) (Y : D)
   : F (join_lattice Y (paco F Y)) \subseteq paco F Y.
