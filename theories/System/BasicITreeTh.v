@@ -1074,7 +1074,7 @@ Proof with eauto with *.
 Qed.
 
 Corollary itree_monad_iter_unfold_eutt {I : Type} {R : Type} (step : I -> itree E (I + R)%type) (i : I)
-  : eqit (R_sim := @eqProp R mkSetoid_from_eq) true true (monad_iter step i) (step i >>= B.either (monad_iter step) pure)%prg.
+  : eqit (R_sim := @eqProp R mkSetoid_from_eq) true true (monad_iter step i) (step i >>= B.either (monad_iter step) pure).
 Proof.
   eapply itree_MonadIterSpec_eutt.
 Defined.
