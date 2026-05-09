@@ -915,6 +915,8 @@ Qed.
 
 End transitivity.
 
+Section EUTT.
+
 #[local, program]
 Instance equality_upto_tau (R : Type) (R_isSetoid : isSetoid R) : isSetoid (itree E R) :=
   { eqProp := eqit (R_sim := eqProp (isSetoid := R_isSetoid)) true true }.
@@ -1073,6 +1075,8 @@ Proof with eauto with *.
   eapply eqit_transitivity; cycle -2...
   intros r1 r2 r3 H1 H2. change (r1 = r2) in H1. change (r2 = r3) in H2. congruence.
 Qed.
+
+End EUTT.
 
 End eqit_prop.
 
