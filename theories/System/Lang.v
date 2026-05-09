@@ -275,7 +275,7 @@ Proof.
   rewrite <- firstn_skipn with (n := n) (l := s) at 2. econs.
 Qed.
 
-Lemma isPrefixOf_inv {s : string} {s1 : string} {s2 : string}
+Lemma isPrefixOf_app_inv {s : string} {s1 : string} {s2 : string}
   (H_prefix : s \prefix s1 ++ s2)
   : {s \prefix s1} + {exists s', s = s1 ++ s' /\ length s' > 0 /\ s' \prefix s2}.
 Proof.
@@ -374,7 +374,7 @@ Lemma WellParen_concat s1 s2
 Proof.
   destruct WELLPAREN1 as [H1H1 H1H2], WELLPAREN2 as [H2H1 H2H2]. econs.
   - s!. lia.
-  - ii. pose proof (isPrefixOf_inv H_prefix) as [PREFIX | (s' & H_s_prefix & NOT_NIL & PREFIX')].
+  - ii. pose proof (isPrefixOf_app_inv H_prefix) as [PREFIX | (s' & H_s_prefix & NOT_NIL & PREFIX')].
     + ss!.
     + subst s_prefix. s!.
       enough (count L s' >= count R s') by lia.
