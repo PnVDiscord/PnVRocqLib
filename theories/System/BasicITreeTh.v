@@ -1005,7 +1005,7 @@ Proof with eauto with *.
   - econs 3. intros x. left. eapply CIH. exists (k0 x)...
 Qed.
 
-Lemma bind_compatWith_eqProp_l_eutt {R1} {R2} (k0 : R1 -> itree E R2) (t1 : itree E R1) (t2 : itree E R1)
+Lemma bind_compatWith_eqProp_l_eutt {R1} {R2} (t1 : itree E R1) (t2 : itree E R1) (k0 : R1 -> itree E R2)
   (HYP : is_similar_to (Similarity := @eqit E R1 R1 eq true true) t1 t2)
   : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (t1 >>= k0) (t2 >>= k0).
 Proof with eauto with *.
@@ -1050,8 +1050,8 @@ Qed.
 
 #[global]
 Instance eutt_MonadLaws : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := itree_isMonad) :=
-  { bind_compatWith_eqProp_l {A : Type} {B : Type} (m1 m2 : itree E A) (k : A -> itree E B) := bind_compatWith_eqProp_l_eutt k m1 m2
-  ; bind_compatWith_eqProp_r {A : Type} {B : Type} (m : itree E A) (k1 k2 : A -> itree E B) := bind_compatWith_eqProp_r_eutt m k1 k2
+  { bind_compatWith_eqProp_l {A : Type} {B : Type} := bind_compatWith_eqProp_l_eutt (R1 := A) (R2 := B)
+  ; bind_compatWith_eqProp_r {A : Type} {B : Type} := bind_compatWith_eqProp_r_eutt (R1 := A) (R2 := B)
   ; bind_assoc {A : Type} {B : Type} {C : Type} := bind_assoc_eutt (R1 := A) (R2 := B) (R3 := C)
   ; bind_pure_l {A : Type} {B : Type} := bind_pure_l_eutt (R1 := A) (R2 := B)
   ; bind_pure_r {A : Type} := bind_pure_r_eutt (R := A)
