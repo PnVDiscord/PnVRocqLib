@@ -523,7 +523,7 @@ Proof.
   - intros x_le_paco_y r y_le_r. transitivity (paco F y); [exact x_le_paco_y | revert r y_le_r].
     cofix CIH. intros r y_le_r z z_in.
     apply unfold_paco in z_in. apply inv_paco' in z_in.
-    destruct z_in as [W [W_le z_in_FW]]. econs.
+    destruct z_in as (W & W_le & z_in_FW). econs.
     eapply mk_paco' with (WITNESS := W); auto. intros a a_in_W.
     pose proof (W_le a a_in_W) as [a_in_y | a_in_paco_y].
     + left. exact (y_le_r a a_in_y).

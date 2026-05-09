@@ -655,7 +655,7 @@ Section eqit_prop.
 #[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : poset_hints.
 #[local] Hint Unfold upperboundsOf : poset_hints.
 
-Context {E : Type -> Type}.
+Context {E : Type@{U_discourse} -> Type@{U_discourse}}.
 
 Section GENERAL.
 
@@ -938,29 +938,23 @@ Defined.
 Section EUTT.
 
 #[local, program]
-Instance equality_upto_tau (R : Type) (R_isSetoid : isSetoid R) : isSetoid (itree E R) :=
-  { eqProp := is_similar_to (Similarity := eqit (R_sim := @eqProp R R_isSetoid) true true) }.
-Next Obligation.
+Instance equality_upto_tau (R : Type@{U_discourse}) (R_isSetoid : isSetoid R) : isSetoid (itree E R) :=
+  { eqProp := @is_similar_to (itree E R) (itree E R) (eqit (R_sim := @eqProp R R_isSetoid) true true) }.
+Next Obligation with eauto.
   split; ii.
-  - eapply eqit_reflexivity; eauto. ii; reflexivity; eauto.
-  - eapply eqit_symmetry; eauto. ii; symmetry; eauto.
-  - eapply eqit_transitivity; eauto. ii; etransitivity; eauto.
+  - eapply eqit_reflexivity... ii; reflexivity...
+  - eapply eqit_symmetry... ii; symmetry...
+  - eapply eqit_transitivity... ii; etransitivity...
 Qed.
 
 #[global]
 Instance eutt : isSetoid1 (itree E) :=
   equality_upto_tau.
 
-Lemma Tau_t_eutt_t_intro {R : Type} (t : itree E R)
-  : is_similar_to (Similarity := @eqit E R R eq true true) (Tau t) t.
-Proof.
-  eapply eqit_fold. simpl. econs 4; auto. eapply eqit_unfold. eapply eqit_reflexivity; eauto.
-Qed.
-
 Lemma bind_pure_l_eutt {R1 : Type} {R2 : Type} (k : R1 -> itree E R2) (x : R1)
   : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (pure x >>= k) (k x).
 Proof.
-  eapply observe_eq_observe_implies_eqit. reflexivity.
+  eapply observe_eq_observe_implies_eqit. eauto with *.
 Qed.
 
 Lemma bind_pure_r_eutt {R : Type} (t : itree E R)
@@ -1007,10 +1001,10 @@ Proof with eauto with *.
 Qed.
 
 Lemma bind_compatWith_eqProp_l_eutt {R1 : Type} {R2 : Type} (t1 : itree E R1) (t2 : itree E R1) (k0 : R1 -> itree E R2)
-  (HYP : is_similar_to (Similarity := @eqit E R1 R1 eq true true) t1 t2)
+  (t1_eq_t2 : is_similar_to (Similarity := @eqit E R1 R1 eq true true) t1 t2)
   : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (t1 >>= k0) (t2 >>= k0).
 Proof with eauto with *.
-  revert t1 t2 HYP.
+  revert t1 t2 t1_eq_t2.
   set (Y := fun p : itree E R2 * itree E R2 => exists s1 s2 : itree E R1, p = (s1 >>= k0, s2 >>= k0) /\ is_similar_to (Similarity := @eqit E R1 R1 eq true true) s1 s2).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R2) true true) bot_lattice).
   { intros t1 t2 H. eapply CLAIM. exists t1, t2... }
@@ -1030,7 +1024,7 @@ Proof with eauto with *.
 Qed.
 
 Lemma bind_compatWith_eqProp_r_eutt {R1 : Type} {R2 : Type} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R1 -> itree E R2)
-  (HYP : forall x : R1, is_similar_to (Similarity := @eqit E R2 R2 eq true true) (k1 x) (k2 x))
+  (k1_eq_k2 : forall x : R1, is_similar_to (Similarity := @eqit E R2 R2 eq true true) (k1 x) (k2 x))
   : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (m >>= k1) (m >>= k2).
 Proof with eauto with *.
   revert m.
@@ -1057,6 +1051,12 @@ Instance itree_MonadLaws_eutt : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := 
   ; bind_pure_l := @bind_pure_l_eutt
   ; bind_pure_r := @bind_pure_r_eutt
   }.
+
+Lemma Tau_t_eutt_t_intro {R : Type} (t : itree E R)
+  : is_similar_to (Similarity := @eqit E R R eq true true) (Tau t) t.
+Proof.
+  eapply eqit_fold. simpl. econs 4; auto. eapply eqit_unfold. eapply eqit_reflexivity; eauto.
+Qed.
 
 #[global]
 Instance itree_MonadIterSpec_eutt
