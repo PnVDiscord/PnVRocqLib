@@ -749,7 +749,7 @@ Proof with eauto with *.
   rewrite <- paco_fold. intros [u1 u2] H_IN.
   apply eqit_unfold in H_IN. red.
   eapply eqitF_skip_mon with (b1 := b1) (b2 := b2) (sim := fun v1 v2 => is_similar_to (Similarity := @eqit E R R' R_sim b1 b2) v1 v2)...
-  intros v1 v2 SIM. left. right. exact SIM.
+  ii; left; right...
 Qed.
 
 Corollary eq_sub_eqit b1 b2 (t1 : itree E R) (t2 : itree E R')
@@ -806,10 +806,11 @@ Context {R : Type} {R_sim : Similarity R R}.
 
 Hypothesis R_sim_refl : forall r : R, r =~= r.
 
-Lemma eqit_reflexivity (b1 : bool) (b2 : bool)
-  : Reflexive (is_similar_to (Similarity := @eqit E R R R_sim b1 b2)).
+Theorem eqit_reflexivity (b : bool) (b' : bool) (t : itree E R)
+  : is_similar_to (Similarity := @eqit E R R R_sim b b') t t.
 Proof with eauto with *.
-  enough (CLAIM : @B.Rel_id (itree E R) \subseteq paco (eqit_op (R' := R) (R_sim := R_sim) b1 b2) bot_lattice).
+  revert t.
+  enough (CLAIM : @B.Rel_id (itree E R) \subseteq paco (eqit_op (R' := R) (R_sim := R_sim) b b') bot_lattice).
   { intros t. exact (CLAIM (t, t) eq_refl). }
   eapply paco_accum... set (Rel_focus := join_lattice bot_lattice (@B.Rel_id (itree E R))).
   rewrite <- paco_fold. intros [t1 t2] H_EQ. repeat red. do 2 red in H_EQ.
@@ -824,36 +825,35 @@ End reflexivity.
 
 Section symmetry.
 
-Context {R : Type} {R' : Type} {R_sim : Similarity R R'} {R_sim_flip : Similarity R' R}.
+Context {R1 : Type} {R2 : Type} {R12 : Similarity R1 R2} {R21 : Similarity R2 R1}.
 
-Hypothesis R_sim_swap : forall r1 : R, forall r2 : R', r1 =~= r2 -> r2 =~= r1.
+Hypothesis R_sim_swap : forall r1 : R1, forall r2 : R2, r1 =~= r2 -> r2 =~= r1.
 
-Lemma eqitF_symmetry b1 b2 sim sim' (ot1 : itreeF (itree E R) E R) (ot2 : itreeF (itree E R') E R')
+Lemma eqitF_symmetry (b : bool) (b' : bool) sim sim' (ot1 : @itreeF (itree E R1) E R1) (ot2 : @itreeF (itree E R2) E R2)
   (sim_swap : forall t1, forall t2, sim t1 t2 -> sim' t2 t1)
-  (H_eqitF : @eqitF E R R' R_sim b1 b2 id sim ot1 ot2)
-  : @eqitF E R' R R_sim_flip b2 b1 id sim' ot2 ot1.
+  (H_eqitF : @eqitF E R1 R2 R12 b b' id sim ot1 ot2)
+  : @eqitF E R2 R1 R21 b' b id sim' ot2 ot1.
 Proof.
   induction H_eqitF as [r1 r2 H_REL | u1 u2 H_REL | X e k1 k2 H_REL | u1 ou2 SK H_REL IH | ou1 u2 SK H_REL IH].
-  - econstructor. exact (R_sim_swap _ _ H_REL).
-  - econstructor. exact (sim_swap _ _ H_REL).
-  - econstructor. intros x. exact (sim_swap _ _ (H_REL x)).
-  - eapply EqTauR; auto.
-  - eapply EqTauL; auto.
+  - econs 1. exact (R_sim_swap _ _ H_REL).
+  - econs 2. exact (sim_swap _ _ H_REL).
+  - econs 3. intros x. exact (sim_swap _ _ (H_REL x)).
+  - econs 5; auto.
+  - econs 4; auto.
 Qed.
 
-Theorem eqit_symmetry (b1 : bool) (b2 : bool) (t1 : itree E R) (t2 : itree E R')
-  (H_eqit : is_similar_to (Similarity := @eqit E R R' R_sim b1 b2) t1 t2)
-  : is_similar_to (Similarity := @eqit E R' R R_sim_flip b2 b1) t2 t1.
+Theorem eqit_symmetry (b : bool) (b' : bool) (t1 : itree E R1) (t2 : itree E R2)
+  (H_eqit : is_similar_to (Similarity := @eqit E R1 R2 R12 b b') t1 t2)
+  : is_similar_to (Similarity := @eqit E R2 R1 R21 b' b) t2 t1.
 Proof with eauto with *.
   revert t1 t2 H_eqit.
-  set (Y := fun p : itree E R' * itree E R => is_similar_to (Similarity := @eqit E R R' R_sim b1 b2) (snd p) (fst p)).
-  enough (CLAIM : Y \subseteq paco (eqit_op (R := R') (R' := R) (R_sim := R_sim_flip) b2 b1) bot_lattice).
+  set (Y := fun p : itree E R2 * itree E R1 => is_similar_to (Similarity := @eqit E R1 R2 R12 b b') (snd p) (fst p)).
+  enough (CLAIM : Y \subseteq paco (eqit_op (R := R2) (R' := R1) (R_sim := R21) b' b) bot_lattice).
   { intros t1 t2 H. exact (CLAIM (t2, t1) H). }
   eapply paco_accum... set (Rel_focus := join_lattice bot_lattice Y).
   rewrite <- paco_fold. intros [u2 u1] H_IN.
-  apply eqit_unfold in H_IN. red.
-  eapply eqitF_symmetry...
-  intros v1 v2 SIM. left. right. exact SIM.
+  apply eqit_unfold in H_IN. red. eapply eqitF_symmetry...
+  ii; left; right...
 Qed.
 
 End symmetry.
@@ -864,15 +864,15 @@ Context {R1 : Type} {R2 : Type} {R3 : Type} {R12 : Similarity R1 R2} {R23 : Simi
 
 Hypothesis R_sim_compose : forall r1 : R1, forall r2 : R2, forall r3 : R3, r1 =~= r2 -> r2 =~= r3 -> r1 =~= r3.
 
-Theorem eqit_transitivity (b1 : bool) (b2 : bool) (t1 : itree E R1) (t2 : itree E R2) (t3 : itree E R3)
-  (H_12 : is_similar_to (Similarity := @eqit E R1 R2 R12 b1 b2) t1 t2)
-  (H_23 : is_similar_to (Similarity := @eqit E R2 R3 R23 b1 b2) t2 t3)
-  : is_similar_to (Similarity := @eqit E R1 R3 R13 b1 b2) t1 t3.
+Theorem eqit_transitivity (b : bool) (b' : bool) (t1 : itree E R1) (t2 : itree E R2) (t3 : itree E R3)
+  (H_12 : is_similar_to (Similarity := @eqit E R1 R2 R12 b b') t1 t2)
+  (H_23 : is_similar_to (Similarity := @eqit E R2 R3 R23 b b') t2 t3)
+  : is_similar_to (Similarity := @eqit E R1 R3 R13 b b') t1 t3.
 Proof with eauto.
-  revert t1 t2 t3 H_12 H_23. set (Y := fun p : itree E R1 * itree E R3 => exists s2 : itree E R2, is_similar_to (Similarity := @eqit E R1 R2 R12 b1 b2) (fst p) s2 /\ is_similar_to (Similarity := @eqit E R2 R3 R23 b1 b2) s2 (snd p)).
-  enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := R13) b1 b2) bot_lattice).
+  revert t1 t2 t3 H_12 H_23. set (Y := fun p : itree E R1 * itree E R3 => exists s2 : itree E R2, is_similar_to (Similarity := @eqit E R1 R2 R12 b b') (fst p) s2 /\ is_similar_to (Similarity := @eqit E R2 R3 R23 b b') s2 (snd p)).
+  enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := R13) b b') bot_lattice).
   { intros t1 t2 t3 H_12 H_23. eapply CLAIM. exists t2... }
-  change (Y =< paco (eqit_op b1 b2) bot_lattice). eapply pcofix1.
+  change (Y =< paco (eqit_op b b') bot_lattice). eapply pcofix1.
   intros K _ CIH [t1 t3] (t2 & H_12 & H_23); simpl in H_12, H_23. eapply paco_fold. do 4 red.
   apply eqit_unfold in H_12, H_23. revert H_12 H_23. generalize t3.(observe) as ot3. generalize t2.(observe) as ot2. generalize t1.(observe) as ot1.
   clear t1 t2 t3. intros ot1 ot2 ot3 H H_23. revert ot3 H_23. induction H.
