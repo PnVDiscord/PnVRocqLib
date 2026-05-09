@@ -919,7 +919,7 @@ Section EUTT.
 
 #[local, program]
 Instance equality_upto_tau (R : Type) (R_isSetoid : isSetoid R) : isSetoid (itree E R) :=
-  { eqProp := eqit (R_sim := eqProp (isSetoid := R_isSetoid)) true true }.
+  { eqProp := eqit (R_sim := @eqProp R R_isSetoid) true true }.
 Next Obligation.
   split; ii.
   - eapply eqit_reflexivity; eauto. ii; reflexivity; eauto.
