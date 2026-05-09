@@ -1070,10 +1070,9 @@ Proof with eauto with *.
   assert (STEP2 : is_similar_to (Similarity := @eqit E R R eq true true) (step i >>= (fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end)) (step i >>= B.either (monad_iter step) pure)).
   { eapply bind_compatWith_eqProp_r_eutt. intros [arg' | r].
     - eapply Tau_eutt_aux.
-    - eapply observe_eq_observe_implies_eqit. reflexivity.
+    - eapply observe_eq_observe_implies_eqit...
   }
-  eapply eqit_transitivity; cycle -2...
-  intros r1 r2 r3 H1 H2. change (r1 = r2) in H1. change (r2 = r3) in H2. congruence.
+  eapply eqit_transitivity; cycle 1... cbv; ii; congruence.
 Qed.
 
 End EUTT.
