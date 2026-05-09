@@ -954,8 +954,7 @@ Instance eutt : isSetoid1 (itree E) :=
 Lemma Tau_t_eutt_t_intro {R : Type} (t : itree E R)
   : is_similar_to (Similarity := @eqit E R R eq true true) (Tau t) t.
 Proof.
-  eapply eqit_fold. simpl. eapply EqTauL with (t1 := t) (ot2 := observe t); auto. eapply eqit_unfold.
-  exact (eqit_reflexivity (R := R) (R_sim := @eq R) (fun r : R => @eq_refl R r) true true t).
+  eapply eqit_fold. simpl. econs 4; auto. eapply eqit_unfold. eapply eqit_reflexivity; eauto.
 Qed.
 
 Lemma bind_pure_l_eutt {R1} {R2} (k : R1 -> itree E R2) (x : R1)
