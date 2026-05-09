@@ -939,7 +939,7 @@ Section EUTT.
 
 #[local, program]
 Instance equality_upto_tau (R : Type@{U_discourse}) (R_isSetoid : isSetoid R) : isSetoid (itree E R) :=
-  { eqProp := @is_similar_to (itree E R) (itree E R) (eqit (R_sim := @eqProp R R_isSetoid) true true) }.
+  { eqProp := eqit (R_sim := @eqProp R R_isSetoid) true true }.
 Next Obligation with eauto.
   split; ii.
   - eapply eqit_reflexivity... ii; reflexivity...
@@ -958,7 +958,7 @@ Proof.
 Qed.
 
 Lemma bind_pure_r_eutt {R : Type} (t : itree E R)
-  : is_similar_to (Similarity := @eqit E R R eq true true) (t >>= pure) t.
+  : eqit (R_sim := @eqProp R mkSetoid_from_eq) true true (t >>= pure) t.
 Proof with eauto with *.
   revert t.
   set (Y := fun p : itree E R * itree E R => exists t : itree E R, p = (t >>= pure, t)).
@@ -973,7 +973,7 @@ Proof with eauto with *.
 Qed.
 
 Lemma bind_assoc_eutt {R1 : Type} {R2 : Type} {R3 : Type} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R2 -> itree E R3)
-  : is_similar_to (Similarity := @eqit E R3 R3 eq true true) (m >>= (fun x : R1 => k1 x >>= k2)) ((m >>= k1) >>= k2).
+  : eqit (R_sim := @eqProp R3 mkSetoid_from_eq) true true (m >>= (fun x : R1 => k1 x >>= k2)) ((m >>= k1) >>= k2).
 Proof with eauto with *.
   revert m.
   set (Y := fun p : itree E R3 * itree E R3 => exists m : itree E R1, p = (m >>= (fun x : R1 => k1 x >>= k2), (m >>= k1) >>= k2)).
@@ -1001,8 +1001,8 @@ Proof with eauto with *.
 Qed.
 
 Lemma bind_compatWith_eqProp_l_eutt {R1 : Type} {R2 : Type} (t1 : itree E R1) (t2 : itree E R1) (k0 : R1 -> itree E R2)
-  (t1_eq_t2 : is_similar_to (Similarity := @eqit E R1 R1 eq true true) t1 t2)
-  : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (t1 >>= k0) (t2 >>= k0).
+  (t1_eq_t2 : eqit (R_sim := @eqProp R1 mkSetoid_from_eq) true true t1 t2)
+  : eqit (R_sim := @eqProp R2 mkSetoid_from_eq) true true (t1 >>= k0) (t2 >>= k0).
 Proof with eauto with *.
   revert t1 t2 t1_eq_t2.
   set (Y := fun p : itree E R2 * itree E R2 => exists s1 s2 : itree E R1, p = (s1 >>= k0, s2 >>= k0) /\ is_similar_to (Similarity := @eqit E R1 R1 eq true true) s1 s2).
@@ -1024,8 +1024,8 @@ Proof with eauto with *.
 Qed.
 
 Lemma bind_compatWith_eqProp_r_eutt {R1 : Type} {R2 : Type} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R1 -> itree E R2)
-  (k1_eq_k2 : forall x : R1, is_similar_to (Similarity := @eqit E R2 R2 eq true true) (k1 x) (k2 x))
-  : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (m >>= k1) (m >>= k2).
+  (k1_eq_k2 : forall x : R1, eqit (R_sim := @eqProp R2 mkSetoid_from_eq) true true (k1 x) (k2 x))
+  : eqit (R_sim := @eqProp R2 mkSetoid_from_eq) true true (m >>= k1) (m >>= k2).
 Proof with eauto with *.
   revert m.
   set (Y := fun p : itree E R2 * itree E R2 => exists m : itree E R1, p = (m >>= k1, m >>= k2)).
@@ -1053,7 +1053,7 @@ Instance itree_MonadLaws_eutt : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := 
   }.
 
 Lemma Tau_t_eutt_t_intro {R : Type} (t : itree E R)
-  : is_similar_to (Similarity := @eqit E R R eq true true) (Tau t) t.
+  : eqit (R_sim := @eqProp R mkSetoid_from_eq) true true (Tau t) t.
 Proof.
   eapply eqit_fold. simpl. econs 4; auto. eapply eqit_unfold. eapply eqit_reflexivity; eauto.
 Qed.
@@ -1063,7 +1063,6 @@ Instance itree_MonadIterSpec_eutt
   : MonadIterSpec (itree E) (SETOID1 := eutt) (MONAD := itree_isMonad) (MONADITER := itree_isMonadIter).
 Proof with eauto with *.
   intros I R step i.
-  change (is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= B.either (monad_iter step) pure)).
   assert (STEP1 : is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end)).
   { eapply observe_eq_observe_implies_eqit... }
   assert (STEP2 : is_similar_to (Similarity := @eqit E R R eq true true) (step i >>= fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end) (step i >>= B.either (monad_iter step) pure)).
@@ -1071,8 +1070,14 @@ Proof with eauto with *.
     - eapply Tau_t_eutt_t_intro.
     - eapply observe_eq_observe_implies_eqit...
   }
-  eapply eqit_transitivity; cycle 1... cbv; ii; congruence.
+  eapply eqit_transitivity...
 Qed.
+
+Corollary itree_monad_iter_unfold_eutt {I : Type} {R : Type} (step : I -> itree E (I + R)%type) (i : I)
+  : eqit (R_sim := @eqProp R mkSetoid_from_eq) true true (monad_iter step i) (step i >>= B.either (monad_iter step) pure)%prg.
+Proof.
+  eapply itree_MonadIterSpec_eutt.
+Defined.
 
 End EUTT.
 
@@ -1080,7 +1085,7 @@ End eqit_prop.
 
 End EQIT.
 
-Infix "≈ₜ" := (EQIT.eqit (R_sim := eqProp) true true).
-Infix "≳ₜ" := (EQIT.eqit (R_sim := eqProp) true false).
-Infix "≲ₜ" := (EQIT.eqit (R_sim := eqProp) false true).
-Infix "≃ₜ" := (EQIT.eqit (R_sim := eqProp) false false).
+Infix "≈ₜ" := (EQIT.eqit (R_sim := @eqProp _ mkSetoid_from_eq) true true).
+Infix "≳ₜ" := (EQIT.eqit (R_sim := @eqProp _ mkSetoid_from_eq) true false).
+Infix "≲ₜ" := (EQIT.eqit (R_sim := @eqProp _ mkSetoid_from_eq) false true).
+Infix "≃ₜ" := (EQIT.eqit (R_sim := @eqProp _ mkSetoid_from_eq) false false).
