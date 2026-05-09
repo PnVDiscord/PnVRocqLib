@@ -915,6 +915,26 @@ Qed.
 
 End transitivity.
 
+Lemma observe_eq_observe_implies_eqit {R : Type} (b1 : bool) (b2 : bool) (t1 : itree E R) (t2 : itree E R)
+  (OBS_EQ : t1.(observe) = t2.(observe))
+  : is_similar_to (Similarity := @eqit E R R eq b1 b2) t1 t2.
+Proof.
+  eapply eqit_obs_eq_obs with (t1 := t2) (t2 := t2); auto.
+  eapply eqit_reflexivity; eauto.
+Qed.
+
+Lemma itree_bind_obs_eq {R1 : Type} {R2 : Type} (k0 : R1 -> itree E R2) (t0 : itree E R1) :
+  (itree_bind' k0 t0).(observe) =
+  match t0.(observe) with
+  | RetF r => (k0 r).(observe)
+  | TauF t => TauF (itree_bind' k0 t)
+  | VisF X e k => VisF X e (fun x : X => itree_bind' k0 (k x))
+  end.
+Proof.
+  rewrite ItreeBisimulation.itree_bind_unfold_observed.
+  destruct t0.(observe); reflexivity.
+Defined.
+
 Section EUTT.
 
 #[local, program]
@@ -930,26 +950,6 @@ Qed.
 #[global]
 Instance eutt : isSetoid1 (itree E) :=
   equality_upto_tau.
-
-Lemma observe_eq_observe_implies_eqit {R} (b1 : bool) (b2 : bool) (t1 : itree E R) (t2 : itree E R)
-  (OBS_EQ : t1.(observe) = t2.(observe))
-  : is_similar_to (Similarity := @eqit E R R eq b1 b2) t1 t2.
-Proof.
-  eapply eqit_obs_eq_obs with (t1 := t2) (t2 := t2); auto.
-  eapply eqit_reflexivity; eauto.
-Qed.
-
-Lemma itree_bind_obs_eq {R1} {R2} (k0 : R1 -> itree E R2) (t0 : itree E R1) :
-  (itree_bind' k0 t0).(observe) =
-  match t0.(observe) with
-  | RetF r => (k0 r).(observe)
-  | TauF t => TauF (itree_bind' k0 t)
-  | VisF X e k => VisF X e (fun x : X => itree_bind' k0 (k x))
-  end.
-Proof.
-  rewrite ItreeBisimulation.itree_bind_unfold_observed.
-  destruct t0.(observe); reflexivity.
-Defined.
 
 Lemma Tau_t_eutt_t_intro {R : Type} (t : itree E R)
   : is_similar_to (Similarity := @eqit E R R eq true true) (Tau t) t.
