@@ -47,12 +47,12 @@ Class isMonadIter (M : Type -> Type) {MONAD : isMonad M} : Type :=
 
 #[global] Arguments monad_iter {M}%_type_scope {MONAD} {isMonadIter} {I}%_type_scope {R}%_type_scope step%_monad_scope i0.
 
-Class MonadIterSpec (M : Type -> Type) {MONAD : isMonad M} {MONADITER : isMonadIter M} {SETOID1 : isSetoid1 M} : Prop :=
+Class MonadIterSpec (M : Type -> Type) {SETOID1 : isSetoid1 M} {MONAD : isMonad M} {MONADITER : isMonadIter M} : Prop :=
   monad_iter_unfold (I : Type) (R : Type) (step : I -> M (I + R)%type)
   : monad_iter step == step >=> B.either (monad_iter step) pure.
 
-Lemma MonadIterSpec_unfold (M : Type -> Type) (MONAD : isMonad M) (MONADITER : isMonadIter M) (SETOID1 : isSetoid1 M) :
-  MonadIterSpec M (MONAD := MONAD) (MONADITER := MONADITER) (SETOID1 := SETOID1) =
+Lemma MonadIterSpec_unfold (M : Type -> Type) (SETOID1 : isSetoid1 M) (MONAD : isMonad M) (MONADITER : isMonadIter M) :
+  MonadIterSpec M (SETOID1 := SETOID1) (MONAD := MONAD) (MONADITER := MONADITER) =
   (forall I : Type, forall R : Type, forall k : I -> M (I + R)%type, forall x : I, monad_iter k x == bind (k x) (fun y : I + R => match y with inl x' => monad_iter k x' | inr y' => pure y' end)).
 Proof.
   reflexivity.
@@ -70,7 +70,7 @@ Instance stateT_isMonadIter {M : Type -> Type} {MONAD : isMonad M} {MONADITER : 
   B.StateT ∘ curry (monad_iter (uncurry (B.runStateT ∘ step) >=> uncurry (B.either (curry (pure ∘ inl)) (curry (pure ∘ inr))))).
 
 #[global]
-Instance stateT_MonadIterSpec {M : Type -> Type} {MONAD : isMonad M} {MONADITER : isMonadIter M} {SETOID1 : isSetoid1 M}
+Instance stateT_MonadIterSpec {M : Type -> Type} {SETOID1 : isSetoid1 M} {MONAD : isMonad M} {MONADITER : isMonadIter M}
   (MONADLAW : MonadLaws M)
   (MONADITERSPEC : MonadIterSpec M)
   : MonadIterSpec (B.stateT S M).

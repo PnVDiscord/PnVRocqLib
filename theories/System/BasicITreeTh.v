@@ -957,7 +957,7 @@ Proof.
   eapply eqit_fold. simpl. econs 4; auto. eapply eqit_unfold. eapply eqit_reflexivity; eauto.
 Qed.
 
-Lemma bind_pure_l_eutt {R1} {R2} (k : R1 -> itree E R2) (x : R1)
+Lemma bind_pure_l_eutt {R1 : Type} {R2 : Type} (k : R1 -> itree E R2) (x : R1)
   : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (pure x >>= k) (k x).
 Proof.
   eapply observe_eq_observe_implies_eqit. reflexivity.
@@ -978,7 +978,7 @@ Proof with eauto with *.
   - econs 3. intros x. left. eapply CIH. exists (k x)...
 Qed.
 
-Lemma bind_assoc_eutt {R1} {R2} {R3} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R2 -> itree E R3)
+Lemma bind_assoc_eutt {R1 : Type} {R2 : Type} {R3 : Type} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R2 -> itree E R3)
   : is_similar_to (Similarity := @eqit E R3 R3 eq true true) (m >>= (fun x : R1 => k1 x >>= k2)) ((m >>= k1) >>= k2).
 Proof with eauto with *.
   revert m.
@@ -1006,7 +1006,7 @@ Proof with eauto with *.
   - econs 3. intros x. left. eapply CIH. exists (k0 x)...
 Qed.
 
-Lemma bind_compatWith_eqProp_l_eutt {R1} {R2} (t1 : itree E R1) (t2 : itree E R1) (k0 : R1 -> itree E R2)
+Lemma bind_compatWith_eqProp_l_eutt {R1 : Type} {R2 : Type} (t1 : itree E R1) (t2 : itree E R1) (k0 : R1 -> itree E R2)
   (HYP : is_similar_to (Similarity := @eqit E R1 R1 eq true true) t1 t2)
   : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (t1 >>= k0) (t2 >>= k0).
 Proof with eauto with *.
@@ -1029,7 +1029,7 @@ Proof with eauto with *.
   - econs 5; auto. rewrite itree_bind_obs_eq...
 Qed.
 
-Lemma bind_compatWith_eqProp_r_eutt {R1} {R2} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R1 -> itree E R2)
+Lemma bind_compatWith_eqProp_r_eutt {R1 : Type} {R2 : Type} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R1 -> itree E R2)
   (HYP : forall x : R1, is_similar_to (Similarity := @eqit E R2 R2 eq true true) (k1 x) (k2 x))
   : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (m >>= k1) (m >>= k2).
 Proof with eauto with *.
@@ -1051,16 +1051,16 @@ Qed.
 
 #[global]
 Instance itree_MonadLaws_eutt : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := itree_isMonad) :=
-  { bind_compatWith_eqProp_l {A : Type} {B : Type} := bind_compatWith_eqProp_l_eutt (R1 := A) (R2 := B)
-  ; bind_compatWith_eqProp_r {A : Type} {B : Type} := bind_compatWith_eqProp_r_eutt (R1 := A) (R2 := B)
-  ; bind_assoc {A : Type} {B : Type} {C : Type} := bind_assoc_eutt (R1 := A) (R2 := B) (R3 := C)
-  ; bind_pure_l {A : Type} {B : Type} := bind_pure_l_eutt (R1 := A) (R2 := B)
-  ; bind_pure_r {A : Type} := bind_pure_r_eutt (R := A)
+  { bind_compatWith_eqProp_l := @bind_compatWith_eqProp_l_eutt
+  ; bind_compatWith_eqProp_r := @bind_compatWith_eqProp_r_eutt
+  ; bind_assoc := @bind_assoc_eutt
+  ; bind_pure_l := @bind_pure_l_eutt
+  ; bind_pure_r := @bind_pure_r_eutt
   }.
 
 #[global]
 Instance itree_MonadIterSpec_eutt
-  : MonadIterSpec (itree E) (MONAD := itree_isMonad) (MONADITER := itree_isMonadIter) (SETOID1 := eutt).
+  : MonadIterSpec (itree E) (SETOID1 := eutt) (MONAD := itree_isMonad) (MONADITER := itree_isMonadIter).
 Proof with eauto with *.
   intros I R step i.
   change (is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= B.either (monad_iter step) pure)).
