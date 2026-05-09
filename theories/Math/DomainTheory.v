@@ -529,14 +529,13 @@ Proof.
   - ss!.
 Qed.
 
-Corollary pcofix1 (F : D -> D) (x : D) (y : D)
+Theorem pcofix1 (F : D -> D) (x : D) (y : D)
   (COFIX1 : forall r : D, y =< r -> x =< r -> x =< paco F r)
-  : forall r : D, y =< r -> x =< paco F r.
+  : x =< paco F y.
 Proof.
-  eapply paco_yoneda.
   set (Z := join_lattice x (paco F (join_lattice y x))).
   enough (CLAIM : Z =< paco F y).
-  { intros z z_in_x. apply CLAIM. left. exact z_in_x. }
+  { intros z z_in_x. eapply CLAIM. left. exact z_in_x. }
   cofix CIH. intros z z_in_Z.
   assert (z_in_paco_yx : z \in paco F (join_lattice y x)).
   { destruct z_in_Z as [z_in_x | z_in_paco].
@@ -547,7 +546,7 @@ Proof.
     - exact z_in_paco.
   }
   apply unfold_paco in z_in_paco_yx. apply inv_paco' in z_in_paco_yx.
-  destruct z_in_paco_yx as [W [W_le z_in_FW]]. econs.
+  destruct z_in_paco_yx as (W & W_le & z_in_FW). econs.
   eapply mk_paco' with (WITNESS := W); auto.
   intros a a_in_W. pose proof (W_le a a_in_W) as [a_in_yx | a_in_paco].
   - destruct a_in_yx as [a_in_y | a_in_x].
