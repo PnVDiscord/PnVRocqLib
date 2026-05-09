@@ -1049,7 +1049,7 @@ Proof with eauto with *.
 Qed.
 
 #[global]
-Instance eutt_MonadLaws : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := itree_isMonad) :=
+Instance itree_MonadLaws_eutt : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := itree_isMonad) :=
   { bind_compatWith_eqProp_l {A : Type} {B : Type} := bind_compatWith_eqProp_l_eutt (R1 := A) (R2 := B)
   ; bind_compatWith_eqProp_r {A : Type} {B : Type} := bind_compatWith_eqProp_r_eutt (R1 := A) (R2 := B)
   ; bind_assoc {A : Type} {B : Type} {C : Type} := bind_assoc_eutt (R1 := A) (R2 := B) (R3 := C)
@@ -1058,8 +1058,8 @@ Instance eutt_MonadLaws : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := itree_
   }.
 
 #[global]
-Instance eutt_MonadIterSpec
-  : MonadIterSpec (itree E) (MONAD := itree_isMonad) (SETOID1 := eutt) (MONADITER := itree_isMonadIter).
+Instance itree_MonadIterSpec_eutt
+  : MonadIterSpec (itree E) (MONAD := itree_isMonad) (MONADITER := itree_isMonadIter) (SETOID1 := eutt).
 Proof with eauto with *.
   intros I R step i.
   change (is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= B.either (monad_iter step) pure)).
