@@ -1049,7 +1049,7 @@ Proof with eauto with *.
 Qed.
 
 #[global]
-Instance itree_eutt_MonadLaws : @MonadLaws (itree E) eutt itree_isMonad :=
+Instance eutt_MonadLaws : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := itree_isMonad) :=
   { bind_compatWith_eqProp_l {A : Type} {B : Type} (m1 m2 : itree E A) (k : A -> itree E B) := bind_compatWith_eqProp_l_eutt k m1 m2
   ; bind_compatWith_eqProp_r {A : Type} {B : Type} (m : itree E A) (k1 k2 : A -> itree E B) := bind_compatWith_eqProp_r_eutt m k1 k2
   ; bind_assoc {A : Type} {B : Type} {C : Type} := bind_assoc_eutt (R1 := A) (R2 := B) (R3 := C)
@@ -1057,9 +1057,12 @@ Instance itree_eutt_MonadLaws : @MonadLaws (itree E) eutt itree_isMonad :=
   ; bind_pure_r {A : Type} := bind_pure_r_eutt (R := A)
   }.
 
-Lemma monad_iter_unfold_pointwise {I : Type} {R : Type} (step : I -> itree E (I + R)%type) (i : I)
-  : is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= B.either (monad_iter step) pure).
+#[global]
+Instance eutt_MonadIterSpec
+  : MonadIterSpec (itree E) (MONAD := itree_isMonad) (SETOID1 := eutt) (MONADITER := itree_isMonadIter).
 Proof with eauto with *.
+  intros I R step i.
+  change (is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= B.either (monad_iter step) pure)).
   assert (STEP1 : is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= (fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end))).
   { eapply observe_eq_observe_implies_eqit... }
   assert (STEP2 : is_similar_to (Similarity := @eqit E R R eq true true) (step i >>= (fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end)) (step i >>= B.either (monad_iter step) pure)).
@@ -1070,10 +1073,6 @@ Proof with eauto with *.
   eapply eqit_transitivity; cycle -2...
   intros r1 r2 r3 H1 H2. change (r1 = r2) in H1. change (r2 = r3) in H2. congruence.
 Qed.
-
-#[global]
-Instance itree_eutt_MonadIterSpec : MonadIterSpec (itree E) (MONAD := itree_isMonad) (MONADITER := itree_isMonadIter) (SETOID1 := eutt) :=
-  @monad_iter_unfold_pointwise.
 
 End eqit_prop.
 
