@@ -829,17 +829,13 @@ Context {R1 : Type} {R2 : Type} {R12 : Similarity R1 R2} {R21 : Similarity R2 R1
 
 Hypothesis R_sim_swap : forall r1 : R1, forall r2 : R2, r1 =~= r2 -> r2 =~= r1.
 
-Lemma eqitF_symmetry (b : bool) (b' : bool) sim sim' (ot1 : @itreeF (itree E R1) E R1) (ot2 : @itreeF (itree E R2) E R2)
-  (sim_swap : forall t1, forall t2, sim t1 t2 -> sim' t2 t1)
-  (H_eqitF : @eqitF E R1 R2 R12 b b' id sim ot1 ot2)
-  : @eqitF E R2 R1 R21 b' b id sim' ot2 ot1.
+Lemma eqitF_symmetry vclo vclo' sim sim' (b : bool) (b' : bool) (ot1 : @itreeF (itree E R1) E R1) (ot2 : @itreeF (itree E R2) E R2)
+  (vclo_vclo' : forall sim, forall sim', (forall t1, forall t2, sim t1 t2 -> sim' t2 t1) -> forall t1, forall t2, vclo sim t1 t2 -> vclo' sim' t2 t1)
+  (sim_sim' : forall t1, forall t2, sim t1 t2 -> sim' t2 t1)
+  (H_eqitF : @eqitF E R1 R2 R12 b b' vclo sim ot1 ot2)
+  : @eqitF E R2 R1 R21 b' b vclo' sim' ot2 ot1.
 Proof.
-  induction H_eqitF as [r1 r2 H_REL | u1 u2 H_REL | X e k1 k2 H_REL | u1 ou2 SK H_REL IH | ou1 u2 SK H_REL IH].
-  - econs 1. exact (R_sim_swap _ _ H_REL).
-  - econs 2. exact (sim_swap _ _ H_REL).
-  - econs 3. intros x. exact (sim_swap _ _ (H_REL x)).
-  - econs 5; auto.
-  - econs 4; auto.
+  induction H_eqitF as [r1 r2 H_REL | u1 u2 H_REL | X e k1 k2 H_REL | u1 ou2 SK H_REL IH | ou1 u2 SK H_REL IH]; econs; eauto.
 Qed.
 
 Theorem eqit_symmetry (b : bool) (b' : bool) (t1 : itree E R1) (t2 : itree E R2)
@@ -853,7 +849,8 @@ Proof with eauto with *.
   eapply paco_accum... set (Rel_focus := join_lattice bot_lattice Y).
   rewrite <- paco_fold. intros [u2 u1] H_IN.
   apply eqit_unfold in H_IN. red. eapply eqitF_symmetry...
-  ii; left; right...
+  - unfold id...
+  - ii; left; right...
 Qed.
 
 End symmetry.
