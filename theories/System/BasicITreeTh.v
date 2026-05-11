@@ -1085,15 +1085,15 @@ Instance eutt_Equivalence {R : Type@{U_discourse}} : Equivalence (EQIT.eqit (R_s
   SETOID.(eqProp_Equivalence).
 
 #[global]
-Instance eutt_Reflexive {R : Type@{U_discourse}} : @Reflexive (itree E R) (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+Instance eutt_Reflexive {R : Type@{U_discourse}} : Reflexive (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
   eutt_Equivalence.(Equivalence_Reflexive).
 
 #[global]
-Instance eutt_Symmetric {R : Type@{U_discourse}} : @Symmetric (itree E R) (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+Instance eutt_Symmetric {R : Type@{U_discourse}} : Symmetric (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
   eutt_Equivalence.(Equivalence_Symmetric).
 
 #[global]
-Instance eutt_Transitive {R : Type@{U_discourse}} : @Transitive (itree E R) (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+Instance eutt_Transitive {R : Type@{U_discourse}} : Transitive (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
   eutt_Equivalence.(Equivalence_Transitive).
 
 #[global]
