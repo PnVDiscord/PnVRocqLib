@@ -1073,11 +1073,38 @@ Proof with eauto with *.
   eapply eqit_transitivity...
 Qed.
 
-Corollary itree_monad_iter_unfold_eutt {I : Type} {R : Type} (step : I -> itree E (I + R)%type) (i : I)
+Corollary itree_monad_iter_unfold_eutt {I : Type@{U_discourse}} {R : Type@{U_discourse}} (step : I -> itree E (I + R)%type) (i : I)
   : eqit (R_sim := @eqProp R mkSetoid_from_eq) true true (monad_iter step i) (step i >>= B.either (monad_iter step) pure).
 Proof.
   eapply itree_MonadIterSpec_eutt.
 Defined.
+
+#[global]
+Instance eutt_Equivalence {R : Type@{U_discourse}} : Equivalence (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+  let SETOID : isSetoid (itree E R) := equality_upto_tau R mkSetoid_from_eq in
+  SETOID.(eqProp_Equivalence).
+
+#[global]
+Instance eutt_Reflexive {R : Type@{U_discourse}} : @Reflexive (itree E R) (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+  eutt_Equivalence.(Equivalence_Reflexive).
+
+#[global]
+Instance eutt_Symmetric {R : Type@{U_discourse}} : @Symmetric (itree E R) (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+  eutt_Equivalence.(Equivalence_Symmetric).
+
+#[global]
+Instance eutt_Transitive {R : Type@{U_discourse}} : @Transitive (itree E R) (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+  eutt_Equivalence.(Equivalence_Transitive).
+
+#[global]
+Add Parametric Morphism {R1 : Type@{U_discourse}} {R2 : Type@{U_discourse}}
+  : (@bind (itree E) (@itree_isMonad E) R1 R2) with signature (EQIT.eqit (R_sim := @eqProp R1 mkSetoid_from_eq) true true ==> eqProp ==> EQIT.eqit (R_sim := @eqProp R2 mkSetoid_from_eq) true true)
+  as itree_bind_eutt_eqProp_eutt.
+Proof.
+  intros m1 m2 m1_eq_m2 k1 k2 k1_eq_k2. transitivity (m2 >>= k1).
+  - eapply bind_compatWith_eqProp_l_eutt. exact m1_eq_m2.
+  - eapply bind_compatWith_eqProp_r_eutt. exact k1_eq_k2.
+Qed.
 
 End EUTT.
 
