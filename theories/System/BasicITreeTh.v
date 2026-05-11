@@ -973,7 +973,7 @@ Proof with eauto with *.
 Qed.
 
 Lemma bind_assoc_eutt {R1 : Type} {R2 : Type} {R3 : Type} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R2 -> itree E R3)
-  : eqit (R_sim := @eqProp R3 mkSetoid_from_eq) true true (m >>= (fun x : R1 => k1 x >>= k2)) ((m >>= k1) >>= k2).
+  : eqit (R_sim := @eqProp R3 mkSetoid_from_eq) true true (m >>= fun x : R1 => k1 x >>= k2) ((m >>= k1) >>= k2).
 Proof with eauto with *.
   revert m.
   set (Y := fun p : itree E R3 * itree E R3 => exists m : itree E R1, p = (m >>= (fun x : R1 => k1 x >>= k2), (m >>= k1) >>= k2)).
