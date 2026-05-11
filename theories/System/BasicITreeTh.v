@@ -976,7 +976,7 @@ Lemma bind_assoc_eutt {R1 : Type} {R2 : Type} {R3 : Type} (m : itree E R1) (k1 :
   : eqit (R_sim := @eqProp R3 mkSetoid_from_eq) true true (m >>= fun x : R1 => k1 x >>= k2) ((m >>= k1) >>= k2).
 Proof with eauto with *.
   revert m.
-  set (Y := fun p : itree E R3 * itree E R3 => exists m : itree E R1, p = (m >>= (fun x : R1 => k1 x >>= k2), (m >>= k1) >>= k2)).
+  set (Y := fun p : itree E R3 * itree E R3 => exists m : itree E R1, p = (m >>= fun x : R1 => k1 x >>= k2, (m >>= k1) >>= k2)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R3) true true) bot_lattice).
   { intros m. eapply CLAIM. exists m... }
   change (Y =< paco (eqit_op (R_sim := @eq R3) true true) bot_lattice). eapply pcofix.
@@ -1031,8 +1031,8 @@ Proof with eauto with *.
   set (Y := fun p : itree E R2 * itree E R2 => exists m : itree E R1, p = (m >>= k1, m >>= k2)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R2) true true) bot_lattice).
   { intros m. eapply CLAIM. exists m... }
-  change (Y =< paco (eqit_op (R_sim := @eq R2) true true) bot_lattice).
-  eapply pcofix. intros K _ CIH p H_in. destruct H_in as (m & ?); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
+  change (Y =< paco (eqit_op (R_sim := @eq R2) true true) bot_lattice). eapply pcofix.
+  intros K _ CIH p H_in. destruct H_in as (m & ?); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
   cbn beta iota. simpl bind. rewrite !itree_bind_obs_eq. destruct m.(observe) as [r | u | X e k0]; simpl.
   - eapply eqitF_id_monotonic; cycle -1.
     + eapply eqit_unfold...
@@ -1052,8 +1052,8 @@ Instance itree_MonadLaws_eutt : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := 
   ; bind_pure_r := @bind_pure_r_eutt
   }.
 
-Lemma Tau_t_eutt_t_intro {R : Type} (t : itree E R)
-  : eqit (R_sim := @eqProp R mkSetoid_from_eq) true true (Tau t) t.
+Lemma Tau_t_eutt_t_intro {b2 : bool} {R : Type} (t : itree E R)
+  : eqit (R_sim := @eqProp R mkSetoid_from_eq) true b2 (Tau t) t.
 Proof.
   eapply eqit_fold. simpl. econs 4; auto. eapply eqit_unfold. eapply eqit_reflexivity; eauto.
 Qed.

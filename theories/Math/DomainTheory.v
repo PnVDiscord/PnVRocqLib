@@ -516,6 +516,8 @@ Proof with eauto.
   eapply G_compositionality... all: rewrite <- paco_eq_G...
 Qed.
 
+Section PCOFIX.
+
 Theorem pcofix (F : D -> D) (x : D) (y : D)
   (COFIX : forall r : D, y =< r -> forall CIH : x =< r, x =< paco F r)
   : x =< paco F y.
@@ -580,6 +582,8 @@ Proof.
   intros r y1_le_r y2_le_r y3_le_r. eapply claim; eauto. clear r y1_le_r y2_le_r y3_le_r.
   intros r y1_le_r y2_le_r y3_le_r. eapply COFIX; ss!.
 Qed.
+
+End PCOFIX.
 
 End PACO.
 
