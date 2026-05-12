@@ -167,6 +167,7 @@ Our main results are:
 - [Soonwon Moon](https://sf.snu.ac.kr/soonwon.moon)
 - [Hanul Jeon](https://hanuljeon95.github.io)
 - [Clare Jang](https://ailrun.github.io)
+- [Jaehyung Lee](https://sf.snu.ac.kr/jaehyung.lee/)
 
 ## 5. Goals
 

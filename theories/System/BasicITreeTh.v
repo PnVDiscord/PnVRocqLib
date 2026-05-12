@@ -932,6 +932,24 @@ Proof.
   destruct t0.(observe); reflexivity.
 Defined.
 
+Lemma itree_monad_iter_obs_eq {I : Type} {R : Type} (step : I -> itree E (I + R)) (i : I) :
+  (monad_iter step i).(observe) =
+  match (step i).(observe) with
+  | RetF r =>
+    match r with
+    | inl i' => TauF (monad_iter step i')
+    | inr r' => RetF r'
+    end
+  | TauF t => TauF (t >>= B.either (fun i' : I => Tau (monad_iter step i')) (fun r' : R => Ret r'))
+  | VisF X e k => VisF X e (fun x : X => k x >>= B.either (fun i' : I => Tau (monad_iter step i')) (fun r' : R => Ret r'))
+  end.
+Proof.
+  cbn. unfold itree_guard. destruct (step i).(observe).
+  - destruct r; reflexivity.
+  - reflexivity.
+  - reflexivity.
+Defined.
+
 Section EUTT.
 
 #[local, program]
@@ -988,11 +1006,11 @@ Proof with eauto with *.
     + econs 2. right. red. eapply paco_preserves_monotonicity with (F := eqit_op (R_sim := @eq R3) true true).
       { eapply eqit_op_isMonotonic1. }
       { eapply bot_lattice_le_intro. }
-      { exact (eqit_reflexivity (fun r : R3 => @eq_refl R3 r) true true (itree_bind' k2 u')). }
+      { exact (eqit_reflexivity (@eq_refl R3) true true (itree_bind' k2 u')). }
     + econs 3. intros x. right. eapply paco_preserves_monotonicity with (F := eqit_op (R_sim := @eq R3) true true).
       { eapply eqit_op_isMonotonic1. }
       { eapply bot_lattice_le_intro. }
-      { exact (eqit_reflexivity (fun r : R3 => @eq_refl R3 r) true true (itree_bind' k2 (k' x))). }
+      { exact (eqit_reflexivity (@eq_refl R3) true true (itree_bind' k2 (k' x))). }
   - econs 2. left. eapply CIH. exists u...
   - econs 3. intros x. left. eapply CIH. exists (k0 x)...
 Qed.
@@ -1010,7 +1028,7 @@ Proof with eauto with *.
   cbn beta iota. apply eqit_unfold in H_eutt. simpl bind. rewrite !itree_bind_obs_eq.
   induction H_eutt as [r1 r2 REL | u1 u2 REL | X e k1 k2 REL | u1 ot2_inner SK_l REL IH | ot1_inner u2 SK_r REL IH]; simpl.
   - change (r1 = r2) in REL. subst r2. eapply eqitF_id_monotonic; cycle -1.
-    + eapply eqit_unfold. exact (eqit_reflexivity (fun r : R2 => @eq_refl R2 r) true true (k0 r1)).
+    + eapply eqit_unfold. exact (eqit_reflexivity (@eq_refl R2) true true (k0 r1)).
     + intros t1 t2 SIM. right. red. revert SIM. eapply paco_preserves_monotonicity; s!.
       { eapply eqit_op_isMonotonic1. }
       { done!. }
@@ -1076,22 +1094,79 @@ Proof.
   eapply itree_MonadIterSpec_eutt.
 Defined.
 
+Lemma eqitF_clear {R : Type@{U_discourse}} {skip_l : bool} {skip_r : bool} (sim : ensemble (itree E R * itree E R)) (ot1 : @itreeF (itree E R) E R) (ot2 : @itreeF (itree E R) E R)
+  : eqitF (R_sim := @eq R) (skip_l := skip_l) (skip_r := skip_r) id (curry (join_lattice E.empty sim)) ot1 ot2 <-> eqitF (R_sim := @eq R) (skip_l := skip_l) (skip_r := skip_r) id (curry sim) ot1 ot2.
+Proof.
+  split; intros H_eqitF.
+  - induction H_eqitF; econs; eauto.
+    + inv REL; eauto. inv H_inl.
+    + unfold id in *. intros x. pose proof (REL x) as [[] | IN]; eauto.
+  - induction H_eqitF; econs; eauto.
+    + right; eauto.
+    + intros x. right. eapply REL with (x := x).
+Qed.
+
+Lemma itree_monad_iter_eqPropCompatible {I : Type@{U_discourse}} {R : Type@{U_discourse}} (step : I -> itree E (I + R)%type) (step' : I -> itree E (I + R)%type)
+  (step_eq_step' : step == step')
+  : forall i : I, monad_iter step i == monad_iter step' i.
+Proof with eauto with *.
+  assert (MON : forall R : Type@{U_discourse}, isMonotonic1 (fun REL : ensemble (itree E R * itree E R) => eqitF' (R_sim := @eqProp R mkSetoid_from_eq) true true id (curry REL))).
+  { i; eapply @eqit_op_isMonotonic1. }
+  change (forall i : I, step i == step' i) in step_eq_step'.
+  set (Y := fun p : itree E R * itree E R => exists i : I, p = (monad_iter step i, monad_iter step' i)).
+  enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R) true true) bot_lattice).
+  { intros i. eapply CLAIM. exists i. reflexivity. }
+  eapply pcofix. intros K _ CIH p H_in. destruct H_in as (i & ?); subst p.
+  set (k := B.either (C := fun _ : I + R => itree E R) (fun i' : I => Tau (monad_iter step i')) (fun r' : R => Ret r')). cbn beta in k.
+  set (k' := B.either (C := fun _ : I + R => itree E R) (fun i' : I => Tau (monad_iter step' i')) (fun r' : R => Ret r')). cbn beta in k'.
+  assert (BIND : forall t : itree E (I + R), forall t' : itree E (I + R), is_similar_to (Similarity := @eqit E (I + R) (I + R) eq true true) t t' -> (t >>= k, t' >>= k') \in paco (eqit_op (R_sim := @eq R) true true) K).
+  { intros t t' H_sim.
+    set (Y' := fun p : itree E R * itree E R => exists u : itree E (I + R), exists u' : itree E (I + R), p = (u >>= k, u' >>= k') /\ is_similar_to (Similarity := @eqit E (I + R) (I + R) eq true true) u u').
+    enough (CLAIM : Y' \subseteq paco (eqit_op (R_sim := @eq R) true true) K).
+    { eapply CLAIM. exists t, t'... }
+    change (Y' =< paco (eqit_op (R_sim := @eq R) true true) K).
+    eapply pcofix. intros K' K_LE CIH' p H_in. destruct H_in as (u & u' & ? & H_eutt); subst p.
+    eapply paco_fold. cbv [eqit_op eqitF' E.In]. cbn beta iota.
+    apply eqit_unfold in H_eutt. simpl bind. rewrite !itree_bind_obs_eq.
+    induction H_eutt as [r1 r2 REL | u1 u2 REL | X e0 h1 h2 REL | u1 ot2_inner SK_l REL IH | ot1_inner u2 SK_r REL IH]; simpl.
+    - change (r1 = r2) in REL. subst r2. unfold k, k'. destruct r1 as [i' | r]; simpl.
+      + econs 2. left. eapply K_LE. eapply CIH. exists i'. reflexivity.
+      + econs 1. reflexivity.
+    - econs 2. left. eapply CIH'. exists u1, u2. split; [reflexivity | exact REL].
+    - econs 3. intros x. left. eapply CIH'. exists (h1 x), (h2 x). split... exact (REL x).
+    - econs 4... rewrite itree_bind_obs_eq. exact IH.
+    - econs 5... rewrite itree_bind_obs_eq. exact IH.
+  }
+  assert (OBS_L : (monad_iter step i).(observe) = (step i >>= k).(observe)).
+  { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. unfold k. destruct (step i).(observe) as [[i' | r] | t | X e0 h]; reflexivity. }
+  assert (OBS_R : (monad_iter step' i).(observe) = (step' i >>= k').(observe)).
+  { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. unfold k'. destruct (step' i).(observe) as [[i' | r] | t | X e0 h]; reflexivity. }
+  pose proof (BIND (step i) (step' i) (step_eq_step' i)) as H_bind. eapply paco_unfold in H_bind...
+  eapply paco_fold. cbv [eqit_op eqitF' E.In] in H_bind |- *. cbn beta iota in H_bind |- *. rewrite OBS_L, OBS_R. exact H_bind.
+Qed.
+
+Section instances.
+
+Context {R : Type@{U_discourse}}.
+
 #[global]
-Instance eutt_Equivalence {R : Type@{U_discourse}} : Equivalence (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+Instance eutt_Equivalence : Equivalence (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
   let SETOID : isSetoid (itree E R) := equality_upto_tau R mkSetoid_from_eq in
   SETOID.(eqProp_Equivalence).
 
 #[global]
-Instance eutt_Reflexive {R : Type@{U_discourse}} : Reflexive (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+Instance eutt_Reflexive : Reflexive (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
   eutt_Equivalence.(Equivalence_Reflexive).
 
 #[global]
-Instance eutt_Symmetric {R : Type@{U_discourse}} : Symmetric (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+Instance eutt_Symmetric : Symmetric (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
   eutt_Equivalence.(Equivalence_Symmetric).
 
 #[global]
-Instance eutt_Transitive {R : Type@{U_discourse}} : Transitive (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
+Instance eutt_Transitive : Transitive (EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true) :=
   eutt_Equivalence.(Equivalence_Transitive).
+
+End instances.
 
 #[global]
 Add Parametric Morphism {R1 : Type@{U_discourse}} {R2 : Type@{U_discourse}}
@@ -1101,6 +1176,14 @@ Proof.
   intros m1 m2 m1_eq_m2 k1 k2 k1_eq_k2. transitivity (m2 >>= k1).
   - eapply bind_compatWith_eqProp_l_eutt. exact m1_eq_m2.
   - eapply bind_compatWith_eqProp_r_eutt. exact k1_eq_k2.
+Qed.
+
+#[global]
+Add Parametric Morphism {I : Type@{U_discourse}} {R : Type@{U_discourse}}
+  : (@monad_iter (itree E) (@itree_isMonad E) (@itree_isMonadIter E) I R) with signature (eqProp ==> @eq I ==> EQIT.eqit (R_sim := @eqProp R mkSetoid_from_eq) true true)
+  as itree_monad_iter_eqProp_eq_eutt.
+Proof.
+  exact itree_monad_iter_eqPropCompatible.
 Qed.
 
 End EUTT.
