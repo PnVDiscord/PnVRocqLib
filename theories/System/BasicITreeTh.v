@@ -1115,34 +1115,32 @@ Proof with eauto with *.
   change (forall i : I, step i == step' i) in step_eq_step'.
   set (Y := fun p : itree E R * itree E R => exists i : I, p = (monad_iter step i, monad_iter step' i)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R) true true) bot_lattice).
-  { intros i. eapply CLAIM. exists i. reflexivity. }
+  { intros i. eapply CLAIM. exists i... }
   eapply pcofix. intros K _ CIH p H_in. destruct H_in as (i & ?); subst p.
   set (k := B.either (C := fun _ : I + R => itree E R) (fun i' : I => Tau (monad_iter step i')) (fun r' : R => Ret r')). cbn beta in k.
   set (k' := B.either (C := fun _ : I + R => itree E R) (fun i' : I => Tau (monad_iter step' i')) (fun r' : R => Ret r')). cbn beta in k'.
-  assert (BIND : forall t : itree E (I + R), forall t' : itree E (I + R), is_similar_to (Similarity := @eqit E (I + R) (I + R) eq true true) t t' -> (t >>= k, t' >>= k') \in paco (eqit_op (R_sim := @eq R) true true) K).
-  { intros t t' H_sim.
-    set (Y' := fun p : itree E R * itree E R => exists u : itree E (I + R), exists u' : itree E (I + R), p = (u >>= k, u' >>= k') /\ is_similar_to (Similarity := @eqit E (I + R) (I + R) eq true true) u u').
-    enough (CLAIM : Y' \subseteq paco (eqit_op (R_sim := @eq R) true true) K).
-    { eapply CLAIM. exists t, t'... }
-    change (Y' =< paco (eqit_op (R_sim := @eq R) true true) K).
-    eapply pcofix. intros K' K_LE CIH' p H_in. destruct H_in as (u & u' & ? & H_eutt); subst p.
-    eapply paco_fold. cbv [eqit_op eqitF' E.In]. cbn beta iota.
-    apply eqit_unfold in H_eutt. simpl bind. rewrite !itree_bind_obs_eq.
-    induction H_eutt as [r1 r2 REL | u1 u2 REL | X e0 h1 h2 REL | u1 ot2_inner SK_l REL IH | ot1_inner u2 SK_r REL IH]; simpl.
-    - change (r1 = r2) in REL. subst r2. unfold k, k'. destruct r1 as [i' | r]; simpl.
-      + econs 2. left. eapply K_LE. eapply CIH. exists i'. reflexivity.
-      + econs 1. reflexivity.
-    - econs 2. left. eapply CIH'. exists u1, u2. split; [reflexivity | exact REL].
-    - econs 3. intros x. left. eapply CIH'. exists (h1 x), (h2 x). split... exact (REL x).
-    - econs 4... rewrite itree_bind_obs_eq. exact IH.
-    - econs 5... rewrite itree_bind_obs_eq. exact IH.
+  enough (BIND : forall t : itree E (I + R), forall t' : itree E (I + R), is_similar_to (Similarity := @eqit E (I + R) (I + R) eq true true) t t' -> (t >>= k, t' >>= k') \in paco (eqit_op (R_sim := @eq R) true true) K).
+  { assert (OBS_L : (monad_iter step i).(observe) = (step i >>= k).(observe)).
+    { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. unfold k. destruct (step i).(observe) as [[i' | r] | t | X e0 h]... }
+    assert (OBS_R : (monad_iter step' i).(observe) = (step' i >>= k').(observe)).
+    { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. unfold k'. destruct (step' i).(observe) as [[i' | r] | t | X e0 h]... }
+    pose proof (BIND (step i) (step' i) (step_eq_step' i)) as H_bind. eapply paco_unfold in H_bind...
+    eapply paco_fold. cbv [eqit_op eqitF' E.In] in H_bind |- *. cbn beta iota in H_bind |- *. rewrite OBS_L, OBS_R. exact H_bind.
   }
-  assert (OBS_L : (monad_iter step i).(observe) = (step i >>= k).(observe)).
-  { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. unfold k. destruct (step i).(observe) as [[i' | r] | t | X e0 h]; reflexivity. }
-  assert (OBS_R : (monad_iter step' i).(observe) = (step' i >>= k').(observe)).
-  { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. unfold k'. destruct (step' i).(observe) as [[i' | r] | t | X e0 h]; reflexivity. }
-  pose proof (BIND (step i) (step' i) (step_eq_step' i)) as H_bind. eapply paco_unfold in H_bind...
-  eapply paco_fold. cbv [eqit_op eqitF' E.In] in H_bind |- *. cbn beta iota in H_bind |- *. rewrite OBS_L, OBS_R. exact H_bind.
+  set (Y' := fun p : itree E R * itree E R => exists m : itree E (I + R), exists m' : itree E (I + R), p = (m >>= k, m' >>= k') /\ is_similar_to (Similarity := @eqit E (I + R) (I + R) eq true true) m m').
+  enough (CLAIM : Y' \subseteq paco (eqit_op (R_sim := @eq R) true true) K).
+  { intros t t' H_sim. eapply CLAIM. exists t, t'... }
+  eapply pcofix. intros K' K_LE CIH' p H_in. destruct H_in as (u & u' & ? & H_eutt); subst p.
+  eapply paco_fold. cbv [eqit_op eqitF' E.In]. cbn beta iota.
+  apply eqit_unfold in H_eutt. simpl bind. rewrite !itree_bind_obs_eq.
+  induction H_eutt as [r1 r2 REL | u1 u2 REL | X e h1 h2 REL | u1 ot2 ? REL IH | ot1 u2 ? REL IH]; simpl.
+  - change (r1 = r2) in REL. subst r2. unfold k, k'. destruct r1 as [i' | r']; simpl.
+    + econs 2. left. eapply K_LE. eapply CIH. exists i'...
+    + econs 1...
+  - econs 2. left. eapply CIH'. exists u1, u2...
+  - econs 3. intros x. left. eapply CIH'. exists (h1 x), (h2 x). split... eapply REL with (x := x).
+  - econs 4... rewrite itree_bind_obs_eq...
+  - econs 5... rewrite itree_bind_obs_eq...
 Qed.
 
 Section instances.
