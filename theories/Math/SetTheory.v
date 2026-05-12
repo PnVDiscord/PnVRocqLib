@@ -373,7 +373,7 @@ Definition _Card_mul : Card -> Card -> Card :=
 Definition _Card_exp : Card -> Card -> Card :=
   Cardinality.exp.
 
-Definition cutoff (D : Type@{Set_u}) : Tree :=
+Definition hartogs (D : Type@{Set_u}) : Tree :=
   mkNode (B.sig (D -> D -> Prop) (@well_founded D)) (fun RWF => @fromWfSet D RWF.(B.proj1_sig) RWF.(B.proj2_sig)).
 
 End TypeTheoreticImplementation.

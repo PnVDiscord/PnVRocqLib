@@ -1047,27 +1047,27 @@ Proof.
   econs. eapply member_implies_rLt. unfold fromWf. eapply fromAcc_member_fromAcc_intro. exact claim3.
 Qed.
 
-Lemma cutoff_fixed
-  : ~ not_fixed (cutoff D).
+Lemma hartogs_fixed
+  : ~ not_fixed (hartogs D).
 Proof.
   intros H_contra. apply least_lt_incr_acc in H_contra; eauto.
   eapply rLt_iff_not_rGe. 2: exact H_contra. eapply rLe_rLt_rLt with (y := @fromWfSet D strictly_increasing strictly_increasing_well_founded).
-  - eapply rLt_implies_rLe. econs. unfold fromWfSet. exists (rec (cutoff D)). reflexivity.
+  - eapply rLt_implies_rLe. econs. unfold fromWfSet. exists (rec (hartogs D)). reflexivity.
   - econs. simpl. exists (B.exist strictly_increasing strictly_increasing_well_founded). reflexivity.
 Qed.
 
 Theorem BourbakiWittFixedpointTheorem
-  : next (rec (cutoff D)) ≡ rec (cutoff D).
+  : next (rec (hartogs D)) ≡ rec (hartogs D).
 Proof.
   split.
-  - eapply NNPP. intros H_contra. eapply cutoff_fixed. eapply end_le_end with (o' := succ (cutoff D)).
+  - eapply NNPP. intros H_contra. eapply hartogs_fixed. eapply end_le_end with (o' := succ (hartogs D)).
     { eapply rLt_implies_rLe. econs. simpl. exists (@existT _ _ false true). simpl. reflexivity. }
-    intros o H_rLt H_dle. eapply H_contra. eapply dle_trans with (d2 := rec (succ (cutoff D))). 1,2,3: eauto.
+    intros o H_rLt H_dle. eapply H_contra. eapply dle_trans with (d2 := rec (succ (hartogs D))). 1,2,3: eauto.
     + eapply rec_succ. reflexivity.
-    + pose proof (rLe_or_rGt o (cutoff D)) as [H_rLe | H_rGt].
+    + pose proof (rLe_or_rGt o (hartogs D)) as [H_rLe | H_rGt].
       * eapply dle_trans with (d2 := rec o); eauto.
       * exfalso. eapply rLt_iff_not_rGe; [exact H_rLt | ].
-        assert (claim1 : succ (cutoff D) =ᵣ succ (cutoff D)) by reflexivity.
+        assert (claim1 : succ (hartogs D) =ᵣ succ (hartogs D)) by reflexivity.
         rewrite rEq_succ_iff in claim1. eapply succ_rLe_intro; eauto.
   - eapply next_extensive; eauto.
 Qed.
@@ -1088,7 +1088,7 @@ Hypothesis ipo_sup_is_supremum : forall I : Type, forall ds : I -> D, forall CHA
 
 Theorem generalised_Kleene_fixedpoint_theorem (f : D -> D)
   (f_isMonotonic : isMonotonic1 f)
-  (mu_f := Ord.rec (D := D) (ipo_sup Empty_set (Empty_set_rect (fun _ : Empty_set => D))) f ipo_sup (cutoff D))
+  (mu_f := Ord.rec (D := D) (ipo_sup Empty_set (Empty_set_rect (fun _ : Empty_set => D))) f ipo_sup (hartogs D))
   : is_lfpOf mu_f f.
 Proof.
   split.
@@ -1548,7 +1548,7 @@ Hypothesis next_good : forall s : pair, good s -> good (next s).
 Hypothesis next_exhausted : forall s : pair, good s-> (forall x : X, s.(P) x) \/ (exists x : X, (next s).(P) x /\ ~ s.(P) x).
 
 Lemma eventually_exhausted'
-  : forall x : X, (Ord.rec base next pair_sup (cutoff pair)).(P) x.
+  : forall x : X, (Ord.rec base next pair_sup (hartogs pair)).(P) x.
 Proof.
   exploit (InducedOrdinal.BourbakiWittFixedpointTheorem (fun s : pair => good s) pair_le _ _ pair_sup _ _ base _ next); i.
   { ii; reflexivity. }
@@ -1559,7 +1559,7 @@ Proof.
   { ii; eapply next_good; eauto. }
   { ii; eapply next_extensive; eauto. }
   { ii; eapply next_eq; eauto. }
-  hexploit (next_exhausted (Ord.rec base next pair_sup (cutoff pair))); i.
+  hexploit (next_exhausted (Ord.rec base next pair_sup (hartogs pair))); i.
   - eapply (InducedOrdinal.rec_good); eauto.
     { ii; reflexivity. }
     { ii; transitivity d2; eauto. }
@@ -1572,7 +1572,7 @@ Qed.
 Lemma eventually_exhausted
   : exists o : Ord.t, forall x : X, (Ord.rec base next pair_sup o).(P) x.
 Proof.
-  exists (cutoff pair). eapply eventually_exhausted'.
+  exists (hartogs pair). eapply eventually_exhausted'.
 Qed.
 
 Lemma well_ordering_aux
@@ -4527,8 +4527,8 @@ Qed.
 Lemma eventually_maximal
   : False.
 Proof.
-  set (c := Ord.rec chain_base chain_next chain_join (cutoff chain)).
-  pose proof (@InducedOrdinal.rec_good chain isChain chain_le chain_le_refl chain_le_trans chain_join chain_join_good chain_join_supremum chain_base chain_base_good chain_next chain_next_good chain_next_extensive chain_next_congruence (cutoff chain)) as Hgood.
+  set (c := Ord.rec chain_base chain_next chain_join (hartogs chain)).
+  pose proof (@InducedOrdinal.rec_good chain isChain chain_le chain_le_refl chain_le_trans chain_join chain_join_good chain_join_supremum chain_base chain_base_good chain_next chain_next_good chain_next_extensive chain_next_congruence (hartogs chain)) as Hgood.
   pose proof (@InducedOrdinal.BourbakiWittFixedpointTheorem chain isChain chain_le chain_le_refl chain_le_trans chain_join chain_join_good chain_join_supremum chain_base chain_base_good chain_next chain_next_good chain_next_extensive chain_next_congruence) as Hfix.
   destruct Hfix as [[H1 H2] H3].
   assert (f c \in chain_next c).
@@ -4630,3 +4630,43 @@ Proof.
 Qed.
 
 End ZORN.
+
+Theorem hartogs_rEq_Hartogs `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {D : Type@{Set_u}}
+  : hartogs D =ᵣ @Cardinal1.Hartogs D (@mkSetoid_from_eq D).
+Proof.
+  refine (let lift (P : D -> Prop) (R : sig P -> sig P -> Prop) (x : D) (y : D) : Prop := exists Hx : P x, exists Hy : P y, R (@exist D P x Hx) (@exist D P y Hy) in _).
+  assert (lift_rel_to_total_wf : forall P : D -> Prop, forall R : @sig D P -> @sig D P -> Prop, well_founded R -> well_founded (lift P R)).
+  { intros P R R_wf x. unfold lift. pose proof (classic (P x)) as [YES | NO].
+    - remember (@exist D P x YES) as sx eqn: H_eq. revert x YES H_eq. induction (R_wf sx) as [sx _ IH].
+      intros x Hx ?. subst sx. econs. intros y (Hy & Hx' & Hrel).
+      rewrite (proof_irrelevance _ Hx' Hx) in Hrel.
+      exact (IH (@exist D P y Hy) Hrel y Hy eq_refl).
+    - econs. intros y (_ & Hyx & _). contradiction.
+  }
+  split.
+  - unfold hartogs. eapply rLe_intro_var1. intros t [[R R_wf] H_t]. simpl in H_t. rewrite H_t.
+    pose proof (extendedOrder_exists D (@mkSetoid_from_eq D) R R_wf) as (R' & R'_wf & R_incl & R'_total & R'_trans); unnw.
+    pose (P := fun _ : D => True).
+    refine (let Rsig : sig P -> sig P -> Prop := binary_relation_on_image R' (@proj1_sig D P) in _).
+    assert (Rsig_wf : well_founded Rsig).
+    { eapply relation_on_image_liftsWellFounded. exact R'_wf. }
+    assert (Rsig_total : forall x : @sig D P, forall y : @sig D P, proj1_sig x = proj1_sig y \/ Rsig x y \/ Rsig y x).
+    { intros [x Hx'] [y Hy']. simpl. pose proof (R'_total x y) as [H | [H | H]]; eauto. }
+    assert (Rsig_trans : Transitive Rsig).
+    { ii; eapply R'_trans; eauto. }
+    assert (Rsig_compat : eqPropCompatible2 (A_isSetoid := @subSetoid D mkSetoid_from_eq P) (B_isSetoid := @subSetoid D mkSetoid_from_eq P) Rsig).
+    { intros [x1 H_x1] [x2 H_x2] [y1 H_y1] [y2 H_y2]; simpl; ii; subst x2 y2. rewrite proof_irrelevance with (p1 := H_x1) (p2 := H_y1). rewrite proof_irrelevance with (p1 := H_x2) (p2 := H_y2). reflexivity. }
+    eapply rLt_intro_var1. exists (@fromWfSet (@sig D P) Rsig Rsig_wf). split.
+    + assert (H_Rsig : well_founded Rsig /\ (forall x : @sig D P, forall y : @sig D P, (` x)%prg = (` y)%prg \/ Rsig x y \/ Rsig y x) /\ Transitive Rsig /\ eqPropCompatible2 (A_isSetoid := @subSetoid D mkSetoid_from_eq P) (B_isSetoid := @subSetoid D mkSetoid_from_eq P) Rsig) by eauto.
+      pattern Rsig in H_Rsig. pose (W := @exist (@sig D P -> @sig D P -> Prop) _ Rsig H_Rsig). exists (@existT _ _ P W). simpl. split; intros c; exists c; eapply fromWf_pirrel.
+    + transitivity (@fromWfSet D R' R'_wf).
+      * eapply fromWfSet_isMonotonic. exact R_incl.
+      * eapply fromWfSet_cong with (f := fun d : D => @exist D P d I); eauto.
+  - unfold hartogs. eapply rLe_intro_var1. intros x [[P [R HR]] Hx].
+    destruct HR as [R_wf [R_total [R_trans R_compat]]]. simpl in Hx. rewrite Hx.
+    pose (Rtot := lift P R).
+    assert (Rtot_wf : well_founded Rtot) by eauto.
+    eapply rLt_intro_var1. exists (@fromWfSet D Rtot Rtot_wf). split.
+    + exists (B.exist Rtot Rtot_wf). reflexivity.
+    + eapply fromWfSet_cong with (f := @proj1_sig D P). intros [a H_a] [b H_b] Hab; simpl. exists H_a. exists H_b. exact Hab.
+Qed.
