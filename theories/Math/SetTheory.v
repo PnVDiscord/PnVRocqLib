@@ -198,7 +198,7 @@ Corollary OrdTrichotomy_implies_LEM
   : forall P : Prop, P \/ ~ P.
 Proof.
   enough (COMPARABILITY : forall alpha : Ord, forall beta : Ord, alpha ≦ᵣ beta \/ beta <ᵣ alpha).
-  {  intros P. pose proof (OrdComparability_implies_EM COMPARABILITY P) as [[YES | NO]]; [left | right]; firstorder. }
+  { intros P. pose proof (OrdComparability_implies_EM COMPARABILITY P) as [[YES | NO]]; [left | right]; firstorder. }
   intros alpha beta. pose proof (trichotomous alpha beta) as [H_EQ | [H_LT | H_GT]].
   - left. exact (proj1 H_EQ).
   - left. eapply rLt_implies_rLe. exact H_LT.
