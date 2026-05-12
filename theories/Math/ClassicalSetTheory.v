@@ -4634,8 +4634,8 @@ End ZORN.
 Theorem hartogs_rEq_Hartogs `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {D : Type@{Set_u}}
   : hartogs D =ᵣ @Cardinal1.Hartogs D (@mkSetoid_from_eq D).
 Proof.
-  refine (let lift (P : D -> Prop) (R : sig P -> sig P -> Prop) (x : D) (y : D) : Prop := exists Hx : P x, exists Hy : P y, R (@exist D P x Hx) (@exist D P y Hy) in _).
-  assert (lift_rel_to_total_wf : forall P : D -> Prop, forall R : @sig D P -> @sig D P -> Prop, well_founded R -> well_founded (lift P R)).
+  refine (let lift (P : D -> Prop) (R : @sig D P -> @sig D P -> Prop) (x : D) (y : D) : Prop := exists Hx : P x, exists Hy : P y, R (@exist D P x Hx) (@exist D P y Hy) in _).
+  assert (lift_wf : forall P : D -> Prop, forall R : @sig D P -> @sig D P -> Prop, well_founded R -> well_founded (lift P R)).
   { intros P R R_wf x. unfold lift. pose proof (classic (P x)) as [YES | NO].
     - remember (@exist D P x YES) as sx eqn: H_eq. revert x YES H_eq. induction (R_wf sx) as [sx _ IH].
       intros x Hx ?. subst sx. econs. intros y (Hy & Hx' & Hrel).
@@ -4647,7 +4647,7 @@ Proof.
   - unfold hartogs. eapply rLe_intro_var1. intros t [[R R_wf] H_t]. simpl in H_t. rewrite H_t.
     pose proof (extendedOrder_exists D (@mkSetoid_from_eq D) R R_wf) as (R' & R'_wf & R_incl & R'_total & R'_trans); unnw.
     pose (P := fun _ : D => True).
-    refine (let Rsig : sig P -> sig P -> Prop := binary_relation_on_image R' (@proj1_sig D P) in _).
+    refine (let Rsig : @sig D P -> @sig D P -> Prop := binary_relation_on_image R' (@proj1_sig D P) in _).
     assert (Rsig_wf : well_founded Rsig).
     { eapply relation_on_image_liftsWellFounded. exact R'_wf. }
     assert (Rsig_total : forall x : @sig D P, forall y : @sig D P, proj1_sig x = proj1_sig y \/ Rsig x y \/ Rsig y x).
@@ -4664,9 +4664,7 @@ Proof.
       * eapply fromWfSet_cong with (f := fun d : D => @exist D P d I); eauto.
   - unfold hartogs. eapply rLe_intro_var1. intros x [[P [R HR]] Hx].
     destruct HR as [R_wf [R_total [R_trans R_compat]]]. simpl in Hx. rewrite Hx.
-    pose (Rtot := lift P R).
-    assert (Rtot_wf : well_founded Rtot) by eauto.
-    eapply rLt_intro_var1. exists (@fromWfSet D Rtot Rtot_wf). split.
-    + exists (B.exist Rtot Rtot_wf). reflexivity.
+    eapply rLt_intro_var1. exists (@fromWfSet D (lift P R) (lift_wf P R R_wf)). split.
+    + exists (B.exist (lift P R) (lift_wf P R R_wf)). reflexivity.
     + eapply fromWfSet_cong with (f := @proj1_sig D P). intros [a H_a] [b H_b] Hab; simpl. exists H_a. exists H_b. exact Hab.
 Qed.
