@@ -1356,8 +1356,18 @@ Qed.
 
 End STEP_ACC.
 
+Section __.
+
+#[local] Notation _well_founded := well_founded.
+#[local] Notation _inhabited := inhabited.
+
 Class well_founded {A : Type} (R : A -> A -> Prop) : Prop :=
-  mk_Acc (x : A) : @Acc A R x.
+  mk_Acc : _well_founded R.
+
+Class inhabited (A : Type) : Prop :=
+  inhabitant : _inhabited A.
+
+End __.
 
 End B.
 
