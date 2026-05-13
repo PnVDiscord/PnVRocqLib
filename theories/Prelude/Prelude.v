@@ -1365,7 +1365,7 @@ Class well_founded {A : Type} (R : A -> A -> Prop) : Prop :=
   mk_Acc : _well_founded R.
 
 Class inhabited (A : Type) : Prop :=
-  inhabitant : _inhabited A.
+  nonempty : _inhabited A.
 
 End __.
 
