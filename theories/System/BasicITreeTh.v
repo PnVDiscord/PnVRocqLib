@@ -6,22 +6,22 @@ Require Import PnV.Data.ITree.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.OrderTheory.
 
-Lemma VisF_eq_VisF_elim {E : Type -> Type} {R : Type} (X1 : Type) (X2 : Type) (e1 : E X1) (e2 : E X2) (k1 : X1 -> itree E R) (k2 : X2 -> itree E R)
+#[local] Notation "x ≠ y" := (~ eq x y) : type_scope.
+
+Lemma VisF_eq_VisF_elim {E : Type@{U_discourse} -> Type@{U_discourse}} {R : Type@{U_discourse}} (X1 : Type@{U_small}) (X2 : Type@{U_small}) (e1 : E X1) (e2 : E X2) (k1 : X1 -> itree E R) (k2 : X2 -> itree E R)
   (VisF_eq_VisF : @VisF (itree E R) E R X1 e1 k1 = @VisF (itree E R) E R X2 e2 k2)
   : { X_EQ : X1 = X2 | @eq_rect Type X1 (fun X => E X * (X -> itree E R))%type (e1, k1) X2 X_EQ = (e2, k2) }.
 Proof.
-  set (view := fun default : { X : Type & (E X * (X -> itree E R))%type } => fun ot : @itreeF (itree E R) E R =>
-    match ot return { X : Type & (E X * (X -> itree E R))%type } with
+  set (view := fun default : { X : Type@{U_small} & (E X * (X -> itree E R))%type } => fun ot : @itreeF (itree E R) E R =>
+    match ot return { X : Type@{U_small} & (E X * (X -> itree E R))%type } with
     | RetF _ => default
     | TauF _ => default
-    | VisF X e k => @existT Type (fun X : Type => (E X * (X -> itree E R)))%type X (e, k)
+    | VisF X e k => @existT Type@{U_small} (fun X : Type@{U_small} => (E X * (X -> itree E R)))%type X (e, k)
     end
   ).
-  pose proof (f_equal (view (@existT Type (fun X : Type => (E X * (X -> itree E R)))%type X1 (e1, k1))) VisF_eq_VisF) as H.
-  exact (FUN_FACTS.existT_eq_existT_elim (B := fun X : Type => (E X * (X -> itree E R))%type) X1 X2 (e1, k1) (e2, k2) H).
+  pose proof (f_equal (view (@existT Type (fun X : Type@{U_small} => (E X * (X -> itree E R))%type) X1 (e1, k1))) VisF_eq_VisF) as H.
+  exact (FUN_FACTS.existT_eq_existT_elim (A := Type@{U_small}) (B := fun X : Type@{U_small} => (E X * (X -> itree E R))%type) X1 X2 (e1, k1) (e2, k2) H).
 Qed.
-
-#[local] Notation "x ≠ y" := (~ eq x y) : type_scope.
 
 Module ItreeBisimulation.
 
@@ -1093,18 +1093,6 @@ Corollary itree_monad_iter_unfold_eutt {I : Type@{U_discourse}} {R : Type@{U_dis
 Proof.
   eapply itree_MonadIterSpec_eutt.
 Defined.
-
-Lemma eqitF_clear {R : Type@{U_discourse}} {skip_l : bool} {skip_r : bool} (sim : ensemble (itree E R * itree E R)) (ot1 : @itreeF (itree E R) E R) (ot2 : @itreeF (itree E R) E R)
-  : eqitF (R_sim := @eq R) (skip_l := skip_l) (skip_r := skip_r) id (curry (join_lattice E.empty sim)) ot1 ot2 <-> eqitF (R_sim := @eq R) (skip_l := skip_l) (skip_r := skip_r) id (curry sim) ot1 ot2.
-Proof.
-  split; intros H_eqitF.
-  - induction H_eqitF; econs; eauto.
-    + inv REL; eauto. inv H_inl.
-    + unfold id in *. intros x. pose proof (REL x) as [[] | IN]; eauto.
-  - induction H_eqitF; econs; eauto.
-    + right; eauto.
-    + intros x. right. eapply REL with (x := x).
-Qed.
 
 Lemma itree_monad_iter_eqPropCompatible {I : Type@{U_discourse}} {R : Type@{U_discourse}} (step : I -> itree E (I + R)%type) (step' : I -> itree E (I + R)%type)
   (step_eq_step' : step == step')
