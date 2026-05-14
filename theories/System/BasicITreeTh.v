@@ -10,7 +10,7 @@ Require Import PnV.Math.OrderTheory.
 
 Lemma VisF_eq_VisF_elim {E : Type@{U_discourse} -> Type@{U_discourse}} {R : Type@{U_discourse}} (X1 : Type@{U_small}) (X2 : Type@{U_small}) (e1 : E X1) (e2 : E X2) (k1 : X1 -> itree E R) (k2 : X2 -> itree E R)
   (VisF_eq_VisF : @VisF (itree E R) E R X1 e1 k1 = @VisF (itree E R) E R X2 e2 k2)
-  : { X_EQ : X1 = X2 | @eq_rect Type@{U_small} X1 (fun X : Type@{U_small} => E X * (X -> itree E R))%type (e1, k1) X2 X_EQ = (e2, k2) }.
+  : { X_EQ : X1 = X2 | @eq_rect Type@{U_small} X1 (fun X : Type@{U_small} => (E X * (X -> itree E R))%type) (e1, k1) X2 X_EQ = (e2, k2) }.
 Proof.
   set (view := fun default : { X : Type@{U_small} & (E X * (X -> itree E R))%type } => fun ot : @itreeF (itree E R) E R =>
     match ot return { X : Type@{U_small} & (E X * (X -> itree E R))%type } with
