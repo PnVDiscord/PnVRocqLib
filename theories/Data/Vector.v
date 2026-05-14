@@ -51,14 +51,14 @@ Proof.
   ).
 Defined.
 
-Lemma rectS_unfold_FZ phi phiFZ phiFS (n : nat) :
-  rectS phi phiFZ phiFS n FZ = phiFZ n.
+Lemma rectS_unfold_FZ phi phiFZ phiFS (n : nat)
+  : rectS phi phiFZ phiFS n FZ = phiFZ n.
 Proof.
   reflexivity.
 Defined.
 
-Lemma rectS_unfold_FS phi phiFZ phiFS (n : nat) (i : Fin.t n) :
-  rectS phi phiFZ phiFS n (FS i) = (match n as m return forall i : Fin.t m, phi m (@FS m i) with O => Fin.case0 | S m' => fun i => phiFS m' i (rectS phi phiFZ phiFS m' i) end) i.
+Lemma rectS_unfold_FS phi phiFZ phiFS (n : nat) (i : Fin.t n)
+  : rectS phi phiFZ phiFS n (FS i) = (match n as m return forall i : Fin.t m, phi m (@FS m i) with O => Fin.case0 | S m' => fun i => phiFS m' i (rectS phi phiFZ phiFS m' i) end) i.
 Proof.
   reflexivity.
 Defined.
@@ -348,7 +348,7 @@ Proof.
 Defined.
 
 Lemma rectS (phi : forall n, vec (S n) -> Type)
-  (phiOnce : forall x, phi 0 [x])
+  (phiOnce : forall x, phi O [x])
   (phiCons : forall n, forall x, forall xs, phi n xs -> phi (S n) (x :: xs))
   : forall n, forall xs, phi n xs.
 Proof.
