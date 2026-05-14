@@ -175,6 +175,6 @@ Our main results are:
 
 - [ ] Ordinal Numbers
 - [ ] IPO <=> pointed DCPO
-- [ ] Regular Language: Regex, ε-NFA, DFA, and Lexer Genrartor
+- [ ] Regular Language: Regex, ε-NFA, DFA, and Lexer Generator
 - [ ] LALR(1) CFG: Parser Generator
 - [ ] Gödel's Incompleteness Theorem
