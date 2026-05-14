@@ -1121,7 +1121,7 @@ Proof with eauto with *.
   { intros t t' t_eq_t'. eapply CLAIM2. exists t, t'... }
   eapply pcofix. intros K2 K1_LE_K2 CIH2 p (t & t' & ? & H_eutt); subst p.
   eapply paco_fold. do 3 red. apply eqit_unfold in H_eutt. simpl bind. rewrite !itree_bind_obs_eq.
-  revert H_eutt. generalize u'.(observe) as ot'. generalize u.(observe) as ot. clear u u'. intros ? ? H.
+  revert H_eutt. generalize t'.(observe) as ot'. generalize t.(observe) as ot. clear t t'. intros ? ? H.
   induction H as [r1 r2 REL | t1 t2 REL | X e k1 k2 REL | t1 ot2 ? REL IH | ot1 t2 ? REL IH]; simpl; subst k k'.
   - change (r1 = r2) in REL. subst r2. destruct r1 as [i' | r']; simpl.
     + econs 2. left. eapply K1_LE_K2. eapply CIH1. exists i'...
