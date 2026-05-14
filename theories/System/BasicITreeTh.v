@@ -967,7 +967,7 @@ Instance eutt : isSetoid1 (itree E) :=
   equality_upto_tau.
 
 Lemma bind_pure_l_eutt {R1 : Type} {R2 : Type} (k : R1 -> itree E R2) (x : R1)
-  : is_similar_to (Similarity := @eqit E R2 R2 eq true true) (pure x >>= k) (k x).
+  : @eqit E R2 R2 eq true true (pure x >>= k) (k x).
 Proof.
   eapply observe_eq_observe_implies_eqit. eauto with *.
 Qed.
@@ -1119,7 +1119,7 @@ Proof with eauto with *.
   eapply pcofix. intros K1 _ CIH1 p (i & ?); subst p.
   set (k := B.either (A := I) (B := R) (C := fun _ : I + R => itree E R) (fun i' : I => Tau (monad_iter step i')) (fun r' : R => Ret r')). cbn beta in k.
   set (k' := B.either (A := I) (B := R) (C := fun _ : I + R => itree E R) (fun i' : I => Tau (monad_iter step' i')) (fun r' : R => Ret r')). cbn beta in k'.
-  enough (BIND : forall t : itree E (I + R), forall t' : itree E (I + R), is_similar_to (Similarity := @eqit E (I + R) (I + R) eq true true) t t' -> (t >>= k, t' >>= k') \in paco (eqit_op (R_sim := @eq R) true true) K1).
+  enough (BIND : forall t : itree E (I + R), forall t' : itree E (I + R), @eqit E (I + R) (I + R) eq true true t t' -> (t >>= k, t' >>= k') \in paco (eqit_op (R_sim := @eq R) true true) K1).
   { assert (OBS_L : (monad_iter step i).(observe) = (step i >>= k).(observe)).
     { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. subst k k'. destruct (step i).(observe) as [[i' | r'] | t | X e k]... }
     assert (OBS_R : (monad_iter step' i).(observe) = (step' i >>= k').(observe)).
