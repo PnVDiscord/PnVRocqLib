@@ -167,15 +167,19 @@ Our main results are as follows:
 - [Soonwon Moon](https://sf.snu.ac.kr/soonwon.moon)
 - [Hanul Jeon](https://hanuljeon95.github.io)
 - [Clare Jang](https://ailrun.github.io)
-- [Jaehyung Lee](https://sf.snu.ac.kr/jaehyung.lee/)
+- [Jaehyung Lee](https://sf.snu.ac.kr/jaehyung.lee)
 
 ## 5. Goals
 
 ### Established at 2024-10-16
 
-- [ ] paco / gpaco
 - [ ] Ordinal Numbers
 - [ ] IPO <=> pointed DCPO
 - [ ] Regular Language: Regex, ε-NFA, DFA, and Lexer Generator
 - [ ] LALR(1) CFG: Parser Generator
 - [ ] Gödel's Incompleteness Theorem
+
+### Established at 2026-05-19
+
+- [ ] paco (paramterized coinduction) / gpaco (generalized parameteric coinduction)
+- [ ] Rewrite all the mutual inductive definitions in this repository with `Vector.t`,

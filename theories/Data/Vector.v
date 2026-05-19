@@ -431,11 +431,8 @@ Proof.
       eapply IH. intros i. eapply H_eq with (i := FS i).
 Qed.
 
-Fixpoint map {A : Type} {B : Type} {n : nat} (f : A -> B) (xs : Vector.t A n) {struct xs} : Vector.t B n :=
-  match xs with
-  | [] => []
-  | x :: xs' => f x :: map f xs'
-  end.
+Definition map {A : Type} {B : Type} {n : nat} (f : A -> B) : forall xs : Vector.t A n, Vector.t B n :=
+  Vector.t_rect A (fun n' : nat => fun _ : Vector.t A n' => Vector.t B n') (@VNil B) (fun n' : nat => fun x : A => fun _ : Vector.t A n' => @VCons B n' (f x)) n.
 
 Lemma map_spec {A : Type} {B : Type} {n : nat} (f : A -> B) (xs : Vector.t A n)
   : forall i : Fin.t n, f (xs !! i) = map f xs !! i.
