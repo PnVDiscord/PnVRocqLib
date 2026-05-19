@@ -23,7 +23,7 @@ compiled with OCaml 5.3.0
 
 ## 2. Contents
 
-Our main results are:
+Our main results are as follows:
 
 - [x] The weak completeness of propositional logic. (`Corollary weak_completeness` in [`PropositionalLogic.v`](theories/Logic/PropositionalLogic.v))
 
@@ -157,7 +157,7 @@ Our main results are:
 ### Literature
 
 1. [A note written by Jayadev Misra](https://www.cs.utexas.edu/users/misra/Notes.dir/KnasterTarski.pdf)
-1. [Constructive Completeness Proofs and Delimited Control](https://theses.hal.science/pastel-00530424/)
+1. [Constructive Completeness Proofs and Delimited Control](https://theses.hal.science/pastel-00530424)
 1. [A Mathematical Introduction to Logic](https://www.amazon.com/Mathematical-Introduction-Logic-Herbert-Enderton/dp/0122384520)
 1. [The Lambda Calculus: Its Syntax and Semantics](https://api.pageplace.de/preview/DT0400.9780080933757_A23543814/preview-9780080933757_A23543814.pdf)
 1. [The Power of Parameterization in Coinductive Proof](https://plv.mpi-sws.org/paco/ppcp.pdf)
@@ -173,8 +173,9 @@ Our main results are:
 
 ### Established at 2024-10-16
 
+- [ ] paco / gpaco
 - [ ] Ordinal Numbers
 - [ ] IPO <=> pointed DCPO
-- [ ] Regular Language: Regex, ε-NFA, DFA, and Lexer Genrartor
+- [ ] Regular Language: Regex, ε-NFA, DFA, and Lexer Generator
 - [ ] LALR(1) CFG: Parser Generator
 - [ ] Gödel's Incompleteness Theorem
