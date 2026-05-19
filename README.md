@@ -182,4 +182,4 @@ Our main results are as follows:
 ### Established at 2026-05-19
 
 - [ ] paco (paramterized coinduction) / gpaco (generalized parameteric coinduction)
-- [ ] Rewrite all the mutual inductive definitions in this repository with `Vector.t`,
+- [ ] Rewrite all the mutual inductive definitions in this repository with `Vector.t`
