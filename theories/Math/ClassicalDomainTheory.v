@@ -984,7 +984,7 @@ Import CpoDef.
 Definition is_ipo (D : Type@{U_discourse}) {PROSET : isProset D} : Type@{U_discourse} :=
   forall I : Type@{U_small}, forall ds : I -> D, forall CHAIN : forall i1, forall i2, ds i1 =< ds i2 \/ ds i2 =< ds i1, { sup_ds : D | is_supremum_of sup_ds (fun d => exists i, d = ds i) }.
 
-Context `{Axms : @ClassicalAxioms true true true}.
+Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}.
 
 Context {D : Type@{U_small}} {PROSET : isProset D}.
 
@@ -1040,15 +1040,9 @@ Proof.
     intros x x_IN_a. eapply UPPER_X. exact (proj2 (COVER x) (ex_intro _ a x_IN_a)).
 Qed.
 
-Let isFiniteEnsemble (X : ensemble D) : Prop :=
-  exists xs : list D, forall x : D, x \in X <-> L.In x xs.
-
-Let ensemble_card (X : ensemble D) : Cardinality.t :=
-  Cardinality.mk { x : D | x \in X } mkSetoid_from_eq.
-
 Lemma directed_sup_from_finite_exists (X : ensemble D)
   (DIRECTED : isDirected X)
-  (FINITE : isFiniteEnsemble X)
+  (FINITE : Cardinal2.isFiniteEnsemble X)
   : exists sup_X : D, is_supremum_of sup_X X.
 Proof.
   destruct FINITE as [xs XS_SPEC].
@@ -1080,11 +1074,10 @@ Qed.
 Lemma finite_directed_extend (X : ensemble D) (Y : ensemble D)
   (DIRECTED : isDirected X)
   (Y_SUB : Y \subseteq X)
-  (Y_FIN : isFiniteEnsemble Y)
-  (x : D)
-  (x_in : x \in X)
-  : exists Z : ensemble D, Y \subseteq Z /\ x \in Z /\ Z \subseteq X /\ isDirected Z /\ isFiniteEnsemble Z.
+  (Y_FIN : Cardinal2.isFiniteEnsemble Y)
+  : forall x : D, x \in X -> (exists Z : ensemble D, Y \subseteq Z /\ x \in Z /\ Z \subseteq X /\ isDirected Z /\ Cardinal2.isFiniteEnsemble Z).
 Proof.
+  intros x x_in.
   pose proof (choose_finite_ub X DIRECTED) as [ub UB].
   destruct Y_FIN as [ys Y_SPEC].
   assert (XS_SUB : L.is_finsubset_of (x :: ys) X).
@@ -1168,9 +1161,8 @@ Proof.
   - intros z z_in. left. exact (IHLE z z_in).
 Qed.
 
-Lemma directed_step_subset_X (X : ensemble D) (ub : list D -> D)
+Lemma directed_step_subset_X (X : ensemble D) (ub : list D -> D) (Y : ensemble D)
   (UB : forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs)
-  (Y : ensemble D)
   (Y_SUB : Y \subseteq X)
   : directed_step ub Y \subseteq X.
 Proof.
@@ -1181,9 +1173,8 @@ Proof.
     exact (proj1 (UB xs XS_SUB)).
 Qed.
 
-Lemma iter_directed_step_subset_X (X : ensemble D) (ub : list D -> D)
+Lemma iter_directed_step_subset_X (X : ensemble D) (ub : list D -> D) (Y : ensemble D)
   (UB : forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs)
-  (Y : ensemble D)
   (Y_SUB : Y \subseteq X)
   (n : nat)
   : iter_directed_step ub n Y \subseteq X.
@@ -1193,9 +1184,8 @@ Proof.
   - eapply directed_step_subset_X; eauto.
 Qed.
 
-Lemma omega_directed_closure_subset_X (X : ensemble D) (ub : list D -> D)
+Lemma omega_directed_closure_subset_X (X : ensemble D) (ub : list D -> D) (Y : ensemble D)
   (UB : forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs)
-  (Y : ensemble D)
   (Y_SUB : Y \subseteq X)
   : omega_directed_closure ub Y \subseteq X.
 Proof.
@@ -1208,9 +1198,8 @@ Proof.
   intros z z_in. exists O. exact z_in.
 Qed.
 
-Lemma omega_directed_closure_directed (X : ensemble D) (ub : list D -> D)
+Lemma omega_directed_closure_directed (X : ensemble D) (ub : list D -> D) (Y : ensemble D)
   (UB : forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs)
-  (Y : ensemble D)
   (Y_SUB : Y \subseteq X)
   (Y_DIR : isDirected Y)
   : isDirected (omega_directed_closure ub Y).
@@ -1242,190 +1231,64 @@ Proof.
       * split; eapply ub_upper; simpl; auto.
 Qed.
 
-Fixpoint rose_reindex {A : Type} {B : Type} (f : A -> B) (t : Cardinal2.rose A) {struct t} : Cardinal2.rose B :=
-  match t with
-  | Cardinal2.leaf x => Cardinal2.leaf (f x)
-  | Cardinal2.node ts => Cardinal2.node (L.map (rose_reindex f) ts)
-  end.
-
-Fixpoint eval_rose (ub : list D -> D) {A : Type} (seed : A -> D) (t : Cardinal2.rose A) {struct t} : D :=
-  match t with
-  | Cardinal2.leaf x => seed x
-  | Cardinal2.node ts => ub (L.map (eval_rose ub seed) ts)
-  end.
-
-Lemma rose_size_in_roses_size_le {A : Type} (t : Cardinal2.rose A) (ts : list (Cardinal2.rose A))
-  (IN : L.In t ts)
-  : Cardinal2.rose_size t <= Cardinal2.roses_size ts.
-Proof.
-  unfold Cardinal2.roses_size. induction ts as [ | t1 ts IH]; simpl in *.
-  - contradiction.
-  - destruct IN as [<- | IN].
-    + lia.
-    + pose proof (IH IN) as LE. lia.
-Qed.
-
 Lemma eval_rose_in_X (X : ensemble D) (ub : list D -> D)
   (UB : forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs)
-  : forall A : Type, forall seed : A -> D, forall SEED : forall i : A, seed i \in X, forall t : Cardinal2.rose A, eval_rose ub seed t \in X.
+  : forall A : Type, forall seed : A -> D, forall SEED : forall i : A, seed i \in X, forall t : Cardinal2.rose A, Cardinal2.eval_rose ub seed t \in X.
 Proof.
   intros A seed SEED.
-  enough (REC : forall n : nat, forall t : Cardinal2.rose A, Cardinal2.rose_size t <= n -> eval_rose ub seed t \in X).
+  enough (REC : forall n : nat, forall t : Cardinal2.rose A, Cardinal2.rose_size t <= n -> Cardinal2.eval_rose ub seed t \in X).
   { intros t. eapply REC. reflexivity. }
   induction n as [n IH] using lt_wf_ind. intros t SIZE.
   destruct t as [x | ts]; simpl in *.
   - exact (SEED x).
   - eapply UB. intros z z_in. rewrite L.in_map_iff in z_in. destruct z_in as [t [<- t_in]].
-    pose proof (rose_size_in_roses_size_le t ts t_in) as LE. eapply IH with (m := Cardinal2.rose_size t).
+    pose proof (Cardinal2.rose_size_in_roses_size_le t ts t_in) as LE. eapply IH with (m := Cardinal2.rose_size t).
     + unfold Cardinal2.roses_size in LE. lia.
     + reflexivity.
 Qed.
 
 Lemma eval_rose_upper (X : ensemble D) (ub : list D -> D)
   (UB : forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs)
-  : forall A : Type, forall seed : A -> D, forall SEED : forall i : A, seed i \in X, forall ts : list (Cardinal2.rose A), forall t : Cardinal2.rose A, forall IN : L.In t ts, eval_rose ub seed t =< eval_rose ub seed (Cardinal2.node ts).
+  : forall A : Type, forall seed : A -> D, forall SEED : forall i : A, seed i \in X, forall ts : list (Cardinal2.rose A), forall t : Cardinal2.rose A, forall IN : L.In t ts, Cardinal2.eval_rose ub seed t =< Cardinal2.eval_rose ub seed (Cardinal2.node ts).
 Proof.
   intros A seed SEED ts t IN.
-  simpl. pose proof (UB (L.map (eval_rose ub seed) ts)) as [ub_in ub_upper].
+  simpl. pose proof (UB (L.map (Cardinal2.eval_rose ub seed) ts)) as [ub_in ub_upper].
   - intros z z_in. rewrite L.in_map_iff in z_in. destruct z_in as [t' [<- _]]. eapply eval_rose_in_X; eauto.
   - eapply ub_upper. rewrite L.in_map_iff. exists t. split; [reflexivity | exact IN].
-Qed.
-
-Lemma eval_rose_map (ub : list D -> D) {A : Type} {B : Type} (seedA : A -> D) (seedB : B -> D) (f : A -> B)
-  (SEED : forall x : A, seedA x = seedB (f x))
-  : forall t : Cardinal2.rose A, eval_rose ub seedA t = eval_rose ub seedB (rose_reindex f t).
-Proof.
-  enough (REC : forall n : nat, forall t : Cardinal2.rose A, Cardinal2.rose_size t <= n -> eval_rose ub seedA t = eval_rose ub seedB (rose_reindex f t)).
-  { intro t. eapply REC. reflexivity. }
-  induction n as [n IH] using lt_wf_ind. intros t SIZE.
-  destruct t as [x | ts]; simpl in *.
-  - exact (SEED x).
-  - f_equal. induction ts as [ | t ts IHlist]; simpl.
-    + reflexivity.
-    + f_equal.
-      * eapply IH with (m := Cardinal2.rose_size t).
-        { pose proof (rose_size_in_roses_size_le t (t :: ts) (or_introl eq_refl)) as LE. unfold Cardinal2.roses_size in LE. lia. }
-        { reflexivity. }
-      * eapply IHlist. pose proof (Cardinal2.rose_size_pos t) as POS. unfold Cardinal2.roses_size in SIZE. simpl in SIZE. lia.
 Qed.
 
 Lemma eval_rose_image_subset_X (X : ensemble D) (ub : list D -> D)
   (UB : forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs)
   (A : Type) (seed : A -> D)
   (SEED : forall i : A, seed i \in X)
-  : (fun z : D => exists t : Cardinal2.rose A, z = eval_rose ub seed t) \subseteq X.
+  : (fun z : D => exists t : Cardinal2.rose A, z = Cardinal2.eval_rose ub seed t) \subseteq X.
 Proof.
   intros z [t ->]. eapply eval_rose_in_X; eauto.
 Qed.
 
 Lemma eval_rose_image_directed (X : ensemble D) (ub : list D -> D)
   (UB : forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs)
-  : forall A : Type, forall seed : A -> D, forall SEED : forall i : A, seed i \in X, isDirected (fun z : D => exists t : Cardinal2.rose A, z = eval_rose ub seed t).
+  : forall A : Type, forall seed : A -> D, forall SEED : forall i : A, seed i \in X, isDirected (fun z : D => exists t : Cardinal2.rose A, z = Cardinal2.eval_rose ub seed t).
 Proof.
   split.
-  - exists (eval_rose ub seed (Cardinal2.node [])). exists (Cardinal2.node []). reflexivity.
-  - intros y1 y2 [t1 ->] [t2 ->]. exists (eval_rose ub seed (Cardinal2.node [t1; t2])). split.
+  - exists (Cardinal2.eval_rose ub seed (Cardinal2.node [])). exists (Cardinal2.node []). reflexivity.
+  - intros y1 y2 [t1 ->] [t2 ->]. exists (Cardinal2.eval_rose ub seed (Cardinal2.node [t1; t2])). split.
     + exists (Cardinal2.node [t1; t2]). reflexivity.
     + split; eapply eval_rose_upper; eauto; simpl; auto.
 Qed.
 
 Lemma eval_rose_image_mono (ub : list D -> D) {A : Type} {B : Type} (seedA : A -> D) (seedB : B -> D) (f : A -> B)
   (SEED : forall x : A, seedA x = seedB (f x))
-  : (fun z : D => exists t : Cardinal2.rose A, z = eval_rose ub seedA t) \subseteq (fun z : D => exists t : Cardinal2.rose B, z = eval_rose ub seedB t).
+  : (fun z : D => exists t : Cardinal2.rose A, z = Cardinal2.eval_rose ub seedA t) \subseteq (fun z : D => exists t : Cardinal2.rose B, z = Cardinal2.eval_rose ub seedB t).
 Proof.
-  intros z [t ?]; subst z. exists (rose_reindex f t). eapply eval_rose_map. exact SEED.
-Qed.
-
-Lemma ensemble_card_image_le (A : Type) (Y : ensemble D) (f : A -> D)
-  (IMAGE : forall y : D, y \in Y <-> (exists x : A, y = f x))
-  : ensemble_card Y =< Cardinality.ofType A.
-Proof.
-  unfold ensemble_card. eapply Cardinal2.Cardinality_ofType_image_le. exact IMAGE.
-Qed.
-
-Lemma ensemble_card_image_lt (A : Type) (Y : ensemble D) (f : A -> D) (kappa : Cardinality.t)
-  (IMAGE : forall y : D, y \in Y <-> (exists x : A, y = f x))
-  (LT : Cardinality.ofType A ≨ kappa)
-  : ensemble_card Y ≨ kappa.
-Proof.
-  unfold ensemble_card. eapply Cardinal2.Cardinality_ofType_image_lt.
-  - exact IMAGE.
-  - exact LT.
-Qed.
-
-Lemma eval_rose_image_card_lt (X : ensemble D) (ub : list D -> D) (A : Type) (seed : A -> D)
-  (LT : Cardinality.ofType (Cardinal2.rose A) ≨ ensemble_card X)
-  : ensemble_card (fun z : D => exists t : Cardinal2.rose A, z = eval_rose ub seed t) ≨ ensemble_card X.
-Proof.
-  eapply ensemble_card_image_lt with (f := eval_rose ub seed).
-  - intros y. reflexivity.
-  - exact LT.
-Qed.
-
-Lemma ensemble_card_subset_le (X : ensemble D) (Y : ensemble D)
-  (SUB : X \subseteq Y)
-  : ensemble_card X =< ensemble_card Y.
-Proof.
-  exists (fun x : (ensemble_card X).(Cardinality.carrier) => @exist D (fun y : D => y \in Y) (proj1_sig x) (SUB (proj1_sig x) (proj2_sig x))).
-  - intros x y EQ. change (x = y) in EQ. subst y. reflexivity.
-  - intros [x Hx] [y Hy] EQ. change (@exist D (fun z : D => z \in Y) x (SUB x Hx) = @exist D (fun z : D => z \in Y) y (SUB y Hy)) in EQ.
-    apply exist_eq_iff in EQ. subst y. change (@exist D (fun z : D => z \in X) x Hx = @exist D (fun z : D => z \in X) x Hy). apply exist_eq_iff. reflexivity.
-Qed.
-
-Lemma finite_if_card_le_finite (X : ensemble D) (Y : ensemble D)
-  (X_INHABITED : exists x : D, x \in X)
-  (LE : ensemble_card X =< ensemble_card Y)
-  (Y_FIN : isFiniteEnsemble Y)
-  : isFiniteEnsemble X.
-Proof.
-  destruct X_INHABITED as [x0 x0_in].
-  destruct LE as [f f_cong f_inj].
-  destruct Y_FIN as [ys Y_SPEC].
-  assert (Hchoice : forall y : D, exists x : D, x \in X /\ (exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y) \/ x = x0 /\ ~ exists x' : D, exists Hx' : x' \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x' Hx')) = y).
-  { intro y. pose proof (classic (exists x : D, exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y)) as [(x & Hx & Hx_eq) | Hnone].
-    - exists x. left. split.
-      + exact Hx.
-      + exists Hx. exact Hx_eq.
-    - exists x0. right. split; [reflexivity | exact Hnone].
-  }
-  pose proof (Axiom_of_Choice D (fun _ : D => D) (fun y : D => fun x : D => x \in X /\ (exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y) \/ x = x0 /\ ~ exists x' : D, exists Hx' : x' \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x' Hx')) = y) Hchoice) as [pick PICK].
-  exists (L.map pick ys). intro x. split.
-  - intro x_in. rewrite L.in_map_iff.
-    pose (fx := f (@exist D (fun z : D => z \in X) x x_in)).
-	    exists (proj1_sig fx). split.
-	    + pose proof (PICK (proj1_sig fx)) as [[pick_in [Hpick Hpick_eq]] | [Hpick_eq Hnone]].
-	      * assert (EQf : f (@exist D (fun z : D => z \in X) (pick (proj1_sig fx)) Hpick) == f (@exist D (fun z : D => z \in X) x x_in)).
-	        { change (f (@exist D (fun z : D => z \in X) (pick (proj1_sig fx)) Hpick) = fx). destruct (f (@exist D (fun z : D => z \in X) (pick (proj1_sig fx)) Hpick)) as [y0 Hy0]. destruct fx as [y1 Hy1]. simpl in Hpick_eq. subst y1. apply exist_eq_iff. reflexivity. }
-	        pose proof (f_inj _ _ EQf) as EQx. change (@exist D (fun z : D => z \in X) (pick (proj1_sig fx)) Hpick = @exist D (fun z : D => z \in X) x x_in) in EQx. exact (f_equal (@proj1_sig D (fun z : D => z \in X)) EQx).
-        * contradiction Hnone. exists x, x_in. reflexivity.
-      + exact (proj1 (Y_SPEC (proj1_sig fx)) (proj2_sig fx)).
-  - intro x_in. rewrite L.in_map_iff in x_in. destruct x_in as [y [<- y_in]].
-    pose proof (PICK y) as [[pick_in _] | [-> _]].
-    + exact pick_in.
-    + exact x0_in.
-Qed.
-
-Lemma finite_subset_card_lt (X : ensemble D) (Y : ensemble D)
-  (X_INHABITED : exists x : D, x \in X)
-  (Y_SUB : Y \subseteq X)
-  (Y_FIN : isFiniteEnsemble Y)
-  (X_INF : ~ isFiniteEnsemble X)
-  : ensemble_card Y ≨ ensemble_card X.
-Proof.
-  split.
-  - eapply ensemble_card_subset_le. exact Y_SUB.
-  - intros [f g f_cong g_cong f_inj g_inj].
-    contradiction X_INF. eapply finite_if_card_le_finite with (Y := Y).
-    + exact X_INHABITED.
-    + exists g; eauto.
-    + exact Y_FIN.
+  intros z [t ?]; subst z. exists (Cardinal2.rose_map f t). eapply Cardinal2.eval_rose_map. exact SEED.
 Qed.
 
 Lemma markowsky_cover_exists_countable (X : ensemble D)
   (DIRECTED : isDirected X)
-  (INFINITE : ~ isFiniteEnsemble X)
-  (COUNTABLE : ensemble_card X =< Cardinality.ofType nat)
-  : exists A : Type@{U_small}, exists Xs : A -> ensemble D, (forall a, Xs a \subseteq X) /\ (forall a : A, isDirected (Xs a)) /\ (forall a : A, ensemble_card (Xs a) ≨ ensemble_card X) /\ (forall a : A, forall b : A, Xs a \subseteq Xs b \/ Xs b \subseteq Xs a) /\ (forall x : D, x \in X <-> (exists a : A, x \in Xs a)).
+  (INFINITE : ~ Cardinal2.isFiniteEnsemble X)
+  (COUNTABLE : Cardinal2.ensemble_card X =< Cardinality.ofType nat)
+  : exists A : Type@{U_small}, exists Xs : A -> ensemble D, (forall a, Xs a \subseteq X) /\ (forall a : A, isDirected (Xs a)) /\ (forall a : A, Cardinal2.ensemble_card (Xs a) ≨ Cardinal2.ensemble_card X) /\ (forall a : A, forall b : A, Xs a \subseteq Xs b \/ Xs b \subseteq Xs a) /\ (forall x : D, x \in X <-> (exists a : A, x \in Xs a)).
 Proof.
   pose proof DIRECTED as [[x0 x0_in] X_directed].
   destruct COUNTABLE as [rank rank_cong rank_inj].
@@ -1443,9 +1306,9 @@ Proof.
       + intros y Hy Hy_rank. contradiction Hnone. exists y, Hy. exact Hy_rank.
   }
   pose proof (Axiom_of_Choice nat (fun _ : nat => D) (fun n : nat => fun x : D => x \in X /\ forall y : D, forall Hy : y \in X, rank (@exist D (fun z : D => z \in X) y Hy) = n -> y = x) Hpick) as [pick PICK].
-  pose (CountStage := { p : nat * ensemble D | let n := Datatypes.fst p in let Y := Datatypes.snd p in Y \subseteq X /\ isDirected Y /\ isFiniteEnsemble Y /\ (forall m : nat, m <= n -> pick m \in Y) }).
+  pose (CountStage := { p : nat * ensemble D | let n := Datatypes.fst p in let Y := Datatypes.snd p in Y \subseteq X /\ isDirected Y /\ Cardinal2.isFiniteEnsemble Y /\ (forall m : nat, m <= n -> pick m \in Y) }).
   set (Y0 := fun z : D => z = pick O).
-  assert (Y0_SPEC : Y0 \subseteq X /\ isDirected Y0 /\ isFiniteEnsemble Y0 /\ forall m : nat, m <= O -> pick m \in Y0).
+  assert (Y0_SPEC : Y0 \subseteq X /\ isDirected Y0 /\ Cardinal2.isFiniteEnsemble Y0 /\ forall m : nat, m <= O -> pick m \in Y0).
   { pose proof (proj1 (PICK O)) as pick0_in. splits.
     - intros z ->. exact pick0_in.
     - split.
@@ -1462,7 +1325,7 @@ Proof.
   { intros [[n Y] [Y_SUB [Y_DIR [Y_FIN Y_CONTAINS]]]].
     pose proof (proj1 (PICK (S n))) as pick_in.
     pose proof (finite_directed_extend X Y DIRECTED Y_SUB Y_FIN (pick (S n)) pick_in) as (Z & YZ & pick_Z & Z_SUB & Z_DIR & Z_FIN).
-    assert (Z_SPEC : Z \subseteq X /\ isDirected Z /\ isFiniteEnsemble Z /\ forall m : nat, m <= S n -> pick m \in Z).
+    assert (Z_SPEC : Z \subseteq X /\ isDirected Z /\ Cardinal2.isFiniteEnsemble Z /\ forall m : nat, m <= S n -> pick m \in Z).
     { splits.
       - exact Z_SUB.
       - exact Z_DIR.
@@ -1477,7 +1340,7 @@ Proof.
   }
   pose proof (AC_implies_DC step base Hstep) as [seq [SEQ0 STEP]].
   pose (Xs := fun n : nat => Datatypes.snd (proj1_sig (seq n))).
-  assert (STAGE_SPEC : forall n : nat, Xs n \subseteq X /\ isDirected (Xs n) /\ isFiniteEnsemble (Xs n) /\ (forall m : nat, m <= Datatypes.fst (proj1_sig (seq n)) -> pick m \in Xs n)).
+  assert (STAGE_SPEC : forall n : nat, Xs n \subseteq X /\ isDirected (Xs n) /\ Cardinal2.isFiniteEnsemble (Xs n) /\ (forall m : nat, m <= Datatypes.fst (proj1_sig (seq n)) -> pick m \in Xs n)).
   { intro n. unfold Xs. destruct (seq n) as [[k Y] SPEC]. exact SPEC. }
   assert (SEQ_INDEX : forall n : nat, Datatypes.fst (proj1_sig (seq n)) = n).
   { induction n as [ | n IH].
@@ -1492,7 +1355,7 @@ Proof.
   exists nat, Xs. splits.
   - intro n. exact (proj1 (STAGE_SPEC n)).
   - intro n. exact (proj1 (proj2 (STAGE_SPEC n))).
-  - intro n. eapply finite_subset_card_lt.
+  - intro n. eapply Cardinal2.finite_subset_card_lt.
     + exists x0. exact x0_in.
     + exact (proj1 (STAGE_SPEC n)).
     + exact (proj1 (proj2 (proj2 (STAGE_SPEC n)))).
@@ -1509,10 +1372,10 @@ Qed.
 
 Theorem markowsky_cover_exists (X : ensemble D)
   (DIRECTED : isDirected X)
-  (INFINITE : ~ isFiniteEnsemble X)
-  : exists A : Type@{U_small}, exists Xs : A -> ensemble D, (forall a, Xs a \subseteq X) /\ (forall a, isDirected (Xs a)) /\ (forall a, ensemble_card (Xs a) ≨ ensemble_card X) /\ (forall a, forall b, Xs a \subseteq Xs b \/ Xs b \subseteq Xs a) /\ (forall x, x \in X <-> (exists a : A, x \in Xs a)).
+  (INFINITE : ~ Cardinal2.isFiniteEnsemble X)
+  : exists A : Type@{U_small}, exists Xs : A -> ensemble D, (forall a, Xs a \subseteq X) /\ (forall a, isDirected (Xs a)) /\ (forall a, Cardinal2.ensemble_card (Xs a) ≨ Cardinal2.ensemble_card X) /\ (forall a, forall b, Xs a \subseteq Xs b \/ Xs b \subseteq Xs a) /\ (forall x, x \in X <-> (exists a : A, x \in Xs a)).
 Proof.
-  pose proof (classic (ensemble_card X =< Cardinality.ofType nat)) as [COUNTABLE | UNCOUNTABLE].
+  pose proof (classic (Cardinal2.ensemble_card X =< Cardinality.ofType nat)) as [COUNTABLE | UNCOUNTABLE].
   - eapply markowsky_cover_exists_countable; eauto.
   - pose proof (choose_finite_ub X DIRECTED) as [ub UB].
     set (XD := { x : D | x \in X }).
@@ -1539,7 +1402,7 @@ Proof.
     }
     pose (Idx := fun a : XD => { b : XD | child_le (rank b) (rank a) }).
     pose (seed := fun a : XD => fun i : Idx a => proj1_sig (proj1_sig i)).
-    pose (Xs := fun a : XD => fun z : D => exists t : Cardinal2.rose (Idx a), z = eval_rose ub (seed a) t).
+    pose (Xs := fun a : XD => fun z : D => exists t : Cardinal2.rose (Idx a), z = Cardinal2.eval_rose ub (seed a) t).
     assert (seed_in_X : forall a : XD, forall i : Idx a, seed a i \in X).
     { intros a i. exact (proj2_sig (proj1_sig i)). }
     pose (idx_incl := fun (a : XD) (b : XD) (LE : child_le (rank a) (rank b)) (i : Idx a) => @exist XD (fun c : XD => child_le (rank c) (rank b)) (proj1_sig i) (child_le_trans (rank (proj1_sig i)) (rank a) (rank b) (proj2_sig i) LE)).
@@ -1565,14 +1428,14 @@ Proof.
       - intro x_in. exists (@exist D (fun z : D => z \in X) x x_in). exists (Cardinal2.leaf (@exist _ _ (@exist D (fun z : D => z \in X) x x_in) (child_le_refl (rank (@exist D (fun z : D => z \in X) x x_in))))). reflexivity.
       - intros [a [t ?]]. subst x. eapply eval_rose_in_X; eauto.
     }
-    assert (Xs_small : forall a : XD, ensemble_card (Xs a) ≨ ensemble_card X).
-    { intro a. eapply eval_rose_image_card_lt. eapply Cardinal3.Cardinality_ofType_rose_lt_of_lt_uncountable.
+    assert (Xs_small : forall a : XD, Cardinal2.ensemble_card (Xs a) ≨ Cardinal2.ensemble_card X).
+    { intro a. eapply Cardinal2.eval_rose_image_card_lt. eapply Cardinal3.Cardinality_ofType_rose_lt_of_lt_uncountable.
       - change (Cardinality.ofType (Idx a) ≨ Cardinality.ofType XD).
         unfold Idx, child_le.
         change (Cardinality.ofType { b : XD | Aczel.isElemOf kappa (rank b) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank b)) (Aczel.childnodes kappa (rank a)) } ≨ Cardinality.ofType XD).
         eapply Cardinal3.Cardinality_ofType_rank_initial_segment_lt with (kappa := kappa) (enum := enum) (rank := rank) (a := a).
         + exact K_CARD.
-        + change (~ ensemble_card X =< Cardinality.ofType nat). exact UNCOUNTABLE.
+        + change (~ Cardinal2.ensemble_card X =< Cardinality.ofType nat). exact UNCOUNTABLE.
         + intros c1 c2. exact (enum_inj c1 c2).
         + exact RANK.
       - exact UNCOUNTABLE.
@@ -1581,10 +1444,10 @@ Proof.
   Qed.
 
 Lemma directed_sup_from_ipo_exists_at (IPO : is_ipo D)
-  : forall alpha : Ord.t, forall X : ensemble D, Aczel.rEq (Cardinality.toTree (ensemble_card X)) alpha -> isDirected X -> exists sup_X : D, is_supremum_of sup_X X.
+  : forall alpha : Ord.t, forall X : ensemble D, Aczel.rEq (Cardinality.toTree (Cardinal2.ensemble_card X)) alpha -> isDirected X -> exists sup_X : D, is_supremum_of sup_X X.
 Proof.
   intros alpha. induction (Aczel.rLt_wf alpha) as [alpha _ IH]. intros X X_CARD DIRECTED.
-  pose proof (classic (isFiniteEnsemble X)) as [FINITE | INFINITE].
+  pose proof (classic (Cardinal2.isFiniteEnsemble X)) as [FINITE | INFINITE].
   - eapply directed_sup_from_finite_exists; eauto.
   - pose proof (markowsky_cover_exists X DIRECTED INFINITE) as (A & Xs & _ & DIRECTEDs & SMALLs & CHAIN_SUB & COVER).
     eapply sup_from_chain_cover_exists with (A := A) (Xs := Xs); eauto.
@@ -1597,8 +1460,7 @@ Qed.
 Lemma directed_sup_from_ipo_exists (IPO : is_ipo D)
   : forall X : ensemble D, isDirected X -> exists sup_X : D, is_supremum_of sup_X X.
 Proof.
-  intros X DIRECTED.
-  eapply directed_sup_from_ipo_exists_at with (alpha := Cardinality.toTree (ensemble_card X)); [exact IPO | eapply eqProp_refl | exact DIRECTED].
+  intros X DIRECTED. eapply directed_sup_from_ipo_exists_at with (alpha := Cardinality.toTree (Cardinal2.ensemble_card X)); [exact IPO | eapply eqProp_refl | exact DIRECTED].
 Qed.
 
 Theorem ipo_iff_dcpo
@@ -1612,17 +1474,15 @@ Proof.
     { intros [X DIRECTED]. eapply directed_sup_from_ipo_exists; eauto. }
     pose proof (Axiom_of_Choice P (fun _ : P => D) (fun p : P => fun s : D => is_supremum_of s (proj1_sig p)) Hsup) as [sup SUP].
     econs.
-    refine (
+    exact (
       {|
         bottom_cpo := bot;
         supremum_cpo := fun X : ensemble D => fun DIRECTED : isDirected X => sup (@exist (ensemble D) isDirected X DIRECTED);
         bottom_cpo_spec := BOT;
-        supremum_cpo_spec := _;
+        supremum_cpo_spec := fun X : ensemble D => fun DIRECTED : isDirected X => SUP (@exist (ensemble D) isDirected X DIRECTED);
       |}
     ).
-    intros X DIRECTED. exact (SUP (@exist (ensemble D) isDirected X DIRECTED)).
-  - intros [CPO].
-    constructor. intros I ds CHAIN.
+  - intros [CPO]. constructor. intros I ds CHAIN.
     pose (bot := @bottom_cpo D PROSET CPO).
     pose (Y := fun d : D => exists i : I, d = ds i).
     pose (Y_aug := fun d : D => d = bot \/ Y d).

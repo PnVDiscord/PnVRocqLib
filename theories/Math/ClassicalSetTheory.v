@@ -5493,6 +5493,10 @@ Module Cardinal2.
 
 Section CARDINALITY.
 
+#[local] Infix "\in" := E.In.
+
+#[local] Infix "\subseteq" := E.isSubsetOf.
+
 Lemma sig_eq_from_proj1 {A : Type@{Set_u}} {P : A -> Prop} (x : @sig A P) (y : @sig A P)
   (EQ : proj1_sig x = proj1_sig y)
   : x = y.
@@ -5537,6 +5541,88 @@ Proof.
   eapply Cardinal1.Cardinality_le_lt_lt.
   - eapply Cardinality_ofType_image_le. exact IMAGE.
   - exact LT.
+Qed.
+
+Definition isFiniteEnsemble {D : Type@{Set_u}} (X : ensemble D) : Prop :=
+  exists xs : list D, forall x : D, x \in X <-> L.In x xs.
+
+Definition ensemble_card {D : Type@{Set_u}} (X : ensemble D) : Cardinality.t :=
+  Cardinality.mk { x : D | x \in X } mkSetoid_from_eq.
+
+Lemma ensemble_card_image_le `{Axms : ClassicalAxioms (b_AC := true)} {D : Type@{Set_u}} (A : Type@{Set_u}) (Y : ensemble D) (f : A -> D)
+  (IMAGE : forall y : D, y \in Y <-> (exists x : A, y = f x))
+  : ensemble_card Y =< Cardinality.ofType A.
+Proof.
+  unfold ensemble_card. eapply Cardinality_ofType_image_le. exact IMAGE.
+Qed.
+
+Lemma ensemble_card_image_lt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {D : Type@{Set_u}} (A : Type@{Set_u}) (Y : ensemble D) (f : A -> D) (kappa : Cardinality.t)
+  (IMAGE : forall y : D, y \in Y <-> (exists x : A, y = f x))
+  (LT : Cardinality.ofType A ≨ kappa)
+  : ensemble_card Y ≨ kappa.
+Proof.
+  unfold ensemble_card. eapply Cardinality_ofType_image_lt.
+  - exact IMAGE.
+  - exact LT.
+Qed.
+
+Lemma ensemble_card_subset_le {D : Type@{Set_u}} (X : ensemble D) (Y : ensemble D)
+  (SUB : X \subseteq Y)
+  : ensemble_card X =< ensemble_card Y.
+Proof.
+  exists (fun x : (ensemble_card X).(Cardinality.carrier) => @exist D (fun y : D => y \in Y) (proj1_sig x) (SUB (proj1_sig x) (proj2_sig x))).
+  - intros x y EQ. change (x = y) in EQ. subst y. reflexivity.
+  - intros [x Hx] [y Hy] EQ. change (@exist D (fun z : D => z \in Y) x (SUB x Hx) = @exist D (fun z : D => z \in Y) y (SUB y Hy)) in EQ.
+    apply exist_eq_iff in EQ. subst y. change (@exist D (fun z : D => z \in X) x Hx = @exist D (fun z : D => z \in X) x Hy). apply exist_eq_iff. reflexivity.
+Qed.
+
+Lemma finite_if_card_le_finite `{Axms : ClassicalAxioms (b_AC := true)} {D : Type@{Set_u}} (X : ensemble D) (Y : ensemble D)
+  (X_INHABITED : exists x : D, x \in X)
+  (LE : ensemble_card X =< ensemble_card Y)
+  (Y_FIN : isFiniteEnsemble Y)
+  : isFiniteEnsemble X.
+Proof.
+  destruct X_INHABITED as [x0 x0_in].
+  destruct LE as [f f_cong f_inj].
+  destruct Y_FIN as [ys Y_SPEC].
+  assert (Hchoice : forall y : D, exists x : D, x \in X /\ (exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y) \/ x = x0 /\ ~ exists x' : D, exists Hx' : x' \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x' Hx')) = y).
+  { intro y. pose proof (classic (exists x : D, exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y)) as [(x & Hx & Hx_eq) | Hnone].
+    - exists x. left. split.
+      + exact Hx.
+      + exists Hx. exact Hx_eq.
+    - exists x0. right. split; [reflexivity | exact Hnone].
+  }
+  pose proof (Axiom_of_Choice D (fun _ : D => D) (fun y : D => fun x : D => x \in X /\ (exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y) \/ x = x0 /\ ~ exists x' : D, exists Hx' : x' \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x' Hx')) = y) Hchoice) as [pick PICK].
+  exists (L.map pick ys). intro x. split.
+  - intro x_in. rewrite L.in_map_iff.
+    pose (fx := f (@exist D (fun z : D => z \in X) x x_in)).
+    exists (proj1_sig fx). split.
+    + pose proof (PICK (proj1_sig fx)) as [(pick_in & Hpick & Hpick_eq) | (Hpick_eq & Hnone)].
+      * assert (EQf : f (@exist D (fun z : D => z \in X) (pick (proj1_sig fx)) Hpick) == f (@exist D (fun z : D => z \in X) x x_in)).
+        { change (f (@exist D (fun z : D => z \in X) (pick (proj1_sig fx)) Hpick) = fx). destruct (f (@exist D (fun z : D => z \in X) (pick (proj1_sig fx)) Hpick)) as [y0 Hy0]. destruct fx as [y1 Hy1]. simpl in Hpick_eq. subst y1. apply exist_eq_iff. reflexivity. }
+        pose proof (f_inj _ _ EQf) as EQx. change (@exist D (fun z : D => z \in X) (pick (proj1_sig fx)) Hpick = @exist D (fun z : D => z \in X) x x_in) in EQx. exact (f_equal (@proj1_sig D (fun z : D => z \in X)) EQx).
+      * contradiction Hnone. exists x, x_in. reflexivity.
+    + exact (proj1 (Y_SPEC (proj1_sig fx)) (proj2_sig fx)).
+  - intro x_in. rewrite L.in_map_iff in x_in. destruct x_in as (y & EQ & y_in). subst x.
+    pose proof (PICK y) as [(pick_in & _) | (pick_eq & _)].
+    + exact pick_in.
+    + rewrite pick_eq. exact x0_in.
+Qed.
+
+Lemma finite_subset_card_lt `{Axms : ClassicalAxioms (b_AC := true)} {D : Type@{Set_u}} (X : ensemble D) (Y : ensemble D)
+  (X_INHABITED : exists x : D, x \in X)
+  (Y_SUB : Y \subseteq X)
+  (Y_FIN : isFiniteEnsemble Y)
+  (X_INF : ~ isFiniteEnsemble X)
+  : ensemble_card Y ≨ ensemble_card X.
+Proof.
+  split.
+  - eapply ensemble_card_subset_le. exact Y_SUB.
+  - intros [f g f_cong g_cong f_inj g_inj].
+    contradiction X_INF. eapply finite_if_card_le_finite with (Y := Y).
+    + exact X_INHABITED.
+    + exists g; eauto.
+    + exact Y_FIN.
 Qed.
 
 Lemma Cardinality_ofType_countable_le_nat {A : Type@{Set_u}} `{COUNTABLE : isCountable A}
@@ -5649,6 +5735,12 @@ Fixpoint rose_map {A : Type} {B : Type} (f : A -> B) (t : rose A) {struct t} : r
   match t with
   | leaf x => leaf (f x)
   | node ts => node (map (rose_map f) ts)
+  end.
+
+Fixpoint eval_rose {A : Type} {B : Type} (merge : list B -> B) (seed : A -> B) (t : rose A) {struct t} : B :=
+  match t with
+  | leaf x => seed x
+  | node ts => merge (map (eval_rose merge seed) ts)
   end.
 
 Section LIST_ROSE_BOUND.
@@ -5816,6 +5908,44 @@ Lemma rose_size_pos {A : Type} (t : rose A)
   : 0 < rose_size t.
 Proof.
   destruct t; simpl; lia.
+Qed.
+
+Lemma rose_size_in_roses_size_le {A : Type} (t : rose A) (ts : list (rose A))
+  (IN : L.In t ts)
+  : rose_size t <= roses_size ts.
+Proof.
+  unfold roses_size. induction ts as [ | t1 ts IH]; simpl in *.
+  - contradiction.
+  - destruct IN as [<- | IN].
+    + lia.
+    + pose proof (IH IN) as LE. lia.
+Qed.
+
+Lemma eval_rose_map {A : Type} {B : Type} {C : Type} (merge : list C -> C) (seedA : A -> C) (seedB : B -> C) (f : A -> B)
+  (SEED : forall x : A, seedA x = seedB (f x))
+  : forall t : rose A, eval_rose merge seedA t = eval_rose merge seedB (rose_map f t).
+Proof.
+  enough (REC : forall n : nat, forall t : rose A, rose_size t <= n -> eval_rose merge seedA t = eval_rose merge seedB (rose_map f t)).
+  { intro t. eapply REC. reflexivity. }
+  induction n as [n IH] using lt_wf_ind. intros t SIZE.
+  destruct t as [x | ts]; simpl in *.
+  - exact (SEED x).
+  - f_equal. induction ts as [ | t ts IHlist]; simpl.
+    + reflexivity.
+    + f_equal.
+      * eapply IH with (m := rose_size t).
+        { pose proof (rose_size_in_roses_size_le t (t :: ts) (or_introl eq_refl)) as LE. unfold roses_size in LE. lia. }
+        { reflexivity. }
+      * eapply IHlist. pose proof (rose_size_pos t) as POS. unfold roses_size in SIZE. simpl in SIZE. lia.
+Qed.
+
+Lemma eval_rose_image_card_lt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {D : Type@{Set_u}} (X : ensemble D) (merge : list D -> D) (A : Type@{Set_u}) (seed : A -> D)
+  (LT : Cardinality.ofType (rose A) ≨ ensemble_card X)
+  : ensemble_card (fun z : D => exists t : rose A, z = eval_rose merge seed t) ≨ ensemble_card X.
+Proof.
+  eapply ensemble_card_image_lt with (f := eval_rose merge seed).
+  - intros y. reflexivity.
+  - exact LT.
 Qed.
 
 Lemma encode_rose_prefix {A : Type} (t1 : rose A) (t2 : rose A) (rest1 : list (A + nat)) (rest2 : list (A + nat))
@@ -6644,7 +6774,7 @@ Qed.
 Definition square_state_initial
   : square_state.
 Proof.
-  refine
+  refine (
     {|
       st_carrier := nat;
       st_isSetoid := mkSetoid_from_eq;
@@ -6656,7 +6786,8 @@ Proof.
       st_code := fun xy : nat * nat => cpInv (Datatypes.fst xy) (Datatypes.snd xy);
       st_code_cong := _;
       st_code_inj := _;
-    |}.
+    |}
+  ).
   - intros x y EQ. change (x = y) in EQ. subst y. reflexivity.
   - intros x y EQ. eapply nat_embed_inj. exact EQ.
   - intros x1 x2 y1 y2 EQ_x EQ_y. change (x1 = x2) in EQ_x. change (y1 = y2) in EQ_y. now subst x2 y2.
@@ -6820,17 +6951,15 @@ Lemma square_state_extend_exists (s : square_state)
   : exists t : square_state, state_le s t.
 Proof.
   exists (square_state_extend s fresh fresh_cong fresh_inj fresh_out).
-  unfold state_le.
-  cbn.
-  refine
-    (ex_intro _
-    ({|
+  unfold state_le. cbn. eexists; [change (state_embedding s (square_state_extend s fresh fresh_cong fresh_inj fresh_out)) | exact I].
+  unshelve refine (
+    {|
       st_lift := fun x : st_carrier s => (inl x : st_carrier (square_state_extend s fresh fresh_cong fresh_inj fresh_out));
       st_lift_cong := _;
       st_lift_emb := _;
       st_lift_code := _;
-    |} : state_embedding s (square_state_extend s fresh fresh_cong fresh_inj fresh_out))
-     I).
+    |}
+  ).
   - intros x y H. econs. exact H.
   - intro x. reflexivity.
   - intros x y. reflexivity.
@@ -6843,7 +6972,9 @@ Section GRAPH_SQUARE_ABSORPTION.
 #[local] Infix "\in" := E.In : type_scope.
 
 Variable A : Type@{Set_u}.
+
 Variable nat_embed : nat -> A.
+
 Hypothesis nat_embed_inj : forall n : nat, forall m : nat, nat_embed n = nat_embed m -> n = m.
 
 Record graph_state : Type@{Set_u} :=
@@ -6861,7 +6992,8 @@ Definition graph_state_le (s : graph_state) (t : graph_state) : Prop :=
   (forall a : A, gs_carrier s a -> gs_carrier t a) /\ (forall x : A, forall y : A, forall z : A, gs_code s x y z -> gs_code t x y z).
 
 #[local]
-Instance graph_state_le_PreOrder : PreOrder graph_state_le.
+Instance graph_state_le_PreOrder
+  : PreOrder graph_state_le.
 Proof.
   split.
   - intros s. split; eauto.
@@ -6872,17 +7004,17 @@ Qed.
 
 #[local]
 Instance graph_state_isProset : isProset graph_state :=
-  {|
-    leProp := graph_state_le;
-    Proset_isSetoid := mkSetoidFromPreOrder graph_state_le_PreOrder;
-    leProp_PreOrder := graph_state_le_PreOrder;
-    leProp_PartialOrder := mkSetoidFromPreOrder_good graph_state_le_PreOrder;
-  |}.
+  { leProp := graph_state_le
+  ; Proset_isSetoid := mkSetoidFromPreOrder graph_state_le_PreOrder
+  ; leProp_PreOrder := graph_state_le_PreOrder
+  ; leProp_PartialOrder := mkSetoidFromPreOrder_good graph_state_le_PreOrder
+  }.
 
 Definition graph_state_initial_code (x : A) (y : A) (z : A) : Prop :=
   exists n : nat, exists m : nat, x = nat_embed n /\ y = nat_embed m /\ z = nat_embed (cpInv n m).
 
-Definition graph_state_initial : graph_state.
+Definition graph_state_initial
+  : graph_state.
 Proof.
   refine
     {|
@@ -6908,9 +7040,8 @@ Definition graph_state_chain_upperbound (C : ensemble graph_state)
   (CHAIN : forall s1 : graph_state, forall s2 : graph_state, s1 \in C -> s2 \in C -> graph_state_le s1 s2 \/ graph_state_le s2 s1)
   : exists u : graph_state, forall s : graph_state, s \in C -> graph_state_le s u.
 Proof.
-  destruct NONEMPTY as [s0 IN0].
-  unshelve eexists.
-  { refine
+  destruct NONEMPTY as [s0 IN0]. unshelve eexists.
+  { refine (
       {|
         gs_carrier := fun a : A => exists s : graph_state, s \in C /\ gs_carrier s a;
         gs_nat := _;
@@ -6919,8 +7050,9 @@ Proof.
         gs_code_total := _;
         gs_code_functional := _;
         gs_code_inj := _;
-      |}.
-  - intro n. exists s0. split; [exact IN0 | exact (gs_nat s0 n)].
+      |}
+    ).
+  - intros n. exists s0. split; [exact IN0 | exact (gs_nat s0 n)].
   - intros x y z (s & INs & Hcode). pose proof (gs_code_dom s x y z Hcode) as (Hx & Hy & Hz). splits; exists s; split; assumption.
   - intros x y (sx & INx & Hx) (sy & INy & Hy). pose proof (CHAIN sx sy INx INy) as [LE | LE].
     + pose proof (gs_code_total sy x y (proj1 LE x Hx) Hy) as [z Hcode]. exists z. exists sy. split; assumption.
@@ -6933,8 +7065,8 @@ Proof.
     + eapply gs_code_inj; [exact Hcode1 | exact (proj2 LE x2 y2 z2 Hcode2) | exact Hz].
   }
   intros s INs. split.
-    + intros a Ha. exists s. split; assumption.
-    + intros x y z Hcode. exists s. split; assumption.
+  - intros a Ha. exists s. split; assumption.
+  - intros x y z Hcode. exists s. split; assumption.
 Defined.
 
 Lemma graph_state_maximal_exists
