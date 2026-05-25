@@ -173,8 +173,8 @@ Our main results are as follows:
 
 ### Established at 2024-10-16
 
-- [ ] Ordinal Numbers
-- [ ] IPO <=> pointed DCPO
+- [x] Ordinal Numbers
+- [x] IPO <=> pointed DCPO
 - [ ] Regular Language: Regex, ε-NFA, DFA, and Lexer Generator
 - [ ] LALR(1) CFG: Parser Generator
 - [ ] Gödel's Incompleteness Theorem

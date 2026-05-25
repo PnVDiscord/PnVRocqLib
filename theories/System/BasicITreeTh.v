@@ -19,7 +19,7 @@ Proof.
     | VisF X e k => @existT Type@{U_small} (fun X : Type@{U_small} => (E X * (X -> itree E R))%type) X (e, k)
     end
   ).
-  pose proof (f_equal (view (@existT Type (fun X : Type@{U_small} => (E X * (X -> itree E R))%type) X1 (e1, k1))) VisF_eq_VisF) as H.
+  pose proof (f_equal (view (@existT Type@{U_small} (fun X : Type@{U_small} => (E X * (X -> itree E R))%type) X1 (e1, k1))) VisF_eq_VisF) as H.
   exact (FUN_FACTS.existT_eq_existT_elim (A := Type@{U_small}) (B := fun X : Type@{U_small} => (E X * (X -> itree E R))%type) X1 X2 (e1, k1) (e2, k2) H).
 Qed.
 
@@ -1112,7 +1112,7 @@ Proof with eauto with *.
     { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. subst k k'. destruct (step i).(observe) as [[i' | r'] | t | X e k]... }
     assert (OBS_R : (monad_iter step' i).(observe) = (step' i >>= k').(observe)).
     { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. subst k k'. destruct (step' i).(observe) as [[i' | r'] | t | X e k]... }
-    pose proof (WTS (step i) (step' i) (step_eq_step' i)) as H_bind. eapply paco_unfold in H_bind...
+    pose proof (WTS (step i) (step' i) (step_eq_step' i)) as H_bind. apply paco_unfold in H_bind...
     eapply paco_fold. do 3 red in H_bind |- *. rewrite OBS_L, OBS_R. exact H_bind.
   }
   clear i.
