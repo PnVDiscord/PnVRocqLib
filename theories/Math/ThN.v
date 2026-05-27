@@ -164,8 +164,8 @@ Lemma div_mod_uniqueness a b q r
   (r_lt_b : r < b)
   : (a / b = q /\ a mod b = r)%nat.
 Proof with try (lia || now (firstorder; eauto)).
-  assert (claim1 : a = b * (a / b) + (a mod b)) by now eapply (Nat.div_mod a b); lia.
-  assert (claim2 : 0 <= a mod b /\ a mod b < b) by now eapply (Nat.mod_bound_pos a b); lia.
+  assert (claim1 : a = b * (a / b) + (a mod b)) by now eapply Nat.div_mod with (x := a) (y := b); lia.
+  assert (claim2 : 0 <= a mod b /\ a mod b < b) by now eapply Nat.mod_bound_pos with (x := a) (y := b); lia.
   assert (claim3 : ~ q > a / b).
   { intros H_false. pose proof (proj1 (greater_than_iff q (a / b)) H_false) as [z q_eq].
     enough (so_we_obatain : b * q + r >= b * S (a / b) + r)...
@@ -185,7 +185,7 @@ Proof with lia || eauto.
   - intros [H_a H_r_bound].
     assert (claim1 : a = b * (a / b) + (a mod b))...
     assert (claim2 : 0 <= a mod b /\ a mod b < b). 
-    { eapply (Nat.mod_bound_pos a b)... }
+    { eapply Nat.mod_bound_pos with (x := a) (y := b)... }
     assert (claim3 : a >= r)...
     enough (claim4 : ~ q > a / b). enough (claim5 : ~ q < a / b). enough (claim6 : q = a / b)...
     + split... replace (a - r) with (q * b)... symmetry; eapply Nat.div_mul...

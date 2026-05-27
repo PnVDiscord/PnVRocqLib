@@ -2,6 +2,7 @@ Require Import PnV.Prelude.SfLib.
 
 Reserved Infix "==" (no associativity, at level 70).
 Reserved Infix "≡" (no associativity, at level 70).
+Reserved Infix "≡ₐ" (no associativity, at level 70).
 Reserved Infix "≈" (no associativity, at level 70).
 Reserved Infix "≅" (no associativity, at level 70).
 Reserved Infix "≃" (no associativity, at level 70).
@@ -67,6 +68,8 @@ Reserved Notation "Gamma '⊢' M '⇉' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊢' M '⇇' A" (at level 70, no associativity).
 
 Reserved Infix "~>β" (at level 70, no associativity).
+Reserved Infix "~>β₁" (at level 70, no associativity).
+Reserved Infix "~>βₐ" (at level 70, no associativity).
 Reserved Infix "~>η" (at level 70, no associativity).
 Reserved Infix "~>β*" (at level 70, no associativity).
 Reserved Infix "~>η*" (at level 70, no associativity).

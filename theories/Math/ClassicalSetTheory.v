@@ -1153,8 +1153,8 @@ Lemma double_rel_well_founded {A : Type} {B : Type} (RA : A -> A -> Prop) (RB : 
 Proof.
   cut (forall a : A, forall b : B, Acc (double_rel RA RB) (a, b)).
   { intros H [a b]. eapply H. }
-  intros a0. pattern a0. revert a0. eapply (well_founded_induction WFA).
-  intros a0 IHL b0. pattern b0. revert b0. eapply (well_founded_induction WFB).
+  intros a0. pattern a0. revert a0. eapply well_founded_induction with (R := RA); [exact WFA |].
+  intros a0 IHL b0. pattern b0. revert b0. eapply well_founded_induction with (R := RB); [exact WFB |].
   intros b0 IHR. econs. intros [a1 b1] LT. inv LT.
   - eapply IHL; eauto.
   - eapply IHR; eauto.
@@ -1168,11 +1168,11 @@ Lemma double_well_founded_induction {A : Type} {B : Type} (RA : A -> A -> Prop) 
   : forall a : A, forall b : B, P a b.
 Proof.
   cut (forall ab : A * B, match ab with (a, b) => P a b end).
-  { intros H a b. eapply (H (a, b)). }
-  intros ab. pattern ab. revert ab. eapply (well_founded_induction (double_rel_well_founded RA RB WFA WFB)).
+  { intros H a b. eapply H with (ab := (a, b)). }
+  intros ab. pattern ab. revert ab. eapply well_founded_induction with (R := double_rel RA RB); [eapply double_rel_well_founded with (RA := RA) (RB := RB); assumption |].
   intros [a b] IH. simpl. eapply IND.
-  - intros a0 LT. eapply (IH (a0, b)). eapply double_rel_left. exact LT.
-  - intros b0 LT. eapply (IH (a, b0)). eapply double_rel_right. exact LT.
+  - intros a0 LT. eapply IH with (y := (a0, b)). eapply double_rel_left. exact LT.
+  - intros b0 LT. eapply IH with (y := (a, b0)). eapply double_rel_right. exact LT.
 Qed.
 
 Fixpoint add (alpha : Ord.t) : Ord.t -> Ord.t :=
@@ -1211,7 +1211,7 @@ Lemma add_rLe_l (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   : add alpha alpha1 ≦ᵣ add beta alpha1.
 Proof.
   revert alpha LE. pattern beta, alpha1. revert beta alpha1.
-  eapply (double_well_founded_induction rLt rLt rLt_wf rLt_wf).
+  eapply double_well_founded_induction with (RA := rLt) (RB := rLt); [exact rLt_wf | exact rLt_wf |].
   intros beta alpha1 IHL IHR alpha LE. destruct alpha as [cs0 ts0], beta as [cs1 ts1], alpha1 as [cs2 ts2].
   rewrite 2 add_red_eq. eapply Ord_join_spec.
   - eapply Ord_sup_rLe_intro. intros c2. transitivity (Ord.suc (add (mkNode cs1 ts1) (ts2 c2))).
@@ -1237,7 +1237,7 @@ Lemma add_rLe_r (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   : add alpha beta ≦ᵣ add alpha alpha1.
 Proof.
   revert beta LE. pattern alpha, alpha1. revert alpha alpha1.
-  eapply (double_well_founded_induction rLt rLt rLt_wf rLt_wf).
+  eapply double_well_founded_induction with (RA := rLt) (RB := rLt); [exact rLt_wf | exact rLt_wf |].
   intros alpha alpha1 IHL IHR beta LE. destruct alpha as [cs0 ts0], beta as [cs1 ts1], alpha1 as [cs2 ts2].
   rewrite 2 add_red_eq. eapply Ord_join_spec.
   - eapply Ord_sup_rLe_intro. intros c1.
@@ -1348,7 +1348,7 @@ Lemma add_comm (alpha : Ord.t) (beta : Ord.t)
 Proof.
   revert alpha beta. cut (forall alpha : Ord.t, forall beta : Ord.t, add alpha beta ≦ᵣ add beta alpha).
   { intros LE alpha beta. split; eapply LE. }
-  eapply (double_well_founded_induction rLt rLt rLt_wf rLt_wf). intros alpha beta IHL IHR.
+  eapply double_well_founded_induction with (RA := rLt) (RB := rLt); [exact rLt_wf | exact rLt_wf |]. intros alpha beta IHL IHR.
   destruct alpha as [cs0 ts0], beta as [cs1 ts1]. rewrite 2 add_red_eq. eapply Ord_join_spec.
   - eapply Ord_sup_rLe_intro. intros c1. transitivity (Ord.suc (add (ts1 c1) (mkNode cs0 ts0))).
     + eapply Ord_suc_rLe. eapply IHR. eapply member_implies_rLt. eapply member_intro.
@@ -1381,7 +1381,7 @@ Proof.
   }
   cut (forall alpha : Ord.t, forall beta_alpha1 : Ord.t * Ord.t, match beta_alpha1 with (beta, alpha1) => add (add alpha beta) alpha1 ≦ᵣ add alpha (add beta alpha1) end).
   { intros H a b c. exact (H a (b, c)). }
-  eapply (double_well_founded_induction rLt (double_rel rLt rLt) rLt_wf (double_rel_well_founded rLt rLt rLt_wf rLt_wf)).
+  eapply double_well_founded_induction with (RA := rLt) (RB := double_rel rLt rLt); [exact rLt_wf | eapply double_rel_well_founded with (RA := rLt) (RB := rLt); exact rLt_wf |].
   intros a [b c] IH0 IH12. simpl. eapply add_spec.
   - intros x LT. pose proof (add_rLt_elim x a b LT) as [[a' [LT0 LE0]] | [b' [LT1 LE1]]].
     + eapply rLe_rLt_rLt with (y := add (add a' b) c).
@@ -1392,10 +1392,10 @@ Proof.
     + eapply rLe_rLt_rLt with (y := add (add a b') c).
       * eapply add_rLe_l. exact LE1.
       * eapply rLe_rLt_rLt with (y := add a (add b' c)).
-        { eapply (IH12 (b', c)). eapply double_rel_left. exact LT1. }
+        { eapply IH12 with (b0 := (b', c)). eapply double_rel_left. exact LT1. }
         { eapply add_rLt_r. eapply add_rLt_l. exact LT1. }
   - intros c' LT2. eapply rLe_rLt_rLt with (y := add a (add b c')).
-    + eapply (IH12 (b, c')). eapply double_rel_right. exact LT2.
+    + eapply IH12 with (b0 := (b, c')). eapply double_rel_right. exact LT2.
     + eapply add_rLt_r. eapply add_rLt_r. exact LT2.
 Qed.
 
@@ -2004,7 +2004,7 @@ Qed.
 Lemma mult_dist (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   : Jacobsthal.mult alpha (Hessenberg.add beta alpha1) =ᵣ Hessenberg.add (Jacobsthal.mult alpha beta) (Jacobsthal.mult alpha alpha1).
 Proof.
-  revert beta alpha1. eapply (Hessenberg.double_well_founded_induction rLt rLt rLt_wf rLt_wf).
+  revert beta alpha1. eapply Hessenberg.double_well_founded_induction with (RA := rLt) (RB := rLt); [exact rLt_wf | exact rLt_wf |].
   intros beta alpha1 IHL IHR. rewrite rEq_iff. split.
   - eapply mult_supremum. intros beta2 LT.
     pose proof (Hessenberg.add_rLt_elim beta2 beta alpha1 LT) as [[beta1 [LT1 LE1]] | [alpha2 [LT2 LE2]]].
@@ -2542,7 +2542,7 @@ Proof.
   { ii; eapply next_extensive; eauto. }
   { ii; eapply next_eq; eauto. }
   hexploit (next_exhausted (Ord.rec base next pair_sup (hartogs pair))); i.
-  - eapply (InducedOrdinal.rec_good); eauto.
+  - eapply InducedOrdinal.rec_good; eauto.
     { ii; reflexivity. }
     { ii; transitivity d2; eauto. }
     { ii; eapply pair_sup_good; eauto. }
@@ -3819,7 +3819,8 @@ Proof.
     assert (H_le2 : @FromOrderType B (children_isSetoid alpha) BWOSET ≦ᵣ @FromOrderType A SETOID WOSET).
     { unfold FromOrderType. eapply fromWfSet_cong with (f := g). intros y1 y2 Hlt.
       assert (Hlt' : isElemOf alpha (f (g y1)) (f (g y2))).
-      { eapply (children_isWoset alpha ORDINAL).(Woset_eqPropCompatible2).
+      { pose proof (children_isWoset alpha ORDINAL).(Woset_eqPropCompatible2) as H_compat.
+        eapply H_compat.
         - symmetry. exact (Hg y1).
         - symmetry. exact (Hg y2).
         - exact Hlt.
@@ -4189,7 +4190,8 @@ Proof.
   intros H_le. rewrite Cardinality_le_iff in H_le.
   change (Cardinality.toTree (card (Ord_of_nat (S n))) ≦ᵣ Cardinality.toTree (Cardinality.ofType (Fin.t n))) in H_le.
   rewrite card_Ord_of_nat_toTree_eq in H_le. rewrite Fin_toTree_eq in H_le.
-  eapply (rLt_StrictOrder.(StrictOrder_Irreflexive) (Ord_of_nat n)).
+  pose proof (rLt_StrictOrder.(StrictOrder_Irreflexive) (Ord_of_nat n)) as H_irrefl.
+  eapply H_irrefl.
   eapply rLt_rLe_rLt.
   - unfold Ord.suc. eapply rLt_succ_intro.
   - exact H_le.
@@ -6031,24 +6033,6 @@ Proof.
   - eapply nat_lt_of_uncountable. exact UNCOUNTABLE.
 Qed.
 
-#[global]
-Instance unit_isCountable
-  : isCountable unit.
-Proof.
-  refine {| encode _ := O; decode _ := Some tt; decode_encode := _ |}. intros [ ]. reflexivity.
-Defined.
-
-#[global, program]
-Instance option_isCountable {A : Type} `{COUNTABLE : isCountable A} : isCountable (option A) :=
-  { encode x := match x with None => O | Some x => S (encode x) end
-  ; decode n := match n with O => Some None | S n => match decode n with Some x => Some (Some x) | None => None end end
-  }.
-Next Obligation.
-  destruct x as [x | ]; simpl.
-  - now rewrite decode_encode.
-  - reflexivity.
-Qed.
-
 Lemma Cardinality_ofType_option_countable_le_nat {A : Type@{Set_u}} `{COUNTABLE : isCountable A}
   : Cardinality.ofType (option A) =< Cardinality.ofType nat.
 Proof.
@@ -7072,7 +7056,7 @@ Defined.
 Lemma graph_state_maximal_exists
   : exists m : graph_state, forall t : graph_state, graph_state_le m t -> graph_state_le t m.
 Proof.
-  eapply (@Zorn's_lemma Axms graph_state graph_state_isProset).
+  eapply Zorn's_lemma with (D := graph_state) (PROSET := graph_state_isProset).
   - econs. exact graph_state_initial.
   - intros C NONEMPTY CHAIN. eapply graph_state_chain_upperbound; eauto.
 Qed.
@@ -8092,7 +8076,7 @@ Proof.
   - assert (H_top : @fromWfSet A R R_wf ≦ᵣ @fromWf (option A) Ropt Ropt_wf None).
     { econs. intros a.
       assert (H_rLe_a : @fromWf A R R_wf a ≦ᵣ @fromWf (option A) Ropt Ropt_wf (Some a)).
-      { eapply (@fromWf_cong A (option A) R Ropt (@Some A) R_wf Ropt_wf). intros x y H_xy. exact H_xy. }
+      { eapply fromWf_cong with (RA := R) (RB := Ropt) (f := @Some A) (RA_wf := R_wf) (RB_wf := Ropt_wf). intros x y H_xy. exact H_xy. }
       assert (H_rLt_a : @fromWf (option A) Ropt Ropt_wf (Some a) <ᵣ @fromWf (option A) Ropt Ropt_wf None).
       { eapply member_implies_rLt. rewrite fromWf_unfold. exists (Some a). split; [reflexivity | reflexivity]. }
       eapply rLe_rLt_rLt; eauto.
@@ -8147,7 +8131,7 @@ Proof.
       * eapply H_f.
       * eapply rLt_implies_rLe. eapply rLe_rLt_rLt with (y := @fromWf A_join R_join R_join_wf (@existT A (fun a : A => option (B a)) a None)).
         { econs. intros x. eapply rLe_rLt_rLt with (y := @fromWf A_join R_join R_join_wf (@existT A (fun a : A => option (B a)) a (Some x))).
-          - eapply (@fromWf_cong (B a) A_join (R a) R_join (fun x : B a => @existT A (fun a : A => option (B a)) a (Some x)) (R_wf a) R_join_wf). intros x0 y0 H_xy. exists eq_refl. exact H_xy.
+          - eapply fromWf_cong with (RA := R a) (RB := R_join) (f := fun x : B a => @existT A (fun a : A => option (B a)) a (Some x)) (RA_wf := R_wf a) (RB_wf := R_join_wf). intros x0 y0 H_xy. exists eq_refl. exact H_xy.
           - eapply member_implies_rLt. rewrite fromWf_unfold. exists (@existT A (fun a : A => option (B a)) a (Some x)). split; [reflexivity | reflexivity].
         }
         { eapply member_implies_rLt. exists (@existT A (fun a : A => option (B a)) a None). reflexivity. }
@@ -8155,8 +8139,8 @@ Proof.
 Qed.
 
 Lemma kappa_inaccessible_union (alpha : Ord.t) (beta : Ord.t)
-  (H_rLt0 : alpha <ᵣ kappa)
-  (H_rLt1 : beta <ᵣ kappa)
+  (H_rLt : alpha <ᵣ kappa)
+  (H_rLt' : beta <ᵣ kappa)
   : Ord_join alpha beta <ᵣ kappa.
 Proof.
   unfold Ord_join. eapply kappa_inaccessible_join. intros [ | ]; assumption.

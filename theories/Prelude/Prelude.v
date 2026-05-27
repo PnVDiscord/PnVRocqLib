@@ -40,7 +40,10 @@ Ltac obs_eqb n m :=
   let H_OBS := fresh "H_OBS" in destruct (Nat.eqb n m) as [ | ] eqn: H_OBS; [rewrite Nat.eqb_eq in H_OBS | rewrite Nat.eqb_neq in H_OBS].
 
 Ltac property X :=
-  eapply (proj2_sig X).
+  let H := fresh "H_property" in
+  pose proof (proj2_sig X) as H;
+  eapply H;
+  clear H.
 
 #[universes(polymorphic=yes)]
 Definition reify@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} (f : forall x : A, { y : B | P x y }) : { f : A -> B | forall x, P x (f x) } :=
@@ -1573,6 +1576,36 @@ Instance Empty_set_isCountable : isCountable Empty_set :=
   ; decode _ := None
   ; decode_encode := Empty_set_ind _
   }.
+
+#[global]
+Instance unit_isCountable
+  : isCountable unit.
+Proof.
+  refine {| encode _ := O; decode _ := Some tt; decode_encode := _ |}. intros [ ]. reflexivity.
+Defined.
+
+#[global, program]
+Instance option_isCountable {A : Type} `(COUNTABLE : isCountable A) : isCountable (option A) :=
+  { encode (x : option A) :=
+    match x with
+    | None => O
+    | Some x => S (encode x)
+    end
+  ; decode (n : nat) :=
+    match n with
+    | O => Some None
+    | S n =>
+      match decode n with
+      | Some x => Some (Some x)
+      | None => None
+      end
+    end
+  }.
+Next Obligation.
+  destruct x as [x | ]; simpl.
+  - now rewrite decode_encode.
+  - reflexivity.
+Qed.
 
 Module L.
 

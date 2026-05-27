@@ -43,6 +43,8 @@ Our main results are as follows:
 
 - [x] A simple replica of `eutt`. (`Instance eutt`, `Instance itree_MonadLaws_eutt`, and `Instance itree_MonadIterSpec_eutt` in [`BasicITreeTh.v`](theories/System/BasicITreeTh.v))
 
+- [x] IPO <=> pointed DCPO. (`Theorem ipo_iff_dcpo` in [`ClassicalDomainTheory.v`](theories/Math/ClassicalDomainTheory.v))
+
 ### [theories/Control/](theories/Control)
 
 - `Category.v` : Basic theory on category.
@@ -173,8 +175,6 @@ Our main results are as follows:
 
 ### Established at 2024-10-16
 
-- [x] Ordinal Numbers
-- [x] IPO <=> pointed DCPO
 - [ ] Regular Language: Regex, ε-NFA, DFA, and Lexer Generator
 - [ ] LALR(1) CFG: Parser Generator
 - [ ] Gödel's Incompleteness Theorem
