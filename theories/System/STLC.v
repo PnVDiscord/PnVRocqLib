@@ -1280,8 +1280,7 @@ Proof.
   induction N_SN as [N N_SN IHN]; intros M' STEP M'N_SN.
   econs. intros Q BETA. inversion BETA; subst.
   - contradiction (rawHeadStep_not_lam _ _ _ _ _ STEP eq_refl).
-  - pose proof (rawHead_confluence M M' M'0 STEP BETA0) as
-      [ALPHA_STEP | (P & STEP_P & MANY_P)].
+  - pose proof (rawHead_confluence M M' M'0 STEP BETA0) as [ALPHA_STEP | (P & STEP_P & MANY_P)].
     + eapply raw_sn_alpha.
       * exact M'N_SN.
       * eapply alpha_equiv_App; [exact ALPHA_STEP | reflexivity].
