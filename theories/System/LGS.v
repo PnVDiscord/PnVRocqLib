@@ -56,13 +56,13 @@ Module Input.
 Definition t : Set :=
   list ascii.
 
-Fixpoint of_string (s : string) : t :=
+Fixpoint of_string (s : string) : Input.t :=
   match s with
   | EmptyString => []
   | String c s' => c :: of_string s'
   end.
 
-Fixpoint to_string (s : t) : string :=
+Fixpoint to_string (s : Input.t) : string :=
   match s with
   | [] => EmptyString
   | c :: s' => String c (to_string s')
@@ -72,6 +72,12 @@ End Input.
 
 Lemma Input_to_of_string (s : string)
   : Input.to_string (Input.of_string s) = s.
+Proof.
+  induction s as [ | c s IH]; simpl; congruence.
+Qed.
+
+Lemma Input_of_to_string (s : Input.t)
+  : Input.of_string (Input.to_string s) = s.
 Proof.
   induction s as [ | c s IH]; simpl; congruence.
 Qed.

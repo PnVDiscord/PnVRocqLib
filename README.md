@@ -131,11 +131,11 @@ Our main results are as follows:
 
 - `Lang.v` : Some formal languages.
 
-- `LGS.v` : A lexer generator.
+- `LGS.v` : A lexer generator. (WIP)
 
 - `P.v` : Provides a function `nat -> option string` by base 36.
 
-- `PGS.v` : A parser generator.
+- `PGS.v` : A parser generator. (WIP)
 
 - `Regex.v` : A theory on regular expression.
 
