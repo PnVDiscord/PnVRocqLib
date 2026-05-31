@@ -1412,6 +1412,21 @@ Proof.
 Qed.
 
 #[global]
+Instance list_hasEqDec {A : Type}
+  (A_hasEqDec : hasEqDec A)
+  : hasEqDec (list A).
+Proof.
+  red in A_hasEqDec |- *. decide equality.
+Defined.
+
+#[global]
+Instance unit_hasEqDec
+  : hasEqDec@{Set} unit.
+Proof.
+  red. decide equality.
+Defined.
+
+#[global]
 Instance nat_hasEqDec : hasEqDec@{Set} nat :=
   Nat.eq_dec.
 
@@ -1969,6 +1984,68 @@ Proof.
 Qed.
 
 End SUBSEQUENCE.
+
+Lemma app_eq_length_inv {A : Type} (xs : list A) (ys : list A) (xs' : list A) (ys' : list A)
+  (EQ : xs ++ ys = xs' ++ ys')
+  (LEN : length xs = length xs')
+  : xs = xs' /\ ys = ys'.
+Proof.
+  revert xs' ys ys' EQ LEN. induction xs as [ | x xs IH]; i.
+  - destruct xs' as [ | x' xs']; simpl in LEN; try lia. simpl in EQ. subst ys'. eauto.
+  - destruct xs' as [ | x' xs']; simpl in LEN; try lia. simpl in EQ. inv EQ.
+    assert (LEN' : length xs = length xs').
+    { lia. }
+    pose proof (IH xs' ys ys' H1 LEN') as [-> ->]. eauto.
+Qed.
+
+Lemma app_eq_middle_cons_inv {A : Type} (xs : list A) (ys : list A) (prefix : list A) (suffix : list A) (x : A)
+  (EQ : xs ++ ys = prefix ++ x :: suffix)
+  : (exists xs_tail, xs = prefix ++ x :: xs_tail /\ suffix = xs_tail ++ ys) \/ (exists prefix_tail, prefix = xs ++ prefix_tail /\ ys = prefix_tail ++ x :: suffix).
+Proof.
+  revert prefix ys suffix EQ. induction xs as [ | y xs IH]; intros prefix ys suffix EQ.
+  - right. exists prefix. simpl in EQ. subst ys. split; reflexivity.
+  - destruct prefix as [ | z prefix].
+    + simpl in EQ. inv EQ. left. exists xs. split; auto.
+    + simpl in EQ. inv EQ. pose proof (IH prefix ys suffix H1) as [(xs_tail & XS & SUFFIX) | (prefix_tail & PREFIX & YS)].
+      * left. exists xs_tail. subst xs. split; [reflexivity | exact SUFFIX].
+      * right. exists prefix_tail. subst prefix. split; [reflexivity | exact YS].
+Qed.
+
+Lemma firstn_nth_error_tl_skipn_app_cons {A : Type} (prefix : list A) (x : A) (suffix : list A)
+  : firstn (length prefix) (prefix ++ x :: suffix) = prefix /\ nth_error (prefix ++ x :: suffix) (length prefix) = Some x /\ tl (skipn (length prefix) (prefix ++ x :: suffix)) = suffix.
+Proof.
+  induction prefix as [ | y prefix IH]; simpl.
+  - splits; reflexivity.
+  - destruct IH as (FIRST & NTH & TAIL). rewrite FIRST. splits; auto.
+Qed.
+
+Fixpoint mapi_from {A : Type} {B : Type} (idx : nat) (f : nat -> A -> B) (xs : list A) {struct xs} : list B :=
+  match xs with
+  | [] => []
+  | x :: xs' => f idx x :: mapi_from (S idx) f xs'
+  end.
+
+Lemma accepted_prefix_longer_cons {A : Type} (base : list A) (c : A) (rest : list A) (prefix : list A) (suffix : list A)
+  (EQ : base ++ c :: rest = prefix ++ suffix)
+  (LT : length base < length prefix)
+  : exists prefix_tail, prefix = base ++ c :: prefix_tail.
+Proof.
+  revert prefix suffix EQ LT. induction base as [ | b base IH]; i.
+  - destruct prefix as [ | p prefix]; simpl in LT; try lia. simpl in EQ. inv EQ. exists prefix. reflexivity.
+  - destruct prefix as [ | p prefix]; simpl in LT; try lia. simpl in EQ. inv EQ.
+    assert (LT' : length base < length prefix).
+    { lia. }
+    pose proof (IH prefix suffix H1 LT') as (prefix_tail & PREFIX). subst prefix. exists prefix_tail. reflexivity.
+Qed.
+
+Lemma skipn_succ_cons_inv {A : Type} (n : nat) (xs : list A) (x : A) (ys : list A)
+  (EQ : skipn n xs = x :: ys)
+  : skipn (S n) xs = ys.
+Proof.
+  revert xs EQ. induction n as [ | n IH]; intros xs EQ.
+  - destruct xs as [ | x' xs']; simpl in EQ; try discriminate. inv EQ. reflexivity.
+  - destruct xs as [ | x' xs']; simpl in EQ; try discriminate. eapply IH. exact EQ.
+Qed.
 
 End L.
 
