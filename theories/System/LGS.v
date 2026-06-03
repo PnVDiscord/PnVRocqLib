@@ -372,8 +372,7 @@ Inductive reachable (M : DFA.t) : M.(state) -> list ascii -> M.(state) -> Prop :
     : reachable M q1 (a :: s) q3.
 
 Definition deterministic (M : DFA.t) : Prop :=
-  forall q, forall a, forall q1, forall q2,
-    step_rel M q a q1 -> step_rel M q a q2 -> q1 = q2.
+  forall q, forall a, forall q1, forall q2, step_rel M q a q1 -> step_rel M q a q2 -> q1 = q2.
 
 End DFA.
 
@@ -430,7 +429,6 @@ Proof.
   - destruct (M.(DFA.step) q1 a) as [q' | ] eqn: STEP; try congruence.
     eauto.
 Qed.
-
 
 Module Thompson.
 
