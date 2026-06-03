@@ -1,9 +1,9 @@
 Require Import Stdlib.Strings.Ascii.
 Require Import Stdlib.Strings.String.
+Require Import PnV.Prelude.Prelude.
 Require Import PnV.Control.Monad.
 Require Import PnV.Data.FiniteSet.
 Require Import PnV.System.Regex.
-Require Import PnV.Prelude.Prelude.
 
 Import DoNotations.
 

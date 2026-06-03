@@ -21,7 +21,6 @@ Qed.
 
 #[global] Hint Rewrite list_corresponds_to_finite_ensemble_iff : simplication_hints.
 
-#[universes(polymorphic=yes)]
 Theorem list_corresponds_to_finite_ensemble_flat_map {A : Type} {B : Type} (xs : list A) (X : ensemble A) (f : A -> list B) (F : A -> ensemble B)
   (xs_sim : xs =~= X)
   (f_sim : forall x, f x =~= F x)
@@ -47,30 +46,36 @@ Proof.
       exact (proj2 (F_SIM b) b_in).
 Qed.
 
+#[universes(polymorphic=yes)]
 Definition mem@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A) : bool :=
   if in_dec eq_dec x xs then true else false.
 
+#[universes(polymorphic=yes)]
 Definition add@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A) : list A :=
   if mem x xs then xs else x :: xs.
 
+#[universes(polymorphic=yes)]
 Fixpoint union@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xs : list A) (ys : list A) {struct xs} : list A :=
   match xs with
   | [] => ys
   | x :: xs' => union xs' (add x ys)
   end.
 
+#[universes(polymorphic=yes)]
 Lemma mem_true_iff@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A)
   : mem x xs = true <-> x ∈ xs.
 Proof.
   unfold mem. destruct (in_dec eq_dec x xs) as [IN | NOT_IN]; done.
 Qed.
 
+#[universes(polymorphic=yes)]
 Lemma mem_false_iff@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A)
   : mem x xs = false <-> ~ x ∈ xs.
 Proof.
   unfold mem. destruct (in_dec eq_dec x xs) as [IN | NOT_IN]; done.
 Qed.
 
+#[universes(polymorphic=yes)]
 Lemma add_sound@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (y : A) (xs : list A)
   (IN : y ∈ add x xs)
   : y = x \/ y ∈ xs.
@@ -82,6 +87,7 @@ Proof.
     + right. exact IN.
 Qed.
 
+#[universes(polymorphic=yes)]
 Lemma add_complete@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (y : A) (xs : list A)
   (IN : y = x \/ y ∈ xs)
   : y ∈ add x xs.
@@ -95,6 +101,7 @@ Proof.
     + right. exact IN.
 Qed.
 
+#[universes(polymorphic=yes)]
 Lemma union_sound@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xs : list A) (ys : list A) (z : A)
   (IN : z ∈ union xs ys)
   : z ∈ xs \/ z ∈ ys.
@@ -108,6 +115,7 @@ Proof.
       * right. exact IN_ys.
 Qed.
 
+#[universes(polymorphic=yes)]
 Lemma union_complete@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xs : list A) (ys : list A) (z : A)
   (IN : z ∈ xs \/ z ∈ ys)
   : z ∈ union xs ys.
@@ -120,6 +128,7 @@ Proof.
     + right. eapply add_complete. right. exact IN_ys.
 Qed.
 
+#[universes(polymorphic=yes)]
 Lemma remove_length_lt@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A)
   (IN : x ∈ xs)
   : length (remove eq_dec x xs) < length xs.
@@ -133,6 +142,7 @@ Proof.
       * pose proof (IH IN) as LT. lia.
 Qed.
 
+#[universes(polymorphic=yes)]
 Fixpoint powerset@{u} {A : Type@{u}} (xs : list A) : list (list A) :=
   match xs with
   | [] => [[]]
@@ -141,6 +151,7 @@ Fixpoint powerset@{u} {A : Type@{u}} (xs : list A) : list (list A) :=
     ps ++ map (fun ys => x :: ys) ps
   end.
 
+#[universes(polymorphic=yes)]
 Lemma filter_in_powerset@{u} {A : Type@{u}} (p : A -> bool) (xs : list A)
   : filter p xs ∈ powerset xs.
 Proof.
@@ -152,37 +163,38 @@ Proof.
     + rewrite in_app_iff. left. exact IH.
 Qed.
 
-Definition product@{u v} {A : Type@{u}} {B : Type@{v}} (xs : list A) (ys : list B)
-  : list (A * B) :=
-  flat_map (fun x => map (fun y => (x, y)) ys) xs.
+#[universes(polymorphic=yes)]
+Definition product@{u v} {A : Type@{u}} {B : Type@{v}} (xs : list A) (ys : list B) : list (A * B) :=
+  xs >>= fun x => ys >>= fun y => pure (x, y).
 
+#[universes(polymorphic=yes)]
 Lemma product_sound@{u v} {A : Type@{u}} {B : Type@{v}} (xs : list A) (ys : list B) x y
   (IN : (x, y) ∈ product xs ys)
   : x ∈ xs /\ y ∈ ys.
 Proof.
-  unfold product in IN. rewrite in_flat_map in IN.
-  destruct IN as (x0 & IN_X & IN_PAIR).
-  rewrite in_map_iff in IN_PAIR.
-  destruct IN_PAIR as (y0 & EQ & IN_Y). inv EQ.
-  split; [exact IN_X | exact IN_Y].
+  unfold product in IN. cbn in IN. rewrite in_concat in IN.
+  destruct IN as (z & IN & IN_PAIR). rewrite L.in_map_iff in IN.
+  destruct IN as (? & EQ & IN); subst z. rewrite in_concat in IN_PAIR.
+  destruct IN_PAIR as (z & IN_PAIR & IN'). rewrite L.in_map_iff in IN_PAIR.
+  destruct IN_PAIR as (? & EQ & IN''); subst z. destruct IN' as [EQ | []].
+  inv EQ. split; [exact IN | exact IN''].
 Qed.
 
+#[universes(polymorphic=yes)]
 Lemma product_complete@{u v} {A : Type@{u}} {B : Type@{v}} (xs : list A) (ys : list B) x y
   (IN_X : x ∈ xs)
   (IN_Y : y ∈ ys)
   : (x, y) ∈ product xs ys.
 Proof.
-  unfold product. rewrite in_flat_map.
-  exists x. split; [exact IN_X | ].
-  rewrite in_map_iff. exists y. split; [reflexivity | exact IN_Y].
+  unfold product. cbn. rewrite in_concat. exists (concat (map (fun y0 : B => [(x, y0)]) ys)). split.
+  - rewrite L.in_map_iff. exists x. split; [reflexivity | exact IN_X].
+  - rewrite in_concat. exists [(x, y)]. split.
+    + rewrite L.in_map_iff. exists y. split; [reflexivity | exact IN_Y].
+    + left. reflexivity.
 Qed.
 
-Lemma NoDup_map_injective_on
-  {A : Type}
-  {B : Type}
-  (f : A -> B)
-  (xs : list A)
-  (INJ : forall x y, x ∈ xs -> y ∈ xs -> f x = f y -> x = y)
+Lemma NoDup_map_injective_on {A : Type} {B : Type} (f : A -> B) (xs : list A)
+  (INJ : forall x, forall y, x ∈ xs -> y ∈ xs -> f x = f y -> x = y)
   (NO_DUP : NoDup xs)
   : NoDup (map f xs).
 Proof.
