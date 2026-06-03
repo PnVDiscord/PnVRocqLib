@@ -43,20 +43,6 @@ Proof.
   unfold all_symbols. rewrite in_app_iff. right. rewrite in_map_iff. exists nt. split; [reflexivity | exact IN].
 Qed.
 
-Module Type FINITE_ENUM.
-
-Parameter t : Set.
-
-Parameter t_hasEqDec : hasEqDec@{Set} t.
-
-Parameter all : list t.
-
-Parameter all_complete : forall x : t, x ∈ all.
-
-Parameter all_no_dup : NoDup all.
-
-End FINITE_ENUM.
-
 Module Type GRAMMAR_SPEC.
 
 Declare Module Token : FINITE_ENUM.
@@ -103,25 +89,6 @@ Notation token := Grammar.Token.t.
 Notation nonterminal := Grammar.Nonterminal.t.
 Notation production := Grammar.Production.t.
 Notation raw_symbol := (symbol token nonterminal).
-
-(*
-  DeRemer-Pennello notation map used below.
-
-  T                 = token
-  N                 = nonterminal
-  V                 = raw_symbol / aug_symbol
-  P                 = production / aug_production
-  augmented S'      = fresh_start
-  end marker        = end_marker
-  LR(0) item        = item
-  Next              = lr0_next
-  nonterminal edge  = nt_transition
-  DR                = DR / DR'
-  reads             = reads / reads_edges
-  includes          = includes / includes_edges
-  lookback          = lookback / lookback_vertices
-  Read, Follow, LA  = Read, Follow, LA
-*)
 
 #[local]
 Instance token_hasEqDec : hasEqDec@{Set} token :=
@@ -231,13 +198,13 @@ Definition lift_nonterminal (nt : nonterminal) : aug_nonterminal :=
   Some nt.
 
 Lemma end_marker_fresh_token (tok : token)
-  : end_marker <> lift_token tok.
+  : ~ end_marker = lift_token tok.
 Proof.
   discriminate.
 Qed.
 
 Lemma fresh_start_fresh_nonterminal (nt : nonterminal)
-  : fresh_start <> lift_nonterminal nt.
+  : ~ fresh_start = lift_nonterminal nt.
 Proof.
   discriminate.
 Qed.
@@ -809,8 +776,7 @@ Definition first_symbol_under (candidate : list first_pair) (sym : raw_symbol) (
 Fixpoint first_rhs_under (candidate : list first_pair) (rhs : list raw_symbol) (tok : token) {struct rhs} : bool :=
   match rhs with
   | [] => false
-  | sym :: rhs' =>
-    first_symbol_under candidate sym tok || match sym with symbol_terminal _ => false | symbol_nonterminal nt => nullable_ntb nt && first_rhs_under candidate rhs' tok end
+  | sym :: rhs' => first_symbol_under candidate sym tok || match sym with symbol_terminal _ => false | symbol_nonterminal nt => nullable_ntb nt && first_rhs_under candidate rhs' tok end
   end.
 
 Definition first_pairs_closedb (candidate : list first_pair) : bool :=
@@ -1942,7 +1908,8 @@ Proof.
         { econs. }
         { change (parse_tree_root child :: map parse_tree_root children) with ([parse_tree_root child] ++ map parse_tree_root children). eapply aug_derives_app.
           - eapply IH; [eapply BOUND; left; reflexivity | exact WF_child].
-          - eapply IH_children. intros child0 IN. eapply BOUND. right. exact IN. }
+          - eapply IH_children. intros child0 IN. eapply BOUND. right. exact IN.
+        }
 Qed.
 
 Lemma parse_tree_wf_derives (tree : parse_tree)
@@ -2349,7 +2316,7 @@ Proof.
       * rewrite andb_true_iff in EQ. destruct EQ as [EQ_st EQ_tok]. rewrite eqb_eq in EQ_st. rewrite eqb_eq in EQ_tok. f_equal. eapply UNIQUE; [left; reflexivity | exact EQ_st | exact EQ_tok].
       * eapply IH.
         { exact IN. }
-	        { intros other' IN' EQ_st EQ_tok. eapply UNIQUE; [right; exact IN' | exact EQ_st | exact EQ_tok]. }
+          { intros other' IN' EQ_st EQ_tok. eapply UNIQUE; [right; exact IN' | exact EQ_st | exact EQ_tok]. }
 Qed.
 
 Lemma insert_action_entry_lookup_inserted (entry : action_entry) (table : list action_entry) (table' : list action_entry)

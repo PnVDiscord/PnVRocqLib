@@ -2417,3 +2417,17 @@ Class isField (K : Type) {SETOID : isSetoid K} : Type :=
   }.
 
 End A.
+
+Module Type FINITE_ENUM.
+
+Parameter t : Set.
+
+Parameter t_hasEqDec : hasEqDec@{Set} t.
+
+Parameter all : list t.
+
+Parameter all_complete : forall x : t, x ∈ all.
+
+Parameter all_no_dup : NoDup all.
+
+End FINITE_ENUM.
