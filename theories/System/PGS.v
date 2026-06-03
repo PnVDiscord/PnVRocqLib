@@ -1885,7 +1885,7 @@ Inductive parse_tree : Set :=
   | parse_node (prod : aug_production) (children : list parse_tree)
     : parse_tree.
 
-Fixpoint parse_tree_root (tree : parse_tree) : aug_symbol :=
+Definition parse_tree_root (tree : parse_tree) : aug_symbol :=
   match tree with
   | parse_leaf tok => symbol_terminal (lift_token tok)
   | parse_node prod _ => symbol_nonterminal (aug_lhs prod)
@@ -2279,10 +2279,10 @@ Lemma parse_loop_acc_sound (table : certified_table) (cfg : parser_config) (ACC 
   (PARSE : parse_loop_acc table cfg ACC = inr tree)
   : aug_in_language tokens.
 Proof.
-  revert cfg ACC tokens tree SOUND PARSE. fix IH 2. intros cfg ACC tokens tree SOUND PARSE. destruct ACC as [cfg0 ACC_NEXT]. destruct (parser_step_outcome table cfg) as [err | [accepted | next]] eqn:STEP_OUT.
+  revert cfg ACC tokens tree SOUND PARSE. fix IH 2. intros cfg ACC tokens tree SOUND PARSE. destruct ACC as [ACC_NEXT]. destruct (parser_step_outcome table cfg) as [err | [accepted | next]] eqn:STEP_OUT.
   - cbn [parse_loop_acc] in PARSE. rewrite STEP_OUT in PARSE. simpl in PARSE. discriminate.
   - cbn [parse_loop_acc] in PARSE. rewrite STEP_OUT in PARSE. destruct accepted as [accepted STEP_ACCEPT]. simpl in PARSE. inv PARSE. eapply parser_step_accept_sound; [exact SOUND | exact STEP_ACCEPT].
-  - cbn [parse_loop_acc] in PARSE. rewrite STEP_OUT in PARSE. destruct next as [cfg' STEP_CONT]. simpl in PARSE. eapply (IH cfg' (cfg0 cfg' STEP_CONT) tokens tree).
+  - cbn [parse_loop_acc] in PARSE. rewrite STEP_OUT in PARSE. destruct next as [cfg' STEP_CONT]. simpl in PARSE. eapply (IH cfg' (ACC_NEXT cfg' STEP_CONT) tokens tree).
     + eapply parser_step_preserves_parser_config_sound; [exact SOUND | exact STEP_CONT].
     + exact PARSE.
 Qed.
