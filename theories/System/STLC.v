@@ -672,13 +672,11 @@ Defined.
 
 Lemma alpha_equiv_lam_rename x ty M z
   (NOT_FREE : is_free_in z (Lam_trm x ty M) = false)
-  : Lam_trm x ty M ≡ₐ
-    Lam_trm z ty (subst_trm (one_subst x (Var_trm z)) M).
+  : Lam_trm x ty M ≡ₐ Lam_trm z ty (subst_trm (one_subst x (Var_trm z)) M).
 Proof.
   red. simpl.
   set (w := chi nil_subst (Lam_trm x ty M)).
-  enough (H_chi :
-    chi nil_subst (Lam_trm z ty (subst_trm (one_subst x (Var_trm z)) M)) = w).
+  enough (H_chi : chi nil_subst (Lam_trm z ty (subst_trm (one_subst x (Var_trm z)) M)) = w).
   { rewrite H_chi. unfold w. f_equal.
     rewrite <- subst_compose_spec.
     eapply equiv_subst_implies_subst_same. intros u FREE_u.
@@ -738,9 +736,8 @@ Proof.
       * exact FREE_v.
       * unfold one_subst, cons_subst, nil_subst.
         destruct (eq_dec v x) as [v_eq_x | v_ne_x].
-        -- subst v. rewrite negb_true_iff in v_ne_z.
-           rewrite eqb_spec in v_ne_z. contradiction.
-        -- simpl. rewrite eqb_spec. reflexivity.
+        { subst v. rewrite negb_true_iff in v_ne_z. rewrite eqb_spec in v_ne_z. contradiction. }
+        { simpl. rewrite eqb_spec. reflexivity. }
 Qed.
 
 Lemma fullBetaOnce_is_free_in M N z
@@ -803,16 +800,16 @@ Qed.
 
 Inductive rawBetaOnce : trm L -> trm L -> Prop :=
   | rawBetaOnce_beta x ty M N
-    : (App_trm (Lam_trm x ty M) N) ~>β₀ (subst_trm (one_subst x N) M)
+    : App_trm (Lam_trm x ty M) N ~>β₀ subst_trm (one_subst x N) M
   | rawBetaOnce_appl M M' N
     (BETA : M ~>β₀ M')
-    : (App_trm M N) ~>β₀ (App_trm M' N)
+    : App_trm M N ~>β₀ App_trm M' N
   | rawBetaOnce_appr M N N'
     (BETA : N ~>β₀ N')
-    : (App_trm M N) ~>β₀ (App_trm M N')
+    : App_trm M N ~>β₀ App_trm M N'
   | rawBetaOnce_lam x ty M M'
     (BETA : M ~>β₀ M')
-    : (Lam_trm x ty M) ~>β₀ (Lam_trm x ty M')
+    : Lam_trm x ty M ~>β₀ Lam_trm x ty M'
   where "M ~>β₀ N" := (rawBetaOnce M N).
 
 Inductive rawBetaMany (M : trm L) (N : trm L) : Prop :=
@@ -884,8 +881,7 @@ Proof.
     split.
     + econs 1.
     + transitivity (subst_trm (cons_subst x (subst_trm s N) s) M).
-      * red. unfold z. eapply subst_cons_lemma_aux1 with (ty := ty).
-        reflexivity.
+      * red. unfold z. eapply subst_cons_lemma_aux1 with (ty := ty). reflexivity.
       * eapply alpha_equiv_subst_cons_compose.
   - pose proof (IHBETA s) as (P & STEP & ALPHA).
     exists (App_trm P (subst_trm s N)). split.
@@ -961,18 +957,17 @@ Proof.
       { eapply alpha_equiv_Lam_same. exact ALPHA_Q. }
       transitivity (Lam_trm x ty (subst_trm (one_subst y (Var_trm x)) M')).
       { eapply alpha_equiv_Lam_same. exact ALPHA_R. }
-      { symmetry. eapply alpha_equiv_lam_rename.
-        assert (NOT_FREE_SOURCE : is_free_in x (Lam_trm x ty M) = false).
-        { simpl. unfold eqb. destruct (eq_dec x x) as [_ | NE].
-          - reflexivity.
-          - contradiction.
-        }
-        assert (NOT_FREE_N : is_free_in x (Lam_trm y ty N') = false).
-        { rewrite <- alpha_equiv_is_free_in with (M := Lam_trm x ty M) (M' := Lam_trm y ty N'); eassumption. }
-        destruct (is_free_in x (Lam_trm y ty M')) eqn:FREE; [| reflexivity].
-        pose proof (fullBetaOnce_is_free_in _ _ x (rawBetaOnce_fullBetaOnce _ _ (rawBetaOnce_lam y ty N' M' BETA0)) FREE) as FREE_N.
-        congruence.
+      assert (NOT_FREE_SOURCE : is_free_in x (Lam_trm x ty M) = false).
+      { simpl. unfold eqb. destruct (eq_dec x x) as [_ | NE].
+        - reflexivity.
+        - contradiction.
       }
+      assert (NOT_FREE_N : is_free_in x (Lam_trm y ty N') = false).
+      { rewrite <- alpha_equiv_is_free_in with (M := Lam_trm x ty M) (M' := Lam_trm y ty N'); eassumption. }
+      symmetry. eapply alpha_equiv_lam_rename.
+      destruct (is_free_in x (Lam_trm y ty M')) eqn: FREE; [ | reflexivity].
+      pose proof (fullBetaOnce_is_free_in _ _ x (rawBetaOnce_fullBetaOnce _ _ (rawBetaOnce_lam y ty N' M' BETA0)) FREE) as FREE_N.
+      congruence.
   - pose proof (alpha_equiv_Con_inv c N ALPHA) as N_eq.
     subst N. inversion BETA.
 Qed.
@@ -1028,23 +1023,21 @@ Proof.
 Qed.
 
 Lemma alpha_equiv_subst_shadow x A gamma M
-  : subst_trm (cons_subst x A (cons_subst x A gamma)) M ≡ₐ
-    subst_trm (cons_subst x A gamma) M.
+  : subst_trm (cons_subst x A (cons_subst x A gamma)) M ≡ₐ subst_trm (cons_subst x A gamma) M.
 Proof.
   eapply alpha_equiv_subst_ext. intros z FREE.
   unfold cons_subst. destruct (eq_dec z x); reflexivity.
 Qed.
 
 Lemma alpha_equiv_subst_swap x y A B gamma M
-  (NE : y <> x)
-  : subst_trm (cons_subst y B (cons_subst x A gamma)) M ≡ₐ
-    subst_trm (cons_subst x A (cons_subst y B gamma)) M.
+  (NE : y ≠ x)
+  : subst_trm (cons_subst y B (cons_subst x A gamma)) M ≡ₐ subst_trm (cons_subst x A (cons_subst y B gamma)) M.
 Proof.
   eapply alpha_equiv_subst_ext. intros z FREE.
   unfold cons_subst.
   destruct (eq_dec z y) as [z_eq_y | z_ne_y].
   - subst z. destruct (eq_dec y x) as [y_eq_x | y_ne_x].
-    + contradiction.
+    + rewrite Name.ne_iff in NE. contradiction.
     + reflexivity.
   - destruct (eq_dec z x) as [z_eq_x | z_ne_x].
     + reflexivity.
@@ -1089,10 +1082,10 @@ Proof.
         unfold s, s'. eapply alpha_equiv_subst_ext. intros u FREE.
         unfold cons_subst. destruct (eq_dec u x0); reflexivity.
       * eapply rawBetaMany_trans with (M' := subst_trm (cons_subst x0 N (cons_subst y (Var_trm z) gamma)) M).
-        { econs 1. unfold s. eapply alpha_equiv_subst_swap. exact y_ne_x. }
+        { econs 1. unfold s. eapply alpha_equiv_subst_swap. rewrite Name.ne_iff. exact y_ne_x. }
         eapply rawBetaMany_trans with (M' := subst_trm (cons_subst x0 N' (cons_subst y (Var_trm z) gamma)) M).
         { eapply IHM. exact BETA. }
-        { econs 1. symmetry. unfold s'. eapply alpha_equiv_subst_swap. exact y_ne_x. }
+        { econs 1. symmetry. unfold s'. eapply alpha_equiv_subst_swap. rewrite Name.ne_iff. exact y_ne_x. }
     + econs 1. symmetry. eapply alpha_equiv_subst_lam_fresh.
       unfold z, s, s'. eapply rawBetaOnce_preserves_is_fresh_in_subst_update.
       * exact BETA.
@@ -1307,11 +1300,7 @@ Proof.
   induction STEP.
   - eapply raw_wkh_exp_alpha; eassumption.
   - pose proof (raw_sn_app_inv M' N M'_SN) as (M'_HEAD_SN & N_SN).
-    eapply rawHead_backward_aux.
-    + eapply IHSTEP. exact M'_HEAD_SN.
-    + exact N_SN.
-    + exact STEP.
-    + exact M'_SN.
+    eapply rawHead_backward_aux; eauto.
 Qed.
 
 Fixpoint jmSNe_neutral (M : trm L) (NE : jmSNe M) {struct NE} : neutral M.
@@ -1346,8 +1335,7 @@ Proof.
     + econs 2. eapply jmStep_rawHead. exact STEP.
 Defined.
 
-Fixpoint raw_sn_to_sn_alpha (M : trm L) (M_SN : raw_sn M) {struct M_SN}
-  : forall N, M ≡ₐ N -> sn N.
+Fixpoint raw_sn_to_sn_alpha (M : trm L) (M_SN : raw_sn M) {struct M_SN} : forall N, M ≡ₐ N -> sn N.
 Proof.
   destruct M_SN as [M_SN]. intros N ALPHA. econs. intros P BETA.
   pose proof (fullBetaOnce_rawBetaOnce N P BETA) as (R & STEP_R & ALPHA_R).

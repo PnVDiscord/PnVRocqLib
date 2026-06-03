@@ -1081,6 +1081,35 @@ Proof.
   econs. intros y R_y_x. eapply IH. econs 1. exact R_y_x.
 Qed.
 
+#[universes(polymorphic=yes)]
+Lemma wf_inverse_image@{u v} {A : Type@{u}} {B : Type@{v}} (R : B -> B -> Prop) (f : A -> B)
+  (WF : well_founded R)
+  : well_founded (fun x => fun y => R (f x) (f y)).
+Proof.
+  eapply relation_on_image_liftsWellFounded. exact WF.
+Qed.
+
+#[universes(polymorphic=yes)]
+Definition lexprod@{u v} (A : Type@{u}) (B : A -> Type@{v}) (R_A : A -> A -> Prop) (R_B : forall a, B a -> B a -> Prop) (lhs : @sigT A B) (rhs : @sigT A B) : Prop :=
+  let '(@existT _ _ a1 b1) := lhs in
+  let '(@existT _ _ a2 b2) := rhs in
+  R_A a1 a2 \/ (exists EQ : a1 = a2, R_B a2 (eq_rect a1 B b1 a2 EQ) b2).
+
+#[universes(polymorphic=yes)]
+Lemma wf_lexprod@{u v} (A : Type@{u}) (B : A -> Type@{v}) (R_A : A -> A -> Prop) (R_B : forall a, B a -> B a -> Prop)
+  (WF_A : well_founded R_A)
+  (WF_B : forall a, well_founded (R_B a))
+  : well_founded (lexprod A B R_A R_B).
+Proof.
+  intros [a b]. revert b.
+  induction (WF_A a) as [a _ IH_A]. intros b.
+  induction (WF_B a b) as [b _ IH_B].
+  econs. intros [a' b'] STEP.
+  simpl in STEP. destruct STEP as [STEP | [EQ STEP]].
+  - eapply IH_A; eauto.
+  - destruct EQ. eapply IH_B. exact STEP.
+Qed.
+
 Definition Prop_to_Set (P : Prop) : Set :=
   P.
 
@@ -1370,6 +1399,9 @@ Class well_founded {A : Type} (R : A -> A -> Prop) : Prop :=
 Class inhabited (A : Type) : Prop :=
   nonempty : _inhabited A.
 
+Class Decision (P : Prop) : Set :=
+  decide : {P} + {~ P}.
+
 End __.
 
 End B.
@@ -1385,6 +1417,14 @@ Infix ">=>" := B.kcompose : program_scope.
 #[universes(polymorphic=yes)]
 Class hasEqDec@{u} (A : Type@{u}) : Type@{u} :=
   eq_dec (x : A) (y : A) : {x = y} + {x <> y}.
+
+#[global]
+Instance hasEqDec_from_Decision@{u} {A : Type@{u}}
+  (EQ_DEC : hasEqDec@{u} A)
+  : forall x : A, forall x' : A, B.Decision (x = x').
+Proof.
+  exact EQ_DEC.
+Defined.
 
 #[universes(polymorphic=yes)]
 Definition eqb@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (x : A) (y : A) : bool :=

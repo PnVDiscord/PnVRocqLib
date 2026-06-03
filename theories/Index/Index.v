@@ -3,6 +3,8 @@ Require Import PnV.Control.Category.
 Require Import PnV.Control.Monad.
 
 Require Import PnV.Data.Aczel.
+Require Import PnV.Data.FiniteMap.
+Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.Graph.
 Require Import PnV.Data.ITree.
 Require Import PnV.Data.Vector.

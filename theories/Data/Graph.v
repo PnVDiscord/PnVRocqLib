@@ -1,5 +1,7 @@
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Control.Category.
+Require Import PnV.Data.FiniteSet.
+Require Import PnV.Data.FiniteMap.
 
 #[local] Notation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
@@ -244,3 +246,180 @@ Fixpoint labeledWalk {G} {G_labeled : Labeled G} {v} {v'} (H_Walk : `[ v -> v' ]
   | Walk_nil => pure (@L.nil G_labeled.(labels))
   | Walk_cons H_edge H_Walk' => liftM2 (@L.cons G_labeled.(labels)) (G_labeled.(labeling) H_edge) (labeledWalk H_Walk')
   end.
+
+Module DigraphFixedpoint.
+
+#[local] Infix "\in" := E.In.
+#[local] Infix "\subseteq" := E.isSubsetOf.
+
+Section DIGRAPH_FIXEDPOINT.
+
+#[local] Infix "=~=" := (is_similar_to (Similarity := list_corresponds_to_finite_ensemble)).
+#[local] Notation vertices := GRAPH.vertices.
+#[local] Notation edges := GRAPH.edges.
+
+Context {G : GRAPH.t}.
+
+#[local] Notation V := G.(vertices).
+#[local] Notation E := G.(edges).
+
+#[local] Notation " src ~~~[ w ]~~> tgt " := (walk tgt src w) : type_scope.
+
+Context {A : Type} (seed : V -> ensemble A).
+
+Inductive gmu (x : V) : ensemble A :=
+  | gmu_seed
+    : seed x \subseteq gmu x
+  | gmu_propagated y
+    (EDGE : (x, y) \in E)
+    : gmu y \subseteq gmu x.
+
+Variable seed' : V -> list A.
+
+Hypothesis seed_sim : forall v : V, seed' v =~= seed v.
+
+Variable vertices' : list V.
+
+Hypothesis vertices_sim : vertices' =~= E.full.
+
+Lemma vertices'_complete (v : V)
+  : L.In v vertices'.
+Proof.
+  pose proof vertices_sim as SIM.
+  rewrite list_corresponds_to_finite_ensemble_iff in SIM.
+  rewrite -> SIM. econs.
+Qed.
+
+Definition reachable (x : V) : ensemble V :=
+  fun y => exists w, x ~~~[ w ]~~> y.
+
+Context `{V_dec : hasEqDec V} `{E_dec : forall x : V, forall y : V, B.Decision ((x, y) \in E)}.
+
+Fixpoint reachableb (fuel : nat) (x : V) (y : V) {struct fuel} : bool :=
+  match fuel with
+  | O => eqb x y
+  | S fuel' => eqb x y || L.existsb (fun z => if E_dec x z then reachableb fuel' z y else false) vertices'
+  end.
+
+Definition reachable' (x : V) : list V :=
+  L.filter (reachableb (L.length vertices') x) vertices'.
+
+Lemma reachableb_sound (fuel : nat) (x : V) (y : V)
+  (REACH : reachableb fuel x y = true)
+  : exists w, L.length w <= fuel /\ x ~~~[ w ]~~> y.
+Proof.
+  revert x y REACH. induction fuel as [ | fuel IH]; i; simpl in REACH.
+  - rewrite eqb_eq in REACH. subst y.
+    exists []. split; [simpl; lia | econstructor 1].
+  - rewrite orb_true_iff in REACH. destruct REACH as [EQ | REACH].
+    + rewrite eqb_eq in EQ. subst y.
+      exists []. split; [simpl; lia | econstructor 1].
+    + rewrite L.existsb_exists in REACH.
+      destruct REACH as [z [z_in REACH]].
+      destruct (E_dec x z) as [EDGE | NO_EDGE]; try discriminate.
+      pose proof (IH z y REACH) as [w [LENGTH WALK]].
+      exists (z :: w). split; [simpl; lia | econstructor; eauto].
+Qed.
+
+Lemma reachableb_complete (fuel : nat) (x : V) (y : V) (w : list V)
+  (WALK : x ~~~[ w ]~~> y)
+  (LENGTH : L.length w <= fuel)
+  : reachableb fuel x y = true.
+Proof.
+  revert fuel LENGTH.
+  induction WALK as [ | v0 v1 w EDGE WALK IH]; i.
+  - destruct fuel as [ | fuel]; simpl.
+    + now rewrite eqb_eq.
+    + rewrite orb_true_iff. left. now rewrite eqb_eq.
+  - destruct fuel as [ | fuel]; simpl in LENGTH; [lia | ].
+    simpl. rewrite orb_true_iff. right. rewrite L.existsb_exists.
+    exists v1. split; [eapply vertices'_complete | ].
+    destruct (E_dec v0 v1) as [EDGE' | NO_EDGE]; ss!.
+Qed.
+
+Lemma reachableb_iff_reachable (x : V) (y : V)
+  : reachableb (L.length vertices') x y = true <-> y \in reachable x.
+Proof.
+  split.
+  - intros REACH.
+    pose proof (reachableb_sound _ _ _ REACH) as [w [_ WALK]].
+    exists w. exact WALK.
+  - intros [w WALK].
+    pose proof (@walk_finds_path G (fun v => fun vs => match @L.in_dec V V_dec v vs with left H_in => or_introl H_in | right H_not_in => or_intror H_not_in end) x y w WALK) as [p PATH].
+    rewrite path_iff_no_dup_walk in PATH.
+    destruct PATH as [WALK' NO_DUP].
+    eapply reachableb_complete; [exact WALK' | ].
+    eapply L.NoDup_incl_length; [exact NO_DUP | ].
+    intros z z_in. eapply vertices'_complete.
+Qed.
+
+Lemma reachable_sim (x : V)
+  : reachable' x =~= reachable x.
+Proof.
+  rewrite list_corresponds_to_finite_ensemble_iff.
+  intros y. unfold reachable'. rewrite -> L.filter_In. split.
+  - intros [_ REACH]. now rewrite <- reachableb_iff_reachable.
+  - intros REACH. split.
+    + eapply vertices'_complete.
+    + now rewrite reachableb_iff_reachable.
+Qed.
+
+Lemma walk_gmu (x : V) (y : V) (w : list V)
+  (WALK : x ~~~[ w ]~~> y)
+  : gmu y \subseteq gmu x.
+Proof.
+  induction WALK as [ | v0 v1 w EDGE WALK IH]; intros a IN; eauto.
+  eapply gmu_propagated; eauto.
+Qed.
+
+Lemma reachable_seed_gmu (x : V) (y : V) (a : A)
+  (REACH : y \in reachable x)
+  (SEED : a \in seed y)
+  : a \in gmu x.
+Proof.
+  destruct REACH as [w WALK].
+  eapply walk_gmu; [exact WALK | ].
+  eapply gmu_seed. exact SEED.
+Qed.
+
+Lemma reachable_step (x : V) (y : V) (z : V)
+  (EDGE : (x, y) \in E)
+  (REACH : z \in reachable y)
+  : z \in reachable x.
+Proof.
+  destruct REACH as [w WALK].
+  exists (y :: w). econstructor; eauto.
+Qed.
+
+Lemma gmu_reachable_seed (x : V) (a : A)
+  (IN : a \in gmu x)
+  : exists y, y \in reachable x /\ a \in seed y.
+Proof.
+  induction IN as [x a SEED | x y EDGE a IN IH].
+  - exists x. split; [exists []; econstructor 1 | exact SEED].
+  - destruct IH as [z [REACH SEED]].
+    exists z. split; [eapply reachable_step; eauto | exact SEED].
+Qed.
+
+Lemma gmu_iff_reachable_seed (x : V) (a : A)
+  : a \in gmu x <-> a \in (reachable x >>= seed).
+Proof.
+  split.
+  - eapply gmu_reachable_seed.
+  - intros [y [REACH SEED]]. eapply reachable_seed_gmu; eauto.
+Qed.
+
+Definition gmu' (x : V) : list A :=
+  L.flat_map seed' (reachable' x).
+
+Theorem gmu_sim (v : V)
+  : gmu' v =~= gmu v.
+Proof.
+  pose proof (list_corresponds_to_finite_ensemble_flat_map (reachable' v) (reachable v) seed' seed (reachable_sim v) seed_sim) as FLAT_MAP.
+  rewrite list_corresponds_to_finite_ensemble_iff in FLAT_MAP |- *.
+  intros a. rewrite FLAT_MAP. symmetry. eapply gmu_iff_reachable_seed.
+Qed.
+
+End DIGRAPH_FIXEDPOINT.
+
+End DigraphFixedpoint.
