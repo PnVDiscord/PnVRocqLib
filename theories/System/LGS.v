@@ -90,13 +90,6 @@ End Error.
 Definition ErrM@{u} (A : Type@{u}) : Type@{u} :=
   Error.t + A.
 
-#[global, universes(polymorphic=yes)]
-Instance result_isMonad@{u} : isMonad@{u u} ErrM@{u} :=
-  { bind {A : Type@{u}} {B : Type@{u}} (m : ErrM@{u} A) (k : A -> ErrM@{u} B) :=
-      B.either (@inl _ _) k m
-  ; pure {A : Type@{u}} (x : A) := inr x
-  }.
-
 Module Input.
 
 Definition t : Set :=
