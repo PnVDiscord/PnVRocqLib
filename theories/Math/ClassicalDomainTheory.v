@@ -1304,8 +1304,7 @@ Proof.
       + intros z Hz Hz_rank. pose proof (rank_inj (@exist D (fun w : D => w \in X) z Hz) (@exist D (fun w : D => w \in X) y Hy)) as EQsig.
         assert (EQrank : rank (@exist D (fun w : D => w \in X) z Hz) = rank (@exist D (fun w : D => w \in X) y Hy)).
         { now rewrite Hz_rank, Hy_rank. }
-        specialize (EQsig EQrank).
-        change (@exist D (fun w : D => w \in X) z Hz = @exist D (fun w : D => w \in X) y Hy) in EQsig. exact (f_equal (@proj1_sig D (fun w : D => w \in X)) EQsig).
+        exact (f_equal (@proj1_sig D (fun w : D => w \in X)) (EQsig EQrank)).
     - exists x0. split.
       + exact x0_in.
       + intros y Hy Hy_rank. contradiction Hnone. exists y, Hy. exact Hy_rank.
@@ -1324,13 +1323,13 @@ Proof.
       + intro H. simpl in H. destruct H as [Hz | []]. subst z. unfold Y0. reflexivity.
     - intros m LE. replace m with O by lia. reflexivity.
   }
-  pose (base := (@exist _ _ (O, Y0) Y0_SPEC : CountStage)).
+  refine (let base : CountStage := @exist _ _ (O, Y0) Y0_SPEC in _).
   pose (step := fun s : CountStage => fun t : CountStage => Datatypes.fst (proj1_sig t) = S (Datatypes.fst (proj1_sig s)) /\ Datatypes.snd (proj1_sig s) \subseteq Datatypes.snd (proj1_sig t)).
   assert (Hstep : forall s : CountStage, exists t : CountStage, step s t).
   { intros [[n Y] [Y_SUB [Y_DIR [Y_FIN Y_CONTAINS]]]].
     pose proof (proj1 (PICK (S n))) as pick_in.
     pose proof (finite_directed_extend X Y DIRECTED Y_SUB Y_FIN (pick (S n)) pick_in) as (Z & YZ & pick_Z & Z_SUB & Z_DIR & Z_FIN).
-    assert (Z_SPEC : Z \subseteq X /\ isDirected Z /\ Cardinal2.isFiniteEnsemble Z /\ forall m : nat, m <= S n -> pick m \in Z).
+    assert (Z_SPEC : Z \subseteq X /\ isDirected Z /\ Cardinal2.isFiniteEnsemble Z /\ (forall m : nat, m <= S n -> pick m \in Z)).
     { splits.
       - exact Z_SUB.
       - exact Z_DIR.

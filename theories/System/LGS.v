@@ -35,8 +35,7 @@ Qed.
 Lemma all_asciis_complete (c : ascii)
   : c ∈ all_asciis.
 Proof.
-  destruct c as [b0 b1 b2 b3 b4 b5 b6 b7].
-  unfold all_asciis.
+  unfold all_asciis. destruct c as [b0 b1 b2 b3 b4 b5 b6 b7].
   eapply list_bind_complete with (x := b0); [eapply all_bools_complete | ].
   eapply list_bind_complete with (x := b1); [eapply all_bools_complete | ].
   eapply list_bind_complete with (x := b2); [eapply all_bools_complete | ].
@@ -80,15 +79,21 @@ Module LGS (Token : TOKEN_SPEC).
 Module Error.
 
 Inductive t : Set :=
-  | EmptyTokenRule (idx : nat)
+  | NullableTokenRule (idx : nat)
   | NoMatch (rest : list ascii)
   | InternalInvariantBroken.
 
 End Error.
 
 #[universes(polymorphic=yes)]
-Definition ErrM@{u} (A : Type@{u}) : Type@{u} :=
+Definition ErrM@{u | } (A : Type@{u}) : Type@{u} :=
   Error.t + A.
+
+#[universes(polymorphic=yes)]
+Instance ErrM_isMonad@{u} : isMonad@{u u} ErrM@{u} :=
+  { pure {A : Type@{u}} (x : A) := inr x
+  ; bind {A : Type@{u}} {B : Type@{u}} (m : ErrM A) (k : A -> ErrM B) := B.either (@inl _ _) k m
+  }.
 
 Module Input.
 
@@ -150,31 +155,32 @@ Proof.
   - induction e as [ | | c | e1 IH1 e2 IH2 | e1 IH1 e2 IH2 | e IH]; simpl; i; try congruence.
     + econs.
     + rewrite orb_true_iff in H. destruct H as [H | H]; eauto with *.
-    + rewrite andb_true_iff in H. destruct H as (H1 & H2).
-      change (@nil ascii) with ((@nil ascii) ++ (@nil ascii)).
+    + rewrite andb_true_iff in H. destruct H as [H1 H2].
+      change (@nil ascii) with (@nil ascii ++ @nil ascii).
       eauto with *.
     + econs.
-  - enough (CLAIM : forall s, forall e0, s =~= e0 -> s = [] -> nullable e0 = true).
+  - revert e.
+    enough (CLAIM : forall s, forall e, s =~= e -> s = [] -> nullable e = true).
     { i. eapply CLAIM; eauto. }
-    intros s e0 H_IN. induction H_IN; simpl; i; subst; try congruence; eauto.
+    intros s e H_IN. induction H_IN; simpl; i; subst; try congruence; eauto.
     + rewrite orb_true_iff. left. eauto.
     + rewrite orb_true_iff. right. eauto.
-    + pose proof (app_eq_nil _ _ H) as (EQ1 & EQ2). subst s1 s2. ss!.
+    + pose proof (app_eq_nil _ _ H) as [EQ1 EQ2]. subst s1 s2. ss!.
 Qed.
 
-Theorem nullable_spec (e : regex ascii)
+Theorem nullable_true_iff (e : regex ascii)
   : nullable e = true <-> [] \in eval_regex e.
 Proof.
   rewrite eval_regex_good. eapply nullable_similar_spec.
 Qed.
 
-Corollary nullable_false_spec (e : regex ascii)
+Corollary nullable_false_iff (e : regex ascii)
   : nullable e = false <-> (~ [] \in eval_regex e).
 Proof.
   destruct (nullable e) eqn: EQ; split; intros H.
   - congruence.
-  - contradiction H. rewrite <- nullable_spec. exact EQ.
-  - intros IN. rewrite <- nullable_spec in IN. congruence.
+  - contradiction H. rewrite <- nullable_true_iff. exact EQ.
+  - intros IN. rewrite <- nullable_true_iff in IN. congruence.
   - reflexivity.
 Qed.
 
@@ -301,5 +307,60 @@ Qed.
 End BASICS.
 
 End TaggedENFA.
+
+Module Rule.
+
+#[projections(primitive)]
+Record t : Set :=
+  mk
+  { index : nat
+  ; token : Token.t
+  ; regex : regex ascii
+  }.
+
+Definition compile_rule (rule : Rule.t) : ErrM Rule.t :=
+  if nullable rule.(regex) then
+    inl (Error.NullableTokenRule rule.(index))
+  else
+    pure rule.
+
+Theorem compile_rule_spec (rule : Rule.t) (compiled_rule : Rule.t)
+  (COMPILE : compile_rule rule = inr compiled_rule)
+  : forall s, s \in eval_regex rule.(regex) <-> s \in eval_regex compiled_rule.(regex).
+Proof.
+  intros s; split; intros ACCEPTS; unfold compile_rule in COMPILE; now destruct (nullable rule.(regex)) eqn: NULLABLE; inv COMPILE.
+Qed.
+
+Lemma compile_rule_not_match_empty (rule : Rule.t) (compiled_rule : Rule.t)
+  (COMPILE : compile_rule rule = inr compiled_rule)
+  : ~ [] \in eval_regex compiled_rule.(regex).
+Proof.
+  unfold compile_rule in COMPILE; destruct (nullable rule.(regex)) eqn: NULLABLE; inv COMPILE; now rewrite <- nullable_false_iff.
+Qed.
+
+Lemma possible_output_of_compile_rule (rule : Rule.t) (RET : ErrM Rule.t)
+  (H_RET : compile_rule rule = RET)
+  : match RET with
+    | inl (Error.NoMatch rest) => False
+    | inl Error.InternalInvariantBroken => False
+    | _ => True
+    end.
+Proof.
+  subst RET; unfold compile_rule; destruct (nullable rule.(regex)); simpl; eauto.
+Qed.
+
+Fixpoint compile_rules (rules : list Rule.t) {struct rules} : ErrM (list Rule.t) :=
+  match rules with
+  | [] => pure (@nil Rule.t)
+  | rule :: rules => liftM2 (@cons Rule.t) (compile_rule rule) (compile_rules rules)
+  end.
+
+Definition raws : list Rule.t :=
+  L.mapi_from 1 (fun index => fun '(token, regex) => Rule.mk index token regex) Token.rules.
+
+Definition compileds : ErrM (list Rule.t) :=
+  compile_rules raws.
+
+End Rule.
 
 End LGS.
