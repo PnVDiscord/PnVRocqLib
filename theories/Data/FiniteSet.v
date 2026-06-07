@@ -164,6 +164,68 @@ Proof.
 Qed.
 
 #[universes(polymorphic=yes)]
+Fixpoint index_of@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A) {struct xs} : nat :=
+  match xs with
+  | [] => O
+  | x' :: xs' => if eq_dec x x' then O else S (index_of x xs')
+  end.
+
+#[universes(polymorphic=yes)]
+Definition lookup@{u} {A : Type@{u}} (default : A) (n : nat) (xs : list A) : A :=
+  nth n xs default.
+
+#[universes(polymorphic=yes)]
+Lemma lookup_index_of@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A) (default : A)
+  (IN : x ∈ xs)
+  : lookup default (index_of x xs) xs = x.
+Proof.
+  induction xs as [ | x' xs IH]; simpl in IN |- *; [contradiction | ].
+  destruct (eq_dec x x') as [EQ | NE].
+  - symmetry. exact EQ.
+  - destruct IN as [EQ | IN]; [contradiction NE; symmetry; exact EQ | ].
+    simpl. eapply IH. exact IN.
+Qed.
+
+#[universes(polymorphic=yes)]
+Lemma index_of_lt@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A)
+  (IN : x ∈ xs)
+  : index_of x xs < length xs.
+Proof.
+  induction xs as [ | x' xs IH]; simpl in IN |- *; [contradiction | ].
+  destruct (eq_dec x x') as [EQ | NE]; [lia | ].
+  destruct IN as [EQ | IN]; [contradiction NE; symmetry; exact EQ | ].
+  pose proof (IH IN). lia.
+Qed.
+
+#[universes(polymorphic=yes)]
+Lemma index_of_in_seq@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A)
+  (IN : x ∈ xs)
+  : index_of x xs ∈ seq 0 (length xs).
+Proof.
+  rewrite in_seq. pose proof (index_of_lt x xs IN). lia.
+Qed.
+
+#[universes(polymorphic=yes)]
+Lemma index_of_inj@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (y : A) (xs : list A) (default : A)
+  (IN_X : x ∈ xs)
+  (IN_Y : y ∈ xs)
+  (EQ : index_of x xs = index_of y xs)
+  : x = y.
+Proof.
+  pose proof (lookup_index_of x xs default IN_X) as Hx.
+  pose proof (lookup_index_of y xs default IN_Y) as Hy.
+  rewrite EQ in Hx. congruence.
+Qed.
+
+#[universes(polymorphic=yes)]
+Lemma lookup_in@{u} {A : Type@{u}} (default : A) (n : nat) (xs : list A)
+  (LT : n < length xs)
+  : lookup default n xs ∈ xs.
+Proof.
+  unfold lookup. eapply nth_In. exact LT.
+Qed.
+
+#[universes(polymorphic=yes)]
 Definition product@{u v} {A : Type@{u}} {B : Type@{v}} (xs : list A) (ys : list B) : list (A * B) :=
   xs >>= fun x => ys >>= fun y => pure (x, y).
 
@@ -230,4 +292,38 @@ Lemma list_pure_complete {A : Type} (x : A)
   : x ∈ pure x.
 Proof.
   change (x ∈ [x]). left. reflexivity.
+Qed.
+
+Lemma forallb_false_exists {A : Type} (p : A -> bool) (xs : list A)
+  (FORALL : forallb p xs = false)
+  : exists x, x ∈ xs /\ p x = false.
+Proof.
+  induction xs as [ | x xs IH]; simpl in FORALL; [inv FORALL | ].
+  rewrite andb_false_iff in FORALL. destruct FORALL as [PX | FORALL].
+  - exists x. split; [left; reflexivity | exact PX].
+  - pose proof (IH FORALL) as (y & IN & PY). exists y. split; [right; exact IN | exact PY].
+Qed.
+
+Lemma NoDup_exists_injective_length {A : Type} {B : Type} `{B_hasEqDec : hasEqDec B} (xs : list A) (ys : list B) (R : A -> B -> Prop)
+  (NO_DUP : NoDup xs)
+  (TOTAL : forall x, x ∈ xs -> exists y, y ∈ ys /\ R x y)
+  (INJ : forall x1, forall x2, forall y, x1 ∈ xs -> x2 ∈ xs -> R x1 y -> R x2 y -> x1 = x2)
+  : length xs <= length ys.
+Proof.
+  revert ys TOTAL INJ.
+  induction NO_DUP as [ | x xs NOT_IN NO_DUP IH]; intros ys TOTAL INJ; simpl; [lia | ].
+  pose proof (TOTAL x (or_introl eq_refl)) as (y & IN_Y & R_XY).
+  enough (LE : length xs <= length (remove eq_dec y ys)).
+  { pose proof (remove_length_lt y ys IN_Y). lia. }
+  eapply IH.
+  - intros x' IN_XS.
+    pose proof (TOTAL x' (or_intror IN_XS)) as (y' & IN_Y' & R_XY').
+    exists y'. split; [ | exact R_XY'].
+    rewrite L.in_remove_iff. split; [exact IN_Y' | ].
+    intros EQ. subst y'.
+    assert (x' = x) as EQ.
+    { eapply INJ; [right; exact IN_XS | left; reflexivity | exact R_XY' | exact R_XY]. }
+    subst x'. contradiction.
+  - intros x1 x2 y0 IN1 IN2 R1 R2.
+    eapply INJ; [right; exact IN1 | right; exact IN2 | exact R1 | exact R2].
 Qed.

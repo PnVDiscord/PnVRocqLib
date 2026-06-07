@@ -3,9 +3,11 @@ Require Import Stdlib.Strings.String.
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Control.Monad.
 Require Import PnV.Data.FiniteSet.
+Require Import PnV.Data.Graph.
 Require Import PnV.System.Regex.
 
 Import DoNotations.
+Import DigraphFixedpoint.
 
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "=~=" := (is_similar_to (Similarity := Re.in_regex eq)) : type_scope.
@@ -45,6 +47,17 @@ Proof.
   eapply list_bind_complete with (x := b6); [eapply all_bools_complete | ].
   eapply list_bind_complete with (x := b7); [eapply all_bools_complete | ].
   eapply list_pure_complete.
+Qed.
+
+Lemma list_bind_sound {A : Type} {B : Type} (xs : list A) (k : A -> list B) (y : B)
+  (IN : y ∈ (xs >>= k))
+  : exists x, x ∈ xs /\ y ∈ k x.
+Proof.
+  induction xs as [ | x xs IH]; simpl in IN; [contradiction | ].
+  rewrite in_app_iff in IN. destruct IN as [IN | IN].
+  - exists x. split; [left; reflexivity | exact IN].
+  - pose proof (IH IN) as (x' & IN_XS & IN_K).
+    exists x'. split; [right; exact IN_XS | exact IN_K].
 Qed.
 
 #[global]
@@ -203,23 +216,23 @@ Proof.
 Defined.
 
 Definition compile_rule (rule : Rule.t) : BuildErrorM Rule.t :=
-  if nullable rule.(regex) then
-    inl (BuildError.NullableTokenRule rule.(index))
+  if nullable rule.(Rule.regex) then
+    inl (BuildError.NullableTokenRule rule.(Rule.index))
   else
     pure rule.
 
 Theorem compile_rule_spec (rule : Rule.t) (compiled_rule : Rule.t)
   (COMPILE : compile_rule rule = inr compiled_rule)
-  : forall s, s \in eval_regex rule.(regex) <-> s \in eval_regex compiled_rule.(regex).
+  : forall s, s \in eval_regex rule.(Rule.regex) <-> s \in eval_regex compiled_rule.(Rule.regex).
 Proof.
-  intros s; split; intros ACCEPTS; unfold compile_rule in COMPILE; now destruct (nullable rule.(regex)) eqn: NULLABLE; inv COMPILE.
+  intros s; split; intros ACCEPTS; unfold compile_rule in COMPILE; now destruct (nullable rule.(Rule.regex)) eqn: NULLABLE; inv COMPILE.
 Qed.
 
 Lemma compile_rule_not_match_empty (rule : Rule.t) (compiled_rule : Rule.t)
   (COMPILE : compile_rule rule = inr compiled_rule)
-  : ~ ([] \in eval_regex compiled_rule.(regex)).
+  : ~ ([] \in eval_regex compiled_rule.(Rule.regex)).
 Proof.
-  unfold compile_rule in COMPILE; destruct (nullable rule.(regex)) eqn: NULLABLE; inv COMPILE; now rewrite <- nullable_false_iff.
+  unfold compile_rule in COMPILE; destruct (nullable rule.(Rule.regex)) eqn: NULLABLE; inv COMPILE; now rewrite <- nullable_false_iff.
 Qed.
 
 Fixpoint compile_rules (rules : list Rule.t) {struct rules} : BuildErrorM (list Rule.t) :=
@@ -253,14 +266,14 @@ Record t : Type :=
 #[global] Existing Instance state_hasEqDec.
 
 Definition accept_state (M : TaggedENFA.t) : Set :=
-  M.(state) * Token.t.
+  M.(TaggedENFA.state) * Token.t.
 
 Variant okay (M : TaggedENFA.t) : Prop :=
   | okay_intro
-    (start_okay : M.(start_state) ∈ M.(states))
-    (accept_states_okay : forall q, forall tag, (q, tag) ∈ M.(accept_states) -> q ∈ M.(states))
-    (eps_step_okay : forall q, forall q', q ∈ M.(states) -> q' ∈ M.(eps_step) q -> q' ∈ M.(states))
-    (char_step_okay : forall q, forall q', forall c, q ∈ M.(states) -> q' ∈ M.(char_step) q c -> q' ∈ M.(states)).
+    (start_okay : M.(TaggedENFA.start_state) ∈ M.(TaggedENFA.states))
+    (accept_states_okay : forall q, forall tag, (q, tag) ∈ M.(TaggedENFA.accept_states) -> q ∈ M.(TaggedENFA.states))
+    (eps_step_okay : forall q, forall q', q ∈ M.(TaggedENFA.states) -> q' ∈ M.(TaggedENFA.eps_step) q -> q' ∈ M.(TaggedENFA.states))
+    (char_step_okay : forall q, forall q', forall c, q ∈ M.(TaggedENFA.states) -> q' ∈ M.(TaggedENFA.char_step) q c -> q' ∈ M.(TaggedENFA.states)).
 
 Section DELTA_STAR.
 
@@ -346,30 +359,30 @@ Section BASICS.
 
 Variable M : TaggedENFA.t.
 
-#[local] Notation Q := M.(state).
-#[local] Notation M_delta_star := (delta_star M.(eps_step) M.(char_step)).
-#[local] Notation M_eclosure := (eclosure M.(eps_step)).
+#[local] Notation Q := M.(TaggedENFA.state).
+#[local] Notation M_delta_star := (delta_star M.(TaggedENFA.eps_step) M.(TaggedENFA.char_step)).
+#[local] Notation M_eclosure := (eclosure M.(TaggedENFA.eps_step)).
 
 Lemma eclosure_okay (q1 : Q) (q2 : Q)
   (OKAY : TaggedENFA.okay M)
-  (IN : q1 ∈ M.(states))
+  (IN : q1 ∈ M.(TaggedENFA.states))
   (H_eclosure : q2 \in M_eclosure q1)
-  : q2 ∈ M.(states).
+  : q2 ∈ M.(TaggedENFA.states).
 Proof.
   destruct OKAY as [_ _ ? _]; induction H_eclosure as [q | q q1' q2' STEP REST IH]; simpl; eauto with *.
 Qed.
 
 Lemma delta_star_okay (q1 : Q) (q2 : Q) (s : Input.t)
   (OKAY : TaggedENFA.okay M)
-  (IN : q1 ∈ M.(states))
+  (IN : q1 ∈ M.(TaggedENFA.states))
   (H_delta_star : q2 \in M_delta_star q1 s)
-  : q2 ∈ M.(states).
+  : q2 ∈ M.(TaggedENFA.states).
 Proof.
   destruct OKAY as [_ _ ? ?]; induction H_delta_star as [q | q q1' q2' s STEP REST IH | q q1' q2' c s STEP REST IH]; simpl; eauto with *.
 Qed.
 
 Definition accepts (s : Input.t) (tag : Token.t) : Prop :=
-  exists qf, qf \in M_delta_star M.(start_state) s /\ (qf, tag) ∈ M.(accept_states).
+  exists qf, qf \in M_delta_star M.(TaggedENFA.start_state) s /\ (qf, tag) ∈ M.(TaggedENFA.accept_states).
 
 Definition accepted_tags (s : Input.t) : ensemble Token.t :=
   fun tag => accepts s tag.
@@ -1145,6 +1158,54 @@ Proof.
       repeat (split; [lia | eauto]).
 Qed.
 
+Lemma fragments2TaggedENFA_okay rules qmax frags
+  (FRAGS : rules2fragments 1 rules = (qmax, frags))
+  : TaggedENFA.okay (fragments2TaggedENFA qmax frags).
+Proof.
+  constructor; simpl.
+  - rewrite in_seq. pose proof (rules2fragments_bounds _ _ _ _ FRAGS) as [LE _]. lia.
+  - intros q tag ACCEPT.
+    pose proof (fragment_accept_states_sound _ _ _ ACCEPT) as (rule & frag & IN_FRAG & ACCEPT_EQ & TOKEN_EQ).
+    subst q tag.
+    pose proof (rules2fragments_bounds _ _ _ _ FRAGS) as [_ BOUND].
+    pose proof (BOUND _ _ IN_FRAG) as (qi_rule & qf & REGEX & BOUNDS & LE_START & LT_END).
+    destruct BOUNDS as [_ ACCEPT_EQ _ _ _]. subst qf.
+    rewrite in_seq. lia.
+  - intros q q' IN_STATES STEP.
+    pose proof (eps_step_from_edges_sound _ _ _ STEP) as IN_EDGE.
+    destruct (eq_dec q 0) as [EQ | NE].
+    + subst q.
+      assert (QI_POS : 0 < 1) by lia.
+      pose proof (fragment_eps_edges_start_sound _ _ _ _ _ FRAGS QI_POS IN_EDGE) as (rule & frag & qi_rule & qf & IN_FRAG & REGEX & START_EQ).
+      subst q'.
+      pose proof (rules2fragments_bounds _ _ _ _ FRAGS) as [_ BOUND].
+      pose proof (BOUND _ _ IN_FRAG) as (qi_rule' & qf' & REGEX' & BOUNDS & LE_START & LT_END).
+      pose proof (regex2fragment_same_fragment _ _ _ _ _ _ REGEX REGEX') as [EQ_QI EQ_QF].
+      subst qi_rule' qf'.
+      destruct BOUNDS as [START_EQ _ LT _ _]. subst.
+      rewrite in_seq. lia.
+    + pose proof (fragment_eps_edges_owner _ _ _ _ _ _ FRAGS IN_EDGE NE) as (rule & frag & qi_rule & qf & IN_FRAG & REGEX & BOUNDS & LE_START & LT_END & RANGE & IN_EDGE').
+      destruct BOUNDS as [_ _ _ EPS _].
+      pose proof (EPS _ IN_EDGE') as RANGE'.
+      unfold eps_edge_in_range in RANGE'. simpl in RANGE'.
+      rewrite in_seq. lia.
+  - intros q q' c IN_STATES STEP.
+    pose proof (char_step_from_edges_sound _ _ _ _ STEP) as (edge & IN_EDGE & SRC & LABEL & DST).
+    subst q q' c.
+    pose proof (fragment_char_edges_owner _ _ _ _ _ FRAGS IN_EDGE) as (rule & frag & qi_rule & qf & IN_FRAG & REGEX & BOUNDS & LE_START & LT_END & RANGE & IN_EDGE').
+    destruct BOUNDS as [_ _ _ _ CHAR].
+    pose proof (CHAR _ IN_EDGE') as RANGE'.
+    unfold char_edge_in_range in RANGE'. simpl in RANGE'.
+    rewrite in_seq. lia.
+Qed.
+
+Theorem mkUnitedTaggedENFA_okay rules
+  : TaggedENFA.okay (mkUnitedTaggedENFA rules).
+Proof.
+  unfold mkUnitedTaggedENFA. destruct (rules2fragments 1 rules) as [qmax frags] eqn: FRAGS.
+  eapply fragments2TaggedENFA_okay. exact FRAGS.
+Qed.
+
 Lemma fragment_eps_edges_isolate qi rules qmax frags rule frag qi_rule qf q q'
   (FRAGS : rules2fragments qi rules = (qmax, frags))
   (IN_FRAG : (rule, frag) ∈ frags)
@@ -1809,7 +1870,7 @@ End Thompson's_construction.
 
 End TaggedENFA.
 
-Module DFA.
+Module TaggedDFA.
 
 #[projections(primitive)]
 Record t : Type :=
@@ -1824,23 +1885,197 @@ Record t : Type :=
 
 #[global] Existing Instance state_hasEqDec.
 
-Fixpoint delta (M : t) (q : M.(state)) (s : Input.t) {struct s} : M.(state) :=
+Fixpoint delta (M : TaggedDFA.t) (q : M.(TaggedDFA.state)) (s : Input.t) {struct s} : M.(TaggedDFA.state) :=
   match s with
   | [] => q
-  | c :: s' => delta M (M.(transition) q c) s'
+  | c :: s' => delta M (M.(TaggedDFA.transition) q c) s'
   end.
 
-Definition accepts (M : t) (s : Input.t) (tag : Token.t) : Prop :=
-  (delta M M.(start_state) s, tag) ∈ M.(accept_states).
+Definition accepts (M : TaggedDFA.t) (s : Input.t) (tag : Token.t) : Prop :=
+  (delta M M.(TaggedDFA.start_state) s, tag) ∈ M.(TaggedDFA.accept_states).
 
-Definition accepted_tags (M : t) (s : Input.t) : ensemble Token.t :=
+Definition accepted_tags (M : TaggedDFA.t) (s : Input.t) : ensemble Token.t :=
   fun tag => accepts M s tag.
+
+Definition state_reachable (M : TaggedDFA.t) (q : M.(TaggedDFA.state)) : Prop :=
+  exists s, q = delta M M.(TaggedDFA.start_state) s.
+
+Definition all_states_reachable (M : TaggedDFA.t) : Prop :=
+  forall q, q ∈ M.(TaggedDFA.states) -> state_reachable M q.
+
+Definition language_equiv (M1 : TaggedDFA.t) (M2 : TaggedDFA.t) : Prop :=
+  forall s, forall tag, accepts M1 s tag <-> accepts M2 s tag.
+
+Variant okay (M : TaggedDFA.t) : Prop :=
+  | okay_intro
+    (start_okay : M.(TaggedDFA.start_state) ∈ M.(TaggedDFA.states))
+    (accept_states_okay : forall q, forall tag, (q, tag) ∈ M.(TaggedDFA.accept_states) -> q ∈ M.(TaggedDFA.states))
+    (transition_okay : forall q, forall c, q ∈ M.(TaggedDFA.states) -> M.(TaggedDFA.transition) q c ∈ M.(TaggedDFA.states)).
+
+Lemma delta_app (M : TaggedDFA.t) (q : M.(TaggedDFA.state)) (s1 : Input.t) (s2 : Input.t)
+  : delta M q (s1 ++ s2) = delta M (delta M q s1) s2.
+Proof.
+  revert q. induction s1 as [ | c s1 IH]; intros q; simpl; eauto.
+Qed.
+
+Lemma delta_okay (M : TaggedDFA.t) (q : M.(TaggedDFA.state)) (s : Input.t)
+  (OKAY : okay M)
+  (IN : q ∈ M.(TaggedDFA.states))
+  : delta M q s ∈ M.(TaggedDFA.states).
+Proof.
+  revert q IN. induction s as [ | c s IH]; intros q IN; simpl; [exact IN | ].
+  eapply IH. destruct OKAY as [_ _ TRANS_OKAY]. eapply TRANS_OKAY. exact IN.
+Qed.
+
+Section NUMBER_STATES.
+
+Variable M : TaggedDFA.t.
+
+#[local] Notation Q := M.(TaggedDFA.state).
+
+Definition state_number (q : Q) : nat :=
+  index_of q M.(TaggedDFA.states).
+
+Definition numbered_state_denote (n : nat) : Q :=
+  lookup M.(TaggedDFA.start_state) n M.(TaggedDFA.states).
+
+Definition numbered_states : list nat :=
+  seq 0 (length M.(TaggedDFA.states)).
+
+Lemma numbered_states_NoDup
+  : NoDup numbered_states.
+Proof.
+  unfold numbered_states. eapply seq_NoDup.
+Qed.
+
+Definition numbered_start_state : nat :=
+  state_number M.(TaggedDFA.start_state).
+
+Definition numbered_transition (n : nat) (c : ascii) : nat :=
+  state_number (M.(TaggedDFA.transition) (numbered_state_denote n) c).
+
+Definition numbered_accept_states : list (nat * Token.t) :=
+  M.(TaggedDFA.accept_states) >>= fun '(q, tag) => [(state_number q, tag)].
+
+Definition number_states : TaggedDFA.t :=
+  {|
+    state := nat;
+    state_hasEqDec := nat_hasEqDec;
+    states := numbered_states;
+    start_state := numbered_start_state;
+    accept_states := numbered_accept_states;
+    transition := numbered_transition;
+  |}.
+
+Theorem number_states_states_NoDup
+  : NoDup number_states.(TaggedDFA.states).
+Proof.
+  simpl. eapply numbered_states_NoDup.
+Qed.
+
+Lemma numbered_state_denote_state_number (q : Q)
+  (IN : q ∈ M.(TaggedDFA.states))
+  : numbered_state_denote (state_number q) = q.
+Proof.
+  unfold numbered_state_denote, state_number.
+  eapply lookup_index_of. exact IN.
+Qed.
+
+Lemma numbered_state_denote_in (n : nat)
+  (IN : n ∈ numbered_states)
+  : numbered_state_denote n ∈ M.(TaggedDFA.states).
+Proof.
+  unfold numbered_states, numbered_state_denote in *.
+  rewrite in_seq in IN. eapply lookup_in. lia.
+Qed.
+
+Lemma numbered_accept_states_complete (q : Q) (tag : Token.t)
+  (ACCEPT : (q, tag) ∈ M.(TaggedDFA.accept_states))
+  : (state_number q, tag) ∈ numbered_accept_states.
+Proof.
+  unfold numbered_accept_states.
+  eapply list_bind_complete with (x := (q, tag)); [exact ACCEPT | ].
+  simpl. left. reflexivity.
+Qed.
+
+Lemma numbered_accept_states_sound (n : nat) (tag : Token.t)
+  (ACCEPT : (n, tag) ∈ numbered_accept_states)
+  : exists q, (q, tag) ∈ M.(TaggedDFA.accept_states) /\ n = state_number q.
+Proof.
+  unfold numbered_accept_states in ACCEPT.
+  pose proof (list_bind_sound _ _ _ ACCEPT) as ([q tag'] & ACCEPT' & IN).
+  simpl in IN. destruct IN as [EQ | []]. inv EQ.
+  exists q. eauto.
+Qed.
+
+Lemma numbered_delta (q : Q) (s : Input.t)
+  (OKAY : okay M)
+  (IN : q ∈ M.(TaggedDFA.states))
+  : delta number_states (state_number q) s = state_number (delta M q s).
+Proof.
+  revert q IN. induction s as [ | c s IH]; intros q IN; simpl; [reflexivity | ].
+  unfold numbered_transition.
+  rewrite numbered_state_denote_state_number; [ | exact IN].
+  eapply IH. destruct OKAY as [_ _ TRANS_OKAY]. eapply TRANS_OKAY. exact IN.
+Qed.
+
+Theorem number_states_sound (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (ACCEPT : accepts number_states s tag)
+  : accepts M s tag.
+Proof.
+  unfold accepts in ACCEPT |- *. simpl in ACCEPT.
+  destruct OKAY as [START_OKAY ACCEPT_OKAY TRANS_OKAY].
+  unfold numbered_start_state in ACCEPT.
+  assert (NUMBERED_DELTA : delta number_states (state_number M.(TaggedDFA.start_state)) s = state_number (delta M M.(TaggedDFA.start_state) s)).
+  { eapply numbered_delta; [econs; eauto | exact START_OKAY]. }
+  rewrite NUMBERED_DELTA in ACCEPT.
+  pose proof (numbered_accept_states_sound _ _ ACCEPT) as (q & ACCEPT_Q & EQ).
+  assert (DELTA_IN : delta M M.(TaggedDFA.start_state) s ∈ M.(TaggedDFA.states)).
+  { eapply delta_okay; [econs; eauto | exact START_OKAY]. }
+  assert (Q_IN : q ∈ M.(TaggedDFA.states)) by (eapply ACCEPT_OKAY; exact ACCEPT_Q).
+  pose proof (index_of_inj _ _ M.(TaggedDFA.states) M.(TaggedDFA.start_state) DELTA_IN Q_IN EQ) as DELTA_EQ.
+  subst q. exact ACCEPT_Q.
+Qed.
+
+Theorem number_states_complete (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (ACCEPT : accepts M s tag)
+  : accepts number_states s tag.
+Proof.
+  unfold accepts in ACCEPT |- *. simpl.
+  destruct OKAY as [START_OKAY ACCEPT_OKAY TRANS_OKAY].
+  unfold numbered_start_state.
+  assert (NUMBERED_DELTA : delta number_states (state_number M.(TaggedDFA.start_state)) s = state_number (delta M M.(TaggedDFA.start_state) s)).
+  { eapply numbered_delta; [econs; eauto | exact START_OKAY]. }
+  rewrite NUMBERED_DELTA.
+  eapply numbered_accept_states_complete. exact ACCEPT.
+Qed.
+
+Theorem number_states_okay
+  (OKAY : okay M)
+  : okay number_states.
+Proof.
+  destruct OKAY as [START_OKAY ACCEPT_OKAY TRANS_OKAY].
+  constructor; simpl.
+  - eapply index_of_in_seq. exact START_OKAY.
+  - intros n tag ACCEPT.
+    pose proof (numbered_accept_states_sound n tag ACCEPT) as (q & ACCEPT_Q & EQ).
+    subst n. eapply index_of_in_seq. eapply ACCEPT_OKAY. exact ACCEPT_Q.
+  - intros n c IN.
+    unfold numbered_transition. eapply index_of_in_seq.
+    eapply TRANS_OKAY. eapply numbered_state_denote_in. exact IN.
+Qed.
+
+End NUMBER_STATES.
 
 Section SUBSET_CONSTRUCTION.
 
 Variable M : TaggedENFA.t.
 
 #[local] Notation Q := M.(TaggedENFA.state).
+#[local] Notation M_eclosure := (TaggedENFA.eclosure M.(TaggedENFA.eps_step)).
+#[local] Notation M_delta_star := (TaggedENFA.delta_star M.(TaggedENFA.eps_step) M.(TaggedENFA.char_step)).
 
 Definition subset_state : Set :=
   list Q.
@@ -1866,8 +2101,233 @@ Definition eclose_step (qs : subset_state) : subset_state :=
 Definition eclose (qs : subset_state) : subset_state :=
   iter (length M.(TaggedENFA.states)) eclose_step (normalize qs).
 
+Lemma normalize_complete (qs : subset_state) (q : Q)
+  (STATES : q ∈ M.(TaggedENFA.states))
+  (IN : q ∈ qs)
+  : q ∈ normalize qs.
+Proof.
+  unfold normalize. rewrite filter_In. split; [exact STATES | ].
+  now rewrite mem_true_iff.
+Qed.
+
+Lemma normalize_sound (qs : subset_state) (q : Q)
+  (IN : q ∈ normalize qs)
+  : q ∈ qs /\ q ∈ M.(TaggedENFA.states).
+Proof.
+  unfold normalize in IN. rewrite filter_In in IN.
+  destruct IN as [STATES MEM]. split; [ | exact STATES].
+  now rewrite mem_true_iff in MEM.
+Qed.
+
+Lemma move_complete (qs : subset_state) (c : ascii) (q : Q) (q' : Q)
+  (IN : q ∈ qs)
+  (STEP : q' ∈ M.(TaggedENFA.char_step) q c)
+  : q' ∈ move qs c.
+Proof.
+  unfold move. eapply list_bind_complete; eauto.
+Qed.
+
+Lemma move_sound (qs : subset_state) (c : ascii) (q' : Q)
+  (IN : q' ∈ move qs c)
+  : exists q, q ∈ qs /\ q' ∈ M.(TaggedENFA.char_step) q c.
+Proof.
+  unfold move in IN. eapply list_bind_sound. exact IN.
+Qed.
+
+Lemma eps_move_complete (qs : subset_state) (q : Q) (q' : Q)
+  (IN : q ∈ qs)
+  (STEP : q' ∈ M.(TaggedENFA.eps_step) q)
+  : q' ∈ eps_move qs.
+Proof.
+  unfold eps_move. eapply list_bind_complete; eauto.
+Qed.
+
+Lemma eps_move_sound (qs : subset_state) (q' : Q)
+  (IN : q' ∈ eps_move qs)
+  : exists q, q ∈ qs /\ q' ∈ M.(TaggedENFA.eps_step) q.
+Proof.
+  unfold eps_move in IN. eapply list_bind_sound. exact IN.
+Qed.
+
+Lemma eclose_step_sound (qs : subset_state) (q' : Q)
+  (IN : q' ∈ eclose_step qs)
+  : exists q, q ∈ qs /\ q' \in M_eclosure q.
+Proof.
+  unfold eclose_step in IN.
+  pose proof (normalize_sound _ _ IN) as [IN_UNION _].
+  pose proof (union_sound _ _ _ IN_UNION) as [IN_EPS | IN_QS].
+  - pose proof (eps_move_sound _ _ IN_EPS) as (q & IN_QS & STEP).
+    exists q. split; [exact IN_QS | ].
+    eapply TaggedENFA.eclosure_step; [exact STEP | constructor].
+  - exists q'. split; [exact IN_QS | constructor].
+Qed.
+
+Lemma iter_eclose_step_sound (fuel : nat) (qs : subset_state) (q' : Q)
+  (IN : q' ∈ iter fuel eclose_step qs)
+  : exists q, q ∈ qs /\ q' \in M_eclosure q.
+Proof.
+  revert qs q' IN. induction fuel as [ | fuel IH]; intros qs q' IN; simpl in IN.
+  - exists q'. split; [exact IN | constructor].
+  - pose proof (IH _ _ IN) as (q1 & STEP & REST).
+    pose proof (eclose_step_sound _ _ STEP) as (q0 & IN_QS & CLOS).
+    exists q0. split; [exact IN_QS | ].
+    eapply TaggedENFA.eclosure_trans; eauto.
+Qed.
+
+Lemma eclose_sound (qs : subset_state) (q' : Q)
+  (IN : q' ∈ eclose qs)
+  : exists q, q ∈ qs /\ q' \in M_eclosure q.
+Proof.
+  unfold eclose in IN.
+  pose proof (iter_eclose_step_sound _ _ _ IN) as (q & IN_NORM & CLOS).
+  pose proof (normalize_sound _ _ IN_NORM) as [IN_QS _].
+  exists q. split; [exact IN_QS | exact CLOS].
+Qed.
+
+Definition eps_graph : GRAPH.t :=
+  {|
+    GRAPH.vertices := Q;
+    GRAPH.edges := fun '(q, q') => q' ∈ M.(TaggedENFA.eps_step) q;
+  |}.
+
+#[local] Notation " src ~~~[ w ]~~> tgt " := (@walk eps_graph tgt src w) : type_scope.
+
+Lemma eclosure_walk (q : Q) (q' : Q)
+  (CLOS : q' \in M_eclosure q)
+  : exists w, q ~~~[ w ]~~> q'.
+Proof.
+  induction CLOS as [q | q q1 q2 STEP REST IH].
+  - exists []. constructor.
+  - destruct IH as [w WALK]. exists (q1 :: w). econstructor; eauto.
+Qed.
+
+Lemma eps_walk_states (q : Q) (q' : Q) (w : list Q)
+  (OKAY : TaggedENFA.okay M)
+  (STATE : q ∈ M.(TaggedENFA.states))
+  (WALK : q ~~~[ w ]~~> q')
+  : forall q0, q0 ∈ w -> q0 ∈ M.(TaggedENFA.states).
+Proof.
+  destruct OKAY as [_ _ EPS_OKAY _].
+  induction WALK as [ | q q1 w STEP REST IH]; intros q0 IN; simpl in IN; [contradiction | ].
+  destruct IN as [EQ | IN].
+  - subst q0. eapply EPS_OKAY; eauto.
+  - eapply IH; [eapply EPS_OKAY; eauto | exact IN].
+Qed.
+
+Lemma eclose_step_complete_keep (qs : subset_state) (q : Q)
+  (STATE : q ∈ M.(TaggedENFA.states))
+  (IN : q ∈ qs)
+  : q ∈ eclose_step qs.
+Proof.
+  unfold eclose_step.
+  eapply normalize_complete; [exact STATE | ].
+  eapply union_complete. right. exact IN.
+Qed.
+
+Lemma eclose_step_complete_edge (qs : subset_state) (q : Q) (q' : Q)
+  (STATE : q' ∈ M.(TaggedENFA.states))
+  (IN : q ∈ qs)
+  (STEP : q' ∈ M.(TaggedENFA.eps_step) q)
+  : q' ∈ eclose_step qs.
+Proof.
+  unfold eclose_step.
+  eapply normalize_complete; [exact STATE | ].
+  eapply union_complete. left.
+  eapply eps_move_complete; eauto.
+Qed.
+
+Lemma iter_eclose_step_keeps (fuel : nat) (qs : subset_state) (q : Q)
+  (STATE : q ∈ M.(TaggedENFA.states))
+  (IN : q ∈ qs)
+  : q ∈ iter fuel eclose_step qs.
+Proof.
+  revert qs IN. induction fuel as [ | fuel IH]; intros qs IN; simpl.
+  - exact IN.
+  - eapply IH. eapply eclose_step_complete_keep; eauto.
+Qed.
+
+Lemma iter_eclose_step_walk_complete (fuel : nat) (qs : subset_state) (q : Q) (q' : Q) (w : list Q)
+  (OKAY : TaggedENFA.okay M)
+  (QS_STATES : forall q0, q0 ∈ qs -> q0 ∈ M.(TaggedENFA.states))
+  (IN : q ∈ qs)
+  (WALK : q ~~~[ w ]~~> q')
+  (LENGTH : length w <= fuel)
+  : q' ∈ iter fuel eclose_step qs.
+Proof.
+  revert fuel qs IN QS_STATES LENGTH.
+  induction WALK as [ | q q1 w STEP REST IH]; intros fuel qs IN QS_STATES LENGTH.
+  - eapply iter_eclose_step_keeps; eauto.
+  - destruct fuel as [ | fuel]; simpl in LENGTH; [lia | ].
+    simpl. eapply IH.
+    + eapply eclose_step_complete_edge; eauto.
+      destruct OKAY as [_ _ EPS_OKAY _]. eapply EPS_OKAY; eauto.
+    + intros q0 IN0. pose proof (normalize_sound _ _ IN0) as [_ STATE]. exact STATE.
+    + lia.
+Qed.
+
+Lemma eclose_complete (qs : subset_state) (q : Q) (q' : Q)
+  (OKAY : TaggedENFA.okay M)
+  (QS_STATES : forall q0, q0 ∈ qs -> q0 ∈ M.(TaggedENFA.states))
+  (IN : q ∈ qs)
+  (CLOS : q' \in M_eclosure q)
+  : q' ∈ eclose qs.
+Proof.
+  unfold eclose.
+  pose proof (eclosure_walk _ _ CLOS) as [w WALK].
+  pose proof (@walk_finds_path eps_graph (fun q => fun qs => match L.in_dec (@eq_dec Q M.(TaggedENFA.state_hasEqDec)) q qs with left IN => or_introl IN | right NOT_IN => or_intror NOT_IN end) q q' w WALK) as [p PATH].
+  rewrite path_iff_no_dup_walk in PATH. destruct PATH as [WALK' NO_DUP].
+  eapply iter_eclose_step_walk_complete with (q := q) (w := p); eauto.
+  - intros q0 IN_NORM. pose proof (normalize_sound _ _ IN_NORM) as [_ STATE]. exact STATE.
+  - eapply normalize_complete; [eapply QS_STATES; exact IN | exact IN].
+  - eapply L.NoDup_incl_length; [exact NO_DUP | ].
+    intros q0 IN_P. eapply eps_walk_states; eauto.
+Qed.
+
+Definition subset_state_okay (qs : subset_state) : Prop :=
+  (forall q, q ∈ qs -> q ∈ M.(TaggedENFA.states)) /\ (forall q, forall q', q ∈ qs -> q' \in M_eclosure q -> q' ∈ qs).
+
+Lemma eclose_closed (qs : subset_state) (q : Q) (q' : Q)
+  (OKAY : TaggedENFA.okay M)
+  (QS_STATES : forall q0, q0 ∈ qs -> q0 ∈ M.(TaggedENFA.states))
+  (IN : q ∈ eclose qs)
+  (CLOS : q' \in M_eclosure q)
+  : q' ∈ eclose qs.
+Proof.
+  pose proof (eclose_sound _ _ IN) as (q0 & IN0 & CLOS0).
+  eapply eclose_complete with (q := q0); eauto.
+  eapply TaggedENFA.eclosure_trans; eauto.
+Qed.
+
 Definition subset_states : list subset_state :=
   powerset M.(TaggedENFA.states).
+
+Lemma normalize_in_subset_states (qs : subset_state)
+  : normalize qs ∈ subset_states.
+Proof.
+  unfold subset_states, normalize. eapply filter_in_powerset.
+Qed.
+
+Lemma eclose_step_in_subset_states (qs : subset_state)
+  : eclose_step qs ∈ subset_states.
+Proof.
+  unfold eclose_step. eapply normalize_in_subset_states.
+Qed.
+
+Lemma iter_eclose_step_in_subset_states (fuel : nat) (qs : subset_state)
+  (QS : qs ∈ subset_states)
+  : iter fuel eclose_step qs ∈ subset_states.
+Proof.
+  revert qs QS. induction fuel as [ | fuel IH]; intros qs QS; simpl.
+  - exact QS.
+  - eapply IH. eapply eclose_step_in_subset_states.
+Qed.
+
+Lemma eclose_in_subset_states (qs : subset_state)
+  : eclose qs ∈ subset_states.
+Proof.
+  unfold eclose. eapply iter_eclose_step_in_subset_states.
+  eapply normalize_in_subset_states.
+Qed.
 
 Definition subset_start_state : subset_state :=
   eclose [M.(TaggedENFA.start_state)].
@@ -1875,13 +2335,138 @@ Definition subset_start_state : subset_state :=
 Definition subset_transition (qs : subset_state) (c : ascii) : subset_state :=
   eclose (move qs c).
 
+Lemma subset_start_state_complete
+  (OKAY : TaggedENFA.okay M)
+  : M.(TaggedENFA.start_state) ∈ subset_start_state.
+Proof.
+  unfold subset_start_state.
+  eapply eclose_complete with (q := M.(TaggedENFA.start_state)); eauto.
+  - intros q IN. destruct OKAY as [START_OKAY _ _ _]. destruct IN as [EQ | []]. now subst q.
+  - left. reflexivity.
+  - constructor.
+Qed.
+
+Lemma subset_start_state_sound (q : Q)
+  (IN : q ∈ subset_start_state)
+  : q \in M_eclosure M.(TaggedENFA.start_state).
+Proof.
+  unfold subset_start_state in IN.
+  pose proof (eclose_sound _ _ IN) as (q0 & IN_START & CLOS).
+  destruct IN_START as [EQ | []]. subst q0. exact CLOS.
+Qed.
+
+Lemma subset_start_state_okay
+  (OKAY : TaggedENFA.okay M)
+  : subset_state_okay subset_start_state.
+Proof.
+  split.
+  - intros q IN. pose proof OKAY as [START_OKAY _ _ _].
+    eapply (TaggedENFA.eclosure_okay M M.(TaggedENFA.start_state) q); eauto.
+    eapply subset_start_state_sound. exact IN.
+  - intros q q' IN CLOS.
+    eapply eclose_closed with (q := q); eauto.
+    intros q0 IN0. destruct OKAY as [START_OKAY _ _ _].
+    destruct IN0 as [EQ | []]. now subst q0.
+Qed.
+
+Lemma subset_transition_sound (qs : subset_state) (c : ascii) (q' : Q)
+  (IN : q' ∈ subset_transition qs c)
+  : exists q, exists q1, q ∈ qs /\ q1 ∈ M.(TaggedENFA.char_step) q c /\ q' \in M_eclosure q1.
+Proof.
+  unfold subset_transition in IN.
+  pose proof (eclose_sound _ _ IN) as (q1 & IN_MOVE & CLOS).
+  pose proof (move_sound _ _ _ IN_MOVE) as (q & IN_QS & STEP).
+  exists q, q1. eauto.
+Qed.
+
+Lemma subset_transition_complete (qs : subset_state) (c : ascii) (q : Q) (q1 : Q) (q' : Q)
+  (OKAY : TaggedENFA.okay M)
+  (QS_STATES : forall q0, q0 ∈ qs -> q0 ∈ M.(TaggedENFA.states))
+  (IN : q ∈ qs)
+  (STEP : q1 ∈ M.(TaggedENFA.char_step) q c)
+  (CLOS : q' \in M_eclosure q1)
+  : q' ∈ subset_transition qs c.
+Proof.
+  unfold subset_transition. eapply eclose_complete with (q := q1); eauto.
+  - intros q0 IN_MOVE. pose proof (move_sound _ _ _ IN_MOVE) as (q2 & IN_QS & STEP2).
+    destruct OKAY as [_ _ _ CHAR_OKAY]. eapply CHAR_OKAY; eauto.
+  - eapply move_complete; eauto.
+Qed.
+
+Lemma subset_transition_okay (qs : subset_state) (c : ascii)
+  (OKAY : TaggedENFA.okay M)
+  (QS_OKAY : subset_state_okay qs)
+  : subset_state_okay (subset_transition qs c).
+Proof.
+  destruct QS_OKAY as [QS_STATES QS_CLOSED]. split.
+  - intros q' IN.
+    pose proof (subset_transition_sound _ _ _ IN) as (q & q1 & IN_QS & STEP & CLOS).
+    eapply (TaggedENFA.eclosure_okay M q1 q'); eauto.
+    pose proof OKAY as [_ _ _ CHAR_OKAY]. eapply CHAR_OKAY; eauto.
+  - intros q q' IN CLOS.
+    unfold subset_transition in *.
+    eapply eclose_closed with (q := q); eauto.
+    intros q0 IN_MOVE. pose proof (move_sound _ _ _ IN_MOVE) as (q2 & IN_QS & STEP).
+    destruct OKAY as [_ _ _ CHAR_OKAY]. eapply CHAR_OKAY; eauto.
+Qed.
+
+Lemma subset_transition_in_subset_states (qs : subset_state) (c : ascii)
+  : subset_transition qs c ∈ subset_states.
+Proof.
+  unfold subset_transition. eapply eclose_in_subset_states.
+Qed.
+
 Definition subset_accept_states_of (qs : subset_state) : list (subset_state * Token.t) :=
   M.(TaggedENFA.accept_states) >>= fun '(q, tag) => if mem q qs then [(qs, tag)] else [].
 
 Definition subset_accept_states : list (subset_state * Token.t) :=
   subset_states >>= subset_accept_states_of.
 
-Definition subset_construct : DFA.t :=
+Lemma subset_accept_states_of_complete (qs : subset_state) (q : Q) (tag : Token.t)
+  (ACCEPT : (q, tag) ∈ M.(TaggedENFA.accept_states))
+  (IN : q ∈ qs)
+  : (qs, tag) ∈ subset_accept_states_of qs.
+Proof.
+  unfold subset_accept_states_of.
+  eapply list_bind_complete with (x := (q, tag)); [exact ACCEPT | ].
+  assert (MEM : mem q qs = true) by (rewrite mem_true_iff; exact IN).
+  rewrite MEM. simpl. left. reflexivity.
+Qed.
+
+Lemma subset_accept_states_of_sound (qs : subset_state) (qs0 : subset_state) (tag : Token.t)
+  (ACCEPT : (qs0, tag) ∈ subset_accept_states_of qs)
+  : qs0 = qs /\ (exists q, (q, tag) ∈ M.(TaggedENFA.accept_states) /\ q ∈ qs).
+Proof.
+  unfold subset_accept_states_of in ACCEPT.
+  pose proof (list_bind_sound _ _ _ ACCEPT) as ([q tag'] & ACCEPT' & IN).
+  destruct (mem q qs) eqn: MEM; simpl in IN; [ | contradiction].
+  destruct IN as [EQ | []]. inv EQ.
+  split; [reflexivity | ].
+  exists q. split; [exact ACCEPT' | now rewrite mem_true_iff in MEM].
+Qed.
+
+Lemma subset_accept_states_complete (qs : subset_state) (q : Q) (tag : Token.t)
+  (QS : qs ∈ subset_states)
+  (ACCEPT : (q, tag) ∈ M.(TaggedENFA.accept_states))
+  (IN : q ∈ qs)
+  : (qs, tag) ∈ subset_accept_states.
+Proof.
+  unfold subset_accept_states.
+  eapply list_bind_complete with (x := qs); [exact QS | ].
+  eapply subset_accept_states_of_complete; eauto.
+Qed.
+
+Lemma subset_accept_states_sound (qs : subset_state) (tag : Token.t)
+  (ACCEPT : (qs, tag) ∈ subset_accept_states)
+  : qs ∈ subset_states /\ (exists q, (q, tag) ∈ M.(TaggedENFA.accept_states) /\ q ∈ qs).
+Proof.
+  unfold subset_accept_states in ACCEPT.
+  pose proof (list_bind_sound _ _ _ ACCEPT) as (qs' & QS & ACCEPT').
+  pose proof (subset_accept_states_of_sound qs' qs tag ACCEPT') as (EQ & q & ACCEPT_Q & IN).
+  subst qs'. eauto.
+Qed.
+
+Definition subset_construct : TaggedDFA.t :=
   {|
     state := subset_state;
     state_hasEqDec := list_hasEqDec M.(TaggedENFA.state_hasEqDec);
@@ -1891,52 +2476,571 @@ Definition subset_construct : DFA.t :=
     transition := subset_transition;
   |}.
 
+Lemma subset_delta_in_subset_states (qs : subset_state) (s : Input.t)
+  (QS : qs ∈ subset_states)
+  : TaggedDFA.delta subset_construct qs s ∈ subset_states.
+Proof.
+  revert qs QS. induction s as [ | c s IH]; intros qs QS; simpl.
+  - exact QS.
+  - eapply IH. eapply subset_transition_in_subset_states.
+Qed.
+
+Lemma subset_delta_sound_aux (qs : subset_state) (s : Input.t) (q' : Q)
+  (IN : q' ∈ TaggedDFA.delta subset_construct qs s)
+  : exists q, q ∈ qs /\ q' \in M_delta_star q s.
+Proof.
+  revert qs q' IN. induction s as [ | c s IH]; intros qs q' IN; simpl in IN.
+  - exists q'. split; [exact IN | constructor].
+  - pose proof (IH _ _ IN) as (q1 & IN_TRANS & REST).
+    pose proof (subset_transition_sound _ _ _ IN_TRANS) as (q0 & qchar & IN_QS & STEP & CLOS).
+    exists q0. split; [exact IN_QS | ].
+    eapply TaggedENFA.delta_star_char; [exact STEP | ].
+    eapply (TaggedENFA.delta_star_app qchar q1 q' [] s).
+    + eapply (proj2 (TaggedENFA.delta_star_iff_eclosure qchar q1)). exact CLOS.
+    + exact REST.
+Qed.
+
+Theorem subset_construct_sound (s : Input.t) (tag : Token.t)
+  (ACCEPT : TaggedDFA.accepts subset_construct s tag)
+  : TaggedENFA.accepts M s tag.
+Proof.
+  unfold TaggedDFA.accepts in ACCEPT.
+  pose proof (subset_accept_states_sound _ _ ACCEPT) as (_ & qf & ACCEPT_Q & IN_QS).
+  unfold TaggedENFA.accepts. exists qf. split; [ | exact ACCEPT_Q].
+  pose proof (subset_delta_sound_aux _ _ _ IN_QS) as (q0 & IN_START & REST).
+  pose proof (subset_start_state_sound _ IN_START) as CLOS.
+  eapply (TaggedENFA.delta_star_app M.(TaggedENFA.start_state) q0 qf [] s).
+  - eapply (proj2 (TaggedENFA.delta_star_iff_eclosure M.(TaggedENFA.start_state) q0)). exact CLOS.
+  - exact REST.
+Qed.
+
+Lemma subset_delta_complete_aux (s : Input.t) (q : Q) (q' : Q)
+  (OKAY : TaggedENFA.okay M)
+  (DELTA : q' \in M_delta_star q s)
+  : forall qs, subset_state_okay qs -> q ∈ qs -> q' ∈ TaggedDFA.delta subset_construct qs s.
+Proof.
+  induction DELTA as [q | q q1 q2 s STEP REST IH | q q1 q2 c s STEP REST IH]; intros qs QS_OKAY IN; simpl.
+  - exact IN.
+  - eapply IH; [exact QS_OKAY | ].
+    destruct QS_OKAY as [_ QS_CLOSED].
+    eapply QS_CLOSED; [exact IN | ].
+    eapply TaggedENFA.eclosure_step; [exact STEP | constructor].
+  - eapply IH.
+    + eapply subset_transition_okay; eauto.
+    + eapply subset_transition_complete with (q := q) (q1 := q1); eauto.
+      * destruct QS_OKAY as [QS_STATES _]. exact QS_STATES.
+      * constructor.
+Qed.
+
+Theorem subset_construct_complete
+  (OKAY : TaggedENFA.okay M) (s : Input.t) (tag : Token.t)
+  (ACCEPT : TaggedENFA.accepts M s tag)
+  : TaggedDFA.accepts subset_construct s tag.
+Proof.
+  unfold TaggedENFA.accepts in ACCEPT. destruct ACCEPT as [qf [DELTA ACCEPT_Q]].
+  unfold TaggedDFA.accepts. simpl.
+  eapply subset_accept_states_complete with (q := qf).
+  - eapply subset_delta_in_subset_states. eapply eclose_in_subset_states.
+  - exact ACCEPT_Q.
+  - eapply subset_delta_complete_aux with (q := M.(TaggedENFA.start_state)); eauto.
+    + eapply subset_start_state_okay; eauto.
+    + eapply subset_start_state_complete; eauto.
+Qed.
+
+Theorem subset_construct_okay
+  (OKAY : TaggedENFA.okay M)
+  : okay subset_construct.
+Proof.
+  constructor; simpl.
+  - eapply eclose_in_subset_states.
+  - intros qs tag ACCEPT.
+    pose proof (subset_accept_states_sound qs tag ACCEPT) as [QS _].
+    exact QS.
+  - intros qs c QS. eapply subset_transition_in_subset_states.
+Qed.
+
 End SUBSET_CONSTRUCTION.
 
 Section MINIMISATION.
 
-Variable M : DFA.t.
+Variable M : TaggedDFA.t.
 
-#[local] Notation Q := M.(state).
+#[local] Notation Q := M.(TaggedDFA.state).
 
 Definition accepts_from (q : Q) (s : Input.t) (tag : Token.t) : Prop :=
-  (delta M q s, tag) ∈ M.(accept_states).
+  (delta M q s, tag) ∈ M.(TaggedDFA.accept_states).
+
+Definition right_language_equiv (q1 : Q) (q2 : Q) : Prop :=
+  forall s, forall tag, accepts_from q1 s tag <-> accepts_from q2 s tag.
 
 Definition accepting_tags_from (q : Q) : list Token.t :=
-  M.(accept_states) >>= fun '(q', tag) => if eq_dec q q' then [tag] else [].
+  M.(TaggedDFA.accept_states) >>= fun '(q', tag) => if eq_dec q q' then [tag] else [].
+
+Lemma accepting_tags_from_complete (q : Q) (tag : Token.t)
+  (ACCEPT : (q, tag) ∈ M.(TaggedDFA.accept_states))
+  : tag ∈ accepting_tags_from q.
+Proof.
+  unfold accepting_tags_from.
+  eapply list_bind_complete with (x := (q, tag)); [exact ACCEPT | ].
+  destruct (eq_dec q q) as [_ | NE]; [simpl; left; reflexivity | contradiction NE; reflexivity].
+Qed.
+
+Lemma accepting_tags_from_sound (q : Q) (tag : Token.t)
+  (ACCEPT : tag ∈ accepting_tags_from q)
+  : (q, tag) ∈ M.(TaggedDFA.accept_states).
+Proof.
+  unfold accepting_tags_from in ACCEPT.
+  pose proof (list_bind_sound _ _ _ ACCEPT) as ([q' tag'] & ACCEPT' & IN).
+  destruct (eq_dec q q') as [EQ | NE]; simpl in IN; [ | contradiction].
+  subst q'. destruct IN as [EQ_TAG | []]. inv EQ_TAG. exact ACCEPT'.
+Qed.
 
 Definition same_accepting_tagsb (q1 : Q) (q2 : Q) : bool :=
-  forallb (fun '(_, tag) => eqb (mem (q1, tag) M.(accept_states)) (mem (q2, tag) M.(accept_states))) M.(accept_states).
+  forallb (fun '(_, tag) => eqb (mem (q1, tag) M.(TaggedDFA.accept_states)) (mem (q2, tag) M.(TaggedDFA.accept_states))) M.(TaggedDFA.accept_states).
+
+Lemma same_accepting_tagsb_refl (q : Q)
+  : same_accepting_tagsb q q = true.
+Proof.
+  unfold same_accepting_tagsb. rewrite forallb_forall.
+  intros [q' tag] IN. simpl. now rewrite eqb_eq.
+Qed.
+
+Lemma same_accepting_tagsb_sound (q1 : Q) (q2 : Q) (tag : Token.t)
+  (SAME : same_accepting_tagsb q1 q2 = true)
+  (ACCEPT : (q1, tag) ∈ M.(TaggedDFA.accept_states))
+  : (q2, tag) ∈ M.(TaggedDFA.accept_states).
+Proof.
+  unfold same_accepting_tagsb in SAME. rewrite forallb_forall in SAME.
+  pose proof (SAME (q1, tag) ACCEPT) as EQB. simpl in EQB.
+  assert (MEM1 : mem (q1, tag) M.(TaggedDFA.accept_states) = true) by (now rewrite mem_true_iff).
+  rewrite MEM1 in EQB. rewrite eqb_eq in EQB.
+  rewrite <- mem_true_iff. now symmetry.
+Qed.
+
+Lemma same_accepting_tagsb_complete (q1 : Q) (q2 : Q) (tag : Token.t)
+  (SAME : same_accepting_tagsb q1 q2 = true)
+  (ACCEPT : (q2, tag) ∈ M.(TaggedDFA.accept_states))
+  : (q1, tag) ∈ M.(TaggedDFA.accept_states).
+Proof.
+  unfold same_accepting_tagsb in SAME. rewrite forallb_forall in SAME.
+  pose proof (SAME (q2, tag) ACCEPT) as EQB. simpl in EQB.
+  assert (MEM2 : mem (q2, tag) M.(TaggedDFA.accept_states) = true) by (now rewrite mem_true_iff).
+  rewrite MEM2 in EQB. rewrite eqb_eq in EQB.
+  rewrite <- mem_true_iff. exact EQB.
+Qed.
+
+Lemma same_accepting_tagsb_false_distinguish (q1 : Q) (q2 : Q)
+  (SAME : same_accepting_tagsb q1 q2 = false)
+  : exists tag, (accepts_from q1 [] tag /\ ~ accepts_from q2 [] tag) \/ (accepts_from q2 [] tag /\ ~ accepts_from q1 [] tag).
+Proof.
+  unfold same_accepting_tagsb in SAME.
+  pose proof (forallb_false_exists _ _ SAME) as ([q tag] & _ & EQB).
+  simpl in EQB.
+  destruct (mem (q1, tag) M.(TaggedDFA.accept_states)) eqn: MEM1, (mem (q2, tag) M.(TaggedDFA.accept_states)) eqn: MEM2; simpl in EQB; inv EQB.
+  - exists tag. left. split.
+    + unfold accepts_from. simpl. rewrite <- mem_true_iff. exact MEM1.
+    + unfold accepts_from. simpl. rewrite <- mem_false_iff. exact MEM2.
+  - exists tag. right. split.
+    + unfold accepts_from. simpl. rewrite <- mem_true_iff. exact MEM2.
+    + unfold accepts_from. simpl. rewrite <- mem_false_iff. exact MEM1.
+Qed.
 
 Fixpoint minimisation_equivb (fuel : nat) (q1 : Q) (q2 : Q) {struct fuel} : bool :=
   match fuel with
   | O => same_accepting_tagsb q1 q2
-  | S fuel' => same_accepting_tagsb q1 q2 && forallb (fun c => minimisation_equivb fuel' (M.(transition) q1 c) (M.(transition) q2 c)) all_asciis
+  | S fuel' => same_accepting_tagsb q1 q2 && forallb (fun c => minimisation_equivb fuel' (M.(TaggedDFA.transition) q1 c) (M.(TaggedDFA.transition) q2 c)) all_asciis
   end.
 
+Definition minimisation_pair_states : list (Q * Q) :=
+  M.(TaggedDFA.states) >>= fun q1 => map (fun q2 => (q1, q2)) M.(TaggedDFA.states).
+
+Definition minimisation_fuel : nat :=
+  length minimisation_pair_states.
+
 Definition minimisation_equiv (q1 : Q) (q2 : Q) : Prop :=
-  minimisation_equivb (length M.(states)) q1 q2 = true.
+  minimisation_equivb minimisation_fuel q1 q2 = true.
+
+Lemma minimisation_equivb_refl (fuel : nat) (q : Q)
+  : minimisation_equivb fuel q q = true.
+Proof.
+  revert q. induction fuel as [ | fuel IH]; intros q.
+  - cbn [minimisation_equivb]. eapply same_accepting_tagsb_refl.
+  - cbn [minimisation_equivb]. rewrite same_accepting_tagsb_refl.
+    change (forallb (fun c => minimisation_equivb fuel (M.(TaggedDFA.transition) q c) (M.(TaggedDFA.transition) q c)) all_asciis = true).
+    rewrite forallb_forall. intros c IN. eapply IH.
+Qed.
+
+Lemma minimisation_equivb_same_accepting_tagsb (fuel : nat) (q1 : Q) (q2 : Q)
+  (EQUIV : minimisation_equivb fuel q1 q2 = true)
+  : same_accepting_tagsb q1 q2 = true.
+Proof.
+  destruct fuel as [ | fuel]; simpl in EQUIV; [exact EQUIV | ].
+  now rewrite andb_true_iff in EQUIV.
+Qed.
+
+Lemma minimisation_equivb_accepts_from_sound (fuel : nat) (q1 : Q) (q2 : Q) (s : Input.t) (tag : Token.t)
+  (LENGTH : length s <= fuel)
+  (EQUIV : minimisation_equivb fuel q1 q2 = true)
+  (ACCEPT : accepts_from q1 s tag)
+  : accepts_from q2 s tag.
+Proof.
+  revert fuel q1 q2 LENGTH EQUIV ACCEPT.
+  induction s as [ | c s IH]; intros fuel q1 q2 LENGTH EQUIV ACCEPT.
+  - eapply same_accepting_tagsb_sound; [ | exact ACCEPT].
+    eapply minimisation_equivb_same_accepting_tagsb. exact EQUIV.
+  - destruct fuel as [ | fuel]; simpl in LENGTH; [lia | ].
+    cbn [minimisation_equivb] in EQUIV. rewrite andb_true_iff in EQUIV. destruct EQUIV as [_ EQUIV].
+    simpl in ACCEPT |- *.
+    eapply (IH fuel (M.(TaggedDFA.transition) q1 c) (M.(TaggedDFA.transition) q2 c)); [lia | | exact ACCEPT].
+    rewrite forallb_forall in EQUIV. eapply EQUIV. eapply all_asciis_complete.
+Qed.
+
+Lemma minimisation_equivb_accepts_from_complete (fuel : nat) (q1 : Q) (q2 : Q) (s : Input.t) (tag : Token.t)
+  (LENGTH : length s <= fuel)
+  (EQUIV : minimisation_equivb fuel q1 q2 = true)
+  (ACCEPT : accepts_from q2 s tag)
+  : accepts_from q1 s tag.
+Proof.
+  revert fuel q1 q2 LENGTH EQUIV ACCEPT.
+  induction s as [ | c s IH]; intros fuel q1 q2 LENGTH EQUIV ACCEPT.
+  - eapply same_accepting_tagsb_complete; [ | exact ACCEPT].
+    eapply minimisation_equivb_same_accepting_tagsb. exact EQUIV.
+  - destruct fuel as [ | fuel]; simpl in LENGTH; [lia | ].
+    cbn [minimisation_equivb] in EQUIV. rewrite andb_true_iff in EQUIV. destruct EQUIV as [_ EQUIV].
+    simpl in ACCEPT |- *.
+    eapply (IH fuel (M.(TaggedDFA.transition) q1 c) (M.(TaggedDFA.transition) q2 c)); [lia | | exact ACCEPT].
+    rewrite forallb_forall in EQUIV. eapply EQUIV. eapply all_asciis_complete.
+Qed.
+
+Lemma minimisation_equivb_false_distinguish (fuel : nat) (q1 : Q) (q2 : Q)
+  (EQUIV : minimisation_equivb fuel q1 q2 = false)
+  : exists s, exists tag, length s <= fuel /\ ((accepts_from q1 s tag /\ ~ accepts_from q2 s tag) \/ (accepts_from q2 s tag /\ ~ accepts_from q1 s tag)).
+Proof.
+  revert q1 q2 EQUIV. induction fuel as [ | fuel IH]; intros q1 q2 EQUIV.
+  - cbn [minimisation_equivb] in EQUIV.
+    pose proof (same_accepting_tagsb_false_distinguish q1 q2 EQUIV) as (tag & DIFF).
+    exists (@nil ascii). exists tag. simpl. split; [lia | exact DIFF].
+  - cbn [minimisation_equivb] in EQUIV. rewrite andb_false_iff in EQUIV.
+    destruct EQUIV as [SAME | TRANS].
+    + pose proof (same_accepting_tagsb_false_distinguish q1 q2 SAME) as (tag & DIFF).
+      exists (@nil ascii). exists tag. simpl. split; [lia | exact DIFF].
+    + pose proof (forallb_false_exists _ _ TRANS) as (c & _ & EQUIV_C).
+      pose proof (IH _ _ EQUIV_C) as (s & tag & LENGTH & DIFF).
+      exists (c :: s). exists tag. simpl. split; [lia | exact DIFF].
+Qed.
+
+Definition minimisation_pair_transition (qq : Q * Q) (c : ascii) : Q * Q :=
+  (M.(TaggedDFA.transition) (fst qq) c, M.(TaggedDFA.transition) (snd qq) c).
+
+Fixpoint minimisation_pair_delta (qq : Q * Q) (s : Input.t) {struct s} : Q * Q :=
+  match s with
+  | [] => qq
+  | c :: s' => minimisation_pair_delta (minimisation_pair_transition qq c) s'
+  end.
+
+Fixpoint minimisation_pair_trace (qq : Q * Q) (s : Input.t) {struct s} : list (Q * Q) :=
+  match s with
+  | [] => []
+  | c :: s' =>
+    let qq' := minimisation_pair_transition qq c in
+    qq' :: minimisation_pair_trace qq' s'
+  end.
+
+Definition minimisation_pair_graph : GRAPH.t :=
+  {|
+    GRAPH.vertices := Q * Q;
+    GRAPH.edges := fun '(qq, qq') => exists c, qq' = minimisation_pair_transition qq c;
+  |}.
+
+#[local] Notation " src ~~~[ w ]~~> tgt " := (@walk minimisation_pair_graph tgt src w) : type_scope.
+
+Lemma minimisation_pair_delta_spec (q1 : Q) (q2 : Q) (s : Input.t)
+  : minimisation_pair_delta (q1, q2) s = (delta M q1 s, delta M q2 s).
+Proof.
+  revert q1 q2. induction s as [ | c s IH]; intros q1 q2; simpl; eauto.
+Qed.
+
+Lemma minimisation_pair_trace_walk (qq : Q * Q) (s : Input.t)
+  : qq ~~~[ minimisation_pair_trace qq s ]~~> minimisation_pair_delta qq s.
+Proof.
+  revert qq. induction s as [ | c s IH]; intros qq; simpl.
+  - constructor.
+  - econstructor; [exists c; reflexivity | eapply IH].
+Qed.
+
+Lemma minimisation_pair_states_complete (q1 : Q) (q2 : Q)
+  (IN1 : q1 ∈ M.(TaggedDFA.states))
+  (IN2 : q2 ∈ M.(TaggedDFA.states))
+  : (q1, q2) ∈ minimisation_pair_states.
+Proof.
+  unfold minimisation_pair_states.
+  eapply list_bind_complete with (x := q1); [exact IN1 | ].
+  rewrite in_map_iff. exists q2. split; [reflexivity | exact IN2].
+Qed.
+
+Lemma minimisation_pair_walk_states (qq : Q * Q) (qq' : Q * Q) (w : list (Q * Q))
+  (OKAY : okay M)
+  (STATE1 : fst qq ∈ M.(TaggedDFA.states))
+  (STATE2 : snd qq ∈ M.(TaggedDFA.states))
+  (WALK : qq ~~~[ w ]~~> qq')
+  : forall qq0, qq0 ∈ w -> (fst qq0 ∈ M.(TaggedDFA.states) /\ snd qq0 ∈ M.(TaggedDFA.states)).
+Proof.
+  destruct OKAY as [_ _ TRANS_OKAY].
+  induction WALK as [ | qq qq1 w EDGE REST IH]; intros qq0 IN; simpl in IN; [contradiction | ].
+  destruct IN as [EQ | IN].
+  - subst qq0. destruct EDGE as [c EQ]. subst qq1. simpl.
+    split; eapply TRANS_OKAY; eauto.
+  - eapply IH; [ | | exact IN].
+    + destruct EDGE as [c EQ]. subst qq1. simpl. eapply TRANS_OKAY. exact STATE1.
+    + destruct EDGE as [c EQ]. subst qq1. simpl. eapply TRANS_OKAY. exact STATE2.
+Qed.
+
+Lemma minimisation_equivb_step (fuel : nat) (q1 : Q) (q2 : Q) (c : ascii)
+  (EQUIV : minimisation_equivb (S fuel) q1 q2 = true)
+  : minimisation_equivb fuel (M.(TaggedDFA.transition) q1 c) (M.(TaggedDFA.transition) q2 c) = true.
+Proof.
+  cbn [minimisation_equivb] in EQUIV. rewrite andb_true_iff in EQUIV.
+  destruct EQUIV as [_ EQUIV]. rewrite forallb_forall in EQUIV.
+  eapply EQUIV. eapply all_asciis_complete.
+Qed.
+
+Lemma minimisation_equivb_walk_same_accepting_tagsb (fuel : nat) (qq : Q * Q) (qq' : Q * Q) (w : list (Q * Q))
+  (WALK : qq ~~~[ w ]~~> qq')
+  (LENGTH : length w <= fuel)
+  (EQUIV : minimisation_equivb fuel (fst qq) (snd qq) = true)
+  : same_accepting_tagsb (fst qq') (snd qq') = true.
+Proof.
+  revert fuel LENGTH EQUIV.
+  induction WALK as [ | qq qq1 w EDGE REST IH]; intros fuel LENGTH EQUIV.
+  - eapply minimisation_equivb_same_accepting_tagsb. exact EQUIV.
+  - destruct fuel as [ | fuel]; simpl in LENGTH; [lia | ].
+    destruct qq as [q1 q2], qq1 as [q1' q2']; cbn [fst snd] in *.
+    destruct EDGE as [c EQ]. inv EQ.
+    eapply (IH fuel); [lia | ].
+    eapply minimisation_equivb_step. exact EQUIV.
+Qed.
+
+Lemma minimisation_equivb_same_accepting_tagsb_unbounded (q1 : Q) (q2 : Q) (s : Input.t)
+  (OKAY : okay M)
+  (STATE1 : q1 ∈ M.(TaggedDFA.states))
+  (STATE2 : q2 ∈ M.(TaggedDFA.states))
+  (EQUIV : minimisation_equivb minimisation_fuel q1 q2 = true)
+  : same_accepting_tagsb (delta M q1 s) (delta M q2 s) = true.
+Proof.
+  pose proof (minimisation_pair_trace_walk (q1, q2) s) as WALK.
+  rewrite minimisation_pair_delta_spec in WALK.
+  pose proof (@walk_finds_path minimisation_pair_graph (fun qq => fun qs => match L.in_dec (@eq_dec (Q * Q) _) qq qs with left IN => or_introl IN | right NOT_IN => or_intror NOT_IN end) (q1, q2) (delta M q1 s, delta M q2 s) _ WALK) as [p PATH].
+  rewrite path_iff_no_dup_walk in PATH. destruct PATH as [WALK' NO_DUP].
+  eapply (minimisation_equivb_walk_same_accepting_tagsb minimisation_fuel (q1, q2) (delta M q1 s, delta M q2 s) p); eauto.
+  eapply L.NoDup_incl_length; [exact NO_DUP | intros qq IN].
+  pose proof (minimisation_pair_walk_states (q1, q2) (delta M q1 s, delta M q2 s) p OKAY STATE1 STATE2 WALK' qq IN) as [IN1 IN2].
+  destruct qq as [qq1 qq2]; simpl in *.
+  eapply minimisation_pair_states_complete; eauto.
+Qed.
+
+Lemma minimisation_equivb_accepts_from_sound_unbounded (q1 : Q) (q2 : Q) (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (STATE1 : q1 ∈ M.(TaggedDFA.states))
+  (STATE2 : q2 ∈ M.(TaggedDFA.states))
+  (EQUIV : minimisation_equivb minimisation_fuel q1 q2 = true)
+  (ACCEPT : accepts_from q1 s tag)
+  : accepts_from q2 s tag.
+Proof.
+  eapply same_accepting_tagsb_sound; [ | exact ACCEPT].
+  eapply minimisation_equivb_same_accepting_tagsb_unbounded; eauto.
+Qed.
+
+Lemma minimisation_equivb_accepts_from_complete_unbounded (q1 : Q) (q2 : Q) (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (STATE1 : q1 ∈ M.(TaggedDFA.states))
+  (STATE2 : q2 ∈ M.(TaggedDFA.states))
+  (EQUIV : minimisation_equivb minimisation_fuel q1 q2 = true)
+  (ACCEPT : accepts_from q2 s tag)
+  : accepts_from q1 s tag.
+Proof.
+  eapply same_accepting_tagsb_complete; [ | exact ACCEPT].
+  eapply minimisation_equivb_same_accepting_tagsb_unbounded; eauto.
+Qed.
+
+Lemma minimisation_equivb_right_language_equiv (q1 : Q) (q2 : Q)
+  (OKAY : okay M)
+  (STATE1 : q1 ∈ M.(TaggedDFA.states))
+  (STATE2 : q2 ∈ M.(TaggedDFA.states))
+  (EQUIV : minimisation_equivb minimisation_fuel q1 q2 = true)
+  : right_language_equiv q1 q2.
+Proof.
+  intros s tag. split; intro ACCEPT.
+  - eapply minimisation_equivb_accepts_from_sound_unbounded with (q1 := q1) (q2 := q2); eauto.
+  - eapply minimisation_equivb_accepts_from_complete_unbounded with (q1 := q1) (q2 := q2); eauto.
+Qed.
+
+Lemma right_language_equiv_minimisation_equivb (q1 : Q) (q2 : Q)
+  (SAME : right_language_equiv q1 q2)
+  : minimisation_equivb minimisation_fuel q1 q2 = true.
+Proof.
+  destruct (minimisation_equivb minimisation_fuel q1 q2) eqn: EQUIV; [reflexivity | ].
+  pose proof (minimisation_equivb_false_distinguish _ _ _ EQUIV) as (s & tag & _ & [(ACCEPT & NOT_ACCEPT) | (ACCEPT & NOT_ACCEPT)]).
+  - pose proof (proj1 (SAME s tag) ACCEPT). contradiction.
+  - pose proof (proj2 (SAME s tag) ACCEPT). contradiction.
+Qed.
 
 Definition minimised_state : Set :=
   list Q.
 
+#[local]
+Instance minimised_state_hasEqDec : hasEqDec minimised_state :=
+  list_hasEqDec M.(TaggedDFA.state_hasEqDec).
+
 Definition minimisation_class (q : Q) : minimised_state :=
-  filter (minimisation_equivb (length M.(states)) q) M.(states).
+  filter (minimisation_equivb minimisation_fuel q) M.(TaggedDFA.states).
+
+Lemma minimisation_class_contains (q : Q)
+  (IN : q ∈ M.(TaggedDFA.states))
+  : q ∈ minimisation_class q.
+Proof.
+  unfold minimisation_class. rewrite filter_In. split; [exact IN | ].
+  eapply minimisation_equivb_refl.
+Qed.
+
+Lemma minimisation_class_eq_of_right_language (q1 : Q) (q2 : Q)
+  (OKAY : okay M)
+  (STATE1 : q1 ∈ M.(TaggedDFA.states))
+  (STATE2 : q2 ∈ M.(TaggedDFA.states))
+  (SAME : right_language_equiv q1 q2)
+  : minimisation_class q1 = minimisation_class q2.
+Proof.
+  unfold minimisation_class. eapply L.filter_ext_in. intros q STATE.
+  destruct (minimisation_equivb minimisation_fuel q1 q) eqn: EQUIV1, (minimisation_equivb minimisation_fuel q2 q) eqn: EQUIV2; try reflexivity.
+  - assert (SAME2 : right_language_equiv q2 q).
+    { pose proof (minimisation_equivb_right_language_equiv q1 q OKAY STATE1 STATE EQUIV1) as SAME1.
+      intros s tag. split; intro ACCEPT.
+      - eapply (proj1 (SAME1 s tag)). eapply (proj2 (SAME s tag)). exact ACCEPT.
+      - eapply (proj1 (SAME s tag)). eapply (proj2 (SAME1 s tag)). exact ACCEPT.
+    }
+    exfalso. pose proof (right_language_equiv_minimisation_equivb q2 q SAME2) as EQUIV.
+    rewrite EQUIV2 in EQUIV. inv EQUIV.
+  - assert (SAME1 : right_language_equiv q1 q).
+    { pose proof (minimisation_equivb_right_language_equiv q2 q OKAY STATE2 STATE EQUIV2) as SAME2.
+      intros s tag. split; intro ACCEPT.
+      - eapply (proj1 (SAME2 s tag)). eapply (proj1 (SAME s tag)). exact ACCEPT.
+      - eapply (proj2 (SAME s tag)). eapply (proj2 (SAME2 s tag)). exact ACCEPT.
+    }
+    exfalso.
+    pose proof (right_language_equiv_minimisation_equivb q1 q SAME1) as EQUIV.
+    rewrite EQUIV1 in EQUIV. inv EQUIV.
+Qed.
 
 Definition minimised_states : list minimised_state :=
-  map minimisation_class M.(states).
+  L.nodup eq_dec (map minimisation_class M.(TaggedDFA.states)).
 
 Definition representative (qs : minimised_state) : Q :=
   match qs with
-  | [] => M.(start_state)
+  | [] => M.(TaggedDFA.start_state)
   | q :: _ => q
   end.
 
 Definition minimised_start_state : minimised_state :=
-  minimisation_class M.(start_state).
+  minimisation_class M.(TaggedDFA.start_state).
+
+Lemma minimisation_class_representative_state (q : Q)
+  (IN : q ∈ M.(TaggedDFA.states))
+  : representative (minimisation_class q) ∈ M.(TaggedDFA.states).
+Proof.
+  destruct (minimisation_class q) as [ | q0 qs] eqn: CLASS.
+  - pose proof (minimisation_class_contains q IN) as IN_CLASS.
+    rewrite CLASS in IN_CLASS. contradiction.
+  - simpl. assert (IN_CLASS : q0 ∈ minimisation_class q) by (rewrite CLASS; left; reflexivity).
+    unfold minimisation_class in IN_CLASS. rewrite filter_In in IN_CLASS. tauto.
+Qed.
+
+Lemma representative_minimisation_class_equiv (q : Q)
+  (IN : q ∈ M.(TaggedDFA.states))
+  : minimisation_equivb minimisation_fuel q (representative (minimisation_class q)) = true.
+Proof.
+  destruct (minimisation_class q) as [ | q0 qs] eqn: CLASS.
+  - pose proof (minimisation_class_contains q IN) as IN_CLASS.
+    rewrite CLASS in IN_CLASS. contradiction.
+  - simpl. assert (IN_CLASS : q0 ∈ minimisation_class q) by (rewrite CLASS; left; reflexivity).
+    unfold minimisation_class in IN_CLASS. rewrite filter_In in IN_CLASS. tauto.
+Qed.
+
+Lemma minimisation_class_in_minimised_states (q : Q)
+  (IN : q ∈ M.(TaggedDFA.states))
+  : minimisation_class q ∈ minimised_states.
+Proof.
+  unfold minimised_states. rewrite L.nodup_In, in_map_iff.
+  exists q. split; [reflexivity | exact IN].
+Qed.
+
+Lemma minimised_states_NoDup
+  : NoDup minimised_states.
+Proof.
+  unfold minimised_states. eapply L.NoDup_nodup.
+Qed.
+
+Lemma minimised_states_representative_state (qs : minimised_state)
+  (QS : qs ∈ minimised_states)
+  : representative qs ∈ M.(TaggedDFA.states).
+Proof.
+  unfold minimised_states in QS. rewrite L.nodup_In in QS. rewrite in_map_iff in QS.
+  destruct QS as (q & EQ & IN). subst qs.
+  eapply minimisation_class_representative_state. exact IN.
+Qed.
+
+Lemma minimised_state_eq_minimisation_class_representative (qs : minimised_state)
+  (OKAY : okay M)
+  (QS : qs ∈ minimised_states)
+  : qs = minimisation_class (representative qs).
+Proof.
+  unfold minimised_states in QS. rewrite L.nodup_In in QS. rewrite in_map_iff in QS.
+  destruct QS as (q & EQ & IN). subst qs.
+  eapply minimisation_class_eq_of_right_language.
+  - exact OKAY.
+  - exact IN.
+  - eapply minimisation_class_representative_state. exact IN.
+  - eapply minimisation_equivb_right_language_equiv.
+    + exact OKAY.
+    + exact IN.
+    + eapply minimisation_class_representative_state. exact IN.
+    + eapply representative_minimisation_class_equiv. exact IN.
+Qed.
+
+Lemma minimised_states_eq_of_representative_right_language (qs1 : minimised_state) (qs2 : minimised_state)
+  (OKAY : okay M)
+  (QS1 : qs1 ∈ minimised_states)
+  (QS2 : qs2 ∈ minimised_states)
+  (SAME : right_language_equiv (representative qs1) (representative qs2))
+  : qs1 = qs2.
+Proof.
+  rewrite (minimised_state_eq_minimisation_class_representative qs1 OKAY QS1).
+  rewrite (minimised_state_eq_minimisation_class_representative qs2 OKAY QS2).
+  eapply minimisation_class_eq_of_right_language.
+  - exact OKAY.
+  - eapply minimised_states_representative_state. exact QS1.
+  - eapply minimised_states_representative_state. exact QS2.
+  - exact SAME.
+Qed.
+
+Lemma minimised_start_state_in_minimised_states
+  (OKAY : okay M)
+  : minimised_start_state ∈ minimised_states.
+Proof.
+  destruct OKAY as [START_OKAY _ _].
+  unfold minimised_start_state. eapply minimisation_class_in_minimised_states. exact START_OKAY.
+Qed.
 
 Definition minimised_transition (qs : minimised_state) (c : ascii) : minimised_state :=
-  minimisation_class (M.(transition) (representative qs) c).
+  minimisation_class (M.(TaggedDFA.transition) (representative qs) c).
+
+Lemma minimised_transition_in_minimised_states (qs : minimised_state) (c : ascii)
+  (OKAY : okay M)
+  (QS : qs ∈ minimised_states)
+  : minimised_transition qs c ∈ minimised_states.
+Proof.
+  unfold minimised_transition. eapply minimisation_class_in_minimised_states.
+  destruct OKAY as [_ _ TRANS_OKAY]. eapply TRANS_OKAY.
+  eapply minimised_states_representative_state. exact QS.
+Qed.
 
 Definition minimised_accept_states_of (qs : minimised_state) : list (minimised_state * Token.t) :=
   accepting_tags_from (representative qs) >>= fun tag => [(qs, tag)].
@@ -1944,32 +3048,278 @@ Definition minimised_accept_states_of (qs : minimised_state) : list (minimised_s
 Definition minimised_accept_states : list (minimised_state * Token.t) :=
   minimised_states >>= minimised_accept_states_of.
 
-Definition minimise : DFA.t :=
+Lemma minimised_accept_states_of_complete (qs : minimised_state) (tag : Token.t)
+  (ACCEPT : (representative qs, tag) ∈ M.(TaggedDFA.accept_states))
+  : (qs, tag) ∈ minimised_accept_states_of qs.
+Proof.
+  unfold minimised_accept_states_of.
+  eapply list_bind_complete with (x := tag); [ | simpl; left; reflexivity].
+  eapply accepting_tags_from_complete. exact ACCEPT.
+Qed.
+
+Lemma minimised_accept_states_of_sound (qs : minimised_state) (qs0 : minimised_state) (tag : Token.t)
+  (ACCEPT : (qs0, tag) ∈ minimised_accept_states_of qs)
+  : qs0 = qs /\ (representative qs, tag) ∈ M.(TaggedDFA.accept_states).
+Proof.
+  unfold minimised_accept_states_of in ACCEPT.
+  pose proof (list_bind_sound _ _ _ ACCEPT) as (tag' & ACCEPT' & IN).
+  simpl in IN. destruct IN as [EQ | []]. inv EQ.
+  split; [reflexivity | ].
+  eapply accepting_tags_from_sound. exact ACCEPT'.
+Qed.
+
+Lemma minimised_accept_states_complete (qs : minimised_state) (tag : Token.t)
+  (QS : qs ∈ minimised_states)
+  (ACCEPT : (representative qs, tag) ∈ M.(TaggedDFA.accept_states))
+  : (qs, tag) ∈ minimised_accept_states.
+Proof.
+  unfold minimised_accept_states.
+  eapply list_bind_complete with (x := qs); [exact QS | ].
+  eapply minimised_accept_states_of_complete. exact ACCEPT.
+Qed.
+
+Lemma minimised_accept_states_sound (qs : minimised_state) (tag : Token.t)
+  (ACCEPT : (qs, tag) ∈ minimised_accept_states)
+  : qs ∈ minimised_states /\ (representative qs, tag) ∈ M.(TaggedDFA.accept_states).
+Proof.
+  unfold minimised_accept_states in ACCEPT.
+  pose proof (list_bind_sound _ _ _ ACCEPT) as (qs' & QS & ACCEPT').
+  pose proof (minimised_accept_states_of_sound qs' qs tag ACCEPT') as (EQ & ACCEPT_Q).
+  subst qs'. eauto.
+Qed.
+
+Definition minimise : TaggedDFA.t :=
   {|
     state := minimised_state;
-    state_hasEqDec := list_hasEqDec M.(state_hasEqDec);
+    state_hasEqDec := list_hasEqDec M.(TaggedDFA.state_hasEqDec);
     states := minimised_states;
     start_state := minimised_start_state;
     accept_states := minimised_accept_states;
     transition := minimised_transition;
   |}.
 
+Lemma minimised_accept_sound_aux (qs : minimised_state) (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (QS : qs ∈ minimised_states)
+  (ACCEPT : (TaggedDFA.delta minimise qs s, tag) ∈ minimised_accept_states)
+  : accepts_from (representative qs) s tag.
+Proof.
+  revert qs QS ACCEPT.
+  induction s as [ | c s IH]; intros qs QS ACCEPT; simpl in ACCEPT.
+  - pose proof (minimised_accept_states_sound _ _ ACCEPT) as [_ ACCEPT'].
+    exact ACCEPT'.
+  - set (qs' := minimised_transition qs c) in *.
+    assert (QS' : qs' ∈ minimised_states).
+    { subst qs'. eapply minimised_transition_in_minimised_states; eauto. }
+    pose proof (IH qs' QS' ACCEPT) as ACCEPT_REP.
+    assert (STATE1 : M.(TaggedDFA.transition) (representative qs) c ∈ M.(TaggedDFA.states)).
+    { destruct OKAY as [_ _ TRANS_OKAY]. eapply TRANS_OKAY. eapply minimised_states_representative_state. exact QS. }
+    assert (STATE2 : representative qs' ∈ M.(TaggedDFA.states)).
+    { eapply minimised_states_representative_state. exact QS'. }
+    assert (EQUIV : minimisation_equivb minimisation_fuel (M.(TaggedDFA.transition) (representative qs) c) (representative qs') = true).
+    { subst qs'. unfold minimised_transition. eapply representative_minimisation_class_equiv. exact STATE1. }
+    eapply minimisation_equivb_accepts_from_complete_unbounded with (q1 := M.(TaggedDFA.transition) (representative qs) c) (q2 := representative qs'); eauto.
+Qed.
+
+Lemma minimised_accept_complete_aux (qs : minimised_state) (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (QS : qs ∈ minimised_states)
+  (ACCEPT : accepts_from (representative qs) s tag)
+  : (TaggedDFA.delta minimise qs s, tag) ∈ minimised_accept_states.
+Proof.
+  revert qs QS ACCEPT.
+  induction s as [ | c s IH]; intros qs QS ACCEPT; simpl in ACCEPT |- *.
+  - eapply minimised_accept_states_complete; eauto.
+  - set (qs' := minimised_transition qs c) in *.
+    assert (QS' : qs' ∈ minimised_states).
+    { subst qs'. eapply minimised_transition_in_minimised_states; eauto. }
+    eapply IH; [exact QS' | ].
+    assert (STATE1 : M.(TaggedDFA.transition) (representative qs) c ∈ M.(TaggedDFA.states)).
+    { destruct OKAY as [_ _ TRANS_OKAY]. eapply TRANS_OKAY. eapply minimised_states_representative_state. exact QS. }
+    assert (STATE2 : representative qs' ∈ M.(TaggedDFA.states)).
+    { eapply minimised_states_representative_state. exact QS'. }
+    assert (EQUIV : minimisation_equivb minimisation_fuel (M.(TaggedDFA.transition) (representative qs) c) (representative qs') = true).
+    { subst qs'. unfold minimised_transition. eapply representative_minimisation_class_equiv. exact STATE1. }
+    eapply minimisation_equivb_accepts_from_sound_unbounded with (q1 := M.(TaggedDFA.transition) (representative qs) c) (q2 := representative qs'); eauto.
+Qed.
+
+Theorem minimise_sound (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (ACCEPT : TaggedDFA.accepts minimise s tag)
+  : TaggedDFA.accepts M s tag.
+Proof.
+  unfold TaggedDFA.accepts in ACCEPT |- *. simpl in ACCEPT.
+  pose proof (minimised_start_state_in_minimised_states OKAY) as QS_START.
+  pose proof (minimised_accept_sound_aux minimised_start_state s tag OKAY QS_START ACCEPT) as ACCEPT_REP.
+  assert (STATE1 : M.(TaggedDFA.start_state) ∈ M.(TaggedDFA.states)).
+  { destruct OKAY as [START_OKAY _ _]. exact START_OKAY. }
+  assert (STATE2 : representative minimised_start_state ∈ M.(TaggedDFA.states)).
+  { eapply minimised_states_representative_state. exact QS_START. }
+  assert (EQUIV : minimisation_equivb minimisation_fuel M.(TaggedDFA.start_state) (representative minimised_start_state) = true).
+  { unfold minimised_start_state. eapply representative_minimisation_class_equiv. exact STATE1. }
+  eapply minimisation_equivb_accepts_from_complete_unbounded with (q1 := M.(TaggedDFA.start_state)) (q2 := representative minimised_start_state); eauto.
+Qed.
+
+Theorem minimise_complete (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (ACCEPT : TaggedDFA.accepts M s tag)
+  : TaggedDFA.accepts minimise s tag.
+Proof.
+  unfold TaggedDFA.accepts in ACCEPT |- *. simpl.
+  pose proof (minimised_start_state_in_minimised_states OKAY) as QS_START.
+  eapply minimised_accept_complete_aux; [exact OKAY | exact QS_START | ].
+  assert (STATE1 : M.(TaggedDFA.start_state) ∈ M.(TaggedDFA.states)).
+  { destruct OKAY as [START_OKAY _ _]. exact START_OKAY. }
+  assert (STATE2 : representative minimised_start_state ∈ M.(TaggedDFA.states)).
+  { eapply minimised_states_representative_state. exact QS_START. }
+  assert (EQUIV : minimisation_equivb minimisation_fuel M.(TaggedDFA.start_state) (representative minimised_start_state) = true).
+  { unfold minimised_start_state. eapply representative_minimisation_class_equiv. exact STATE1. }
+  eapply minimisation_equivb_accepts_from_sound_unbounded with (q1 := M.(TaggedDFA.start_state)) (q2 := representative minimised_start_state); eauto.
+Qed.
+
+Theorem minimise_okay
+  (OKAY : okay M)
+  : okay minimise.
+Proof.
+  split; simpl.
+  - eapply minimised_start_state_in_minimised_states. exact OKAY.
+  - intros qs tag ACCEPT. pose proof (minimised_accept_states_sound qs tag ACCEPT) as [QS _]. exact QS.
+  - intros qs c QS. eapply minimised_transition_in_minimised_states; eauto.
+Qed.
+
+Definition minimise_numbered : TaggedDFA.t :=
+  number_states minimise.
+
+Theorem minimise_numbered_sound (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (ACCEPT : TaggedDFA.accepts minimise_numbered s tag)
+  : TaggedDFA.accepts M s tag.
+Proof.
+  pose proof (minimise_okay OKAY) as OKAY_MIN.
+  pose proof (number_states_sound minimise s tag OKAY_MIN ACCEPT) as ACCEPT_MIN.
+  eapply minimise_sound; eauto.
+Qed.
+
+Theorem minimise_numbered_complete (s : Input.t) (tag : Token.t)
+  (OKAY : okay M)
+  (ACCEPT : TaggedDFA.accepts M s tag)
+  : TaggedDFA.accepts minimise_numbered s tag.
+Proof.
+  pose proof (minimise_okay OKAY) as OKAY_MIN.
+  eapply number_states_complete; [exact OKAY_MIN | eapply minimise_complete; eauto].
+Qed.
+
+Theorem minimise_numbered_okay
+  (OKAY : okay M)
+  : okay minimise_numbered.
+Proof.
+  eapply number_states_okay. eapply minimise_okay. exact OKAY.
+Qed.
+
+Theorem minimise_states_minimal (N : TaggedDFA.t)
+  (OKAY : okay M)
+  (REACHABLE : all_states_reachable M)
+  (OKAY_N : okay N)
+  (NODUP_N : NoDup N.(TaggedDFA.states))
+  (EQUIV : language_equiv M N)
+  : length minimise.(TaggedDFA.states) <= length N.(TaggedDFA.states).
+Proof.
+  cbn [states minimise].
+  eapply @NoDup_exists_injective_length with (R := fun qs => fun n => exists s, representative qs = delta M M.(TaggedDFA.start_state) s /\ n = delta N N.(TaggedDFA.start_state) s).
+  - exact N.(TaggedDFA.state_hasEqDec).
+  - eapply minimised_states_NoDup.
+  - intros qs QS.
+    pose proof (minimised_states_representative_state qs QS) as STATE.
+    pose proof (REACHABLE _ STATE) as (s & EQ).
+    exists (delta N N.(TaggedDFA.start_state) s). split.
+    + eapply delta_okay.
+      * exact OKAY_N.
+      * destruct OKAY_N as [START_OKAY _ _]. exact START_OKAY.
+    + exists s. split; [exact EQ | reflexivity].
+  - intros qs1 qs2 n QS1 QS2 R1 R2.
+    destruct R1 as (s1 & EQ1 & EQN1).
+    destruct R2 as (s2 & EQ2 & EQN2).
+    eapply minimised_states_eq_of_representative_right_language; eauto.
+    intros s tag. split; intro ACCEPT.
+    + assert (ACCEPT_M1 : accepts M (s1 ++ s) tag).
+      { unfold accepts, accepts_from in *. rewrite delta_app. rewrite <- EQ1. exact ACCEPT. }
+      pose proof (proj1 (EQUIV (s1 ++ s) tag) ACCEPT_M1) as ACCEPT_N1.
+      assert (ACCEPT_N2 : accepts N (s2 ++ s) tag).
+      { unfold accepts in ACCEPT_N1 |- *. rewrite !delta_app in *. rewrite <- EQN1 in ACCEPT_N1. rewrite <- EQN2. exact ACCEPT_N1. }
+      pose proof (proj2 (EQUIV (s2 ++ s) tag) ACCEPT_N2) as ACCEPT_M2.
+      unfold accepts, accepts_from in ACCEPT_M2 |- *. rewrite delta_app in ACCEPT_M2.
+      rewrite <- EQ2 in ACCEPT_M2. exact ACCEPT_M2.
+    + assert (ACCEPT_M2 : accepts M (s2 ++ s) tag).
+      { unfold accepts, accepts_from in *. rewrite delta_app. rewrite <- EQ2. exact ACCEPT. }
+      pose proof (proj1 (EQUIV (s2 ++ s) tag) ACCEPT_M2) as ACCEPT_N2.
+      assert (ACCEPT_N1 : accepts N (s1 ++ s) tag).
+      { unfold accepts in ACCEPT_N2 |- *. rewrite !delta_app in *. rewrite <- EQN2 in ACCEPT_N2. rewrite <- EQN1. exact ACCEPT_N2. }
+      pose proof (proj2 (EQUIV (s1 ++ s) tag) ACCEPT_N1) as ACCEPT_M1.
+      unfold accepts, accepts_from in ACCEPT_M1 |- *. rewrite delta_app in ACCEPT_M1.
+      rewrite <- EQ1 in ACCEPT_M1. exact ACCEPT_M1.
+Qed.
+
+Theorem minimise_numbered_states_minimal (N : TaggedDFA.t)
+  (OKAY_M : okay M)
+  (REACHABLE : all_states_reachable M)
+  (OKAY_N : okay N)
+  (NODUP_N : NoDup N.(TaggedDFA.states))
+  (EQUIV : language_equiv M N)
+  : length minimise_numbered.(TaggedDFA.states) <= length N.(TaggedDFA.states).
+Proof.
+  unfold minimise_numbered. cbn [states number_states numbered_states].
+  unfold numbered_states. rewrite length_seq. eapply minimise_states_minimal; eauto.
+Qed.
+
 End MINIMISATION.
+
+Module Partial.
+
+#[projections(primitive)]
+Record TaggedDFA : Type :=
+  mk
+  { state : Set
+  ; state_hasEqDec : hasEqDec@{Set} state
+  ; states : list state
+  ; start_state : state
+  ; accept_states : list (state * Token.t)
+  ; transition (q : state) (c : ascii) : state
+  }.
+
+End Partial.
 
 Section DELETE_DEAD_STATE.
 
-Variable M : DFA.t.
+Variable M : TaggedDFA.t.
 
-#[local] Notation Q := M.(state).
+#[local] Notation Q := M.(TaggedDFA.state).
 
 Definition delete_state_set : Set :=
   list Q.
 
 Definition delete_normalize (qs : delete_state_set) : delete_state_set :=
-  filter (fun q => mem q qs) M.(states).
+  filter (fun q => mem q qs) M.(TaggedDFA.states).
+
+Lemma delete_normalize_complete (qs : delete_state_set) (q : Q)
+  (STATES : q ∈ M.(TaggedDFA.states))
+  (IN : q ∈ qs)
+  : q ∈ delete_normalize qs.
+Proof.
+  unfold delete_normalize. rewrite filter_In. split; [exact STATES | ].
+  now rewrite mem_true_iff.
+Qed.
+
+Lemma delete_normalize_sound (qs : delete_state_set) (q : Q)
+  (IN : q ∈ delete_normalize qs)
+  : q ∈ qs /\ q ∈ M.(TaggedDFA.states).
+Proof.
+  unfold delete_normalize in IN. rewrite filter_In in IN.
+  destruct IN as [STATES MEM]. split; [ | exact STATES].
+  now rewrite mem_true_iff in MEM.
+Qed.
 
 Definition delete_successors (q : Q) : delete_state_set :=
-  map (M.(transition) q) all_asciis.
+  map (M.(TaggedDFA.transition) q) all_asciis.
 
 Definition delete_reachable_move (qs : delete_state_set) : delete_state_set :=
   qs >>= delete_successors.
@@ -1978,19 +3328,19 @@ Definition delete_reachable_step (qs : delete_state_set) : delete_state_set :=
   delete_normalize (union (delete_reachable_move qs) qs).
 
 Definition reachable_states : delete_state_set :=
-  iter (length M.(states)) delete_reachable_step (delete_normalize [M.(start_state)]).
+  iter (length M.(TaggedDFA.states)) delete_reachable_step (delete_normalize [M.(TaggedDFA.start_state)]).
 
 Definition accepting_stateb (q : Q) : bool :=
-  existsb (fun '(q', _) => eqb q q') M.(accept_states).
+  existsb (fun '(q', _) => eqb q q') M.(TaggedDFA.accept_states).
 
 Definition accepting_states : delete_state_set :=
-  filter accepting_stateb M.(states).
+  filter accepting_stateb M.(TaggedDFA.states).
 
 Definition predecessorb (q : Q) (p : Q) : bool :=
-  existsb (fun c => eqb (M.(transition) p c) q) all_asciis.
+  existsb (fun c => eqb (M.(TaggedDFA.transition) p c) q) all_asciis.
 
 Definition predecessors (q : Q) : delete_state_set :=
-  filter (predecessorb q) M.(states).
+  filter (predecessorb q) M.(TaggedDFA.states).
 
 Definition live_move (qs : delete_state_set) : delete_state_set :=
   qs >>= predecessors.
@@ -1999,33 +3349,145 @@ Definition live_step (qs : delete_state_set) : delete_state_set :=
   delete_normalize (union (live_move qs) qs).
 
 Definition live_states : delete_state_set :=
-  iter (length M.(states)) live_step accepting_states.
+  iter (length M.(TaggedDFA.states)) live_step accepting_states.
+
+Lemma accepting_stateb_complete (q : Q) (tag : Token.t)
+  (ACCEPT : (q, tag) ∈ M.(TaggedDFA.accept_states))
+  : accepting_stateb q = true.
+Proof.
+  unfold accepting_stateb. rewrite existsb_exists.
+  exists (q, tag). split; [exact ACCEPT | simpl].
+  now rewrite eqb_eq.
+Qed.
+
+Lemma accepting_states_complete (q : Q) (tag : Token.t)
+  (OKAY : okay M)
+  (ACCEPT : (q, tag) ∈ M.(TaggedDFA.accept_states))
+  : q ∈ accepting_states.
+Proof.
+  destruct OKAY as [_ ACCEPT_OKAY _].
+  unfold accepting_states. rewrite filter_In. split.
+  - eapply ACCEPT_OKAY. exact ACCEPT.
+  - eapply accepting_stateb_complete. exact ACCEPT.
+Qed.
 
 Definition dead_states : delete_state_set :=
-  filter (fun q => negb (mem q live_states)) M.(states).
+  filter (fun q => negb (mem q live_states)) M.(TaggedDFA.states).
 
 Definition useful_states : delete_state_set :=
-  filter (fun q => mem q reachable_states && mem q live_states) M.(states).
+  filter (fun q => mem q reachable_states && mem q live_states) M.(TaggedDFA.states).
 
 Definition delete_dead_accept_states : list (Q * Token.t) :=
-  filter (fun '(q, _) => mem q live_states) M.(accept_states).
+  filter (fun '(q, _) => mem q live_states) M.(TaggedDFA.accept_states).
 
-Definition delete_dead_state : DFA.t :=
+Lemma live_step_complete_keep (q : Q) (qs : delete_state_set)
+  (STATE : q ∈ M.(TaggedDFA.states))
+  (IN : q ∈ qs)
+  : q ∈ live_step qs.
+Proof.
+  unfold live_step.
+  eapply delete_normalize_complete; [exact STATE | ].
+  eapply union_complete. right. exact IN.
+Qed.
+
+Lemma iter_live_step_keeps (fuel : nat) (q : Q) (qs : delete_state_set)
+  (STATE : q ∈ M.(TaggedDFA.states))
+  (IN : q ∈ qs)
+  : q ∈ iter fuel live_step qs.
+Proof.
+  revert qs IN. induction fuel as [ | fuel IH]; intros qs IN; simpl.
+  - exact IN.
+  - eapply IH. eapply live_step_complete_keep; eauto.
+Qed.
+
+Lemma accepting_state_live (q : Q) (tag : Token.t)
+  (OKAY : okay M)
+  (ACCEPT : (q, tag) ∈ M.(TaggedDFA.accept_states))
+  : q ∈ live_states.
+Proof.
+  unfold live_states.
+  eapply iter_live_step_keeps.
+  - destruct OKAY as [_ ACCEPT_OKAY _]. eapply ACCEPT_OKAY. exact ACCEPT.
+  - eapply accepting_states_complete; eauto.
+Qed.
+
+Lemma delete_dead_accept_states_complete (q : Q) (tag : Token.t)
+  (ACCEPT : (q, tag) ∈ M.(TaggedDFA.accept_states))
+  (LIVE : q ∈ live_states)
+  : (q, tag) ∈ delete_dead_accept_states.
+Proof.
+  unfold delete_dead_accept_states. rewrite filter_In. split; [exact ACCEPT | ].
+  now rewrite mem_true_iff.
+Qed.
+
+Lemma delete_dead_accept_states_sound (q : Q) (tag : Token.t)
+  (ACCEPT : (q, tag) ∈ delete_dead_accept_states)
+  : (q, tag) ∈ M.(TaggedDFA.accept_states) /\ q ∈ live_states.
+Proof.
+  unfold delete_dead_accept_states in ACCEPT. rewrite filter_In in ACCEPT.
+  destruct ACCEPT as [ACCEPT LIVE]. split; [exact ACCEPT | ].
+  now rewrite mem_true_iff in LIVE.
+Qed.
+
+Definition delete_dead_state : Partial.TaggedDFA :=
   {|
-    state := Q;
-    state_hasEqDec := M.(state_hasEqDec);
-    states := live_states;
-    start_state := M.(start_state);
-    accept_states := delete_dead_accept_states;
-    transition := M.(transition);
+    Partial.state := Q;
+    Partial.state_hasEqDec := M.(TaggedDFA.state_hasEqDec);
+    Partial.states := live_states;
+    Partial.start_state := M.(TaggedDFA.start_state);
+    Partial.accept_states := delete_dead_accept_states;
+    Partial.transition := M.(TaggedDFA.transition);
   |}.
 
 End DELETE_DEAD_STATE.
 
-End DFA.
+End TaggedDFA.
 
 Definition t : Type :=
-  DFA.t.
+  TaggedDFA.Partial.TaggedDFA.
+
+Fixpoint delta (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (s : Input.t) {struct s} : M.(TaggedDFA.Partial.state) :=
+  match s with
+  | [] => q
+  | c :: s' => delta M (M.(TaggedDFA.Partial.transition) q c) s'
+  end.
+
+Definition accepts (M : LGS.t) (s : Input.t) (tag : Token.t) : Prop :=
+  (delta M M.(TaggedDFA.Partial.start_state) s, tag) ∈ M.(TaggedDFA.Partial.accept_states).
+
+Definition accepted_tags (M : LGS.t) (s : Input.t) : ensemble Token.t :=
+  fun tag => accepts M s tag.
+
+Lemma delta_app (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (s1 : Input.t) (s2 : Input.t)
+  : delta M q (s1 ++ s2) = delta M (delta M q s1) s2.
+Proof.
+  revert q. induction s1 as [ | c s1 IH]; intros q; simpl; eauto.
+Qed.
+
+Lemma delete_dead_state_delta (M : TaggedDFA.t) (q : M.(TaggedDFA.state)) (s : Input.t)
+  : delta (TaggedDFA.delete_dead_state M) q s = TaggedDFA.delta M q s.
+Proof.
+  revert q. induction s as [ | c s IH]; intros q; simpl; eauto.
+Qed.
+
+Theorem delete_dead_state_sound (M : TaggedDFA.t) (s : Input.t) (tag : Token.t)
+  (ACCEPT : accepts (TaggedDFA.delete_dead_state M) s tag)
+  : TaggedDFA.accepts M s tag.
+Proof.
+  unfold accepts, TaggedDFA.accepts in *. rewrite delete_dead_state_delta in ACCEPT. cbn in ACCEPT.
+  pose proof (TaggedDFA.delete_dead_accept_states_sound M _ _ ACCEPT) as [ACCEPT' _].
+  exact ACCEPT'.
+Qed.
+
+Theorem delete_dead_state_complete (M : TaggedDFA.t) (s : Input.t) (tag : Token.t)
+  (OKAY : TaggedDFA.okay M)
+  (ACCEPT : TaggedDFA.accepts M s tag)
+  : accepts (TaggedDFA.delete_dead_state M) s tag.
+Proof.
+  unfold accepts, TaggedDFA.accepts in *. rewrite delete_dead_state_delta. cbn.
+  eapply TaggedDFA.delete_dead_accept_states_complete; [exact ACCEPT | ].
+  eapply TaggedDFA.accepting_state_live; eauto.
+Qed.
 
 Fixpoint first_accepting_token_from {Q : Set} `{Q_hasEqDec : hasEqDec@{Set} Q} (q : Q) (accept_states : list (Q * Token.t)) {struct accept_states} : option Token.t :=
   match accept_states with
@@ -2033,20 +3495,255 @@ Fixpoint first_accepting_token_from {Q : Set} `{Q_hasEqDec : hasEqDec@{Set} Q} (
   | (q', tag) :: accept_states' => if eq_dec q q' then Some tag else first_accepting_token_from q accept_states'
   end.
 
-Definition first_accepting_token (M : LGS.t) (q : M.(DFA.state)) : option Token.t :=
-  @first_accepting_token_from M.(DFA.state) M.(DFA.state_hasEqDec) q M.(DFA.accept_states).
+Lemma first_accepting_token_from_sound {Q : Set} `{Q_hasEqDec : hasEqDec@{Set} Q} (q : Q) (accept_states : list (Q * Token.t)) (tag : Token.t)
+  (FIND : first_accepting_token_from q accept_states = Some tag)
+  : (q, tag) ∈ accept_states.
+Proof.
+  induction accept_states as [ | [q' tag'] accept_states IH]; simpl in FIND; [inv FIND | ].
+  destruct (eq_dec q q') as [EQ | NE].
+  - subst q'. inv FIND. left. reflexivity.
+  - right. eapply IH. exact FIND.
+Qed.
 
-Fixpoint maximal_munch (M : LGS.t) (q : M.(DFA.state)) (s : list ascii) (best : option (list ascii * Token.t)) {struct s} : option (list ascii * Token.t) :=
+Lemma first_accepting_token_from_complete_some {Q : Set} `{Q_hasEqDec : hasEqDec@{Set} Q} (q : Q) (accept_states : list (Q * Token.t))
+  (ACCEPT : exists tag, (q, tag) ∈ accept_states)
+  : exists tag, first_accepting_token_from q accept_states = Some tag.
+Proof.
+  induction accept_states as [ | [q' tag'] accept_states IH]; simpl in ACCEPT |- *.
+  - destruct ACCEPT as (tag & ACCEPT). contradiction.
+  - destruct (eq_dec q q') as [EQ | NE].
+    + exists tag'. reflexivity.
+    + destruct ACCEPT as (tag & [EQ | ACCEPT]).
+      * inv EQ. contradiction.
+      * eapply IH. exists tag. exact ACCEPT.
+Qed.
+
+Definition first_accepting_token (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) : option Token.t :=
+  @first_accepting_token_from M.(TaggedDFA.Partial.state) M.(TaggedDFA.Partial.state_hasEqDec) q M.(TaggedDFA.Partial.accept_states).
+
+Lemma first_accepting_token_sound (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (tag : Token.t)
+  (FIND : first_accepting_token M q = Some tag)
+  : (q, tag) ∈ M.(TaggedDFA.Partial.accept_states).
+Proof.
+  eapply first_accepting_token_from_sound. exact FIND.
+Qed.
+
+Lemma first_accepting_token_complete_some (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (tag : Token.t)
+  (ACCEPT : (q, tag) ∈ M.(TaggedDFA.Partial.accept_states))
+  : exists tag', first_accepting_token M q = Some tag'.
+Proof.
+  eapply first_accepting_token_from_complete_some. exists tag. exact ACCEPT.
+Qed.
+
+Fixpoint maximal_munch (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (s : list ascii) (best : option (list ascii * Token.t)) {struct s} : option (list ascii * Token.t) :=
   match s with
   | [] => best
   | c :: s' =>
-    let q' := M.(DFA.transition) q c in
+    let q' := M.(TaggedDFA.Partial.transition) q c in
     let best' := B.maybe (A := _) (B := fun _ => _) best (fun tag => Some (s', tag)) (first_accepting_token M q') in
     maximal_munch M q' s' best'
   end.
 
-Definition scan_one (M : t) (s : list ascii) : option (list ascii * Token.t) :=
-  maximal_munch M M.(DFA.start_state) s None.
+Lemma maximal_munch_some_if_best_some (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (s : Input.t) (rest : Input.t) (tag : Token.t)
+  : exists rest', exists tag', maximal_munch M q s (Some (rest, tag)) = Some (rest', tag').
+Proof.
+  revert q rest tag. induction s as [ | c s IH]; intros q rest tag; simpl.
+  - exists rest, tag. reflexivity.
+  - destruct (first_accepting_token M (M.(TaggedDFA.Partial.transition) q c)) as [tag' | ]; cbn; eauto.
+Qed.
+
+Lemma maximal_munch_some_accepted_prefix (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (consumed : Input.t) (rest : Input.t) (best : option (Input.t * Token.t)) (tag : Token.t)
+  (NONEMPTY : ~ consumed = [])
+  (ACCEPT : (delta M q consumed, tag) ∈ M.(TaggedDFA.Partial.accept_states))
+  : exists rest', exists tag', maximal_munch M q (consumed ++ rest) best = Some (rest', tag').
+Proof.
+  revert q rest best tag NONEMPTY ACCEPT.
+  induction consumed as [ | c consumed IH]; intros q rest best tag NONEMPTY ACCEPT; [contradiction | ].
+  simpl in ACCEPT |- *.
+  set (q' := M.(TaggedDFA.Partial.transition) q c) in *.
+  destruct consumed as [ | c' consumed'].
+  - simpl in ACCEPT. destruct (first_accepting_token M q') as [tag' | ] eqn: FIND; cbn.
+    + eapply maximal_munch_some_if_best_some.
+    + pose proof (first_accepting_token_complete_some M q' tag ACCEPT) as (tag' & FIND').
+      rewrite FIND in FIND'. inv FIND'.
+  - destruct (first_accepting_token M q') as [tag' | ] eqn: FIND; cbn.
+    + eapply IH; [discriminate | exact ACCEPT].
+    + eapply IH; [discriminate | exact ACCEPT].
+Qed.
+
+Definition munch_accepts (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (s : Input.t) (rest : Input.t) (tag : Token.t) : Prop :=
+  exists consumed, s = consumed ++ rest /\ (delta M q consumed, tag) ∈ M.(TaggedDFA.Partial.accept_states).
+
+Lemma maximal_munch_sound_aux (M : LGS.t) (q0 : M.(TaggedDFA.Partial.state)) (s0 : Input.t) (q : M.(TaggedDFA.Partial.state)) (s : Input.t) (best : option (Input.t * Token.t)) (rest : Input.t) (tag : Token.t)
+  (CUR : exists consumed, s0 = consumed ++ s /\ q = delta M q0 consumed)
+  (BEST : forall rest0, forall tag0, best = Some (rest0, tag0) -> munch_accepts M q0 s0 rest0 tag0)
+  (SCAN : maximal_munch M q s best = Some (rest, tag))
+  : munch_accepts M q0 s0 rest tag.
+Proof.
+  revert q best rest tag CUR BEST SCAN.
+  induction s as [ | c s IH]; intros q best rest tag CUR BEST SCAN; simpl in SCAN.
+  - eapply BEST. exact SCAN.
+  - destruct CUR as (consumed & EQ_INPUT & EQ_STATE). subst q.
+    set (q' := M.(TaggedDFA.Partial.transition) (delta M q0 consumed) c) in *.
+    assert (NEXT_INPUT : s0 = (consumed ++ [c]) ++ s).
+    { rewrite EQ_INPUT. rewrite <- app_assoc. reflexivity. }
+    assert (NEXT_STATE : q' = delta M q0 (consumed ++ [c])).
+    { subst q'. rewrite delta_app. reflexivity. }
+    destruct (first_accepting_token M q') as [tag' | ] eqn: FIND; cbn in SCAN.
+    + eapply IH with (q := q') (best := Some (s, tag')); [ | | exact SCAN].
+      * exists (consumed ++ [c]). split.
+        { exact NEXT_INPUT. }
+        { exact NEXT_STATE. }
+      * intros rest0 tag0 BEST'. inv BEST'.
+        exists (consumed ++ [c]). split.
+        { exact NEXT_INPUT. }
+        { rewrite <- NEXT_STATE. eapply first_accepting_token_sound. exact FIND. }
+    + eapply IH with (q := q') (best := best); [ | | exact SCAN].
+      * exists (consumed ++ [c]). split.
+        { exact NEXT_INPUT. }
+        { exact NEXT_STATE. }
+      * intros rest0 tag0 BEST'. eapply BEST. exact BEST'.
+Qed.
+
+Theorem maximal_munch_sound (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (s : Input.t) (best : option (Input.t * Token.t)) (rest : Input.t) (tag : Token.t)
+  (BEST : forall rest0 tag0, best = Some (rest0, tag0) -> munch_accepts M q s rest0 tag0)
+  (SCAN : maximal_munch M q s best = Some (rest, tag))
+  : munch_accepts M q s rest tag.
+Proof.
+  eapply maximal_munch_sound_aux with (q := q) (s := s) (best := best); eauto.
+  exists []. split; reflexivity.
+Qed.
+
+Definition scan_one (M : LGS.t) (s : list ascii) : option (list ascii * Token.t) :=
+  maximal_munch M M.(TaggedDFA.Partial.start_state) s None.
+
+Definition scan_candidate (M : LGS.t) (s : Input.t) (rest : Input.t) (tag : Token.t) : Prop :=
+  exists consumed, s = consumed ++ rest /\ (~ consumed = []) /\ accepts M consumed tag.
+
+Lemma maximal_munch_length_le (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (s : list ascii) (best : option (list ascii * Token.t)) (rest : list ascii) (tag : Token.t) (n : nat)
+  (BEST_LE : forall rest0 tag0, best = Some (rest0, tag0) -> length rest0 <= n)
+  (INPUT_LE : length s <= n)
+  (SCAN : maximal_munch M q s best = Some (rest, tag))
+  : length rest <= n.
+Proof.
+  revert q best rest tag n BEST_LE INPUT_LE SCAN.
+  induction s as [ | c s IH]; intros q best rest tag n BEST_LE INPUT_LE SCAN; simpl in SCAN.
+  - eapply BEST_LE. exact SCAN.
+  - destruct (first_accepting_token M (M.(TaggedDFA.Partial.transition) q c)) as [tag' | ] eqn: FIND; cbn in SCAN.
+    + eapply (IH (M.(TaggedDFA.Partial.transition) q c) (Some (s, tag')) rest tag n).
+      * intros rest0 tag0 BEST. injection BEST as EQ_REST EQ_TAG. subst rest0. simpl in INPUT_LE. lia.
+      * simpl in INPUT_LE. lia.
+      * exact SCAN.
+    + eapply (IH (M.(TaggedDFA.Partial.transition) q c) best rest tag n).
+      * intros rest0 tag0 BEST. pose proof (BEST_LE rest0 tag0 BEST). lia.
+      * simpl in INPUT_LE. lia.
+      * exact SCAN.
+Qed.
+
+Lemma maximal_munch_length_le_accepted_prefix (M : LGS.t) (q : M.(TaggedDFA.Partial.state)) (consumed : Input.t) (rest : Input.t) (best : option (Input.t * Token.t)) (rest' : Input.t) (tag' : Token.t) (tag : Token.t)
+  (NONEMPTY : ~ consumed = [])
+  (ACCEPT : (delta M q consumed, tag) ∈ M.(TaggedDFA.Partial.accept_states))
+  (SCAN : maximal_munch M q (consumed ++ rest) best = Some (rest', tag'))
+  : length rest' <= length rest.
+Proof.
+  revert q rest best rest' tag' tag NONEMPTY ACCEPT SCAN.
+  induction consumed as [ | c consumed IH]; intros q rest best rest' tag' tag NONEMPTY ACCEPT SCAN; [contradiction | ].
+  simpl in ACCEPT, SCAN.
+  set (q' := M.(TaggedDFA.Partial.transition) q c) in *.
+  destruct consumed as [ | c' consumed'].
+  - simpl in ACCEPT.
+    destruct (first_accepting_token M q') as [tag0 | ] eqn: FIND; cbn in SCAN.
+    + eapply (maximal_munch_length_le M q' rest (Some (rest, tag0)) rest' tag' (length rest)); [ | lia | exact SCAN].
+      intros rest0 tag1 BEST. inv BEST. lia.
+    + pose proof (first_accepting_token_complete_some M q' tag ACCEPT) as (tag0 & FIND').
+      rewrite FIND in FIND'. inv FIND'.
+  - destruct (first_accepting_token M q') as [tag0 | ] eqn: FIND; cbn in SCAN.
+    + eapply IH; [discriminate | exact ACCEPT | exact SCAN].
+    + eapply IH; [discriminate | exact ACCEPT | exact SCAN].
+Qed.
+
+Lemma scan_one_length_lt (M : LGS.t) (s : list ascii) (rest : list ascii) (tag : Token.t)
+  (SCAN : scan_one M s = Some (rest, tag))
+  : length rest < length s.
+Proof.
+  destruct s as [ | c s]; simpl in SCAN; [inv SCAN | ].
+  unfold scan_one in SCAN. simpl in SCAN.
+  destruct (first_accepting_token M (M.(TaggedDFA.Partial.transition) M.(TaggedDFA.Partial.start_state) c)) as [tag' | ] eqn: FIND; cbn in SCAN.
+  - pose proof (maximal_munch_length_le M (M.(TaggedDFA.Partial.transition) M.(TaggedDFA.Partial.start_state) c) s (Some (s, tag')) rest tag (length s)) as LENGTH.
+    assert (LE : length rest <= length s).
+    { eapply LENGTH; [ | lia | exact SCAN]. intros rest0 tag0 BEST. inversion BEST; subst. lia. }
+    simpl. lia.
+  - pose proof (maximal_munch_length_le M (M.(TaggedDFA.Partial.transition) M.(TaggedDFA.Partial.start_state) c) s None rest tag (length s)) as LENGTH.
+    assert (LE : length rest <= length s).
+    { eapply LENGTH; [intros rest0 tag0 BEST; inv BEST | lia | exact SCAN]. }
+    simpl. lia.
+Qed.
+
+Theorem scan_one_sound (M : LGS.t) (s : Input.t) (rest : Input.t) (tag : Token.t)
+  (SCAN : scan_one M s = Some (rest, tag))
+  : exists consumed, s = consumed ++ rest /\ accepts M consumed tag /\ length rest < length s.
+Proof.
+  pose proof SCAN as SCAN_LENGTH.
+  unfold scan_one in SCAN.
+  pose proof (maximal_munch_sound M M.(TaggedDFA.Partial.start_state) s None rest tag) as SOUND.
+  assert (BEST : forall rest0, forall tag0, None = Some (rest0, tag0) -> munch_accepts M M.(TaggedDFA.Partial.start_state) s rest0 tag0).
+  { intros rest0 tag0 BEST. inv BEST. }
+  pose proof (SOUND BEST SCAN) as (consumed & EQ_INPUT & ACCEPT).
+  exists consumed. repeat split; eauto.
+  eapply scan_one_length_lt. exact SCAN_LENGTH.
+Qed.
+
+Theorem scan_one_maximal (M : LGS.t) (s : Input.t) (rest : Input.t) (tag : Token.t)
+  (SCAN : scan_one M s = Some (rest, tag))
+  : scan_candidate M s rest tag /\ (forall rest', forall tag', scan_candidate M s rest' tag' -> length rest <= length rest').
+Proof.
+  split.
+  - pose proof (scan_one_sound M s rest tag SCAN) as (consumed & EQ_INPUT & ACCEPT & LT).
+    exists consumed. repeat split; eauto.
+    intros EQ. subst consumed. simpl in EQ_INPUT. subst s. lia.
+  - intros rest' tag' (consumed & EQ_INPUT & NONEMPTY & ACCEPT).
+    unfold scan_one in SCAN. rewrite EQ_INPUT in SCAN.
+    unfold accepts in ACCEPT.
+    eapply maximal_munch_length_le_accepted_prefix; eauto.
+Qed.
+
+Theorem scan_one_complete (M : LGS.t) (s : Input.t) (rest : Input.t) (tag : Token.t)
+  (CANDIDATE : scan_candidate M s rest tag)
+  : exists rest', exists tag', scan_one M s = Some (rest', tag') /\ length rest' <= length rest.
+Proof.
+  destruct CANDIDATE as (consumed & EQ_INPUT & NONEMPTY & ACCEPT).
+  unfold scan_one. rewrite EQ_INPUT. unfold accepts in ACCEPT.
+  pose proof (maximal_munch_some_accepted_prefix M M.(TaggedDFA.Partial.start_state) consumed rest None tag NONEMPTY ACCEPT) as (rest' & tag' & SCAN).
+  exists rest', tag'. split; [exact SCAN | eapply maximal_munch_length_le_accepted_prefix; eauto].
+Qed.
+
+Corollary scan_one_some_iff (M : LGS.t) (s : Input.t)
+  : (exists rest, exists tag, scan_one M s = Some (rest, tag)) <-> (exists rest, exists tag, scan_candidate M s rest tag).
+Proof.
+  split.
+  - intros (rest & tag & SCAN).
+    pose proof (scan_one_maximal M s rest tag SCAN) as [CANDIDATE _].
+    exists rest, tag. exact CANDIDATE.
+  - intros (rest & tag & CANDIDATE).
+    pose proof (scan_one_complete M s rest tag CANDIDATE) as (rest' & tag' & SCAN & _).
+    exists rest', tag'. exact SCAN.
+Qed.
+
+Inductive scan_all_spec (M : LGS.t) : Input.t -> list Token.t -> Prop :=
+  | scan_all_spec_nil
+    : scan_all_spec M [] []
+  | scan_all_spec_cons s rest tag tags
+    (SCAN : scan_one M s = Some (rest, tag))
+    (REST : scan_all_spec M rest tags)
+    : scan_all_spec M s (tag :: tags).
+
+Inductive scan_all_accepts (M : LGS.t) : Input.t -> list Token.t -> Prop :=
+  | scan_all_accepts_nil
+    : scan_all_accepts M [] []
+  | scan_all_accepts_cons consumed rest tag tags
+    (ACCEPT : accepts M consumed tag)
+    (REST : scan_all_accepts M rest tags)
+    : scan_all_accepts M (consumed ++ rest) (tag :: tags).
 
 Definition input_lt (s1 : Input.t) (s2 : Input.t) : Prop :=
   length s1 < length s2.
@@ -2071,9 +3768,288 @@ Fixpoint scan_all' (M : LGS.t) (s : list ascii) (H_Acc : Acc input_lt s) {struct
 Definition scan_all (M : LGS.t) (s : list ascii) : option (list Token.t) :=
   scan_all' M s (L.length_lt_wf s).
 
+Theorem scan_all'_sound (M : LGS.t) (s : Input.t) (H_Acc : Acc input_lt s) (tags : list Token.t)
+  (SCAN : scan_all' M s H_Acc = Some tags)
+  : scan_all_spec M s tags.
+Proof.
+  revert s H_Acc tags SCAN.
+  refine (fix IH (s : Input.t) (H_Acc : Acc input_lt s) (tags : list Token.t) (SCAN : scan_all' M s H_Acc = Some tags) {struct H_Acc} : scan_all_spec M s tags := _).
+  destruct H_Acc as [H_Acc_inv].
+  destruct s as [ | c s]; simpl in SCAN.
+  - inv SCAN. constructor.
+  - destruct (scan_one M (c :: s)) as [[rest tag] | ] eqn: SCAN_ONE; [ | inv SCAN].
+    destruct (lt_dec (length rest) (S (length s))) as [LT | NLT]; cbn in SCAN; [ | inv SCAN].
+    destruct (scan_all' M rest (H_Acc_inv rest LT)) as [tags' | ] eqn: SCAN_REST; cbn in SCAN; inv SCAN.
+    eapply scan_all_spec_cons with (rest := rest); [exact SCAN_ONE | ].
+    eapply IH. exact SCAN_REST.
+Qed.
+
+Theorem scan_all_sound (M : LGS.t) (s : Input.t) (tags : list Token.t)
+  (SCAN : scan_all M s = Some tags)
+  : scan_all_spec M s tags.
+Proof.
+  unfold scan_all in SCAN. eapply scan_all'_sound. exact SCAN.
+Qed.
+
+Theorem scan_all'_complete (M : LGS.t) (s : Input.t) (H_Acc : Acc input_lt s) (tags : list Token.t)
+  (SPEC : scan_all_spec M s tags)
+  : scan_all' M s H_Acc = Some tags.
+Proof.
+  revert H_Acc.
+  induction SPEC; intros H_Acc.
+  - destruct H_Acc as [H_Acc_inv]. simpl. reflexivity.
+  - destruct H_Acc as [H_Acc_inv].
+    destruct s as [ | c s']; simpl in SCAN.
+    + inv SCAN.
+    + simpl. rewrite SCAN.
+      destruct (lt_dec (length rest) (S (length s'))) as [LT | NLT].
+      * rewrite IHSPEC. reflexivity.
+      * exfalso. pose proof (scan_one_length_lt M (c :: s') rest tag SCAN). simpl in H. lia.
+Qed.
+
+Theorem scan_all_complete (M : LGS.t) (s : Input.t) (tags : list Token.t)
+  (SPEC : scan_all_spec M s tags)
+  : scan_all M s = Some tags.
+Proof.
+  unfold scan_all. eapply scan_all'_complete. exact SPEC.
+Qed.
+
+Corollary scan_all_spec_iff (M : LGS.t) (s : Input.t) (tags : list Token.t)
+  : scan_all M s = Some tags <-> scan_all_spec M s tags.
+Proof.
+  split.
+  - eapply scan_all_sound.
+  - eapply scan_all_complete.
+Qed.
+
+Theorem scan_all_spec_accepts (M : LGS.t) (s : Input.t) (tags : list Token.t)
+  (SCAN : scan_all_spec M s tags)
+  : scan_all_accepts M s tags.
+Proof.
+  induction SCAN.
+  - constructor.
+  - pose proof (scan_one_sound M s rest tag SCAN) as (consumed & EQ_INPUT & ACCEPT & _).
+    subst s. econstructor; eauto.
+Qed.
+
+Theorem scan_all_accepts_sound (M : LGS.t) (s : Input.t) (tags : list Token.t)
+  (SCAN : scan_all M s = Some tags)
+  : scan_all_accepts M s tags.
+Proof.
+  eapply scan_all_spec_accepts. eapply scan_all_sound. exact SCAN.
+Qed.
+
+Inductive scan_all_rules (rules : list Rule.t) : Input.t -> list Token.t -> Prop :=
+  | scan_all_rules_nil
+    : scan_all_rules rules [] []
+  | scan_all_rules_cons consumed rest tag tags rule
+    (NONEMPTY : ~ consumed = [])
+    (IN_RULE : rule ∈ rules)
+    (TOKEN : rule.(Rule.token) = tag)
+    (REGEX : consumed \in eval_regex rule.(Rule.regex))
+    (REST : scan_all_rules rules rest tags)
+    : scan_all_rules rules (consumed ++ rest) (tag :: tags).
+
 Definition build : BuildErrorM LGS.t := do
   'rules <- Rule.compileds;
-  ret (DFA.delete_dead_state (DFA.minimise (DFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules))))
-  end. 
+  ret (TaggedDFA.delete_dead_state (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules))))
+  end.
+
+Theorem build_sound (M : LGS.t)
+  (BUILD : build = inr M)
+  : exists rules, Rule.compileds = inr rules /\ M = TaggedDFA.delete_dead_state (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules))).
+Proof.
+  unfold build in BUILD. destruct Rule.compileds as [err | rules] eqn: COMPILED; inv BUILD.
+  exists rules. split; eauto.
+Qed.
+
+Theorem build_complete (rules : list Rule.t)
+  (COMPILED : Rule.compileds = inr rules)
+  : build = inr (TaggedDFA.delete_dead_state (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules)))).
+Proof.
+  unfold build. rewrite COMPILED. reflexivity.
+Qed.
+
+Theorem build_accepts_sound (M : LGS.t) (s : Input.t) (tag : Token.t)
+  (BUILD : build = inr M)
+  (ACCEPT : accepts M s tag)
+  : exists rules, Rule.compileds = inr rules /\ exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex).
+Proof.
+  pose proof (build_sound M BUILD) as (rules & COMPILED & EQ). subst M.
+  exists rules. split; [exact COMPILED | ].
+  pose proof (delete_dead_state_sound _ _ _ ACCEPT) as ACCEPT_DFA.
+  pose proof (TaggedDFA.minimise_numbered_sound _ _ _ (TaggedDFA.subset_construct_okay _ (TaggedENFA.mkUnitedTaggedENFA_okay rules)) ACCEPT_DFA) as ACCEPT_SUBSET.
+  pose proof (TaggedDFA.subset_construct_sound _ _ _ ACCEPT_SUBSET) as ACCEPT_ENFA.
+  assert (COMPILE : fmap TaggedENFA.mkUnitedTaggedENFA Rule.compileds = inr (TaggedENFA.mkUnitedTaggedENFA rules)).
+  { unfold fmap, mkFunctorFromMonad. simpl. rewrite COMPILED. reflexivity. }
+  pose proof (TaggedENFA.mkUnitedTaggedENFA_sound _ COMPILE) as (rules' & COMPILED' & SOUND).
+  rewrite COMPILED in COMPILED'. inv COMPILED'.
+  eapply SOUND. exact ACCEPT_ENFA.
+Qed.
+
+Theorem build_accepts_sound_with_rules (M : LGS.t) (rules : list Rule.t) (s : Input.t) (tag : Token.t)
+  (BUILD : build = inr M)
+  (COMPILED : Rule.compileds = inr rules)
+  (ACCEPT : accepts M s tag)
+  : exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex).
+Proof.
+  pose proof (build_accepts_sound M s tag BUILD ACCEPT) as (rules' & COMPILED' & ACCEPT').
+  rewrite COMPILED in COMPILED'. inv COMPILED'. exact ACCEPT'.
+Qed.
+
+Theorem build_scan_one_sound (M : LGS.t) (s : Input.t) (rest : Input.t) (tag : Token.t)
+  (BUILD : build = inr M)
+  (SCAN : scan_one M s = Some (rest, tag))
+  : exists rules, Rule.compileds = inr rules /\ (exists consumed, exists rule, s = consumed ++ rest /\ (~ consumed = []) /\ rule ∈ rules /\ rule.(Rule.token) = tag /\ consumed \in eval_regex rule.(Rule.regex) /\ length rest < length s).
+Proof.
+  pose proof (build_sound M BUILD) as (rules & COMPILED & _).
+  pose proof (scan_one_sound M s rest tag SCAN) as (consumed & EQ_INPUT & ACCEPT & LT).
+  pose proof (build_accepts_sound_with_rules M rules consumed tag BUILD COMPILED ACCEPT) as (rule & IN_RULE & TOKEN & REGEX).
+  exists rules. split; [exact COMPILED | exists consumed, rule].
+  repeat split; eauto. intros EQ. subst consumed. simpl in EQ_INPUT. subst s. lia.
+Qed.
+
+Theorem build_accepts_complete (M : LGS.t) (rules : list Rule.t) (s : Input.t) (tag : Token.t)
+  (BUILD : build = inr M)
+  (COMPILED : Rule.compileds = inr rules)
+  (ACCEPT : exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex))
+  : accepts M s tag.
+Proof.
+  rewrite (build_complete rules COMPILED) in BUILD. inv BUILD.
+  assert (COMPILE : fmap TaggedENFA.mkUnitedTaggedENFA Rule.compileds = inr (TaggedENFA.mkUnitedTaggedENFA rules)).
+  { unfold fmap, mkFunctorFromMonad. simpl. rewrite COMPILED. reflexivity. }
+  pose proof (TaggedENFA.mkUnitedTaggedENFA_okay rules) as OKAY_ENFA.
+  pose proof (TaggedENFA.mkUnitedTaggedENFA_complete _ COMPILE) as (rules' & COMPILED' & COMPLETE).
+  rewrite COMPILED in COMPILED'. injection COMPILED' as EQ_RULES. subst rules'.
+  pose proof (COMPLETE s tag ACCEPT) as ACCEPT_ENFA.
+  pose proof (TaggedDFA.subset_construct_complete _ OKAY_ENFA _ _ ACCEPT_ENFA) as ACCEPT_SUBSET.
+  pose proof (TaggedDFA.subset_construct_okay _ OKAY_ENFA) as OKAY_SUBSET.
+  pose proof (TaggedDFA.minimise_numbered_complete _ _ _ OKAY_SUBSET ACCEPT_SUBSET) as ACCEPT_MIN.
+  pose proof (TaggedDFA.minimise_numbered_okay _ OKAY_SUBSET) as OKAY_MIN.
+  eapply delete_dead_state_complete; eauto.
+Qed.
+
+Theorem build_scan_all_spec_sound (M : LGS.t) (rules : list Rule.t) (s : Input.t) (tags : list Token.t)
+  (BUILD : build = inr M)
+  (COMPILED : Rule.compileds = inr rules)
+  (SPEC : scan_all_spec M s tags)
+  : scan_all_rules rules s tags.
+Proof.
+  induction SPEC.
+  - constructor.
+  - pose proof (scan_one_sound M s rest tag SCAN) as (consumed & EQ_INPUT & ACCEPT & LT).
+    pose proof (build_accepts_sound_with_rules M rules consumed tag BUILD COMPILED ACCEPT) as (rule & IN_RULE & TOKEN & REGEX).
+    subst s. econstructor; eauto.
+    intros EQ. subst consumed. simpl in LT. lia.
+Qed.
+
+Theorem build_scan_all_sound (M : LGS.t) (s : Input.t) (tags : list Token.t)
+  (BUILD : build = inr M)
+  (SCAN : scan_all M s = Some tags)
+  : exists rules, Rule.compileds = inr rules /\ scan_all_rules rules s tags.
+Proof.
+  pose proof (build_sound M BUILD) as (rules & COMPILED & _).
+  exists rules. split; [exact COMPILED | ].
+  eapply build_scan_all_spec_sound; [exact BUILD | exact COMPILED | ].
+  eapply scan_all_sound. exact SCAN.
+Qed.
+
+Section MAIN_THEOREMS.
+
+Theorem build_correct (M : LGS.t)
+  : build = inr M <-> (exists rules, Rule.compileds = inr rules /\ M =TaggedDFA.delete_dead_state(TaggedDFA.minimise_numbered(TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules)))).
+Proof.
+  split.
+  - exact (build_sound M).
+  - intros (rules & COMPILED & EQ). subst M.
+    eapply build_complete. exact COMPILED.
+Qed.
+
+Theorem build_accepts_correct (M : LGS.t)
+  (BUILD : build = inr M)
+  : exists rules, Rule.compileds = inr rules /\ (forall s, forall tag, accepts M s tag <-> (exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex))).
+Proof.
+  pose proof (build_sound M BUILD) as (rules & COMPILED & _).
+  exists rules. split; [exact COMPILED | ].
+  intros s tag. split.
+  - intro ACCEPT. eapply build_accepts_sound_with_rules; eauto.
+  - intro ACCEPT. eapply build_accepts_complete; eauto.
+Qed.
+
+Theorem scan_one_correct (M : LGS.t) (s : Input.t) (rest : Input.t) (tag : Token.t)
+  (SCAN_ONE : scan_one M s = Some (rest, tag))
+  : scan_candidate M s rest tag /\ (forall rest', forall tag', scan_candidate M s rest' tag' -> length rest <= length rest').
+Proof.
+  eapply scan_one_maximal; eauto.
+Qed.
+
+Theorem scan_one_success_correct (M : LGS.t) (s : Input.t)
+  : (exists rest, exists tag, scan_one M s = Some (rest, tag)) <-> (exists rest, exists tag, scan_candidate M s rest tag).
+Proof.
+  eapply scan_one_some_iff.
+Qed.
+
+Theorem scan_all_correct (M : LGS.t) (s : Input.t) (tags : list Token.t)
+  : scan_all M s = Some tags <-> scan_all_spec M s tags.
+Proof.
+  eapply scan_all_spec_iff.
+Qed.
+
+Variant build_scan_one_spec (M : LGS.t) (s : Input.t) (rest : Input.t) (tag : Token.t) : Prop :=
+  | build_scan_one_spec_intro rules consumed rule
+    (COMPILED : Rule.compileds = inr rules)
+    (EQ_INPUT : s = consumed ++ rest)
+    (NONEMPTY : ~ consumed = [])
+    (IN_RULE : rule ∈ rules)
+    (TOKEN : rule.(Rule.token) = tag)
+    (REGEX : consumed \in eval_regex rule.(Rule.regex))
+    (LENGTH : length rest < length s)
+    (MAXIMAL : forall rest', forall tag', scan_candidate M s rest' tag' -> length rest <= length rest')
+    : build_scan_one_spec M s rest tag.
+
+Theorem build_scan_one_correct (M : LGS.t) (s : Input.t) (rest : Input.t) (tag : Token.t)
+  (BUILD : build = inr M)
+  (SCAN : scan_one M s = Some (rest, tag))
+  : build_scan_one_spec M s rest tag.
+Proof.
+  pose proof (build_scan_one_sound M s rest tag BUILD SCAN) as (rules & COMPILED & consumed & rule & EQ_INPUT & NONEMPTY & IN_RULE & TOKEN & REGEX & LT).
+  pose proof (scan_one_maximal M s rest tag SCAN) as [_ MAXIMAL].
+  econstructor; eauto.
+Qed.
+
+Theorem build_scan_one_complete_correct (M : LGS.t) (rules : list Rule.t) (s : Input.t) (consumed : Input.t) (rest : Input.t) (rule : Rule.t)
+  (BUILD : build = inr M)
+  (COMPILED : Rule.compileds = inr rules)
+  (EQ_INPUT : s = consumed ++ rest)
+  (NONEMPTY : ~ consumed = [])
+  (IN_RULE : rule ∈ rules)
+  (REGEX : consumed \in eval_regex rule.(Rule.regex))
+  : exists rest', exists tag', scan_one M s = Some (rest', tag') /\ length rest' <= length rest.
+Proof.
+  eapply scan_one_complete.
+  exists consumed. repeat split; eauto.
+  eapply build_accepts_complete with (rules := rules); eauto.
+Qed.
+
+Theorem build_scan_all_correct (M : LGS.t) (s : Input.t) (tags : list Token.t)
+  (BUILD : build = inr M)
+  (SCAN : scan_all M s = Some tags)
+  : exists rules, Rule.compileds = inr rules /\ scan_all_rules rules s tags.
+Proof.
+  eapply build_scan_all_sound; eauto.
+Qed.
+
+Theorem minimise_numbered_minimal_correct (M : TaggedDFA.t) (N : TaggedDFA.t)
+  (OKAY_M : TaggedDFA.okay M)
+  (REACHABLE : TaggedDFA.all_states_reachable M)
+  (OKAY_N : TaggedDFA.okay N)
+  (NODUP_N : NoDup N.(TaggedDFA.states))
+  (EQUIV : TaggedDFA.language_equiv M N)
+  : length (TaggedDFA.minimise_numbered M).(TaggedDFA.states) <= length N.(TaggedDFA.states).
+Proof.
+  eapply TaggedDFA.minimise_numbered_states_minimal; eauto.
+Qed.
+
+End MAIN_THEOREMS.
 
 End LGS.
