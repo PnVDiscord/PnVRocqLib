@@ -1580,6 +1580,10 @@ Next Obligation.
   - intros [f1 H_f1] [f2 H_f2] [f3 H_f3]; ii; simpl in *. unfold is_similar_to in *. transitivity (f2 x'); eauto with *.
 Qed.
 
+#[local]
+Instance Similarity_bool_Prop : Similarity bool Prop :=
+  fun b => fun P => if b then P else ~ P.
+
 End SIMILARITY.
 
 #[universes(template), projections(primitive)]

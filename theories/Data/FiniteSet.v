@@ -62,6 +62,50 @@ Fixpoint union@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xs : list A) (ys :
   end.
 
 #[universes(polymorphic=yes)]
+Fixpoint iter@{u} {A : Type@{u}} (fuel : nat) (step : A -> A) (x : A) {struct fuel} : A :=
+  match fuel with
+  | O => x
+  | S fuel' => iter fuel' step (step x)
+  end.
+
+#[universes(polymorphic=yes)]
+Lemma iter_succ@{u} {A : Type@{u}} (fuel : nat) (step : A -> A) (x : A)
+  : iter (S fuel) step x = step (iter fuel step x).
+Proof.
+  revert x. induction fuel as [ | fuel IH]; intros x; simpl.
+  - reflexivity.
+  - change (iter (S fuel) step (step x) = step (iter fuel step (step x))).
+    eapply IH.
+Qed.
+
+Fixpoint pow2 (n : nat) {struct n} : nat :=
+  match n with
+  | O => 1
+  | S n' => 2 * pow2 n'
+  end.
+
+#[universes(polymorphic=yes)]
+Definition nonempty@{u} {A : Type@{u}} (xs : list A) : bool :=
+  match xs with
+  | [] => false
+  | _ :: _ => true
+  end.
+
+#[universes(polymorphic=yes)]
+Fixpoint normalize@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xs : list A) {struct xs} : list A :=
+  match xs with
+  | [] => []
+  | x :: xs' => add x (normalize xs')
+  end.
+
+#[universes(polymorphic=yes)]
+Fixpoint unions@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xss : list (list A)) {struct xss} : list A :=
+  match xss with
+  | [] => []
+  | xs :: xss' => union xs (unions xss')
+  end.
+
+#[universes(polymorphic=yes)]
 Lemma mem_true_iff@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A)
   : mem x xs = true <-> x ∈ xs.
 Proof.
@@ -129,6 +173,56 @@ Proof.
 Qed.
 
 #[universes(polymorphic=yes)]
+Lemma normalize_sound@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xs : list A) (z : A)
+  (IN : z ∈ normalize xs)
+  : z ∈ xs.
+Proof.
+  induction xs as [ | x xs IH]; simpl in IN |- *.
+  - exact IN.
+  - pose proof (add_sound x z (normalize xs) IN) as [EQ | IN'].
+    + left. symmetry. exact EQ.
+    + right. eapply IH. exact IN'.
+Qed.
+
+#[universes(polymorphic=yes)]
+Lemma normalize_complete@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xs : list A) (z : A)
+  (IN : z ∈ xs)
+  : z ∈ normalize xs.
+Proof.
+  induction xs as [ | x xs IH]; simpl in IN |- *.
+  - exact IN.
+  - eapply add_complete. destruct IN as [EQ | IN'].
+    + left. symmetry. exact EQ.
+    + right. eapply IH. exact IN'.
+Qed.
+
+#[universes(polymorphic=yes)]
+Lemma unions_sound@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xss : list (list A)) (z : A)
+  (IN : z ∈ unions xss)
+  : exists xs, xs ∈ xss /\ z ∈ xs.
+Proof.
+  induction xss as [ | xs xss IH]; simpl in IN.
+  - contradiction.
+  - pose proof (union_sound xs (unions xss) z IN) as [IN_XS | IN_XSS].
+    + exists xs. split; [left; reflexivity | exact IN_XS].
+    + pose proof (IH IN_XSS) as (xs' & IN_XSS' & IN_XS').
+      exists xs'. split; [right; exact IN_XSS' | exact IN_XS'].
+Qed.
+
+#[universes(polymorphic=yes)]
+Lemma unions_complete@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (xss : list (list A)) (xs : list A) (z : A)
+  (IN_XSS : xs ∈ xss)
+  (IN_XS : z ∈ xs)
+  : z ∈ unions xss.
+Proof.
+  induction xss as [ | xs' xss IH]; simpl in IN_XSS |- *.
+  - contradiction.
+  - eapply union_complete. destruct IN_XSS as [EQ | IN_XSS].
+    + left. congruence.
+    + right. eapply IH; eauto.
+Qed.
+
+#[universes(polymorphic=yes)]
 Lemma remove_length_lt@{u} {A : Type@{u}} `{EQ_DEC : hasEqDec@{u} A} (x : A) (xs : list A)
   (IN : x ∈ xs)
   : length (remove eq_dec x xs) < length xs.
@@ -161,6 +255,15 @@ Proof.
     + rewrite in_app_iff. right. rewrite in_map_iff.
       exists (filter p xs). split; [reflexivity | exact IH].
     + rewrite in_app_iff. left. exact IH.
+Qed.
+
+#[universes(polymorphic=yes)]
+Lemma powerset_length@{u} {A : Type@{u}} (xs : list A)
+  : length (powerset xs) = pow2 (length xs).
+Proof.
+  induction xs as [ | x xs IH]; simpl.
+  - reflexivity.
+  - rewrite length_app. rewrite length_map. rewrite IH. lia.
 Qed.
 
 #[universes(polymorphic=yes)]
@@ -304,6 +407,18 @@ Proof.
   - pose proof (IH FORALL) as (y & IN & PY). exists y. split; [right; exact IN | exact PY].
 Qed.
 
+Lemma find_some_exists {A : Type} (p : A -> bool) (xs : list A) (x : A)
+  (IN : x ∈ xs)
+  (PX : p x = true)
+  : exists y, find p xs = Some y.
+Proof.
+  induction xs as [ | x0 xs IH]; simpl in IN |- *; [contradiction | ].
+  destruct IN as [EQ | IN].
+  - subst x0. rewrite PX. exists x. reflexivity.
+  - destruct (p x0) eqn: PX0; [exists x0; reflexivity | ].
+    eapply IH; eauto.
+Qed.
+
 Lemma NoDup_exists_injective_length {A : Type} {B : Type} `{B_hasEqDec : hasEqDec B} (xs : list A) (ys : list B) (R : A -> B -> Prop)
   (NO_DUP : NoDup xs)
   (TOTAL : forall x, x ∈ xs -> exists y, y ∈ ys /\ R x y)
@@ -326,4 +441,22 @@ Proof.
     subst x'. contradiction.
   - intros x1 x2 y0 IN1 IN2 R1 R2.
     eapply INJ; [right; exact IN1 | right; exact IN2 | exact R1 | exact R2].
+Qed.
+
+Inductive relation_star {A : Type} (R : A -> A -> Prop) : A -> A -> Prop :=
+  | relation_star_refl x
+    : relation_star R x x
+  | relation_star_step x y z
+    (STEP : R x y)
+    (REST : relation_star R y z)
+    : relation_star R x z.
+
+Lemma relation_star_monotone {A : Type} (R : A -> A -> Prop) (R' : A -> A -> Prop) (x : A) (y : A)
+  (INCL : forall x, forall y, R x y -> R' x y)
+  (STEPS : relation_star R x y)
+  : relation_star R' x y.
+Proof.
+  induction STEPS as [x | x y z STEP REST IH].
+  - constructor.
+  - econstructor; [eapply INCL; exact STEP | exact IH].
 Qed.

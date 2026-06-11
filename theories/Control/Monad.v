@@ -36,6 +36,21 @@ Let do_notation_example1 : option nat := do
   ret (x + y)
   end.
 
+Let do_notation_example2 (a : nat) : option nat :=
+  do
+    Some 1;
+    'x <- Some 2;
+    Some 3;
+    let y := 4;
+    match a with
+    | O => pure (x + y)
+    | S a' => do
+      Some 5;
+      ret 6
+      end
+    end
+  end.
+
 End EXAMPLE.
 
 End DoNotations.
