@@ -2033,7 +2033,7 @@ Proof.
 Qed.
 
 Definition strict_subseq (xs : list A) (ys : list A) : Prop :=
-  xs <> ys /\ subseq xs ys.
+  (~ xs = ys) /\ subseq xs ys.
 
 Lemma strict_subseq_length_lt xs ys
   (SUBSEQ : strict_subseq xs ys)
