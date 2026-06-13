@@ -6877,8 +6877,7 @@ Proof.
   split; eapply state_encode_sum_inj; assumption.
 Qed.
 
-Definition square_state_extend (s : square_state)
-  (fresh : st_carrier s -> A)
+Definition square_state_extend (s : square_state) (fresh : st_carrier s -> A)
   (fresh_cong : forall x : st_carrier s, forall y : st_carrier s, @eqProp (st_carrier s) (st_isSetoid s) x y -> fresh x = fresh y)
   (fresh_inj : forall x : st_carrier s, forall y : st_carrier s, fresh x = fresh y -> @eqProp (st_carrier s) (st_isSetoid s) x y)
   (fresh_out : forall x : st_carrier s, forall y : st_carrier s, fresh x <> st_emb s y)
@@ -6927,8 +6926,7 @@ Proof.
     + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
 Defined.
 
-Lemma square_state_extend_exists (s : square_state)
-  (fresh : st_carrier s -> A)
+Lemma square_state_extend_exists (s : square_state) (fresh : st_carrier s -> A)
   (fresh_cong : forall x : st_carrier s, forall y : st_carrier s, @eqProp (st_carrier s) (st_isSetoid s) x y -> fresh x = fresh y)
   (fresh_inj : forall x : st_carrier s, forall y : st_carrier s, fresh x = fresh y -> @eqProp (st_carrier s) (st_isSetoid s) x y)
   (fresh_out : forall x : st_carrier s, forall y : st_carrier s, fresh x <> st_emb s y)
