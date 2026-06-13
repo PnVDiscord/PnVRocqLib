@@ -46,13 +46,13 @@ Definition all : list bool :=
 Lemma all_complete
   : forall x : Bool_FinEnum.t, L.In x Bool_FinEnum.all.
 Proof.
-  intros x; destruct x; simpl; tauto.
+  intros [ | ]; simpl; tauto.
 Qed.
 
 Lemma all_no_dup
   : NoDup Bool_FinEnum.all.
 Proof.
-  assert (EQ : L.nodup (@eq_dec bool bool_hasEqDec) all = all) by (vm_compute; reflexivity).
+  assert (EQ : L.nodup (@eq_dec@{Set} bool bool_hasEqDec) all = all) by reflexivity.
   rewrite <- EQ. eapply L.NoDup_nodup.
 Qed.
 
@@ -70,22 +70,23 @@ Definition t : Set :=
 Definition t_hasEqDec : hasEqDec@{Set} Ascii_FinEnum.t :=
   ascii_hasEqDec.
 
-Definition all : list ascii := do
-  'b0 <- all_bools;
-  'b1 <- all_bools;
-  'b2 <- all_bools;
-  'b3 <- all_bools;
-  'b4 <- all_bools;
-  'b5 <- all_bools;
-  'b6 <- all_bools;
-  'b7 <- all_bools;
-  ret (Ascii b0 b1 b2 b3 b4 b5 b6 b7)
+Definition all : list ascii :=
+  do
+    'b0 <- all_bools;
+    'b1 <- all_bools;
+    'b2 <- all_bools;
+    'b3 <- all_bools;
+    'b4 <- all_bools;
+    'b5 <- all_bools;
+    'b6 <- all_bools;
+    'b7 <- all_bools;
+    ret (Ascii b0 b1 b2 b3 b4 b5 b6 b7)
   end.
 
 Lemma all_complete
   : forall x : Ascii_FinEnum.t, L.In x Ascii_FinEnum.all.
 Proof.
-  intros c; unfold all; destruct c as [b0 b1 b2 b3 b4 b5 b6 b7].
+  unfold all; intros [b0 b1 b2 b3 b4 b5 b6 b7].
   eapply list_bind_complete with (x := b0); [eapply all_bools_complete | ].
   eapply list_bind_complete with (x := b1); [eapply all_bools_complete | ].
   eapply list_bind_complete with (x := b2); [eapply all_bools_complete | ].
@@ -100,7 +101,7 @@ Qed.
 Lemma all_no_dup
   : NoDup Ascii_FinEnum.all.
 Proof.
-  assert (EQ : L.nodup (@eq_dec ascii ascii_hasEqDec) all = all) by reflexivity.
+  assert (EQ : L.nodup (@eq_dec@{Set} ascii ascii_hasEqDec) all = all) by reflexivity.
   rewrite <- EQ. eapply L.NoDup_nodup.
 Qed.
 
@@ -121,13 +122,13 @@ Class isToken `(Token : Set) : Set :=
 #[global] Existing Instance Token_hasEqDec.
 
 Fact mem_spec (A : Set) `(A_hasEqDec : hasEqDec@{Set} A) (x : A) (xs : list A) (b : bool)
-  : mem x xs = b <-> (if b then x ∈ xs else ~ x ∈ xs).
+  : mem@{Set} x xs = b <-> (if b then x ∈ xs else ~ x ∈ xs).
 Proof.
   destruct b; [eapply mem_true_iff | eapply mem_false_iff].
 Qed.
 
 Fact eqb_iff (A : Set) `(A_hasEqDec : hasEqDec@{Set} A) (x : A) (y : A) (b : bool)
-  : eqb x y = b <-> (if b then x = y else ~ x = y).
+  : eqb@{Set} x y = b <-> (if b then x = y else ~ x = y).
 Proof.
   eapply eqb_spec.
 Qed.
@@ -141,7 +142,7 @@ Qed.
 Fact forallb_iff (A : Set) (p : A -> bool) (xs : list A)
   : forallb p xs = true <-> (forall x, x ∈ xs -> p x = true).
 Proof.
-  eapply forallb_forall.
+  eapply L.forallb_forall.
 Qed.
 
 #[local] Hint Rewrite mem_spec eqb_iff existsb_iff forallb_iff : simplication_hints.
@@ -194,8 +195,7 @@ Fact prefix_suffix_decompose (s : Input.t) (n : nat)
   (LE : n <= length s)
   : exists prefix, exists suffix, s = prefix ++ suffix /\ length prefix = n.
 Proof.
-  exists (firstn n s). exists (skipn n s). rewrite firstn_skipn. 
-  split; [reflexivity | rewrite length_firstn; lia].
+  exists (firstn n s). exists (skipn n s). rewrite firstn_skipn. split; [reflexivity | rewrite length_firstn; lia].
 Qed.
 
 Fact app_cancel_prefix (prefix : Input.t) (s1 : Input.t) (s2 : Input.t)
@@ -227,6 +227,8 @@ Qed.
 
 End Input.
 
+Module REGEX.
+
 Fixpoint nullable (e : regex ascii) {struct e} : bool :=
   match e with
   | Re.Null => false
@@ -247,7 +249,7 @@ Proof.
     + rewrite andb_true_iff in H. destruct H as [H1 H2]. change (@nil ascii) with (@nil ascii ++ @nil ascii). eauto with *.
     + econs.
   - revert e.
-    enough (CLAIM : forall s, forall e, s =~= e -> s = [] -> nullable e = true).
+    enough (CLAIM : forall s : list ascii, forall e : regex ascii, s =~= e -> s = [] -> nullable e = true).
     { i; eapply CLAIM; eauto. }
     intros s e H_IN. induction H_IN; simpl; i; subst; try congruence; eauto.
     + rewrite orb_true_iff. left. eauto.
@@ -271,26 +273,50 @@ Proof.
   - reflexivity.
 Qed.
 
-Corollary nullable_refinement (e : regex ascii)
-  : nullable e ⊑ ([] \in eval_regex e).
+Corollary nullable_refines (e : regex ascii)
+  : (nullable e) ⊑ ([] \in eval_regex e).
 Proof.
   destruct (nullable e) as [ | ] eqn: H_OBS; red; simpl.
   - now rewrite nullable_true_iff in H_OBS.
   - now rewrite nullable_false_iff in H_OBS.
 Qed.
 
-Lemma union_inv (s : Input.t) (e1 : regex ascii) (e2 : regex ascii)
-  (IN : s \in eval_regex (Re.Union e1 e2))
-  : s \in eval_regex e1 \/ s \in eval_regex e2.
+Theorem empty_inv (s : Input.t)
+  : s \in eval_regex (Re.Empty) <-> s = [].
 Proof.
-  simpl in IN. destruct IN as [IN | IN]; [left | right]; exact IN.
+  ss!.
 Qed.
 
-Lemma append_inv (s : Input.t) (e1 : regex ascii) (e2 : regex ascii)
-  (IN : s \in eval_regex (Re.Append e1 e2))
-  : exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e1 /\ s2 \in eval_regex e2.
+Theorem null_inv (s : Input.t)
+  : s \in eval_regex (Re.Null) <-> False.
 Proof.
-  cbn [eval_regex] in IN. rewrite E.liftM2_spec in IN. firstorder.
+  ss!.
+Qed.
+
+Theorem char_inv (s : Input.t) (c : ascii)
+  : s \in eval_regex (Re.Char c) <-> s = [c].
+Proof.
+  ss!.
+Qed.
+
+Theorem union_inv (s : Input.t) (e1 : regex ascii) (e2 : regex ascii)
+  : s \in eval_regex (Re.Union e1 e2) <-> (s \in eval_regex e1 \/ s \in eval_regex e2).
+Proof.
+  ss!.
+Qed.
+
+Theorem append_inv (s : Input.t) (e1 : regex ascii) (e2 : regex ascii)
+  : s \in eval_regex (Re.Append e1 e2) <-> (exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e1 /\ s2 \in eval_regex e2).
+Proof.
+  ss!.
+Qed.
+
+Theorem star_inv (s : Input.t) (e : regex ascii)
+  : s \in eval_regex (Re.Star e) <-> (s = [] \/ (exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e /\ s2 \in eval_regex (Re.Star e))).
+Proof.
+  split; intros IN.
+  - now inv IN; firstorder.
+  - destruct IN as [EQ | (s1 & s2 & EQ & H_s1 & H_s2)]; subst s; [econs 1 | econs 2]; eauto.
 Qed.
 
 Fact star_nil (e : regex ascii)
@@ -299,11 +325,8 @@ Proof.
   econs 1.
 Qed.
 
-Lemma star_inv (s : Input.t) (e : regex ascii)
-  (IN : s \in eval_regex (Re.Star e))
-  : s = [] \/ (exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e /\ s2 \in eval_regex (Re.Star e)).
-Proof.
-  inv IN; firstorder.
-Qed.
+End REGEX.
+
+#[local] Hint Resolve star_nil : core.
 
 End LGS.

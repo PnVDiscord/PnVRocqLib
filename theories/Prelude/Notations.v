@@ -55,12 +55,16 @@ Reserved Infix "~~>" (no associativity, at level 95).
 Reserved Infix "~~>*" (no associativity, at level 95).
 Reserved Infix "~~>⁺" (no associativity, at level 95).
 
-Reserved Notation " src '~~~[' x ']~~>' tgt " (at level 70, no associativity).
-Reserved Notation " src '---[' x ']-->' tgt " (at level 70, no associativity).
-Reserved Notation " src '===[' x ']==>' tgt " (at level 70, no associativity).
-Reserved Notation " src '~~~[' x ']~~>*' tgt " (at level 70, no associativity).
-Reserved Notation " src '---[' x ']-->*' tgt " (at level 70, no associativity).
-Reserved Notation " src '===[' x ']==>*' tgt " (at level 70, no associativity).
+Reserved Notation " src '~~~[' w ']~~>' tgt " (at level 70, no associativity).
+Reserved Notation " src '---[' p ']-->' tgt " (at level 70, no associativity).
+Reserved Notation " src '===[' t ']==>' tgt " (at level 70, no associativity).
+Reserved Notation " src '~~~[' walk ']~~>*' tgt " (at level 70, no associativity).
+Reserved Notation " src '---[' path ']-->*' tgt " (at level 70, no associativity).
+Reserved Notation " src '===[' trail ']==>*' tgt " (at level 70, no associativity).
+
+Reserved Notation " src '~~~[' w ']~~>*(' G  ')' tgt " (G at level 10, at level 70, no associativity).
+Reserved Notation " src '---[' p ']-->*(' G  ')' tgt " (G at level 10, at level 70, no associativity).
+Reserved Notation " src '===[' t ']==>*(' G  ')' tgt " (G at level 10, at level 70, no associativity).
 
 Reserved Notation "Gamma '∋' x '⦂' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊧' M '⦂' A" (at level 70, no associativity).
@@ -75,6 +79,8 @@ Reserved Infix "~>βₐ" (at level 70, no associativity).
 Reserved Infix "~>η" (at level 70, no associativity).
 Reserved Infix "~>β*" (at level 70, no associativity).
 Reserved Infix "~>η*" (at level 70, no associativity).
+Reserved Infix "~>β₀" (at level 70, no associativity).
+Reserved Infix "~>β₀*" (at level 70, no associativity).
 
 Reserved Notation "Gamma '⊢' M '~>β' N '⦂' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊢' M '~>η' N '⦂' A" (at level 70, no associativity).

@@ -15,3 +15,7 @@ Import DigraphFixedpoint.
 #[local] Infix "⊑" := is_similar_to.
 
 #[local] Existing Instance Similarity_bool_Prop.
+
+Module PGS.
+
+End PGS.

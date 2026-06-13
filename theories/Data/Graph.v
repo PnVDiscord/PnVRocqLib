@@ -233,6 +233,10 @@ Notation " src ===[ t ]==>* tgt " := (trail tgt src t) : type_scope.
 
 End GraphNotations.
 
+Notation " src '~~~[' w ']~~>*(' G  ')' tgt " := (@walk G tgt src w).
+Notation " src '---[' p ']-->*(' G  ')' tgt " := (@path G tgt src p).
+Notation " src '===[' t ']==>*(' G  ')' tgt " := (@trail G tgt src t).
+
 #[projections(primitive)]
 Record Labeled {G : GRAPH.t} : Type :=
   { labels : Type
@@ -345,7 +349,7 @@ Proof.
     pose proof (reachableb_sound _ _ _ REACH) as [w [_ WALK]].
     exists w. exact WALK.
   - intros [w WALK].
-    assert (exists p : list (GRAPH.vertices G), @path G y x p) as [p PATH].
+    assert (exists p : list (GRAPH.vertices G), x ---[ p ]-->*( G ) y) as [p PATH].
     { eapply @walk_finds_path with (G := G) (w := w); eauto. now intros v vs; pose proof (L.in_dec eq_dec v vs) as [YES | NO]; [left | right]. }
     rewrite path_iff_no_dup_walk in PATH.
     clear WALK. destruct PATH as [WALK NO_DUP].
@@ -426,9 +430,6 @@ Section DIGRAPH.
 #[local] Infix "\in" := E.In.
 #[local] Infix "∈" := L.In.
 
-#[local] Notation " src ~~~[ w ]~~> tgt " := (walk tgt src w) : type_scope.
-#[local] Notation " src ---[ p ]--> tgt " := (path tgt src p) : type_scope.
-
 Context {X : Type}.
 
 Fixpoint digraph_value {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : X -> list A) (deps : X -> list X) (x : X) : list A :=
@@ -508,7 +509,7 @@ Qed.
 
 Lemma digraph_trace_walk {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (trace : list X)
   (TRACE : digraph_trace seed deps x a trace)
-  : @walk (digraph_graph deps) (last trace x) x trace.
+  : x ~~~[ trace ]~~>*( digraph_graph deps ) last trace x.
 Proof.
   induction TRACE as [x a IN | x y a trace EDGE TRACE IH].
   - constructor.
@@ -516,7 +517,7 @@ Proof.
 Qed.
 
 Lemma digraph_walk_trace {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (target : X) (trace : list X)
-  (WALK : @walk (digraph_graph deps) target x trace)
+  (WALK : x ~~~[ trace ]~~>*(digraph_graph deps) target)
   (IN : a ∈ seed target)
   : digraph_trace seed deps x a trace.
 Proof.
@@ -529,7 +530,7 @@ Lemma digraph_trace_simple {A : Type} `{X_hasEqDec : hasEqDec X} (seed : X -> li
 Proof.
   pose proof (digraph_trace_walk seed deps x a trace TRACE) as WALK.
   pose proof (digraph_trace_seed_at_last seed deps x a trace TRACE) as SEED.
-  assert (exists simple, @path (digraph_graph deps) (@last X trace x) x simple) as [simple PATH].
+  assert (exists simple : list (GRAPH.vertices (digraph_graph deps)), x ---[ simple ]-->*( digraph_graph deps ) last trace x) as [simple PATH].
   { eapply walk_finds_path with (w := trace); auto. intros v vs. now pose proof (@L.in_dec X X_hasEqDec v vs) as [YES | NO]; [left | right]. }
   rewrite path_iff_no_dup_walk in PATH. destruct PATH as [WALK' NO_DUP].
   exists simple. split; [eapply digraph_walk_trace; eauto | exact NO_DUP].
@@ -541,7 +542,7 @@ Lemma digraph_trace_simple_bounded {A : Type} `{X_hasEqDec : hasEqDec X} (nodes 
   : exists simple, digraph_trace seed deps x a simple /\ length simple <= length nodes.
 Proof.
   destruct (digraph_trace_simple seed deps x a trace TRACE) as (simple & TRACE' & NO_DUP).
-  exists simple. split; [exact TRACE' | ].
+  exists simple. split; trivial.
   pose proof (digraph_trace_in_nodes nodes seed deps x a simple DEPS_CLOSED TRACE') as IN_NODES.
   eapply L.NoDup_incl_length; [exact NO_DUP | intros y IN].
   rewrite Forall_forall in IN_NODES. eapply IN_NODES. exact IN.

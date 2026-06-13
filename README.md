@@ -11,7 +11,7 @@ git clone https://github.com/PnVDiscord/PnVRocqLib.git
 cd PnVRocqLib
 eval `opam env`
 rocq makefile -f _CoqProject -o CoqMakefile
-make -f CoqMakefile -j
+eval $(opam env) && make -f CoqMakefile -j
 ```
 
 ### `rocq -v`
@@ -44,6 +44,8 @@ Our main results are as follows:
 - [x] A simple replica of `eutt`. (`Instance eutt`, `Instance itree_MonadLaws_eutt`, and `Instance itree_MonadIterSpec_eutt` in [`BasicITreeTh.v`](theories/System/BasicITreeTh.v))
 
 - [x] IPO <=> pointed DCPO. (`Theorem ipo_iff_dcpo` in [`ClassicalDomainTheory.v`](theories/Math/ClassicalDomainTheory.v))
+
+- [x] The strong normalisation property of STLC. (`Theorem Typing_implies_StrongNormalisation` in [`STLC.v`](theories/System/STLC.v))
 
 ### [theories/Control/](theories/Control)
 
