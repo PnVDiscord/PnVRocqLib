@@ -6638,9 +6638,9 @@ Theorem Cardinality_ofType_rank_strict_initial_segment_lt (A : Type@{Set_u}) (ka
   (enum_inj : forall c1 : Aczel.children kappa, forall c2 : Aczel.children kappa, c1 == c2 <-> enum c1 = enum c2)
   (rank : A -> Aczel.children kappa)
   (RANK : forall x : A, enum (rank x) = x)
-  (a : A)
-  : Cardinality.ofType { x : A | Aczel.isElemOf kappa (rank x) (rank a) } ≨ Cardinality.ofType A.
+  : forall a : A, Cardinality.ofType { x : A | Aczel.isElemOf kappa (rank x) (rank a) } ≨ Cardinality.ofType A.
 Proof.
+  i.
   pose proof (Cardinal1.hasCardinality_isOrdinal _ _ K_CARD) as K_ORD.
   set (alpha := Aczel.childnodes kappa (rank a)).
   assert (ALPHA_ORD : Aczel.isOrdinal alpha).
@@ -6689,8 +6689,7 @@ Theorem Cardinality_ofType_rank_initial_segment_lt (A : Type@{Set_u}) (kappa : O
   (enum_inj : forall c1 : Aczel.children kappa, forall c2 : Aczel.children kappa, c1 == c2 <-> enum c1 = enum c2)
   (rank : A -> Aczel.children kappa)
   (RANK : forall x : A, enum (rank x) = x)
-  (a : A)
-  : Cardinality.ofType { x : A | Aczel.isElemOf kappa (rank x) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank x)) (Aczel.childnodes kappa (rank a)) } ≨ Cardinality.ofType A.
+  : forall a : A, Cardinality.ofType { x : A | Aczel.isElemOf kappa (rank x) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank x)) (Aczel.childnodes kappa (rank a)) } ≨ Cardinality.ofType A.
 Proof.
   set (StrictIdx := { x : A | Aczel.isElemOf kappa (rank x) (rank a) }).
   set (Idx := { x : A | Aczel.isElemOf kappa (rank x) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank x)) (Aczel.childnodes kappa (rank a)) }).
@@ -7000,7 +6999,7 @@ Definition graph_state_initial_code (x : A) (y : A) (z : A) : Prop :=
 Definition graph_state_initial
   : graph_state.
 Proof.
-  refine
+  refine (
     {|
       gs_carrier := fun a : A => exists n : nat, a = nat_embed n;
       gs_nat := _;
@@ -7009,7 +7008,8 @@ Proof.
       gs_code_total := _;
       gs_code_functional := _;
       gs_code_inj := _;
-    |}.
+    |}
+  ).
   - intro n. exists n. reflexivity.
   - intros x y z (n & m & Hx & Hy & Hz). subst. splits; eauto.
   - intros x y (n & Hx) (m & Hy). subst. exists (nat_embed (cpInv n m)). exists n, m. splits; reflexivity.
@@ -7036,17 +7036,17 @@ Proof.
         gs_code_inj := _;
       |}
     ).
-  - intros n. exists s0. split; [exact IN0 | exact (gs_nat s0 n)].
-  - intros x y z (s & INs & Hcode). pose proof (gs_code_dom s x y z Hcode) as (Hx & Hy & Hz). splits; exists s; split; assumption.
-  - intros x y (sx & INx & Hx) (sy & INy & Hy). pose proof (CHAIN sx sy INx INy) as [LE | LE].
-    + pose proof (gs_code_total sy x y (proj1 LE x Hx) Hy) as [z Hcode]. exists z. exists sy. split; assumption.
-    + pose proof (gs_code_total sx x y Hx (proj1 LE y Hy)) as [z Hcode]. exists z. exists sx. split; assumption.
-  - intros x y z1 z2 (s1 & IN1 & Hcode1) (s2 & IN2 & Hcode2). pose proof (CHAIN s1 s2 IN1 IN2) as [LE | LE].
-    + eapply gs_code_functional; [exact (proj2 LE x y z1 Hcode1) | exact Hcode2].
-    + eapply gs_code_functional; [exact Hcode1 | exact (proj2 LE x y z2 Hcode2)].
-  - intros x1 y1 z1 x2 y2 z2 (s1 & IN1 & Hcode1) (s2 & IN2 & Hcode2) Hz. pose proof (CHAIN s1 s2 IN1 IN2) as [LE | LE].
-    + eapply gs_code_inj; [exact (proj2 LE x1 y1 z1 Hcode1) | exact Hcode2 | exact Hz].
-    + eapply gs_code_inj; [exact Hcode1 | exact (proj2 LE x2 y2 z2 Hcode2) | exact Hz].
+    - intros n. exists s0. split; [exact IN0 | exact (gs_nat s0 n)].
+    - intros x y z (s & INs & Hcode). pose proof (gs_code_dom s x y z Hcode) as (Hx & Hy & Hz). splits; exists s; split; assumption.
+    - intros x y (sx & INx & Hx) (sy & INy & Hy). pose proof (CHAIN sx sy INx INy) as [LE | LE].
+      + pose proof (gs_code_total sy x y (proj1 LE x Hx) Hy) as [z Hcode]. exists z. exists sy. split; assumption.
+      + pose proof (gs_code_total sx x y Hx (proj1 LE y Hy)) as [z Hcode]. exists z. exists sx. split; assumption.
+    - intros x y z1 z2 (s1 & IN1 & Hcode1) (s2 & IN2 & Hcode2). pose proof (CHAIN s1 s2 IN1 IN2) as [LE | LE].
+      + eapply gs_code_functional; [exact (proj2 LE x y z1 Hcode1) | exact Hcode2].
+      + eapply gs_code_functional; [exact Hcode1 | exact (proj2 LE x y z2 Hcode2)].
+    - intros x1 y1 z1 x2 y2 z2 (s1 & IN1 & Hcode1) (s2 & IN2 & Hcode2) Hz. pose proof (CHAIN s1 s2 IN1 IN2) as [LE | LE].
+      + eapply gs_code_inj; [exact (proj2 LE x1 y1 z1 Hcode1) | exact Hcode2 | exact Hz].
+      + eapply gs_code_inj; [exact Hcode1 | exact (proj2 LE x2 y2 z2 Hcode2) | exact Hz].
   }
   intros s INs. split.
   - intros a Ha. exists s. split; assumption.
@@ -7565,9 +7565,9 @@ Lemma tree_top_join (X : Type@{Set_u}) (os : X -> Ord.t)
   (H_rLt : forall x : X, os x <ᵣ tree_top X)
   : Ord.sup X os <ᵣ tree_top X.
 Proof.
-  pose proof (Axiom_of_Choice X (fun _ : X => tree X) (fun x : X => fun tr : tree X => os x ≦ᵣ @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr)) as [f H_f].
+  exploit (Axiom_of_Choice X (fun _ : X => tree X) (fun x : X => fun tr : tree X => os x ≦ᵣ @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr)).
   { intros x. pose proof (H_rLt x) as [[tr H_rLe]]. exists tr. exact H_rLe. }
-  eapply rLe_rLt_rLt with (y := @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_join f)).
+  intros [f H_f]. eapply rLe_rLt_rLt with (y := @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_join f)).
   - eapply Ord_sup_rLe_intro. intros x. transitivity (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (f x)).
     + eapply H_f.
     + eapply rLt_implies_rLe. eapply member_implies_rLt. rewrite fromWf_unfold.
@@ -7593,37 +7593,36 @@ Lemma tree_top_orec (X : Type@{Set_u}) (base0 : Ord.t) (next : Ord.t -> Ord.t) (
   : forall alpha : Ord.t, alpha <ᵣ tree_top X -> Ord.orec base1 next alpha <ᵣ tree_top X.
 Proof.
   intros alpha H_rLt.
-  assert (H_recs : forall tr : tree X, Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr) <ᵣ tree_top X).
-  { intros tr. induction tr as [ | tr IH | trs IH | tr0 IH0 tr1 IH1].
-    - eapply rLe_rLt_rLt with (y := base1).
-      + pose proof (Ord_orec_rEq_r base1 next H_next_le H_next_mon (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tree_O) Ord.zer (tree_O_rEq X)) as H_eq.
-        pose proof (Ord_orec_zer base1 next) as H_eq0. transitivity (Ord.orec base1 next Ord.zer).
-        * eapply H_eq.
-        * exact (proj1 H_eq0).
-      + exact H_base1.
-    - eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
-      + pose proof (Ord_orec_rEq_r base1 next H_next_le H_next_mon (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_S tr)) (Ord.suc (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr)) (tree_S_rEq X tr)) as H_eq.
-        transitivity (Ord.orec base1 next (Ord.suc (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
-        * eapply H_eq.
-        * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
-      + eapply H_inaccessible. exact IH.
-    - eapply rLe_rLt_rLt with (y := Ord_join base1 (Ord.sup X (fun x : X => next (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x)))))).
-      + pose proof (Ord_orec_rEq_r base1 next H_next_le H_next_mon (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_join trs)) (mkNode X (fun x : X => @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x))) (tree_join_rEq X trs)) as H_eq.
-        transitivity (Ord.orec base1 next (mkNode X (fun x : X => @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x)))).
-        * eapply H_eq.
-        * rewrite Ord_orec_unfold. reflexivity.
-      + eapply H_inaccessible.
-        * exact H_base1.
-        * eapply H_inaccessible. intros x. eapply H_inaccessible. exact (IH x).
-    - eapply rLe_rLt_rLt with (y := Ord.orec base1 next (Ord.suc (Ord_join (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0) (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1)))).
-      + eapply Ord_orec_rLe; eauto. eapply tree_union_le.
-      + eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (Ord_join (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0) (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1)))).
-        * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (Ord_join (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0) (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1)))).
-        * eapply H_inaccessible. eapply rLe_rLt_rLt with (y := Ord_join (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0)) (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1))).
-          { exact (proj1 (Ord_orec_join base1 next H_next_le H_next_mon (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0) (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1))). }
-          { eapply H_inaccessible; assumption. }
-  }
-  destruct H_rLt as [[tr H_rLe]]. eapply rLe_rLt_rLt; [eapply Ord_orec_rLe; eauto; exact H_rLe | eapply H_recs].
+  enough (H_recs : forall tr : tree X, Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr) <ᵣ tree_top X).
+  { destruct H_rLt as [[tr H_rLe]]. eapply rLe_rLt_rLt; [eapply Ord_orec_rLe; eauto; exact H_rLe | eapply H_recs]. }
+  intros tr. induction tr as [ | tr IH | trs IH | tr0 IH0 tr1 IH1].
+  - eapply rLe_rLt_rLt with (y := base1).
+    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tree_O) Ord.zer H_next_le H_next_mon (tree_O_rEq X)) as H_eq.
+      pose proof (Ord_orec_zer base1 next) as H_eq0. transitivity (Ord.orec base1 next Ord.zer).
+      * eapply H_eq.
+      * exact (proj1 H_eq0).
+    + exact H_base1.
+  - eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
+    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_S tr)) (Ord.suc (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr)) H_next_le H_next_mon (tree_S_rEq X tr)) as H_eq.
+      transitivity (Ord.orec base1 next (Ord.suc (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
+      * eapply H_eq.
+      * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
+    + eapply H_inaccessible. exact IH.
+  - eapply rLe_rLt_rLt with (y := Ord_join base1 (Ord.sup X (fun x : X => next (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x)))))).
+    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_join trs)) (mkNode X (fun x : X => @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x))) H_next_le H_next_mon (tree_join_rEq X trs)) as H_eq.
+      transitivity (Ord.orec base1 next (mkNode X (fun x : X => @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x)))).
+      * eapply H_eq.
+      * rewrite Ord_orec_unfold. reflexivity.
+    + eapply H_inaccessible.
+      * exact H_base1.
+      * eapply H_inaccessible. intros x. eapply H_inaccessible. exact (IH x).
+  - eapply rLe_rLt_rLt with (y := Ord.orec base1 next (Ord.suc (Ord_join (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0) (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1)))).
+    + eapply Ord_orec_rLe; eauto. eapply tree_union_le.
+    + eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (Ord_join (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0) (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1)))).
+      * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (Ord_join (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0) (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1)))).
+      * eapply H_inaccessible. eapply rLe_rLt_rLt with (y := Ord_join (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0)) (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1))).
+        { exact (proj1 (Ord_orec_join base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0) (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1) H_next_le H_next_mon)). }
+        { eapply H_inaccessible; assumption. }
 Qed.
 
 Lemma tree_top_rec_inaccessible (X : Type@{Set_u}) (base0 : Ord.t) (next : Ord.t -> Ord.t) (base1 : Ord.t)
@@ -7850,8 +7849,7 @@ Proof.
   eapply rLe_rLt_rLt with (y := @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_join P f)).
   - eapply Ord_sup_rLe_intro. intros x. transitivity (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (f x)).
     + eapply H_f.
-    + eapply rLt_implies_rLe. eapply member_implies_rLt. rewrite fromWf_unfold.
-      exists (f x). split; [now exists x | reflexivity].
+    + eapply rLt_implies_rLe. eapply member_implies_rLt. rewrite fromWf_unfold. exists (f x). split; [now exists x | reflexivity].
   - eapply member_implies_rLt. exists (gtree_join P f). reflexivity.
 Qed.
 
@@ -7873,37 +7871,36 @@ Lemma gtree_top_orec (X : Type@{Set_u}) (base0 : Ord.t) (next : Ord.t -> Ord.t) 
   : forall alpha : Ord.t, alpha <ᵣ gtree_top X -> Ord.orec base1 next alpha <ᵣ gtree_top X.
 Proof.
   intros alpha H_rLt.
-  assert (H_recs : forall tr : gtree X, Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr) <ᵣ gtree_top X).
-  { intros tr. induction tr as [ | tr IH | P trs IH | tr0 IH0 tr1 IH1].
-    - eapply rLe_rLt_rLt with (y := base1).
-      + pose proof (Ord_orec_rEq_r base1 next H_next_le H_next_mon (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) gtree_O) Ord.zer (gtree_O_rEq X)) as H_eq.
-        pose proof (Ord_orec_zer base1 next) as H_eq0. transitivity (Ord.orec base1 next Ord.zer).
-        * eapply H_eq.
-        * exact (proj1 H_eq0).
-      + exact H_base1.
-    - eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr))).
-      + pose proof (Ord_orec_rEq_r base1 next H_next_le H_next_mon (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_S tr)) (Ord.suc (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr)) (gtree_S_rEq X tr)) as H_eq.
-        transitivity (Ord.orec base1 next (Ord.suc (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr))).
-        * eapply H_eq.
-        * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr))).
-      + eapply H_inaccessible. exact IH.
-    - eapply rLe_rLt_rLt with (y := Ord_join base1 (Ord.sup (@sig X P) (fun x : @sig X P => next (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x)))))).
-      + pose proof (Ord_orec_rEq_r base1 next H_next_le H_next_mon (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_join P trs)) (mkNode (@sig X P) (fun x : @sig X P => @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x))) (gtree_join_rEq X P trs)) as H_eq.
-        transitivity (Ord.orec base1 next (mkNode (@sig X P) (fun x : @sig X P => @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x)))).
-        * eapply H_eq.
-        * rewrite Ord_orec_unfold. reflexivity.
-      + eapply H_inaccessible.
-        * exact H_base1.
-        * eapply H_inaccessible. intros x. eapply H_inaccessible. exact (IH x).
-    - eapply rLe_rLt_rLt with (y := Ord.orec base1 next (Ord.suc (Ord_join (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0) (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1)))).
-      + eapply Ord_orec_rLe; eauto. eapply gtree_union_le.
-      + eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (Ord_join (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0) (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1)))).
-        * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (Ord_join (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0) (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1)))).
-        * eapply H_inaccessible. eapply rLe_rLt_rLt with (y := Ord_join (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0)) (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1))).
-          { exact (proj1 (Ord_orec_join base1 next H_next_le H_next_mon (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0) (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1))). }
-          { eapply H_inaccessible; assumption. }
-  }
-  destruct H_rLt as [[tr H_rLe]]. eapply rLe_rLt_rLt; [eapply Ord_orec_rLe; eauto; exact H_rLe | eapply H_recs].
+  enough (H_recs : forall tr : gtree X, Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr) <ᵣ gtree_top X).
+  { destruct H_rLt as [[tr H_rLe]]. eapply rLe_rLt_rLt; [eapply Ord_orec_rLe; eauto; exact H_rLe | eapply H_recs]. }
+  intros tr. induction tr as [ | tr IH | P trs IH | tr0 IH0 tr1 IH1].
+  - eapply rLe_rLt_rLt with (y := base1).
+    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) gtree_O) Ord.zer H_next_le H_next_mon (gtree_O_rEq X)) as H_eq.
+      pose proof (Ord_orec_zer base1 next) as H_eq0. transitivity (Ord.orec base1 next Ord.zer).
+      * eapply H_eq.
+      * exact (proj1 H_eq0).
+    + exact H_base1.
+  - eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr))).
+    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_S tr)) (Ord.suc (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr)) H_next_le H_next_mon (gtree_S_rEq X tr)) as H_eq.
+      transitivity (Ord.orec base1 next (Ord.suc (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr))).
+      * eapply H_eq.
+      * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr))).
+    + eapply H_inaccessible. exact IH.
+  - eapply rLe_rLt_rLt with (y := Ord_join base1 (Ord.sup (@sig X P) (fun x : @sig X P => next (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x)))))).
+    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_join P trs)) (mkNode (@sig X P) (fun x : @sig X P => @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x))) H_next_le H_next_mon (gtree_join_rEq X P trs)) as H_eq.
+      transitivity (Ord.orec base1 next (mkNode (@sig X P) (fun x : @sig X P => @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x)))).
+      * eapply H_eq.
+      * rewrite Ord_orec_unfold. reflexivity.
+    + eapply H_inaccessible.
+      * exact H_base1.
+      * eapply H_inaccessible. intros x. eapply H_inaccessible. exact (IH x).
+  - eapply rLe_rLt_rLt with (y := Ord.orec base1 next (Ord.suc (Ord_join (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0) (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1)))).
+    + eapply Ord_orec_rLe; eauto. eapply gtree_union_le.
+    + eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (Ord_join (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0) (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1)))).
+      * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (Ord_join (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0) (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1)))).
+      * eapply H_inaccessible. eapply rLe_rLt_rLt with (y := Ord_join (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0)) (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1))).
+        { exact (proj1 (Ord_orec_join base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr0) (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr1) H_next_le H_next_mon)). }
+        { eapply H_inaccessible; assumption. }
 Qed.
 
 Lemma gtree_top_rec_ginaccessible (X : Type@{Set_u}) (base0 : Ord.t) (next : Ord.t -> Ord.t) (base1 : Ord.t)
@@ -8051,7 +8048,7 @@ Qed.
 Lemma kappa_inaccessible_O
   : Ord.zer <ᵣ kappa.
 Proof.
-  eapply rLe_rLt_rLt with (y := @fromWfSet Empty_set (fun x : Empty_set => fun _ : Empty_set => False) (fun x : Empty_set => match x with end)).
+  eapply rLe_rLt_rLt with (y := @fromWfSet Empty_set (fun x : Empty_set => fun _ : Empty_set => False) (Empty_set_ind _)).
   - eapply Ord_zer_rLe.
   - eapply kappa_inaccessible_from_wf_set.
 Qed.
@@ -8062,32 +8059,38 @@ Lemma kappa_inaccessible_is_S (alpha : Ord.t) (beta : Ord.t)
   : beta <ᵣ kappa.
 Proof.
   rewrite H_succ. pose proof (kappa_complete alpha H_rLt) as (A & R & R_wf & H_rLe).
-  set (Ropt := fun x : option A => fun y : option A => match y with | Some y' => match x with | Some x' => R x' y' | None => False end | None => match x with | Some _ => True | None => False end end).
+  set (Ropt := fun x : option A => fun y : option A =>
+    match x, y with
+    | Some x', Some y' => R x' y'
+    | Some x', None => True
+    | None, _ => False
+    end
+  ).
   assert (Ropt_wf : well_founded Ropt).
-  - assert (H_some_acc : forall a : A, Acc Ropt (Some a)).
-    + intros a. induction (R_wf a) as [a _ IH]. econs. intros [b | ] H_rel.
-      * eapply IH. exact H_rel.
-      * contradiction.
-    + intros [a | ].
-      * eapply H_some_acc.
-      * econs. intros [a | ] H_rel.
-        { eapply H_some_acc. }
-        { contradiction. }
-  - assert (H_top : @fromWfSet A R R_wf ≦ᵣ @fromWf (option A) Ropt Ropt_wf None).
-    { econs. intros a.
-      assert (H_rLe_a : @fromWf A R R_wf a ≦ᵣ @fromWf (option A) Ropt Ropt_wf (Some a)).
-      { eapply fromWf_cong with (RA := R) (RB := Ropt) (f := @Some A) (RA_wf := R_wf) (RB_wf := Ropt_wf). intros x y H_xy. exact H_xy. }
-      assert (H_rLt_a : @fromWf (option A) Ropt Ropt_wf (Some a) <ᵣ @fromWf (option A) Ropt Ropt_wf None).
-      { eapply member_implies_rLt. rewrite fromWf_unfold. exists (Some a). split; [reflexivity | reflexivity]. }
-      eapply rLe_rLt_rLt; eauto.
+  { assert (H_some_acc : forall a : A, Acc Ropt (Some a)).
+    { intros a. induction (R_wf a) as [a _ IH]. econs. intros [b | ] H_rel.
+      - eapply IH. exact H_rel.
+      - contradiction.
     }
-    eapply rLe_rLt_rLt with (y := Ord.suc (@fromWfSet A R R_wf)).
-    + eapply Ord_suc_rLe. exact H_rLe.
-    + eapply rLe_rLt_rLt with (y := @fromWfSet (option A) Ropt Ropt_wf).
-      * unfold Ord.suc. rewrite succ_rLe_iff. eapply rLe_rLt_rLt with (y := @fromWf (option A) Ropt Ropt_wf None).
-        { exact H_top. }
-        { eapply member_implies_rLt. exists None. reflexivity. }
-      * eapply kappa_inaccessible_from_wf_set.
+    intros [a | ]. eapply H_some_acc. econs. intros [a | ] H_rel.
+    - eapply H_some_acc.
+    - contradiction.
+  }
+  assert (H_top : @fromWfSet A R R_wf ≦ᵣ @fromWf (option A) Ropt Ropt_wf None).
+  { econs. intros a.
+    assert (H_rLe_a : @fromWf A R R_wf a ≦ᵣ @fromWf (option A) Ropt Ropt_wf (Some a)).
+    { eapply fromWf_cong with (RA := R) (RB := Ropt) (f := @Some A) (RA_wf := R_wf) (RB_wf := Ropt_wf). intros x y H_xy. exact H_xy. }
+    assert (H_rLt_a : @fromWf (option A) Ropt Ropt_wf (Some a) <ᵣ @fromWf (option A) Ropt Ropt_wf None).
+    { eapply member_implies_rLt. rewrite fromWf_unfold. exists (Some a). split; [reflexivity | reflexivity]. }
+    eapply rLe_rLt_rLt; eauto.
+  }
+  eapply rLe_rLt_rLt with (y := Ord.suc (@fromWfSet A R R_wf)).
+  - eapply Ord_suc_rLe. exact H_rLe.
+  - eapply rLe_rLt_rLt with (y := @fromWfSet (option A) Ropt Ropt_wf).
+    + unfold Ord.suc. rewrite succ_rLe_iff. eapply rLe_rLt_rLt with (y := @fromWf (option A) Ropt Ropt_wf None).
+      * exact H_top.
+      * eapply member_implies_rLt. exists None. reflexivity.
+    + eapply kappa_inaccessible_from_wf_set.
 Qed.
 
 Lemma kappa_inaccessible_S (alpha : Ord.t)
@@ -8117,7 +8120,7 @@ Proof.
   pose (A_join := { a : A & option (B a) }).
   pose (R_join := fun x : A_join => fun y : A_join => match y with | @existT _ _ a None => match x with | @existT _ _ a' (Some _) => a = a' | _ => False end | @existT _ _ a (Some y') => match x with | @existT _ _ a' (Some x') => exists H_eq : a' = a, R a (eq_rect a' B x' a H_eq) y' | _ => False end end).
   assert (R_join_wf : well_founded R_join).
-  - intros [a [x | ]].
+  { intros [a [x | ]].
     + induction (R_wf a x) as [x _ IH]. econs. intros [a' [y | ]] H_rel.
       * unfold R_join in H_rel. destruct H_rel as [H_eq H_rel]. subst a'. simpl in H_rel. eapply IH. exact H_rel.
       * contradiction.
@@ -8126,16 +8129,16 @@ Proof.
         { unfold R_join in H_rel. destruct H_rel as [H_eq H_rel]. subst a'. simpl in H_rel. eapply IH. exact H_rel. }
         { contradiction. }
       * contradiction.
-  - eapply rLe_rLt_rLt with (y := @fromWfSet A_join R_join R_join_wf).
-    + eapply Ord_sup_rLe_intro. intros a. transitivity (@fromWfSet (B a) (R a) (R_wf a)).
-      * eapply H_f.
-      * eapply rLt_implies_rLe. eapply rLe_rLt_rLt with (y := @fromWf A_join R_join R_join_wf (@existT A (fun a : A => option (B a)) a None)).
-        { econs. intros x. eapply rLe_rLt_rLt with (y := @fromWf A_join R_join R_join_wf (@existT A (fun a : A => option (B a)) a (Some x))).
-          - eapply fromWf_cong with (RA := R a) (RB := R_join) (f := fun x : B a => @existT A (fun a : A => option (B a)) a (Some x)) (RA_wf := R_wf a) (RB_wf := R_join_wf). intros x0 y0 H_xy. exists eq_refl. exact H_xy.
-          - eapply member_implies_rLt. rewrite fromWf_unfold. exists (@existT A (fun a : A => option (B a)) a (Some x)). split; [reflexivity | reflexivity].
-        }
-        { eapply member_implies_rLt. exists (@existT A (fun a : A => option (B a)) a None). reflexivity. }
-    + eapply kappa_inaccessible_from_wf_set.
+  }
+  eapply rLe_rLt_rLt with (y := @fromWfSet A_join R_join R_join_wf).
+  - eapply Ord_sup_rLe_intro. intros a. transitivity (@fromWfSet (B a) (R a) (R_wf a)).
+    + eapply H_f.
+    + eapply rLt_implies_rLe. eapply rLe_rLt_rLt with (y := @fromWf A_join R_join R_join_wf (@existT A (fun a : A => option (B a)) a None)).
+      * econs. intros x. eapply rLe_rLt_rLt with (y := @fromWf A_join R_join R_join_wf (@existT A (fun a : A => option (B a)) a (Some x))).
+        { eapply fromWf_cong with (RA := R a) (RB := R_join) (f := fun x : B a => @existT A (fun a : A => option (B a)) a (Some x)) (RA_wf := R_wf a) (RB_wf := R_join_wf). intros x0 y0 H_xy. exists eq_refl. exact H_xy. }
+        { eapply member_implies_rLt. rewrite fromWf_unfold. exists (@existT A (fun a : A => option (B a)) a (Some x)). split; [reflexivity | reflexivity]. }
+      * eapply member_implies_rLt. exists (@existT A (fun a : A => option (B a)) a None). reflexivity.
+  - eapply kappa_inaccessible_from_wf_set.
 Qed.
 
 Lemma kappa_inaccessible_union (alpha : Ord.t) (beta : Ord.t)
@@ -8171,7 +8174,7 @@ Proof.
     + eapply rLe_rLt_rLt with (y := next (Ord.orec base next (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b))))).
       * exact (proj1 (Ord_orec_suc base next H_next_le H_next_mon (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b))))).
       * eapply H_next. eapply rLe_rLt_rLt with (y := Ord_join base (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => Ord.orec base next (@fromWf A R R_wf (proj1_sig b))))).
-        { exact (proj1 (Ord_orec_sup base next H_next_le H_next_mon (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b)))). }
+        { exact (proj1 (Ord_orec_sup base next (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b)) H_next_le H_next_mon)). }
         { eapply kappa_inaccessible_union.
           - exact H_base.
           - eapply kappa_inaccessible_join. intros [b R_b_a]. eapply IH. exact R_b_a.
