@@ -586,16 +586,14 @@ Fixpoint jmRed (ty : typ L) : trm L -> Prop :=
   | (ty1 -> ty2)%typ => fun M => jmSN M /\ forall N, jmRed ty1 N -> jmRed ty2 (App_trm M N)
   end.
 
-Fixpoint jmRed_jmSN (ty : typ L) {struct ty}
-  : forall M, jmRed ty M -> jmSN M.
+Fixpoint jmRed_jmSN (ty : typ L) {struct ty} : forall M, jmRed ty M -> jmSN M.
 Proof.
   destruct ty as [b | ty1 ty2]; simpl; intros M H.
   - exact H.
   - exact (proj1 H).
 Defined.
 
-Fixpoint jmRed_ne (ty : typ L)
-  : forall M, jmSNe M -> jmRed ty M.
+Fixpoint jmRed_ne (ty : typ L) : forall M, jmSNe M -> jmRed ty M.
 Proof.
   destruct ty as [b | ty1 ty2]; simpl; intros M NE.
   - eapply jmSN_ne. exact NE.
@@ -616,8 +614,7 @@ Proof.
     + eapply jmSN_exp.
       * exact STEP.
       * exact (proj1 HN).
-    + intros P HP.
-      eapply jmRed_exp.
+    + intros P HP. eapply jmRed_exp.
       * eapply jmStep_appl. exact STEP.
       * exact (proj2 HN P HP).
 Defined.
@@ -1049,21 +1046,17 @@ Lemma rawBetaOnce_preserves_is_fresh_in_subst_update gamma x N N' z M
   (FRESH : is_fresh_in_subst z (cons_subst x N gamma) M = true)
   : is_fresh_in_subst z (cons_subst x N' gamma) M = true.
 Proof.
-  unfold is_fresh_in_subst in *. rewrite forallb_forall in FRESH |- *.
-  intros y y_in. specialize (FRESH y y_in).
-  unfold "∘" in FRESH |- *. unfold cons_subst in FRESH |- *.
-  destruct (eq_dec y x) as [y_eq_x | y_ne_x].
-  - rewrite negb_true_iff in FRESH |- *.
-    destruct (is_free_in z N') eqn:FREE; [| reflexivity].
-    pose proof (fullBetaOnce_is_free_in _ _ z (rawBetaOnce_fullBetaOnce _ _ BETA) FREE) as FREE_N.
-    congruence.
-  - exact FRESH.
+  unfold is_fresh_in_subst in *. rewrite forallb_forall in FRESH |- *. intros y y_in.
+  pose proof (FRESH y y_in) as H. unfold "∘" in H |- *. unfold cons_subst in H |- *.
+  destruct (eq_dec y x) as [y_eq_x | y_ne_x]; [rewrite negb_true_iff in H |- * | exact H].
+  destruct (is_free_in z N') eqn: FREE; [ | trivial].
+  enough (is_free_in z N = true) by congruence.
+  exact (fullBetaOnce_is_free_in _ _ z (rawBetaOnce_fullBetaOnce _ _ BETA) FREE).
 Qed.
 
 Lemma rawBetaMany_subst_update gamma x N N' M
   (BETA : N ~>β₀ N')
-  : subst_trm (cons_subst x N gamma) M ~>β₀*
-    subst_trm (cons_subst x N' gamma) M.
+  : subst_trm (cons_subst x N gamma) M ~>β₀* subst_trm (cons_subst x N' gamma) M.
 Proof.
   revert gamma x N N' BETA. induction M; intros gamma x0 N N' BETA; simpl.
   - unfold cons_subst. destruct (eq_dec x x0) as [x_eq | x_ne].
@@ -1249,15 +1242,11 @@ Proof.
     + eapply rawBetaMany_app_r. econs 2. exact BETA0.
 Qed.
 
-Fixpoint raw_sn_app_inv M N
-  (MN_SN : raw_sn (App_trm M N)) {struct MN_SN}
-  : raw_sn M /\ raw_sn N.
+Fixpoint raw_sn_app_inv M N (MN_SN : raw_sn (App_trm M N)) {struct MN_SN} : raw_sn M /\ raw_sn N.
 Proof.
   destruct MN_SN as [MN_SN]. split.
-  - econs. intros M' BETA.
-    exact (proj1 (raw_sn_app_inv M' N (MN_SN (App_trm M' N) (rawBetaOnce_appl M M' N BETA)))).
-  - econs. intros N' BETA.
-    exact (proj2 (raw_sn_app_inv M N' (MN_SN (App_trm M N') (rawBetaOnce_appr M N N' BETA)))).
+  - econs. intros M' BETA. exact (proj1 (raw_sn_app_inv M' N (MN_SN (App_trm M' N) (rawBetaOnce_appl M M' N BETA)))).
+  - econs. intros N' BETA. exact (proj2 (raw_sn_app_inv M N' (MN_SN (App_trm M N') (rawBetaOnce_appr M N N' BETA)))).
 Defined.
 
 Lemma rawHead_backward_aux M N M'

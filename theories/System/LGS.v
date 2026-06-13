@@ -106,11 +106,16 @@ Qed.
 
 End Ascii_FinEnum.
 
+Notation all_asciis := Ascii_FinEnum.all.
+
+Notation all_asciis_complete := Ascii_FinEnum.all_complete.
+
 Module LGS.
 
+#[projections(primitive)]
 Class isToken `(Token : Set) : Set :=
   { Token_hasEqDec : hasEqDec@{Set} Token
-  ; rules : list (Token * regex ascii)
+  ; rulesForTokens : list (Token * regex ascii)
   }.
 
 #[global] Existing Instance Token_hasEqDec.
@@ -222,8 +227,6 @@ Qed.
 
 End Input.
 
-Module RegexFacts.
-
 Fixpoint nullable (e : regex ascii) {struct e} : bool :=
   match e with
   | Re.Null => false
@@ -234,7 +237,7 @@ Fixpoint nullable (e : regex ascii) {struct e} : bool :=
   | Re.Star e1 => true
   end.
 
-Lemma nullable_similar_spec (e : regex ascii)
+Lemma nullable_spec (e : regex ascii)
   : nullable e = true <-> [] =~= e.
 Proof.
   split.
@@ -245,25 +248,25 @@ Proof.
     + econs.
   - revert e.
     enough (CLAIM : forall s, forall e, s =~= e -> s = [] -> nullable e = true).
-    { i. eapply CLAIM; eauto. }
+    { i; eapply CLAIM; eauto. }
     intros s e H_IN. induction H_IN; simpl; i; subst; try congruence; eauto.
     + rewrite orb_true_iff. left. eauto.
     + rewrite orb_true_iff. right. eauto.
-    + pose proof (app_eq_nil _ _ H) as [EQ1 EQ2]. subst s1 s2. ss!.
+    + pose proof (app_eq_nil _ _ H) as [EQ1 EQ2]; ss!.
 Qed.
 
 Theorem nullable_true_iff (e : regex ascii)
   : nullable e = true <-> [] \in eval_regex e.
 Proof.
-  rewrite eval_regex_good. eapply nullable_similar_spec.
+  rewrite eval_regex_good. eapply nullable_spec.
 Qed.
 
 Theorem nullable_false_iff (e : regex ascii)
   : nullable e = false <-> (~ [] \in eval_regex e).
 Proof.
-  destruct (nullable e) eqn: EQ; split; intros H.
+  destruct (nullable e) eqn: H_OBS; split; intros H.
   - congruence.
-  - contradiction H. rewrite <- nullable_true_iff. exact EQ.
+  - contradiction H. rewrite <- nullable_true_iff. exact H_OBS.
   - intros IN. rewrite <- nullable_true_iff in IN. congruence.
   - reflexivity.
 Qed.
@@ -300,11 +303,7 @@ Lemma star_inv (s : Input.t) (e : regex ascii)
   (IN : s \in eval_regex (Re.Star e))
   : s = [] \/ (exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e /\ s2 \in eval_regex (Re.Star e)).
 Proof.
-  inv IN.
-  - left. reflexivity.
-  - right. exists s1, s2. repeat split; eauto.
+  inv IN; firstorder.
 Qed.
-
-End RegexFacts.
 
 End LGS.
