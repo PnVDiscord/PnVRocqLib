@@ -382,13 +382,24 @@ Proof.
   induction xs as [ | x xs IH]; simpl; congruence.
 Qed.
 
+Lemma list_bind_sound {A : Type} {B : Type} (xs : list A) (k : A -> list B) (y : B)
+  (IN : y ∈ (xs >>= k))
+  : exists x, x ∈ xs /\ y ∈ k x.
+Proof.
+  induction xs as [ | x xs IH]; simpl in IN; [contradiction | ].
+  rewrite in_app_iff in IN. destruct IN as [IN | IN].
+  - exists x. split; [left; reflexivity | exact IN].
+  - pose proof (IH IN) as (x' & IN_XS & IN_K).
+    exists x'. split; [right; exact IN_XS | exact IN_K].
+Qed.
+
 Lemma list_bind_complete {A : Type} {B : Type} (xs : list A) (k : A -> list B) (x : A) (y : B)
-  (IN_X : x ∈ xs)
-  (IN_Y : y ∈ k x)
+  (x_in : x ∈ xs)
+  (y_in : y ∈ k x)
   : y ∈ (xs >>= k).
 Proof.
   rewrite list_bind_flat_map. rewrite in_flat_map.
-  exists x. split; [exact IN_X | exact IN_Y].
+  exists x. split; [exact x_in | exact y_in].
 Qed.
 
 Lemma list_pure_complete {A : Type} (x : A)
@@ -441,22 +452,4 @@ Proof.
     subst x'. contradiction.
   - intros x1 x2 y0 IN1 IN2 R1 R2.
     eapply INJ; [right; exact IN1 | right; exact IN2 | exact R1 | exact R2].
-Qed.
-
-Inductive relation_star {A : Type} (R : A -> A -> Prop) : A -> A -> Prop :=
-  | relation_star_refl x
-    : relation_star R x x
-  | relation_star_step x y z
-    (STEP : R x y)
-    (REST : relation_star R y z)
-    : relation_star R x z.
-
-Lemma relation_star_monotone {A : Type} (R : A -> A -> Prop) (R' : A -> A -> Prop) (x : A) (y : A)
-  (INCL : forall x, forall y, R x y -> R' x y)
-  (STEPS : relation_star R x y)
-  : relation_star R' x y.
-Proof.
-  induction STEPS as [x | x y z STEP REST IH].
-  - constructor.
-  - econstructor; [eapply INCL; exact STEP | exact IH].
 Qed.

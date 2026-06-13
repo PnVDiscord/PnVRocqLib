@@ -852,6 +852,11 @@ End E.
 
 Notation ensemble := E.t.
 
+#[global] Bind Scope function_scope with E.t.
+#[global] Bind Scope function_scope with ensemble.
+
+Notation "{ x : A | P }" := (fun x : A => P : Prop) : function_scope.
+
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
 
@@ -1044,6 +1049,24 @@ Defined.
 Module B.
 
 #[local] Open Scope program_scope.
+
+Inductive relation_star {A : Type} (R : A -> A -> Prop) : A -> A -> Prop :=
+  | relation_star_refl x
+    : relation_star R x x
+  | relation_star_step x y z
+    (STEP : R x y)
+    (REST : relation_star R y z)
+    : relation_star R x z.
+
+Lemma relation_star_monotone {A : Type} (R : A -> A -> Prop) (R' : A -> A -> Prop) (x : A) (y : A)
+  (INCL : forall x, forall y, R x y -> R' x y)
+  (STEPS : relation_star R x y)
+  : relation_star R' x y.
+Proof.
+  induction STEPS as [x | x y z STEP REST IH].
+  - econstructor 1.
+  - econstructor 2; [eapply INCL; exact STEP | exact IH].
+Qed.
 
 Inductive transitiveClosure {A : Type} (R : A -> A -> Prop) (x : A) (y : A) : Prop :=
   | transitiveClosure_once
@@ -1582,7 +1605,7 @@ Qed.
 
 #[local]
 Instance Similarity_bool_Prop : Similarity bool Prop :=
-  fun b => fun P => if b then P else ~ P.
+  fun b : bool => fun P : Prop => if b then P else ~ P.
 
 End SIMILARITY.
 

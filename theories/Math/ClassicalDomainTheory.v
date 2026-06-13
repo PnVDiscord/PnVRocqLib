@@ -999,7 +999,7 @@ Proof.
   assert (CHAIN : forall i1 : void, forall i2 : void, empty_ds i1 =< empty_ds i2 \/ empty_ds i2 =< empty_ds i1).
   { intros []. }
   pose proof (IPO void empty_ds CHAIN) as [bot BOT_SUP].
-  exists bot. intro x. eapply BOT_SUP. intros y [i _]. destruct i.
+  exists bot. intros x. eapply BOT_SUP. intros y [i _]. destruct i.
 Qed.
 
 Lemma chain_ensemble_has_sup_from_ipo (IPO : is_ipo D)
@@ -1011,10 +1011,10 @@ Proof.
   assert (CHAIN' : forall i1 : I, forall i2 : I, ds i1 =< ds i2 \/ ds i2 =< ds i1).
   { intros [x x_IN] [y y_IN]. exact (CHAIN x y x_IN y_IN). }
   pose proof (IPO I ds CHAIN') as [s SUP_IMAGE].
-  exists s. intro u. split.
-  - intro s_le_u. pose proof (proj1 (SUP_IMAGE u) s_le_u) as UB_IMAGE.
+  exists s. intros u. split.
+  - intros s_le_u. pose proof (proj1 (SUP_IMAGE u) s_le_u) as UB_IMAGE.
     intros x x_IN. exact (UB_IMAGE x (@ex_intro _ _ (@exist _ _ x x_IN) eq_refl)).
-  - intro UB_X. eapply SUP_IMAGE.
+  - intros UB_X. eapply SUP_IMAGE.
     intros y [iy ->]. exact (UB_X (proj1_sig iy) (proj2_sig iy)).
 Qed.
 
@@ -1031,12 +1031,12 @@ Proof.
     - right. eapply S_SPEC. intros x x_IN. pose proof (proj1 (S_SPEC a (s a)) (leProp_refl (s a))) as UPPER_a. exact (UPPER_a x (SUB x x_IN)).
   }
   pose proof (IPO A s S_CHAIN) as [sup_X SUP_S].
-  exists sup_X. intro u. split.
-  - intro sup_X_le_u. intros x x_IN. pose proof (proj1 (COVER x) x_IN) as [a x_IN_a].
+  exists sup_X. intros u. split.
+  - intros sup_X_le_u. intros x x_IN. pose proof (proj1 (COVER x) x_IN) as [a x_IN_a].
     pose proof (proj1 (S_SPEC a (s a)) (leProp_refl (s a))) as UPPER_a.
     pose proof (proj1 (SUP_S sup_X) (leProp_refl sup_X)) as UPPER_s.
     transitivity (s a); [exact (UPPER_a x x_IN_a) | transitivity sup_X; [exact (UPPER_s (s a) (@ex_intro _ _ a eq_refl)) | exact sup_X_le_u]].
-  - intro UPPER_X. eapply SUP_S. intros y [a ->]. eapply S_SPEC.
+  - intros UPPER_X. eapply SUP_S. intros y [a ->]. eapply S_SPEC.
     intros x x_IN_a. eapply UPPER_X. exact (proj2 (COVER x) (@ex_intro _ _ a x_IN_a)).
 Qed.
 
@@ -1050,9 +1050,9 @@ Proof.
   assert (XS_SUBSET : L.is_finsubset_of xs X).
   { intros x x_IN. exact (proj2 (XS_SPEC x) x_IN). }
   pose proof (DIRECTED_XS XS_SUBSET) as [sup_X [sup_X_IN UPPER_XS]].
-  exists sup_X. intro u. split.
-  - intro sup_X_le_u. intros x x_IN. transitivity sup_X; [exact (UPPER_XS x (proj1 (XS_SPEC x) x_IN)) | exact sup_X_le_u].
-  - intro UPPER_X. exact (UPPER_X sup_X sup_X_IN).
+  exists sup_X. intros u. split.
+  - intros sup_X_le_u. intros x x_IN. transitivity sup_X; [exact (UPPER_XS x (proj1 (XS_SPEC x) x_IN)) | exact sup_X_le_u].
+  - intros UPPER_X. exact (UPPER_X sup_X sup_X_IN).
 Qed.
 
 Lemma choose_finite_ub (X : ensemble D)
@@ -1062,10 +1062,10 @@ Proof.
   pose proof DIRECTED as [X_nonempty X_directed].
   destruct X_nonempty as [x0 x0_in].
   assert (H : forall xs : list D, exists u : D, L.is_finsubset_of xs X -> u \in X /\ forall x : D, L.In x xs -> x =< u).
-  { intro xs. pose proof (classic (L.is_finsubset_of xs X)) as [SUB | NOT_SUB].
+  { intros xs. pose proof (classic (L.is_finsubset_of xs X)) as [SUB | NOT_SUB].
     - pose proof (proj1 (isDirected_iff X) DIRECTED xs SUB) as [u [u_in u_upper]].
-      exists u. intro SUB'. split; [exact u_in | exact u_upper].
-    - exists x0. intro SUB. contradiction.
+      exists u. intros SUB'. split; [exact u_in | exact u_upper].
+    - exists x0. intros SUB. contradiction.
   }
   pose proof (Axiom_of_Choice (list D) (fun _ : list D => D) (fun xs : list D => fun u : D => L.is_finsubset_of xs X -> u \in X /\ forall x : D, L.In x xs -> x =< u) H) as [ub UB].
   exists ub. exact UB.
@@ -1102,7 +1102,7 @@ Proof.
       * split.
         { destruct z1_in as [z1_in | [-> | ->]]; [eapply u_upper; right; exact (proj1 (Y_SPEC z1) z1_in) | eapply u_upper; left; reflexivity | reflexivity]. }
         { destruct z2_in as [z2_in | [-> | ->]]; [eapply u_upper; right; exact (proj1 (Y_SPEC z2) z2_in) | eapply u_upper; left; reflexivity | reflexivity]. }
-  - exists (ys ++ [x; u]). intro z. split.
+  - exists (ys ++ [x; u]). intros z. split.
     + intros z_in. rewrite L.in_app_iff. destruct z_in as [z_in | [-> | ->]].
       * left. exact (proj1 (Y_SPEC z) z_in).
       * right. simpl. left. reflexivity.
@@ -1260,8 +1260,6 @@ Proof.
   - eapply ub_upper. rewrite L.in_map_iff. exists t. split; [reflexivity | exact IN].
 Qed.
 
-#[local] Notation "{ x : A | P }" := (fun x : A => P).
-
 Lemma eval_rose_image_subset_X (A : Type) (X : ensemble D) (ub : list D -> D) (seed : A -> D)
   (UB : is_ub_of ub X)
   (SEED : forall i : A, seed i \in X)
@@ -1298,7 +1296,7 @@ Proof.
   pose proof DIRECTED as [[x0 x0_in] X_directed].
   destruct COUNTABLE as [rank rank_cong rank_inj].
   assert (Hpick : forall n : nat, exists x : D, x \in X /\ forall y : D, forall Hy : y \in X, rank (@exist D (fun z : D => z \in X) y Hy) = n -> y = x).
-  { intro n. pose proof (classic (exists y : D, exists Hy : y \in X, rank (@exist D (fun z : D => z \in X) y Hy) = n)) as [(y & Hy & Hy_rank) | Hnone].
+  { intros n. pose proof (classic (exists y : D, exists Hy : y \in X, rank (@exist D (fun z : D => z \in X) y Hy) = n)) as [(y & Hy & Hy_rank) | Hnone].
     - exists y. split.
       + exact Hy.
       + intros z Hz Hz_rank. pose proof (rank_inj (@exist D (fun w : D => w \in X) z Hz) (@exist D (fun w : D => w \in X) y Hy)) as EQsig.
@@ -1318,9 +1316,9 @@ Proof.
     - split.
       + exists (pick O). reflexivity.
       + intros y z -> ->. exists (pick O). splits; reflexivity.
-    - exists [pick O]. intro z. split.
+    - exists [pick O]. intros z. split.
       + intros ->. simpl. left. reflexivity.
-      + intro H. simpl in H. destruct H as [Hz | []]. subst z. unfold Y0. reflexivity.
+      + intros H. simpl in H. destruct H as [Hz | []]. subst z. unfold Y0. reflexivity.
     - intros m LE. replace m with O by lia. reflexivity.
   }
   refine (let base : CountStage := @exist _ _ (O, Y0) Y0_SPEC in _).
@@ -1339,13 +1337,13 @@ Proof.
         + apply YZ. apply Y_CONTAINS. change (m <= n). lia.
     }
     exists (@exist _ _ (S n, Z) Z_SPEC). split.
-    - reflexivity.
+    - simpl; reflexivity.
     - exact YZ.
   }
   pose proof (AC_implies_DC step base Hstep) as [seq [SEQ0 STEP]].
   pose (Xs := fun n : nat => Datatypes.snd (proj1_sig (seq n))).
   assert (STAGE_SPEC : forall n : nat, Xs n \subseteq X /\ isDirected (Xs n) /\ Cardinal2.isFiniteEnsemble (Xs n) /\ (forall m : nat, m <= Datatypes.fst (proj1_sig (seq n)) -> pick m \in Xs n)).
-  { intro n. unfold Xs. destruct (seq n) as [[k Y] SPEC]. exact SPEC. }
+  { intros n. unfold Xs. destruct (seq n) as [[k Y] SPEC]. exact SPEC. }
   assert (SEQ_INDEX : forall n : nat, Datatypes.fst (proj1_sig (seq n)) = n).
   { induction n as [ | n IH].
     - rewrite SEQ0. reflexivity.
@@ -1357,9 +1355,9 @@ Proof.
     - intros z z_in. pose proof (STEP m) as [_ SUB]. exact (SUB z (IHLE z z_in)).
   }
   exists nat, Xs. splits.
-  - intro n. exact (proj1 (STAGE_SPEC n)).
-  - intro n. exact (proj1 (proj2 (STAGE_SPEC n))).
-  - intro n. eapply Cardinal2.finite_subset_card_lt.
+  - intros n. exact (proj1 (STAGE_SPEC n)).
+  - intros n. exact (proj1 (proj2 (STAGE_SPEC n))).
+  - intros n. eapply Cardinal2.finite_subset_card_lt.
     + exists x0. exact x0_in.
     + exact (proj1 (STAGE_SPEC n)).
     + exact (proj1 (proj2 (proj2 (STAGE_SPEC n)))).
@@ -1367,8 +1365,8 @@ Proof.
   - intros n m. pose proof (Nat.le_ge_cases n m) as [LE | LE].
     + left. exact (Xs_MON n m LE).
     + right. exact (Xs_MON m n LE).
-  - intro x. split.
-    + intro x_in. set (n := rank (@exist D (fun z : D => z \in X) x x_in)).
+  - intros x. split.
+    + intros x_in. set (n := rank (@exist D (fun z : D => z \in X) x x_in)).
       exists n. pose proof (proj2 (PICK n) x x_in eq_refl) as PICK_EQ.
       rewrite PICK_EQ. pose proof (STAGE_SPEC n) as [_ [_ [_ CONTAINS]]]. rewrite SEQ_INDEX in CONTAINS. exact (CONTAINS n (le_n n)).
     + intros [n x_in]. exact (proj1 (STAGE_SPEC n) x x_in).
@@ -1386,11 +1384,11 @@ Proof.
     pose proof (Cardinal1.makeOrdinalIndexedSequence XD mkSetoid_from_eq) as [kappa [K_CARD [enum [enum_inj enum_surj]]]].
     pose proof (Cardinal1.hasCardinality_isOrdinal _ _ K_CARD) as K_ORD.
     assert (Hrank : forall y : XD, exists a : Aczel.children kappa, enum a = y).
-    { intro y. pose proof (enum_surj y) as [a EQ]. exists a. change (y = enum a) in EQ. now symmetry. }
+    { intros y. pose proof (enum_surj y) as [a EQ]. exists a. change (y = enum a) in EQ. now symmetry. }
     pose proof (Axiom_of_Choice XD (fun _ : XD => Aczel.children kappa) (fun y : XD => fun a : Aczel.children kappa => enum a = y) Hrank) as [rank RANK].
     pose (child_le := fun a : Aczel.children kappa => fun b : Aczel.children kappa => Aczel.isElemOf kappa a b \/ a == b).
     assert (child_le_refl : forall a : Aczel.children kappa, child_le a a).
-    { intro a. right. reflexivity. }
+    { intros a. right. reflexivity. }
     assert (child_le_trans : forall a : Aczel.children kappa, forall b : Aczel.children kappa, forall c : Aczel.children kappa, child_le a b -> child_le b c -> child_le a c).
     { intros a b c [LT_ab | EQ_ab] [LT_bc | EQ_bc].
       - left. pose proof (proj1 (proj2 (proj2 (proj1 (Aczel.isOrdinal_iff1 kappa) K_ORD)))) as TRANS. eapply TRANS; eauto.
@@ -1411,29 +1409,29 @@ Proof.
     { intros a i. exact (proj2_sig (proj1_sig i)). }
     pose (idx_incl := fun (a : XD) (b : XD) (LE : child_le (rank a) (rank b)) (i : Idx a) => @exist XD (fun c : XD => child_le (rank c) (rank b)) (proj1_sig i) (child_le_trans (rank (proj1_sig i)) (rank a) (rank b) (proj2_sig i) LE)).
     assert (Xs_sub : forall a : XD, Xs a \subseteq X).
-    { intro a. eapply eval_rose_image_subset_X.
+    { intros a. eapply eval_rose_image_subset_X.
       - exact UB.
       - exact (seed_in_X a).
     }
     assert (Xs_directed : forall a : XD, isDirected (Xs a)).
-    { intro a. eapply eval_rose_image_directed.
+    { intros a. eapply eval_rose_image_directed.
       - exact UB.
       - exact (seed_in_X a).
     }
     assert (Xs_mono : forall a : XD, forall b : XD, child_le (rank a) (rank b) -> Xs a \subseteq Xs b).
-    { intros a b LE. eapply eval_rose_image_mono with (f := idx_incl a b LE). intro i. reflexivity. }
+    { intros a b LE. eapply eval_rose_image_mono with (f := idx_incl a b LE). intros i. reflexivity. }
     assert (Xs_chain : forall a : XD, forall b : XD, Xs a \subseteq Xs b \/ Xs b \subseteq Xs a).
     { intros a b. pose proof (child_le_total (rank a) (rank b)) as [LE | LE].
       - left. exact (Xs_mono a b LE).
       - right. exact (Xs_mono b a LE).
     }
     assert (Xs_cover : forall x : D, x \in X <-> (exists a : XD, x \in Xs a)).
-    { intro x. split.
-      - intro x_in. exists (@exist D (fun z : D => z \in X) x x_in). exists (Cardinal2.leaf (@exist _ _ (@exist D (fun z : D => z \in X) x x_in) (child_le_refl (rank (@exist D (fun z : D => z \in X) x x_in))))). reflexivity.
+    { intros x. split.
+      - intros x_in. exists (@exist D (fun z : D => z \in X) x x_in). exists (Cardinal2.leaf (@exist _ _ (@exist D (fun z : D => z \in X) x x_in) (child_le_refl (rank (@exist D (fun z : D => z \in X) x x_in))))). reflexivity.
       - intros [a [t ?]]. subst x. eapply eval_rose_in_X; eauto.
     }
     assert (Xs_small : forall a : XD, Cardinal2.ensemble_card (Xs a) ≨ Cardinal2.ensemble_card X).
-    { intro a. eapply Cardinal2.eval_rose_image_card_lt. eapply Cardinal3.Cardinality_ofType_rose_lt_of_lt_uncountable.
+    { intros a. eapply Cardinal2.eval_rose_image_card_lt. eapply Cardinal3.Cardinality_ofType_rose_lt_of_lt_uncountable.
       - change (Cardinality.ofType (Idx a) ≨ Cardinality.ofType XD).
         unfold Idx, child_le.
         change (Cardinality.ofType { b : XD | Aczel.isElemOf kappa (rank b) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank b)) (Aczel.childnodes kappa (rank a)) }%type ≨ Cardinality.ofType XD).
@@ -1516,12 +1514,12 @@ Proof.
             split; [eapply leProp_refl | exact LE].
     }
     exists (@supremum_cpo D PROSET CPO Y_aug Y_aug_DIRECTED).
-    intro u. split.
-    + intro SUP_LE. intros x Y_IN.
+    intros u. split.
+    + intros SUP_LE. intros x Y_IN.
       pose proof (@supremum_cpo_spec D PROSET CPO Y_aug Y_aug_DIRECTED u) as [SUP1 SUP2].
       eapply SUP1; eauto. eauto.
       right. exact Y_IN.
-    + intro UPPER.
+    + intros UPPER.
       pose proof (@supremum_cpo_spec D PROSET CPO Y_aug Y_aug_DIRECTED u) as [SUP1 SUP2].
       eapply SUP2. intros x [EQ | Y_IN].
       * subst. exact (@bottom_cpo_spec D PROSET CPO u).
