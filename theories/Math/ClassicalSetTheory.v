@@ -6691,6 +6691,7 @@ Theorem Cardinality_ofType_rank_initial_segment_lt (A : Type@{Set_u}) (kappa : O
   (RANK : forall x : A, enum (rank x) = x)
   : forall a : A, Cardinality.ofType { x : A | Aczel.isElemOf kappa (rank x) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank x)) (Aczel.childnodes kappa (rank a)) } ≨ Cardinality.ofType A.
 Proof.
+  i.
   set (StrictIdx := { x : A | Aczel.isElemOf kappa (rank x) (rank a) }).
   set (Idx := { x : A | Aczel.isElemOf kappa (rank x) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank x)) (Aczel.childnodes kappa (rank a)) }).
   assert (IDX_LE : Cardinality.ofType Idx =< Cardinality.ofType (option StrictIdx)).
