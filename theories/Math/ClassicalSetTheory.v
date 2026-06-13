@@ -7013,7 +7013,9 @@ Proof.
   - intros x y z (n & m & Hx & Hy & Hz). subst. splits; eauto.
   - intros x y (n & Hx) (m & Hy). subst. exists (nat_embed (cpInv n m)). exists n, m. splits; reflexivity.
   - intros x y z1 z2 (n1 & m1 & Hx1 & Hy1 & Hz1) (n2 & m2 & Hx2 & Hy2 & Hz2). subst.
-    assert (n1 = n2) by now eapply nat_embed_inj. assert (m1 = m2) by now eapply nat_embed_inj. now subst n2 m2.
+    assert (n1 = n2) by now eapply nat_embed_inj.
+    assert (m1 = m2) by now eapply nat_embed_inj.
+    now subst n2 m2.
   - intros x1 y1 z1 x2 y2 z2 (n1 & m1 & Hx1 & Hy1 & Hz1) (n2 & m2 & Hx2 & Hy2 & Hz2) Hz. subst.
     pose proof (nat_embed_inj _ _ Hz) as Hpair. pose proof (cpInv_inj _ _ _ _ Hpair) as [Hn Hm]. subst n2 m2. split; reflexivity.
 Defined.
@@ -8164,27 +8166,27 @@ Proof.
   intros alpha H_rLt.
   pose proof (kappa_complete alpha H_rLt) as (A & R & R_wf & H_rLe).
   assert (H_rec : forall a : A, Ord.orec base next (@fromWf A R R_wf a) <ᵣ kappa).
-  - intros a. induction (R_wf a) as [a _ IH].
+  { intros a. induction (R_wf a) as [a _ IH].
     eapply rLe_rLt_rLt with (y := Ord.orec base next (Ord.suc (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b))))).
-    + eapply Ord_orec_rLe; eauto. eapply fromWf_isSupremum. intros b R_b_a.
+    - eapply Ord_orec_rLe; eauto. eapply fromWf_isSupremum. intros b R_b_a.
       eapply rLe_rLt_rLt with (y := Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b))).
-      * change ((fun b0 : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b0)) (@exist A (fun b : A => R b a) b R_b_a) ≦ᵣ Ord.sup (@sig A (fun b : A => R b a)) (fun b0 : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b0))). eapply Ord_rLe_sup_intro.
-      * unfold Ord.suc. eapply rLt_succ_intro.
-    + eapply rLe_rLt_rLt with (y := next (Ord.orec base next (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b))))).
-      * exact (proj1 (Ord_orec_suc base next H_next_le H_next_mon (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b))))).
-      * eapply H_next. eapply rLe_rLt_rLt with (y := Ord_join base (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => Ord.orec base next (@fromWf A R R_wf (proj1_sig b))))).
-        { exact (proj1 (Ord_orec_sup base next (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b)) H_next_le H_next_mon)). }
-        { eapply kappa_inaccessible_union.
-          - exact H_base.
-          - eapply kappa_inaccessible_join. intros [b R_b_a]. eapply IH. exact R_b_a.
-        }
-  - eapply rLe_rLt_rLt with (y := Ord.orec base next (@fromWfSet A R R_wf)).
-    + eapply Ord_orec_rLe; [exact H_next_le | exact H_next_mon | exact H_rLe].
-    + eapply rLe_rLt_rLt with (y := Ord_join base (Ord.sup A (fun a : A => next (Ord.orec base next (@fromWf A R R_wf a))))).
-      * unfold fromWfSet. rewrite Ord_orec_unfold. reflexivity.
-      * eapply kappa_inaccessible_union.
-        { exact H_base. }
-        { eapply kappa_inaccessible_join. intros a. eapply H_next. eapply H_rec. }
+      + change ((fun b0 : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b0)) (@exist A (fun b : A => R b a) b R_b_a) ≦ᵣ Ord.sup (@sig A (fun b : A => R b a)) (fun b0 : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b0))). eapply Ord_rLe_sup_intro.
+      + unfold Ord.suc. eapply rLt_succ_intro.
+    - eapply rLe_rLt_rLt with (y := next (Ord.orec base next (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b))))).
+      + exact (proj1 (Ord_orec_suc base next H_next_le H_next_mon (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b))))).
+      + eapply H_next. eapply rLe_rLt_rLt with (y := Ord_join base (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => Ord.orec base next (@fromWf A R R_wf (proj1_sig b))))).
+        * exact (proj1 (Ord_orec_sup base next (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b)) H_next_le H_next_mon)).
+        * eapply kappa_inaccessible_union.
+          { exact H_base. }
+          { eapply kappa_inaccessible_join. intros [b R_b_a]. eapply IH. exact R_b_a. }
+  }
+  eapply rLe_rLt_rLt with (y := Ord.orec base next (@fromWfSet A R R_wf)).
+  - eapply Ord_orec_rLe; [exact H_next_le | exact H_next_mon | exact H_rLe].
+  - eapply rLe_rLt_rLt with (y := Ord_join base (Ord.sup A (fun a : A => next (Ord.orec base next (@fromWf A R R_wf a))))).
+    + unfold fromWfSet. rewrite Ord_orec_unfold. reflexivity.
+    + eapply kappa_inaccessible_union.
+      * exact H_base.
+      * eapply kappa_inaccessible_join. intros a. eapply H_next. eapply H_rec.
 Qed.
 
 Lemma kappa_inaccessible_add (alpha : Ord.t) (beta : Ord.t)
