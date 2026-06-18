@@ -684,7 +684,7 @@ Class FiniteGraph : Type :=
   ; enum_vertices_all : enum_vertices =~= E.full
   } as GRAPH.
 
-#[global] Existing Instance G.
+#[local] Existing Instance G.
 #[global] Existing Instance V_dec.
 #[global] Existing Instance E_dec.
 
@@ -885,6 +885,7 @@ End EXPORT.
 
 Section DIGRAPH_FIXEDPOINT.
 
+#[local] Infix "∈" := L.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
 
 Context `{GRAPH : !FiniteGraph}.
@@ -896,15 +897,19 @@ Definition deps (v : V) : list V :=
   L.filter (fun v' => if E_dec v v' then true else false) enum_vertices.
 
 Lemma in_deps_iff (v : V) (v' : V)
-  : In v' (deps v) <-> (v, v') \in G.(GRAPH.edges).
+  : v' ∈ deps v <-> (v, v') \in E.
 Proof.
-  unfold deps. pose proof enum_vertices_all. rewrite L.filter_In. destruct (E_dec _ _) as [YES | NO]; ss!.
+  unfold deps. pose proof enum_vertices_all.
+  rewrite L.filter_In. destruct (E_dec _ _) as [YES | NO]; ss!.
 Qed.
 
 #[local] Hint Rewrite in_deps_iff : simplication_hints.
 
 Context {A : Type}.
 
+(** `seed` gives each vertex `v` to the finite set `seed(v)`.
+  * forall v, seed(v) ⊆ digraph_cl(v)
+  *)
 Variable seed : V -> list A.
 
 Definition digraph_cl (v : V) : ensemble A :=
@@ -921,7 +926,7 @@ Qed.
 
 Lemma digraph_trace_seed_at_last (v : V) (a : A) (trace : list V)
   (TRACE : trace \in digraph_trace v a)
-  : L.In a (seed (last trace v)).
+  : a ∈ seed (last trace v).
 Proof.
   eapply DigraphFixedpoint.digraph_trace_seed_at_last; eauto.
 Qed.
@@ -942,8 +947,6 @@ Lemma digraph_trace_simple (v : V) (a : A) (trace : list V)
 Proof.
   eapply DigraphFixedpoint.digraph_trace_simple; eauto.
 Qed.
-
-#[local] Infix "∈" := L.In.
 
 Lemma digraph_trace_in_nodes (nodes : list V) (v : V) (a : A) (trace : list V)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
