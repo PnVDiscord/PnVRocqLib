@@ -824,10 +824,10 @@ Qed.
 Definition reachable_impl (v : V) : list V :=
   L.filter (reachableb v) enum_vertices.
 
-Theorem reachable_sim (v : V)
-  : reachable_impl v =~= reachable v.
+Theorem reachable_sim
+  : forall v, reachable_impl v =~= reachable v.
 Proof.
-  exact (DigraphFixedpoint.reachable_sim enum_vertices enum_vertices_all v).
+  exact (DigraphFixedpoint.reachable_sim enum_vertices enum_vertices_all).
 Qed.
 
 Section DIGRAPH.
