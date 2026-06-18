@@ -821,8 +821,8 @@ Proof.
   exact (DigraphFixedpoint.reachableb_iff_reachable enum_vertices enum_vertices_all v v').
 Qed.
 
-Definition reachable_impl (x : V) : list V :=
-  L.filter (reachableb x) enum_vertices.
+Definition reachable_impl (v : V) : list V :=
+  L.filter (reachableb v) enum_vertices.
 
 Theorem reachable_sim (v : V)
   : reachable_impl v =~= reachable v.
