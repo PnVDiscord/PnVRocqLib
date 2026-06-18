@@ -1046,9 +1046,36 @@ Proof.
   intros x [i P_x] y EQ. exists i. exact (COMPAT i (x i) P_x (y i) (EQ i)).
 Defined.
 
+#[universes(template), projections(primitive)]
+Class isCountable (A : Type) : Type :=
+  { encode : A -> nat
+  ; decode : nat -> option A
+  ; decode_encode (x : A)
+    : decode (encode x) = Some x 
+  }.
+
 Module B.
 
 #[local] Open Scope program_scope.
+
+#[universes(template)]
+Inductive rose {A : Type} : Type :=
+  | leaf (x : A)
+  | node (ts : list (@rose A)).
+
+#[global] Arguments rose : clear implicits.
+
+Fixpoint rose_map {A : Type} {B : Type} (f : A -> B) (t : rose A) {struct t} : rose B :=
+  match t with
+  | leaf x => leaf (f x)
+  | node ts => node (map (rose_map f) ts)
+  end.
+
+Fixpoint eval_rose {A : Type} {B : Type} (merge : list B -> B) (seed : A -> B) (t : rose A) {struct t} : B :=
+  match t with
+  | leaf x => seed x
+  | node ts => merge (map (eval_rose merge seed) ts)
+  end.
 
 Inductive relation_star {A : Type} (R : A -> A -> Prop) : A -> A -> Prop :=
   | relation_star_refl x
@@ -1258,7 +1285,7 @@ Proof.
     + econs.
     + reflexivity.
   - destruct m as [x | ]; simpl.
-    + specialize k_EQ with (x := x). trivial.
+    + eapply k_EQ with (x := x).
     + econs.
   - destruct m as [x | ]; simpl.
     + reflexivity.
@@ -1630,14 +1657,6 @@ Instance nat_isEnumerable : isEnumerable nat :=
   ; enum_spec x := @exist _ _ x eq_refl
   }.
 
-#[universes(template), projections(primitive)]
-Class isCountable (A : Type) : Type :=
-  { encode : A -> nat
-  ; decode : nat -> option A
-  ; decode_encode (x : A)
-    : decode (encode x) = Some x 
-  }.
-
 Lemma encode_inj {A : Type} `{COUNTABLE : isCountable A} x1 x2
   (EQ : encode x1 = encode x2)
   : x1 = x2.
@@ -1891,6 +1910,54 @@ Lemma lookup_map {A : Type} {B : Type} (f : A -> B) (xs : list A) (i : nat)
   : map f xs !! i = match xs !! i with Some x => Some (f x) | None => None end.
 Proof.
   revert i. induction xs as [ | x xs IH], i as [ | i]; simpl in *; try congruence; eauto.
+Qed.
+
+Lemma list_eq_of_nth_error {A : Type} (xs : list A) (ys : list A)
+  (EQ : forall n : nat, nth_error xs n = nth_error ys n)
+  : xs = ys.
+Proof.
+  revert ys EQ. induction xs as [ | x xs IH]; intros [ | y ys] EQ; simpl in *.
+  - reflexivity.
+  - pose proof (EQ O). discriminate.
+  - pose proof (EQ O). discriminate.
+  - enough (Some x = Some y /\ xs = ys) as [? ?] by congruence.
+    split.
+    + eapply EQ with (n := O).
+    + eapply IH. intros n. eapply EQ with (n := S n).
+Qed.
+
+Lemma list_map_inj {A : Type} {B : Type} (f : A -> B)
+  (f_inj : forall x1 : A, forall x2 : A, f x1 = f x2 -> x1 = x2)
+  : forall xs : list A, forall ys : list A, map f xs = map f ys -> xs = ys.
+Proof.
+  induction xs as [ | x xs IH]; intros [ | y ys] EQ; simpl in EQ; try discriminate EQ.
+  - reflexivity.
+  - injection EQ as EQ_head EQ_tail. f_equal.
+    + eapply f_inj. exact EQ_head.
+    + eapply IH. exact EQ_tail.
+Qed.
+
+Lemma NoDup_map_injective_on {A : Type} {B : Type} (f : A -> B) (xs : list A)
+  (INJ : forall x, forall y, L.In x xs -> L.In y xs -> f x = f y -> x = y)
+  (NO_DUP : NoDup xs)
+  : NoDup (map f xs).
+Proof.
+  induction NO_DUP as [ | x xs NOT_IN NO_DUP IH]; simpl.
+  - econs.
+  - econs.
+    + intros IN_MAP. rewrite in_map_iff in IN_MAP.
+      destruct IN_MAP as (y & EQ & IN_Y).
+      assert (x = y) as X_EQ_Y.
+      { eapply INJ; [left; reflexivity | right; exact IN_Y | symmetry; exact EQ]. }
+      subst y. contradiction.
+    + eapply IH. intros y z IN_Y IN_Z EQ.
+      eapply INJ; [right; exact IN_Y | right; exact IN_Z | exact EQ].
+Qed.
+
+Lemma list_bind_flat_map {A : Type} {B : Type} (xs : list A) (k : A -> list B)
+  : (xs >>= k) = L.flat_map k xs.
+Proof.
+  simpl; induction xs as [ | x xs IH]; simpl; congruence.
 Qed.
 
 Section SUBSEQUENCE.
@@ -2458,3 +2525,98 @@ Parameter all_complete : forall x : t, L.In x all.
 Parameter all_no_dup : NoDup all.
 
 End FINITE_ENUM.
+Module Option (E : FINITE_ENUM) <: FINITE_ENUM.
+
+Definition t : Set :=
+  option E.t.
+
+#[local]
+Instance t_hasEqDec : hasEqDec@{Set} Option.t :=
+  option_hasEqDec E.t_hasEqDec.
+
+Definition all : list Option.t :=
+  None :: map Some E.all.
+
+Lemma all_complete
+  : forall x : Option.t, L.In x Option.all.
+Proof.
+  intros [x | ]; simpl.
+  - right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E.all_complete].
+  - left. reflexivity.
+Qed.
+
+Lemma all_no_dup
+  : NoDup Option.all.
+Proof.
+  simpl. constructor.
+  - intros IN. rewrite L.in_map_iff in IN. destruct IN as (x & EQ & _). discriminate.
+  - eapply L.NoDup_map_injective_on.
+    + intros x y _ _ EQ. congruence.
+    + eapply E.all_no_dup.
+Qed.
+
+End Option.
+
+Module Sum (E1 : FINITE_ENUM) (E2 : FINITE_ENUM) <: FINITE_ENUM.
+
+Definition t : Set :=
+  E1.t + E2.t.
+
+#[local]
+Instance t_hasEqDec : hasEqDec@{Set} Sum.t :=
+  sum_hasEqDec E1.t_hasEqDec E2.t_hasEqDec.
+
+Definition all : list Sum.t :=
+  map inl E1.all ++ map inr E2.all.
+
+Lemma all_complete
+  : forall x : Sum.t, L.In x Sum.all.
+Proof.
+  intros [x | x]; unfold all; rewrite L.in_app_iff.
+  - left. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E1.all_complete].
+  - right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E2.all_complete].
+Qed.
+
+Lemma all_no_dup
+  : NoDup Sum.all.
+Proof.
+  unfold all. eapply NoDup_app.
+  - eapply L.NoDup_map_injective_on.
+    + intros x y _ _ EQ. congruence.
+    + eapply E1.all_no_dup.
+  - eapply L.NoDup_map_injective_on.
+    + intros x y _ _ EQ. congruence.
+    + eapply E2.all_no_dup.
+  - intros x IN_LEFT IN_RIGHT.
+    rewrite L.in_map_iff in IN_LEFT. rewrite L.in_map_iff in IN_RIGHT.
+    destruct IN_LEFT as (x1 & EQ1 & _), IN_RIGHT as (x2 & EQ2 & _).
+    subst x. discriminate.
+Qed.
+
+End Sum.
+
+Module Bool_FinEnum <: FINITE_ENUM.
+
+Definition t : Set :=
+  bool.
+
+Definition t_hasEqDec : hasEqDec@{Set} Bool_FinEnum.t :=
+  bool_hasEqDec.
+
+Definition all : list bool :=
+  [false; true].
+
+Lemma all_complete
+  : forall x : Bool_FinEnum.t, L.In x Bool_FinEnum.all.
+Proof.
+  intros [ | ]; simpl; tauto.
+Qed.
+
+Lemma all_no_dup
+  : NoDup Bool_FinEnum.all.
+Proof.
+  assert (EQ : L.nodup (@eq_dec@{Set} bool bool_hasEqDec) all = all) by reflexivity.
+  rewrite <- EQ. eapply L.NoDup_nodup.
+Qed.
+
+End Bool_FinEnum.

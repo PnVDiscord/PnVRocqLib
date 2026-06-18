@@ -29,9 +29,9 @@ Our main results are as follows:
 
 - [x] The soundness, completeness, and compactness theorems of propositional logic. (`Theorem the_propositional_soundness_theorem`, `Theorem the_propositional_completeness_theorem`, and `Corollary the_propositional_compactness_theorem` in [`ClassicalPropositionalLogic.v`](theories/Logic/ClassicalPropositionalLogic.v))
 
-- [x] The soundness and countable completeness theorems of first-order logic. (`Theorem HilbertCalculus_sound` and `Theorem HilbertCalculus_countable_complete` in [`ClassicalFol.v`](theories/Logic/ClassicalFol.v))
-
 - [x] The Kleene fixed-point theorem. (`Theorem lfp_returns_the_least_fixed_point` in [`ClassicalDomainTheory.v`](theories/Math/ClassicalDomainTheory.v))
+
+- [x] The soundness and countable completeness theorems of first-order logic. (`Theorem HilbertCalculus_sound` and `Theorem HilbertCalculus_countable_complete` in [`ClassicalFol.v`](theories/Logic/ClassicalFol.v))
 
 - [x] The weak normalisation property of STLC. (`Corollary Normalisation_by_Evaluation` in [`STLC.v`](theories/System/STLC.v))
 

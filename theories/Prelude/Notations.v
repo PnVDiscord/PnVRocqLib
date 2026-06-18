@@ -62,9 +62,9 @@ Reserved Notation " src '~~~[' walk ']~~>*' tgt " (at level 70, no associativity
 Reserved Notation " src '---[' path ']-->*' tgt " (at level 70, no associativity).
 Reserved Notation " src '===[' trail ']==>*' tgt " (at level 70, no associativity).
 
-Reserved Notation " src '~~~[' w ']~~>*(' G  ')' tgt " (G at level 10, at level 70, no associativity).
-Reserved Notation " src '---[' p ']-->*(' G  ')' tgt " (G at level 10, at level 70, no associativity).
-Reserved Notation " src '===[' t ']==>*(' G  ')' tgt " (G at level 10, at level 70, no associativity).
+Reserved Notation " src '~~~[' w ']~~>*('  G  ')' tgt " (G at level 10, at level 70, no associativity).
+Reserved Notation " src '---[' p ']-->*('  G  ')' tgt " (G at level 10, at level 70, no associativity).
+Reserved Notation " src '===[' t ']==>*('  G  ')' tgt " (G at level 10, at level 70, no associativity).
 
 Reserved Notation "Gamma '∋' x '⦂' A" (at level 70, no associativity).
 Reserved Notation "Gamma '⊧' M '⦂' A" (at level 70, no associativity).

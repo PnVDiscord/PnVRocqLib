@@ -1100,6 +1100,31 @@ End AUX1.
 
 Section BASIC_THEORY2_ON_SYNTAX.
 
+#[local] Opaque chi.
+
+#[local] Notation bty := (bty _).
+#[local] Infix "≡ₐ" := alpha_equiv : type_scope.
+
+Lemma alpha_equiv_subst_shadow x e gamma M
+  : subst_trm (cons_subst x e (cons_subst x e gamma)) M ≡ₐ subst_trm (cons_subst x e gamma) M.
+Proof.
+  eapply alpha_equiv_subst_ext. intros z FREE. unfold cons_subst. destruct (eq_dec z x); reflexivity.
+Qed.
+
+Lemma alpha_equiv_subst_swap x y e e' gamma M
+  (NE : y ≠ x)
+  : subst_trm (cons_subst y e' (cons_subst x e gamma)) M ≡ₐ subst_trm (cons_subst x e (cons_subst y e' gamma)) M.
+Proof.
+  eapply alpha_equiv_subst_ext. intros z FREE. unfold cons_subst.
+  destruct (eq_dec z y) as [z_eq_y | z_ne_y].
+  - subst z. destruct (eq_dec y x) as [y_eq_x | y_ne_x].
+    + rewrite Name.ne_iff in NE. contradiction.
+    + reflexivity.
+  - destruct (eq_dec z x) as [z_eq_x | z_ne_x].
+    + reflexivity.
+    + destruct (eq_dec z y) as [z_eq_y | z_ne_y']; [contradiction | reflexivity].
+Qed.
+
 End BASIC_THEORY2_ON_SYNTAX.
 
 Section SN.

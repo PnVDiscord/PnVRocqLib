@@ -143,13 +143,13 @@ Definition add (alpha : Ord.t) (beta : Ord.t) : Ord.t :=
   Ord.orec alpha suc beta.
 
 Definition mul (alpha : Ord.t) (beta : Ord.t) : Ord.t :=
-  Ord.orec zer (fun beta1 => Ord.add beta1 alpha) beta.
+  Ord.orec zer (fun xi => Ord.add xi alpha) beta.
 
 Definition one : Ord.t :=
   Ord.suc Ord.zer.
 
 Definition exp (alpha : Ord.t) (beta : Ord.t) : Ord.t :=
-  Ord.orec one (fun beta1 : Ord.t => Ord.mul beta1 alpha) beta.
+  Ord.orec one (fun xi : Ord.t => Ord.mul xi alpha) beta.
 
 End Ord.
 
@@ -195,9 +195,9 @@ Definition _Ord_exp : Ord -> Ord -> Ord :=
 
 Theorem OrdComparability_implies_EM
   (COMPARABILITY : forall alpha : Ord, forall beta : Ord, alpha ≦ᵣ beta \/ beta <ᵣ alpha)
-  : forall P : Type, inhabited (P + (P -> Empty_set))%type.
+  : forall P : Type, inhabited (P + (P -> void))%type.
 Proof.
-  i. pose proof (COMPARABILITY (mkNode P (fun _ => Ord.zer)) (mkNode (P -> Empty_set) (fun _ => Ord.zer))) as [YES | NO].
+  i. pose proof (COMPARABILITY (mkNode P (fun _ => Ord.zer)) (mkNode (P -> void) (fun _ => Ord.zer))) as [YES | NO].
   - assert (NP : P -> False).
     { intros H. destruct YES. simpl in *. pose proof (H_rLt H) as [[c H_rLe]]; simpl in *. pose proof (c H) as []. }
     econs. right. intros H. pose proof (NP H) as [].
@@ -389,7 +389,7 @@ Definition hartogs (D : Type@{Set_u}) : Tree :=
 
 End TypeTheoreticImplementation.
 
-Section ORDINAL_ARITHMETIC.
+Section BASIC_ORDINAL_ARITHMETIC.
 
 Import TypeTheoreticImplementation.
 
@@ -436,14 +436,14 @@ Proof.
   unfold Ord.sup. eapply rLe_indexed_union_intro. exists i. reflexivity.
 Qed.
 
-Lemma Ord_sup_empty_rLe (alphas : Empty_set -> Ord.t) (alpha : Ord.t)
-  : Ord.sup Empty_set alphas ≦ᵣ alpha.
+Lemma Ord_sup_empty_rLe (alphas : void -> Ord.t) (alpha : Ord.t)
+  : Ord.sup void alphas ≦ᵣ alpha.
 Proof.
   eapply Ord_sup_rLe_intro. intros [].
 Qed.
 
-Lemma Ord_sup_empty_rEq (alphas : Empty_set -> Ord.t)
-  : Ord.sup Empty_set alphas =ᵣ Ord.zer.
+Lemma Ord_sup_empty_rEq (alphas : void -> Ord.t)
+  : Ord.sup void alphas =ᵣ Ord.zer.
 Proof.
   rewrite rEq_iff. split.
   - eapply Ord_sup_empty_rLe.
@@ -622,16 +622,16 @@ Proof.
   assert (NEXT : forall alpha : Ord.t, alpha <ᵣ mkNode cs ts -> next (Ord.orec base next alpha) ≦ᵣ Ord_join base (Ord.sup cs (fun c : cs => next (Ord.orec base next (ts c))))).
   { intros alpha LT. destruct LT as [[c LE]]. transitivity (next (Ord.orec base next (ts c))).
     - eapply NEXT_MON. exact (proj1 (proj2 (IH (ts c) (member_implies_rLt (ts c) (mkNode cs ts) (member_intro cs ts c)))) alpha LE).
-    - transitivity (Ord.sup cs (fun c0 : cs => next (Ord.orec base next (ts c0)))).
-      + change ((fun c0 : cs => next (Ord.orec base next (ts c0))) c ≦ᵣ Ord.sup cs (fun c0 : cs => next (Ord.orec base next (ts c0)))). eapply Ord_rLe_sup_intro.
+    - transitivity (Ord.sup cs (fun c : cs => next (Ord.orec base next (ts c)))).
+      + change ((fun c : cs => next (Ord.orec base next (ts c))) c ≦ᵣ Ord.sup cs (fun c : cs => next (Ord.orec base next (ts c)))).
+        eapply Ord_rLe_sup_intro.
       + eapply Ord_join_r.
   }
   assert (MON : forall alpha : Ord.t, alpha ≦ᵣ mkNode cs ts -> Ord.orec base next alpha ≦ᵣ Ord_join base (Ord.sup cs (fun c : cs => next (Ord.orec base next (ts c))))).
-  { intros [cs_alpha ts_alpha] LE. rewrite Ord_orec_unfold. eapply Ord_join_spec.
-    - exact BASE.
-    - eapply Ord_sup_rLe_intro. intros c. eapply NEXT. eapply rLt_rLe_rLt with (y := mkNode cs_alpha ts_alpha).
-      + eapply member_implies_rLt. eapply member_intro.
-      + exact LE.
+  { intros [cs_alpha ts_alpha] LE. rewrite Ord_orec_unfold. eapply Ord_join_spec; [exact BASE | eapply Ord_sup_rLe_intro].
+    intros c. eapply NEXT. eapply rLt_rLe_rLt with (y := mkNode cs_alpha ts_alpha).
+    - eapply member_implies_rLt. eapply member_intro.
+    - exact LE.
   }
   splits; [exact BASE | exact MON | exact NEXT].
 Qed.
@@ -728,7 +728,8 @@ Lemma Ord_orec_sup_inhabited (base : Ord.t) (next : Ord.t -> Ord.t) (I : Type@{S
 Proof.
   etransitivity.
   - eapply Ord_orec_sup; eauto.
-  - destruct INHABITED as [i]. eapply Ord_join_max_r. transitivity (Ord.orec base next (alphas i)).
+  - destruct INHABITED as [i]. eapply Ord_join_max_r.
+    transitivity (Ord.orec base next (alphas i)).
     + eapply Ord_orec_base_rLe.
     + change ((fun i : I => Ord.orec base next (alphas i)) i ≦ᵣ Ord.sup I (fun i : I => Ord.orec base next (alphas i))). eapply Ord_rLe_sup_intro.
 Qed.
@@ -775,8 +776,8 @@ Proof.
   - eapply eqTree_rLe_rLe; [exact EQ | reflexivity].
   - eapply rLt_rLe_rLt with (y := Ord.suc (Ord.add alpha (ts c))).
     + unfold Ord.suc. rewrite rLt_succ_iff. eapply IH. eapply member_implies_rLt. eapply member_intro.
-    + unfold Ord.add. rewrite Ord_orec_unfold. transitivity (Ord.sup cs (fun c0 : cs => Ord.suc (Ord.orec alpha Ord.suc (ts c0)))).
-      * change ((fun c0 : cs => Ord.suc (Ord.orec alpha Ord.suc (ts c0))) c ≦ᵣ Ord.sup cs (fun c0 : cs => Ord.suc (Ord.orec alpha Ord.suc (ts c0)))). eapply Ord_rLe_sup_intro.
+    + unfold Ord.add. rewrite Ord_orec_unfold. transitivity (Ord.sup cs (fun c : cs => Ord.suc (Ord.orec alpha Ord.suc (ts c)))).
+      * change ((fun c : cs => Ord.suc (Ord.orec alpha Ord.suc (ts c))) c ≦ᵣ Ord.sup cs (fun c : cs => Ord.suc (Ord.orec alpha Ord.suc (ts c)))). eapply Ord_rLe_sup_intro.
       * eapply Ord_join_r.
 Qed.
 
@@ -857,16 +858,15 @@ Lemma Ord_add_rLe_l (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
 Proof.
   revert alpha beta LE. induction (rLt_wf alpha1) as [alpha1 _ IH]. intros alpha beta LE. destruct alpha1 as [cs ts].
   unfold Ord.add. rewrite 2 Ord_orec_unfold. eapply Ord_join_spec.
-  - transitivity beta.
+  { transitivity beta; [exact LE | eapply Ord_join_l]. }
+  eapply Ord_sup_rLe_intro. intros c. transitivity (Ord.suc (Ord.orec beta Ord.suc (ts c))).
+  - eapply Ord_suc_rLe. eapply IH.
+    + eapply member_implies_rLt. eapply member_intro.
     + exact LE.
-    + eapply Ord_join_l.
-  - eapply Ord_sup_rLe_intro. intros c. transitivity (Ord.suc (Ord.orec beta Ord.suc (ts c))).
-    + eapply Ord_suc_rLe. eapply IH.
-      * eapply member_implies_rLt. eapply member_intro.
-      * exact LE.
-    + transitivity (Ord.sup cs (fun c : cs => Ord.suc (Ord.orec beta Ord.suc (ts c)))).
-      * change ((fun c : cs => Ord.suc (Ord.orec beta Ord.suc (ts c))) c ≦ᵣ Ord.sup cs (fun c0 : cs => Ord.suc (Ord.orec beta Ord.suc (ts c0)))). eapply Ord_rLe_sup_intro.
-      * eapply Ord_join_r.
+  - transitivity (Ord.sup cs (fun c : cs => Ord.suc (Ord.orec beta Ord.suc (ts c)))).
+    + change ((fun c : cs => Ord.suc (Ord.orec beta Ord.suc (ts c))) c ≦ᵣ Ord.sup cs (fun c : cs => Ord.suc (Ord.orec beta Ord.suc (ts c)))).
+      eapply Ord_rLe_sup_intro.
+    + eapply Ord_join_r.
 Qed.
 
 Lemma Ord_add_rEq_l (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
@@ -999,7 +999,7 @@ Lemma Ord_mul_rEq_r (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   (EQ : beta =ᵣ alpha1)
   : Ord.mul alpha beta =ᵣ Ord.mul alpha alpha1.
 Proof.
-  rewrite rEq_iff in *. destruct EQ as [LE GE]. split; now eapply Ord_mul_rLe_r.
+  rewrite rEq_iff in *. destruct EQ as [LE GE]. now split; eapply Ord_mul_rLe_r.
 Qed.
 
 Lemma Ord_mul_rLe_l (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
@@ -1014,17 +1014,18 @@ Proof.
       * eapply member_implies_rLt. eapply member_intro.
       * exact LE.
     + transitivity (Ord.add (Ord.orec Ord.zer (fun beta1 : Ord.t => Ord.add beta1 beta) (ts c)) beta).
-      * eapply Ord_add_rLe_r. exact LE.
-      * transitivity (Ord.sup cs (fun c : cs => Ord.add (Ord.orec Ord.zer (fun beta1 : Ord.t => Ord.add beta1 beta) (ts c)) beta)).
-        { change ((fun c : cs => Ord.add (Ord.orec Ord.zer (fun beta1 : Ord.t => Ord.add beta1 beta) (ts c)) beta) c ≦ᵣ Ord.sup cs (fun c0 : cs => Ord.add (Ord.orec Ord.zer (fun beta1 : Ord.t => Ord.add beta1 beta) (ts c0)) beta)). eapply Ord_rLe_sup_intro. }
-        { eapply Ord_join_r. }
+      { eapply Ord_add_rLe_r. exact LE. }
+      transitivity (Ord.sup cs (fun c : cs => Ord.add (Ord.orec Ord.zer (fun beta1 : Ord.t => Ord.add beta1 beta) (ts c)) beta)).
+      * change ((fun c : cs => Ord.add (Ord.orec Ord.zer (fun beta1 : Ord.t => Ord.add beta1 beta) (ts c)) beta) c ≦ᵣ Ord.sup cs (fun c : cs => Ord.add (Ord.orec Ord.zer (fun beta1 : Ord.t => Ord.add beta1 beta) (ts c)) beta)).
+        eapply Ord_rLe_sup_intro.
+      * eapply Ord_join_r.
 Qed.
 
 Lemma Ord_mul_rEq_l (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   (EQ : alpha =ᵣ beta)
   : Ord.mul alpha alpha1 =ᵣ Ord.mul beta alpha1.
 Proof.
-  rewrite rEq_iff in *. destruct EQ as [LE GE]. split; now eapply Ord_mul_rLe_l.
+  rewrite rEq_iff in *. destruct EQ as [LE GE]. now split; eapply Ord_mul_rLe_l.
 Qed.
 
 #[local]
@@ -1504,4 +1505,4 @@ Proof.
   unfold omega. eapply sup_isOrdinal. eapply Ord_of_nat_isOrdinal.
 Qed.
 
-End ORDINAL_ARITHMETIC.
+End BASIC_ORDINAL_ARITHMETIC.

@@ -942,3 +942,63 @@ Proof with lia || eauto.
 Qed.
 
 End ACKERMANN.
+
+Lemma cpInv_ge_r (x : nat) (y : nat)
+  : y <= cpInv x y.
+Proof.
+  unfold cpInv. enough (0 <= sum_from_0_to (x + y)) by lia. induction (x + y); simpl; lia.
+Qed.
+
+Fixpoint encode_list {A : Type} (enc : A -> nat) (xs : list A) : nat :=
+  match xs with
+  | [] => O
+  | x :: xs => S (cpInv (enc x) (encode_list enc xs))
+  end.
+
+Fixpoint decode_list_fuel {A : Type} (dec : nat -> option A) (fuel : nat) (n : nat) : option (list A) :=
+  match fuel with
+  | O => None
+  | S fuel' =>
+    match n with
+    | O => Some []
+    | S n' =>
+      let '(n_x, n_xs) := cp n' in
+      match dec n_x, decode_list_fuel dec fuel' n_xs with
+      | Some x, Some xs => Some (x :: xs)
+      | _, _ => None
+      end
+    end
+  end.
+
+Definition decode_list {A : Type} (dec : nat -> option A) (n : nat) : option (list A) :=
+  decode_list_fuel dec (S n) n.
+
+Lemma decode_encode_list_fuel {A : Type} (enc : A -> nat) (dec : nat -> option A)
+  (DEC_ENC : forall x : A, dec (enc x) = Some x)
+  : forall xs : list A, forall fuel : nat, encode_list enc xs < fuel -> decode_list_fuel dec fuel (encode_list enc xs) = Some xs.
+Proof.
+  induction xs as [ | x xs IH]; intros [ | fuel] FUEL; simpl in *; try lia.
+  - reflexivity.
+  - rewrite cpInv_rightInv. simpl. rewrite DEC_ENC.
+    pose proof (cpInv_ge_r (enc x) (encode_list enc xs)) as LE.
+    assert (TAIL : decode_list_fuel dec fuel (encode_list enc xs) = Some xs) by (eapply IH; lia).
+    now rewrite TAIL.
+Qed.
+
+Lemma decode_encode_list {A : Type} (enc : A -> nat) (dec : nat -> option A)
+  (DEC_ENC : forall x : A, dec (enc x) = Some x)
+  : forall xs : list A, decode_list dec (encode_list enc xs) = Some xs.
+Proof.
+  intro xs. unfold decode_list. eapply decode_encode_list_fuel.
+  - exact DEC_ENC.
+  - lia.
+Qed.
+
+#[global]
+Instance list_isCountable {A : Type}
+  (COUNTABLE : isCountable A)
+  : isCountable (list A).
+Proof.
+  refine {| encode := encode_list (@encode A COUNTABLE); decode := decode_list (@decode A COUNTABLE); decode_encode := _ |}.
+  exact (decode_encode_list (@encode A COUNTABLE) (@decode A COUNTABLE) (@decode_encode A COUNTABLE)).
+Defined.

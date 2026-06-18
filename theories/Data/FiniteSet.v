@@ -358,30 +358,6 @@ Proof.
     + left. reflexivity.
 Qed.
 
-Lemma NoDup_map_injective_on {A : Type} {B : Type} (f : A -> B) (xs : list A)
-  (INJ : forall x, forall y, x ∈ xs -> y ∈ xs -> f x = f y -> x = y)
-  (NO_DUP : NoDup xs)
-  : NoDup (map f xs).
-Proof.
-  induction NO_DUP as [ | x xs NOT_IN NO_DUP IH]; simpl.
-  - econs.
-  - econs.
-    + intros IN_MAP. rewrite in_map_iff in IN_MAP.
-      destruct IN_MAP as (y & EQ & IN_Y).
-      assert (x = y) as X_EQ_Y.
-      { eapply INJ; [left; reflexivity | right; exact IN_Y | symmetry; exact EQ]. }
-      subst y. contradiction.
-    + eapply IH. intros y z IN_Y IN_Z EQ.
-      eapply INJ; [right; exact IN_Y | right; exact IN_Z | exact EQ].
-Qed.
-
-Lemma list_bind_flat_map {A : Type} {B : Type} (xs : list A) (k : A -> list B)
-  : (xs >>= k) = L.flat_map k xs.
-Proof.
-  change (concat (map k xs) = L.flat_map k xs).
-  induction xs as [ | x xs IH]; simpl; congruence.
-Qed.
-
 Lemma list_bind_sound {A : Type} {B : Type} (xs : list A) (k : A -> list B) (y : B)
   (IN : y ∈ (xs >>= k))
   : exists x, x ∈ xs /\ y ∈ k x.
@@ -398,7 +374,7 @@ Lemma list_bind_complete {A : Type} {B : Type} (xs : list A) (k : A -> list B) (
   (y_in : y ∈ k x)
   : y ∈ (xs >>= k).
 Proof.
-  rewrite list_bind_flat_map. rewrite in_flat_map.
+  rewrite L.list_bind_flat_map. rewrite in_flat_map.
   exists x. split; [exact x_in | exact y_in].
 Qed.
 

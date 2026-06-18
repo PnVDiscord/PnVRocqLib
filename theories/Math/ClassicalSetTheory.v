@@ -1175,10 +1175,10 @@ Proof.
   - intros b0 LT. eapply IH with (y := (a, b0)). eapply double_rel_right. exact LT.
 Qed.
 
-Fixpoint add (alpha : Ord.t) : Ord.t -> Ord.t :=
+Fixpoint add (alpha : Ord.t) {struct alpha} : forall beta : Ord.t, Ord.t :=
   match alpha with
   | mkNode cs0 ts0 =>
-    fix add_right (beta : Ord.t) : Ord.t :=
+    fix add_right (beta : Ord.t) {struct beta} : Ord.t :=
     match beta with
     | mkNode cs1 ts1 => Ord_join (Ord.sup cs1 (fun c1 : cs1 => Ord.suc (add_right (ts1 c1)))) (Ord.sup cs0 (fun c0 : cs0 => Ord.suc (add (ts0 c0) (mkNode cs1 ts1))))
     end
@@ -1213,7 +1213,7 @@ Proof.
   revert alpha LE. pattern beta, alpha1. revert beta alpha1.
   eapply double_well_founded_induction with (RA := rLt) (RB := rLt); [exact rLt_wf | exact rLt_wf |].
   intros beta alpha1 IHL IHR alpha LE. destruct alpha as [cs0 ts0], beta as [cs1 ts1], alpha1 as [cs2 ts2].
-  rewrite 2 add_red_eq. eapply Ord_join_spec.
+  rewrite !add_red_eq. eapply Ord_join_spec.
   - eapply Ord_sup_rLe_intro. intros c2. transitivity (Ord.suc (add (mkNode cs1 ts1) (ts2 c2))).
     + eapply Ord_suc_rLe. eapply IHR.
       * eapply member_implies_rLt. eapply member_intro.
@@ -1273,7 +1273,8 @@ Proof.
 Qed.
 
 #[global]
-Instance add_isMonotonic2 : isMonotonic2 add.
+Instance add_isMonotonic2
+  : isMonotonic2 add.
 Proof.
   intros alpha beta alpha1 beta1 LE0 LE1. transitivity (add beta alpha1).
   - eapply add_rLe_l. exact LE0.
@@ -1530,9 +1531,9 @@ Qed.
 
 End Hessenberg.
 
-Global Opaque Hessenberg.add.
+#[global] Opaque Hessenberg.add.
 
-#[local] Infix "⊕" := Hessenberg.add (at level 80, right associativity).
+#[global] Infix "⊕" := Hessenberg.add (at level 45, right associativity).
 
 Module Jacobsthal.
 
@@ -1556,7 +1557,7 @@ Proof.
       * eapply Hessenberg.arith_add_larger.
       * transitivity (Hessenberg.add (mult alpha (ts c)) alpha).
         { eapply Hessenberg.add_rLe_l. eapply IH. eapply member_implies_rLt. eapply member_intro. }
-        { pose proof (Hessenberg.add_comm (mult alpha (ts c)) alpha) as [LE _]. exact LE. }
+        { exact (proj1 (Hessenberg.add_comm (mult alpha (ts c)) alpha)). }
     + change (Ord.sup cs (fun c : cs => Hessenberg.add alpha (mult alpha (ts c))) ≦ᵣ Ord.orec Ord.zer (Hessenberg.add alpha) (mkNode cs ts)). rewrite Ord_orec_unfold. eapply Ord_join_r.
 Qed.
 
@@ -1688,7 +1689,8 @@ Proof.
 Qed.
 
 #[global]
-Instance mult_isMonotonic2 : isMonotonic2 mult.
+Instance mult_isMonotonic2
+  : isMonotonic2 mult.
 Proof.
   intros alpha beta alpha1 beta1 LE0 LE1. transitivity (mult beta alpha1).
   - eapply mult_rLe_l. exact LE0.
@@ -1945,18 +1947,17 @@ Qed.
 
 End Jacobsthal.
 
-Global Opaque Jacobsthal.mult.
-Global Opaque Jacobsthal.expn.
+#[global] Opaque Jacobsthal.mult.
+#[global] Opaque Jacobsthal.expn.
 
-#[local] Infix "⊗" := Jacobsthal.mult (at level 80, right associativity).
-#[local] Infix "↑" := Jacobsthal.expn (at level 80, right associativity).
+#[global] Infix "⊗" := Jacobsthal.mult (at level 45, right associativity).
+#[global] Infix "↑" := Jacobsthal.expn (at level 45, right associativity).
 
 Module ClassicJacobsthal.
 
 #[local] Typeclasses Opaque Ord.t.
 
 #[local] Existing Instance rEq_asSetoid.
-
 #[local] Existing Instance Ord_isProset.
 
 Lemma add_rotate_l (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
@@ -2071,28 +2072,27 @@ Lemma expn_add (base : Ord.t) (alpha : Ord.t) (beta : Ord.t)
 Proof.
   revert alpha. induction (rLt_wf beta) as [beta _ IH]. intros alpha. destruct beta as [cs ts].
   etransitivity.
-  - eapply Jacobsthal.expn_rEq_r. exact POS. eapply Ord_add_mkNode.
+  { eapply Jacobsthal.expn_rEq_r. exact POS. eapply Ord_add_mkNode. }
+  etransitivity.
+  { eapply Jacobsthal.expn_join. exact POS. }
+  etransitivity.
+  { eapply Ord_join_rEq_r. eapply Jacobsthal.expn_sup. exact POS. }
+  etransitivity.
+  - eapply Ord_join_rEq_r. eapply Ord_join_rEq_r. eapply Ord_sup_rEq. intros c.
+    etransitivity.
+    { eapply Jacobsthal.expn_suc. exact POS. }
+    etransitivity.
+    { eapply Jacobsthal.mult_rEq_l. eapply IH. eapply member_implies_rLt. eapply member_intro. }
+    { eapply mult_assoc. }
   - etransitivity.
-    + eapply Jacobsthal.expn_join. exact POS.
-    + etransitivity.
-      * eapply Ord_join_rEq_r. eapply Jacobsthal.expn_sup. exact POS.
-      * etransitivity.
-        { eapply Ord_join_rEq_r. eapply Ord_join_rEq_r. eapply Ord_sup_rEq. intros c. etransitivity.
-          - eapply Jacobsthal.expn_suc. exact POS.
-          - etransitivity.
-            + eapply Jacobsthal.mult_rEq_l. eapply IH. eapply member_implies_rLt. eapply member_intro.
-            + eapply mult_assoc.
-        }
-        { etransitivity.
-          - eapply Ord_join_absorb_l. eapply Jacobsthal.expn_base.
-          - symmetry. etransitivity.
-            + eapply Jacobsthal.mult_rEq_r. eapply Jacobsthal.expn_mkNode.
-            + etransitivity.
-              * eapply Jacobsthal.mult_join.
-              * etransitivity.
-                { eapply Ord_join_rEq_l. eapply Jacobsthal.mult_one_r. }
-                { eapply Ord_join_rEq_r. eapply Jacobsthal.mult_sup. }
-        }
+    { eapply Ord_join_absorb_l. eapply Jacobsthal.expn_base. }
+    symmetry. etransitivity.
+    { eapply Jacobsthal.mult_rEq_r. eapply Jacobsthal.expn_mkNode. }
+    etransitivity.
+    { eapply Jacobsthal.mult_join. }
+    etransitivity.
+    { eapply Ord_join_rEq_l. eapply Jacobsthal.mult_one_r. }
+    { eapply Ord_join_rEq_r. eapply Jacobsthal.mult_sup. }
 Qed.
 
 Lemma expn_mult (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
@@ -2100,14 +2100,14 @@ Lemma expn_mult (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   : Jacobsthal.expn alpha (Ord.mul beta alpha1) =ᵣ Jacobsthal.expn (Jacobsthal.expn alpha beta) alpha1.
 Proof.
   induction alpha1 as [cs ts IH]. etransitivity.
-  - eapply Jacobsthal.expn_rEq_r. exact POS. eapply Ord_mul_mkNode.
-  - etransitivity.
-    + eapply Jacobsthal.expn_sup. exact POS.
-    + symmetry. etransitivity.
-      * eapply Jacobsthal.expn_mkNode.
-      * eapply Ord_join_rEq_r. eapply Ord_sup_rEq. intros c. symmetry. etransitivity.
-        { eapply expn_add. exact POS. }
-        { eapply Jacobsthal.mult_rEq_l. eapply IH. }
+  { eapply Jacobsthal.expn_rEq_r. exact POS. eapply Ord_mul_mkNode. }
+  etransitivity.
+  { eapply Jacobsthal.expn_sup. exact POS. }
+  symmetry. etransitivity.
+  { eapply Jacobsthal.expn_mkNode. }
+  eapply Ord_join_rEq_r. eapply Ord_sup_rEq. intros c. symmetry. etransitivity.
+  { eapply expn_add. exact POS. }
+  { eapply Jacobsthal.mult_rEq_l. eapply IH. }
 Qed.
 
 End ClassicJacobsthal.
@@ -2136,27 +2136,27 @@ Proof with eauto with *.
   - destruct H as [[c2 H_rLe]]. simpl in *. exploit (IH (ts2 c2) _ (mkNode cs1 ts1) (ts2 c2))...
     { eapply rLt_rLe_rLt... }
     intros (H1 & H2). rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_LT | H_EQ].
-    + specialize (H1 H_LT). inversion H_isOrdinal2. eapply TRANS with (y := ts2 c2)...
-    + specialize (H2 H_EQ). rewrite -> H2...
+    + pose proof (H1 H_LT) as H1'. inversion H_isOrdinal2. eapply TRANS with (y := ts2 c2)...
+    + pose proof (H2 H_EQ) as H2'. rewrite -> H2'...
   - eapply extensionality. intros z; split; intros [c z_eq].
     + simpl in *. change (z == ts1 c) in z_eq. destruct H as [H_rLe1 H_rLe2]. destruct H_rLe1. simpl in H_rLt. pose proof (H_rLt c) as [[c' H_rLe]].
       simpl in c', H_rLe. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. rewrite z_eq. clear z z_eq. destruct H_rLe as [H_LT | H_EQ].
       * exploit (IH (ts2 c') _ (ts1 c) (ts2 c'))...
         { eapply rLt_rLe_rLt... }
-        intros (H1 & H2). specialize (H1 H_LT). inversion H_isOrdinal2. eapply TRANS with (y := ts2 c')...
+        intros (H1 & H2). pose proof (H1 H_LT) as H1'. inversion H_isOrdinal2. eapply TRANS with (y := ts2 c')...
       * exploit (IH (ts2 c') _ (ts1 c) (ts2 c'))...
         { eapply rLt_rLe_rLt... }
         { rewrite -> H_EQ... }
-        intros (H1 & H2). specialize (H2 H_EQ). rewrite -> H2...
+        intros (H1 & H2). pose proof (H2 H_EQ) as H2'. rewrite -> H2...
     + simpl in *. change (z == ts2 c) in z_eq. destruct H as [H_rLe1 H_rLe2]. destruct H_rLe2. simpl in H_rLt. pose proof (H_rLt c) as [[c' H_rLe]].
       simpl in c', H_rLe. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. rewrite z_eq. clear z z_eq. destruct H_rLe as [H_LT | H_EQ].
       * exploit (IH (ts1 c') _ (ts2 c) (ts1 c'))...
         { eapply rLt_rLe_rLt... }
-        intros (H1 & H2). specialize (H1 H_LT). inversion H_isOrdinal1. eapply TRANS with (y := ts1 c')...
+        intros (H1 & H2). pose proof (H1 H_LT). inversion H_isOrdinal1. eapply TRANS with (y := ts1 c')...
       * exploit (IH (ts1 c') _ (ts2 c) (ts1 c'))...
         { eapply rLt_rLe_rLt... }
         { rewrite -> H_EQ... }
-        intros (H1 & H2). specialize (H2 H_EQ). rewrite -> H2...
+        intros (H1 & H2). pose proof (H2 H_EQ) as H2'. rewrite -> H2...
 Qed.
 
 Lemma Ordinal_rLt_Ordinal_elim (alpha : Tree) (beta : Tree)
@@ -2843,12 +2843,12 @@ Proof.
     rewrite fromWfSet_pirrel with (R_wf' := R_wf) in alpha_eq.
     change (FromOrderType (toSet alpha)) with (fromWfSet RA RA_wf) in alpha_eq.
     assert (claim1 : fromWfSet RA RA_wf ≦ᵣ fromWfSet R R_wf) by now rewrite alpha_eq.
-    specialize (HH RA R RA_wf R_wf (toSet_isWoset alpha).(Woset_eqPropCompatible2) R_eqPropCompatible2 (toSet_isWoset alpha).(Woset_isWellPoset).(wltProp_Transitive) R_Transitive claim1 claim2 R_total).
+    pose proof (HH RA R RA_wf R_wf (toSet_isWoset alpha).(Woset_eqPropCompatible2) R_eqPropCompatible2 (toSet_isWoset alpha).(Woset_isWellPoset).(wltProp_Transitive) R_Transitive claim1 claim2 R_total) as HH'.
     assert (claim3 : forall x1 : toSet alpha, forall x2 : toSet alpha, eqProp (isSetoid := toSet_isSetoid alpha) x1 x2 -> forall x : toSet alpha, RA x1 x -> RA x2 x).
     { pose proof (toSet_isWoset alpha).(Woset_eqPropCompatible2) as X. ii; eapply X with (x2 := x1) (y2 := x); eauto with *. }
     assert (claim4 : forall x1, forall x2, x1 == x2 -> forall x : @sig D P, R x1 x -> R x2 x).
     { ii. now rewrite <- H. }
-    destruct HH as [f H_f]. exists (fun x : toSet alpha => proj1_sig (f x)).
+    destruct HH' as [f H_f]. exists (fun x : toSet alpha => proj1_sig (f x)).
     + red; simpl Cardinality.carrier; ii. pose proof (R_total (f x1) (f x2)) as [H_EQ | [H_LT | H_GT]]; eauto.
       * rewrite <- H_f in H_LT. exfalso. contradiction (well_founded_implies_Irreflexive' (SETOID := toSet_isSetoid alpha) RA RA_wf claim3 x1 x2 x_EQ H_LT).
       * rewrite <- H_f in H_GT. exfalso. symmetry in x_EQ. contradiction (well_founded_implies_Irreflexive' (SETOID := toSet_isSetoid alpha) RA RA_wf claim3 x2 x1 x_EQ H_GT).
@@ -2916,12 +2916,12 @@ Proof.
     change (@FromOrderType (children alpha) (children_isSetoid alpha) (children_isWoset alpha H_isOrdinal)) with (@fromWfSet (children alpha) RA RA_wf) in alpha_eq.
     assert (claim1 : @fromWfSet (children alpha) RA RA_wf ≦ᵣ @fromWfSet (@sig D P) R R_wf).
     { rewrite <- alpha_eq. unfold FromOrderType. now eapply fromWfSet_cong with (f := fun x => x). }
-    specialize (HH RA R RA_wf R_wf RA_eqPropCompatible2 R_eqPropCompatible2 RA_Transitive R_Transitive claim1 RA_total R_total).
+    pose proof (HH RA R RA_wf R_wf RA_eqPropCompatible2 R_eqPropCompatible2 RA_Transitive R_Transitive claim1 RA_total R_total) as HH'.
     assert (claim3 : forall x1 : children alpha, forall x2 : children alpha, x1 == x2 -> forall x : children alpha, RA x1 x -> RA x2 x).
     { intros x1 x2 H x Hlt. eapply RA_eqPropCompatible2 with (x2 := x1) (y2 := x); eauto with *. }
     assert (claim4 : forall x1 : @sig D P, forall x2 : @sig D P, x1 == x2 -> forall x : @sig D P, R x1 x -> R x2 x).
     { intros x1 x2 H x Hlt. now rewrite <- H. }
-    destruct HH as [g Hg]. exists (fun x : children alpha => proj1_sig (g x)).
+    destruct HH' as [g Hg]. exists (fun x : children alpha => proj1_sig (g x)).
     + red. simpl. intros x1 x2 x_EQ. pose proof (R_total (g x1) (g x2)) as [H_EQ | [H_LT | H_GT]]; eauto.
       * rewrite <- Hg in H_LT. exfalso. contradiction (well_founded_implies_Irreflexive' (SETOID := children_isSetoid alpha) RA RA_wf claim3 x1 x2 x_EQ H_LT).
       * rewrite <- Hg in H_GT. exfalso. symmetry in x_EQ. contradiction (well_founded_implies_Irreflexive' (SETOID := children_isSetoid alpha) RA RA_wf claim3 x2 x1 x_EQ H_GT).
@@ -2984,7 +2984,7 @@ Corollary Hartogs_minimal_nonembed `{Axms : ClassicalAxioms (b_AC := true)} (D :
   (H_nLe : ~ Cardinality.mk (children beta) (children_isSetoid beta) =< Cardinality.mk D D_isSetoid)
   : Hartogs D ≦ᵣ beta.
 Proof.
-  eapply NNPP; intro H_contra.
+  eapply NNPP; intros H_contra.
   pose proof (proj2 (InducedOrdinal.rLt_iff_not_rGe beta (Hartogs D)) H_contra) as Hlt.
   pose proof (Ordinal1.Ordinal_rLt_Ordinal_elim beta (Hartogs D) H_isOrdinal (Hartogs_isOrdinal) Hlt) as Hin.
   contradiction H_nLe. exact (proj1 (Hartogs_spec2 D D_isSetoid beta H_isOrdinal) Hin).
@@ -3483,7 +3483,7 @@ Proof.
   unfold card.
   set (u := indexed_union I alphas).
   assert (Hord : forall i, isOrdinal (alphas i)).
-  { intro i. eapply isCardinal_isOrdinal. exact (HCARD i). }
+  { intros i. eapply isCardinal_isOrdinal. exact (HCARD i). }
   assert (Hord_u : isOrdinal u).
   { unfold u. eapply sup_isOrdinal. exact Hord. }
   split.
@@ -3668,7 +3668,7 @@ Corollary Hartogs_ordertype_lowerbound `{Axms : ClassicalAxioms (b_AC := true)} 
   (H_nLe : ~ Cardinality.mk A A_isSetoid =< Cardinality.mk D D_isSetoid)
   : Hartogs D ≦ᵣ @FromOrderType A A_isSetoid WOSET.
 Proof.
-  eapply NNPP; intro H_contra.
+  eapply NNPP; intros H_contra.
   contradiction H_nLe. rewrite <- Hartogs_ordertype_iff.
   eapply Ordinal1.Ordinal_rLt_Ordinal_elim.
   - eapply FromOrderType_isOrdinal.
@@ -3731,7 +3731,7 @@ Proof.
     pose proof (hasCardinality_intro lambda) as [(R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & H_lambda) MIN].
     set (WOSET := @O.WellfoundedToset_isWoset classic lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) {| wltProp := R; wltProp_well_founded := R_wf; wltProp_Transitive := R_Transitive; |} R_eqPropCompatible2 R_total).
     assert (H_nLe : ~ Cardinality.mk lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) =< Cardinality.mk kappa.(Cardinality.carrier) kappa.(Cardinality.carrier_isSetoid)).
-    { intro H_ge. contradiction H_ne. destruct H_le as [f f_cong f_inj], H_ge as [g g_cong g_inj]. exists f g; eauto. }
+    { intros H_ge. contradiction H_ne. destruct H_le as [f f_cong f_inj], H_ge as [g g_cong g_inj]. exists f g; eauto. }
     rewrite Cardinality_le_iff. rewrite next_toTree_eq.
     change (@FromOrderType lambda.(Cardinality.carrier) lambda.(Cardinality.carrier_isSetoid) WOSET == Cardinality.toTree lambda) in H_lambda.
     rewrite <- H_lambda. now eapply Hartogs_ordertype_lowerbound with (A := lambda.(Cardinality.carrier)) (A_isSetoid := lambda.(Cardinality.carrier_isSetoid)) (WOSET := WOSET).
@@ -5455,10 +5455,10 @@ Proof.
   }
   destruct H_fromWfSet as [H_left H_right].
   exploit (Axiom_of_Choice kappa.(Cardinality.carrier) (fun _ => lambda.(Cardinality.carrier)) (fun x y => @fromWf _ Rl Rl_wf y == @fromWf _ Rk Rk_wf x)).
-  { intro x. pose proof (H_left x) as [y Hy]. exists y. eauto with *. }
+  { intros x. pose proof (H_left x) as [y Hy]. exists y. eauto with *. }
   intros [f Hf].
   exploit (Axiom_of_Choice lambda.(Cardinality.carrier) (fun _ => kappa.(Cardinality.carrier)) (fun y x => @fromWf _ Rk Rk_wf x == @fromWf _ Rl Rl_wf y)).
-  { intro y. pose proof (H_right y) as [x Hx]. exists x. eauto with *. }
+  { intros y. pose proof (H_right y) as [x Hx]. exists x. eauto with *. }
   intros [g Hg].
   exists f. split.
   - intros x1 x2. split.
@@ -5468,7 +5468,7 @@ Proof.
     + intros Hff. rewrite <- fromOrderType_eq_fromOrderType_iff in Hff.
       change (fromWf Rl Rl_wf (f x1) == fromWf Rl Rl_wf (f x2)) in Hff.
       do 2 rewrite -> Hf in Hff. now rewrite <- fromOrderType_eq_fromOrderType_iff.
-  - intro y. exists (g y). rewrite <- fromOrderType_eq_fromOrderType_iff.
+  - intros y. exists (g y). rewrite <- fromOrderType_eq_fromOrderType_iff.
     change (fromWf Rl Rl_wf y == fromWf Rl Rl_wf (f (g y))).
     now rewrite -> Hf, -> Hg.
 Qed.
@@ -5588,15 +5588,15 @@ Proof.
   destruct LE as [f f_cong f_inj].
   destruct Y_FIN as [ys Y_SPEC].
   assert (Hchoice : forall y : D, exists x : D, x \in X /\ (exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y) \/ x = x0 /\ ~ exists x' : D, exists Hx' : x' \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x' Hx')) = y).
-  { intro y. pose proof (classic (exists x : D, exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y)) as [(x & Hx & Hx_eq) | Hnone].
+  { intros y. pose proof (classic (exists x : D, exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y)) as [(x & Hx & Hx_eq) | Hnone].
     - exists x. left. split.
       + exact Hx.
       + exists Hx. exact Hx_eq.
     - exists x0. right. split; [reflexivity | exact Hnone].
   }
   pose proof (Axiom_of_Choice D (fun _ : D => D) (fun y : D => fun x : D => x \in X /\ (exists Hx : x \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x Hx)) = y) \/ x = x0 /\ ~ exists x' : D, exists Hx' : x' \in X, proj1_sig (f (@exist D (fun z : D => z \in X) x' Hx')) = y) Hchoice) as [pick PICK].
-  exists (L.map pick ys). intro x. split.
-  - intro x_in. rewrite L.in_map_iff.
+  exists (L.map pick ys). intros x. split.
+  - intros x_in. rewrite L.in_map_iff.
     pose (fx := f (@exist D (fun z : D => z \in X) x x_in)).
     exists (proj1_sig fx). split.
     + pose proof (PICK (proj1_sig fx)) as [(pick_in & Hpick & Hpick_eq) | (Hpick_eq & Hnone)].
@@ -5605,7 +5605,7 @@ Proof.
         pose proof (f_inj _ _ EQf) as EQx. change (@exist D (fun z : D => z \in X) (pick (proj1_sig fx)) Hpick = @exist D (fun z : D => z \in X) x x_in) in EQx. exact (f_equal (@proj1_sig D (fun z : D => z \in X)) EQx).
       * contradiction Hnone. exists x, x_in. reflexivity.
     + exact (proj1 (Y_SPEC (proj1_sig fx)) (proj2_sig fx)).
-  - intro x_in. rewrite L.in_map_iff in x_in. destruct x_in as (y & EQ & y_in). subst x.
+  - intros x_in. rewrite L.in_map_iff in x_in. destruct x_in as (y & EQ & y_in). subst x.
     pose proof (PICK y) as [(pick_in & _) | (pick_eq & _)].
     + exact pick_in.
     + rewrite pick_eq. exact x0_in.
@@ -5726,106 +5726,7 @@ Qed.
 
 End CARDINALITY.
 
-#[universes(template)]
-Inductive rose {A : Type} : Type :=
-  | leaf (x : A)
-  | node (ts : list (@rose A)).
-
-#[global] Arguments rose : clear implicits.
-
-Fixpoint rose_map {A : Type} {B : Type} (f : A -> B) (t : rose A) {struct t} : rose B :=
-  match t with
-  | leaf x => leaf (f x)
-  | node ts => node (map (rose_map f) ts)
-  end.
-
-Fixpoint eval_rose {A : Type} {B : Type} (merge : list B -> B) (seed : A -> B) (t : rose A) {struct t} : B :=
-  match t with
-  | leaf x => seed x
-  | node ts => merge (map (eval_rose merge seed) ts)
-  end.
-
 Section LIST_ROSE_BOUND.
-
-Fixpoint encode_list {A : Type} (enc : A -> nat) (xs : list A) : nat :=
-  match xs with
-  | [] => O
-  | x :: xs => S (cpInv (enc x) (encode_list enc xs))
-  end.
-
-Lemma cpInv_ge_r (x : nat) (y : nat)
-  : y <= cpInv x y.
-Proof.
-  unfold cpInv. enough (0 <= sum_from_0_to (x + y)) by lia. induction (x + y); simpl; lia.
-Qed.
-
-Fixpoint decode_list_fuel {A : Type} (dec : nat -> option A) (fuel : nat) (n : nat) : option (list A) :=
-  match fuel with
-  | O => None
-  | S fuel' =>
-    match n with
-    | O => Some []
-    | S n' =>
-      let '(n_x, n_xs) := cp n' in
-      match dec n_x, decode_list_fuel dec fuel' n_xs with
-      | Some x, Some xs => Some (x :: xs)
-      | _, _ => None
-      end
-    end
-  end.
-
-Definition decode_list {A : Type} (dec : nat -> option A) (n : nat) : option (list A) :=
-  decode_list_fuel dec (S n) n.
-
-Lemma decode_encode_list_fuel {A : Type} (enc : A -> nat) (dec : nat -> option A)
-  (DEC_ENC : forall x : A, dec (enc x) = Some x)
-  : forall xs : list A, forall fuel : nat, encode_list enc xs < fuel -> decode_list_fuel dec fuel (encode_list enc xs) = Some xs.
-Proof.
-  induction xs as [ | x xs IH]; intros [ | fuel] FUEL; simpl in *; try lia.
-  - reflexivity.
-  - rewrite cpInv_rightInv. simpl. rewrite DEC_ENC. assert (TAIL : decode_list_fuel dec fuel (encode_list enc xs) = Some xs) by (eapply IH; pose proof (cpInv_ge_r (enc x) (encode_list enc xs)) as LE; lia). now rewrite TAIL.
-Qed.
-
-Lemma decode_encode_list {A : Type} (enc : A -> nat) (dec : nat -> option A)
-  (DEC_ENC : forall x : A, dec (enc x) = Some x)
-  : forall xs : list A, decode_list dec (encode_list enc xs) = Some xs.
-Proof.
-  intro xs. unfold decode_list. eapply decode_encode_list_fuel.
-  - exact DEC_ENC.
-  - lia.
-Qed.
-
-#[global]
-Instance list_isCountable {A : Type} (COUNTABLE : isCountable A)
-  : isCountable (list A).
-Proof.
-  refine {| encode := encode_list (@encode A COUNTABLE); decode := decode_list (@decode A COUNTABLE); decode_encode := _ |}.
-  exact (decode_encode_list (@encode A COUNTABLE) (@decode A COUNTABLE) (@decode_encode A COUNTABLE)).
-Defined.
-
-Lemma list_eq_of_nth_error {A : Type} (xs : list A) (ys : list A)
-  (EQ : forall n : nat, nth_error xs n = nth_error ys n)
-  : xs = ys.
-Proof.
-  revert ys EQ. induction xs as [ | x xs IH]; intros [ | y ys] EQ; simpl in *.
-  - reflexivity.
-  - specialize (EQ O). discriminate EQ.
-  - specialize (EQ O). discriminate EQ.
-  - f_equal.
-    + specialize (EQ O). simpl in EQ. congruence.
-    + eapply IH. intro n. specialize (EQ (S n)). simpl in EQ. exact EQ.
-Qed.
-
-Lemma list_map_inj {A : Type} {B : Type} (f : A -> B)
-  (f_inj : forall x1 : A, forall x2 : A, f x1 = f x2 -> x1 = x2)
-  : forall xs : list A, forall ys : list A, map f xs = map f ys -> xs = ys.
-Proof.
-  induction xs as [ | x xs IH]; intros [ | y ys] EQ; simpl in EQ; try discriminate EQ.
-  - reflexivity.
-  - injection EQ as EQ_head EQ_tail. f_equal.
-    + eapply f_inj. exact EQ_head.
-    + eapply IH. exact EQ_tail.
-Qed.
 
 Lemma Cardinality_ofType_list_le (A : Type@{Set_u}) (B : Type@{Set_u})
   (LE : Cardinality.ofType A =< Cardinality.ofType B)
@@ -5833,7 +5734,7 @@ Lemma Cardinality_ofType_list_le (A : Type@{Set_u}) (B : Type@{Set_u})
 Proof.
   destruct LE as [f f_cong f_inj].
   eapply Cardinality_ofType_le_ofType with (f := map f).
-  intros xs ys EQ. eapply list_map_inj.
+  intros xs ys EQ. eapply L.list_map_inj with (f := f).
   - intros x1 x2 EQ'. change (x1 = x2). eapply f_inj. change (f x1 = f x2). exact EQ'.
   - exact EQ.
 Qed.
@@ -5849,7 +5750,7 @@ Lemma Cardinality_ofType_list_le_exp (A : Type@{Set_u})
 Proof.
   exists (@list_nth_function A).
   - intros xs ys EQ. change (xs = ys) in EQ. subst ys. intros n n' EQ. change (n = n') in EQ. now subst n'.
-  - intros xs ys EQ. change (xs = ys). eapply list_eq_of_nth_error. intro n. pose proof (EQ n n eq_refl) as Hn. change (nth_error xs n = nth_error ys n) in Hn. exact Hn.
+  - intros xs ys EQ. change (xs = ys). eapply L.list_eq_of_nth_error. intros n. exact (EQ n n eq_refl).
 Qed.
 
 Definition list_out {A : Type} (xs : list A) : unit + (A * list A) :=
@@ -5876,43 +5777,43 @@ Proof.
     + destruct p1 as [x xs], p2 as [y ys]. simpl in *. subst. reflexivity.
 Qed.
 
-Definition rose_out {A : Type} (t : rose A) : A + list (rose A) :=
+Definition rose_out {A : Type} (t : B.rose A) : A + list (B.rose A) :=
   match t with
-  | leaf x => inl x
-  | node ts => inr ts
+  | B.leaf x => inl x
+  | B.node ts => inr ts
   end.
 
-Definition rose_in {A : Type} (s : A + list (rose A)) : rose A :=
+Definition rose_in {A : Type} (s : A + list (B.rose A)) : B.rose A :=
   match s with
-  | inl x => leaf x
-  | inr ts => node ts
+  | inl x => B.leaf x
+  | inr ts => B.node ts
   end.
 
-Fixpoint encode_rose {A : Type} (t : rose A) {struct t} : list (A + nat) :=
+Fixpoint encode_rose {A : Type} (t : B.rose A) {struct t} : list (A + nat) :=
   match t with
-  | leaf x => [inl x]
-  | node ts => inr (length ts) :: concat (map encode_rose ts)
+  | B.leaf x => [inl x]
+  | B.node ts => inr (length ts) :: concat (map encode_rose ts)
   end.
 
-Definition encode_roses {A : Type} (ts : list (rose A)) : list (A + nat) :=
+Definition encode_roses {A : Type} (ts : list (B.rose A)) : list (A + nat) :=
   concat (map encode_rose ts).
 
-Fixpoint rose_size {A : Type} (t : rose A) : nat :=
+Fixpoint rose_size {A : Type} (t : B.rose A) : nat :=
   match t with
-  | leaf _ => S O
-  | node ts => S (fold_right (fun t : rose A => fun n : nat => rose_size t + n) 0 ts)
+  | B.leaf _ => S O
+  | B.node ts => S (fold_right (fun t : B.rose A => fun n : nat => rose_size t + n) 0 ts)
   end.
 
-Definition roses_size {A : Type} (ts : list (rose A)) : nat :=
-  fold_right (fun t : rose A => fun n : nat => rose_size t + n) O ts.
+Definition roses_size {A : Type} (ts : list (B.rose A)) : nat :=
+  fold_right (fun t : B.rose A => fun n : nat => rose_size t + n) O ts.
 
-Lemma rose_size_pos {A : Type} (t : rose A)
+Lemma rose_size_pos {A : Type} (t : B.rose A)
   : 0 < rose_size t.
 Proof.
   destruct t; simpl; lia.
 Qed.
 
-Lemma rose_size_in_roses_size_le {A : Type} (t : rose A) (ts : list (rose A))
+Lemma rose_size_in_roses_size_le {A : Type} (t : B.rose A) (ts : list (B.rose A))
   (IN : L.In t ts)
   : rose_size t <= roses_size ts.
 Proof.
@@ -5925,10 +5826,10 @@ Qed.
 
 Lemma eval_rose_map {A : Type} {B : Type} {C : Type} (merge : list C -> C) (seedA : A -> C) (seedB : B -> C) (f : A -> B)
   (SEED : forall x : A, seedA x = seedB (f x))
-  : forall t : rose A, eval_rose merge seedA t = eval_rose merge seedB (rose_map f t).
+  : forall t : B.rose A, B.eval_rose merge seedA t = B.eval_rose merge seedB (B.rose_map f t).
 Proof.
-  enough (REC : forall n : nat, forall t : rose A, rose_size t <= n -> eval_rose merge seedA t = eval_rose merge seedB (rose_map f t)).
-  { intro t. eapply REC. reflexivity. }
+  enough (REC : forall n : nat, forall t : B.rose A, rose_size t <= n -> B.eval_rose merge seedA t = B.eval_rose merge seedB (B.rose_map f t)).
+  { intros t. eapply REC. reflexivity. }
   induction n as [n IH] using lt_wf_ind. intros t SIZE.
   destruct t as [x | ts]; simpl in *.
   - exact (SEED x).
@@ -5942,18 +5843,19 @@ Proof.
 Qed.
 
 Lemma eval_rose_image_card_lt `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {D : Type@{Set_u}} (X : ensemble D) (merge : list D -> D) (A : Type@{Set_u}) (seed : A -> D)
-  (LT : Cardinality.ofType (rose A) ≨ ensemble_card X)
-  : ensemble_card (fun z : D => exists t : rose A, z = eval_rose merge seed t) ≨ ensemble_card X.
+  (LT : Cardinality.ofType (B.rose A) ≨ ensemble_card X)
+  : ensemble_card (fun z : D => exists t : B.rose A, z = B.eval_rose merge seed t) ≨ ensemble_card X.
 Proof.
-  eapply ensemble_card_image_lt with (f := eval_rose merge seed).
+  eapply ensemble_card_image_lt with (f := B.eval_rose merge seed).
   - intros y. reflexivity.
   - exact LT.
 Qed.
 
-Lemma encode_rose_prefix {A : Type} (t1 : rose A) (t2 : rose A) (rest1 : list (A + nat)) (rest2 : list (A + nat))
-  : encode_rose t1 ++ rest1 = encode_rose t2 ++ rest2 -> t1 = t2 /\ rest1 = rest2.
+Lemma encode_rose_prefix {A : Type} (t1 : B.rose A) (t2 : B.rose A) (rest1 : list (A + nat)) (rest2 : list (A + nat))
+  (EQ : encode_rose t1 ++ rest1 = encode_rose t2 ++ rest2)
+  : t1 = t2 /\ rest1 = rest2.
 Proof.
-  revert t2 rest1 rest2.
+  revert t2 rest1 rest2 EQ.
   remember (rose_size t1) as n eqn: SIZE. revert t1 SIZE.
   induction n as [n IH] using lt_wf_ind. intros t1 SIZE t2 rest1 rest2 EQ.
   destruct t1 as [x1 | ts1], t2 as [x2 | ts2]; simpl in EQ.
@@ -5961,14 +5863,14 @@ Proof.
   - discriminate EQ.
   - discriminate EQ.
   - inv EQ.
-    assert (LIST : forall ts1' : list (rose A), forall ts2' : list (rose A), forall rest1' : list (A + nat), forall rest2' : list (A + nat), roses_size ts1' <= roses_size ts1 -> length ts1' = length ts2' -> encode_roses ts1' ++ rest1' = encode_roses ts2' ++ rest2' -> ts1' = ts2' /\ rest1' = rest2').
+    assert (LIST : forall ts1' : list (B.rose A), forall ts2' : list (B.rose A), forall rest1' : list (A + nat), forall rest2' : list (A + nat), roses_size ts1' <= roses_size ts1 -> length ts1' = length ts2' -> encode_roses ts1' ++ rest1' = encode_roses ts2' ++ rest2' -> ts1' = ts2' /\ rest1' = rest2').
     { induction ts1' as [ | t1' ts1' IHlist]; intros [ | t2' ts2'] rest1' rest2' BOUND EQ_length EQ'; simpl in *.
       - split; [reflexivity | exact EQ'].
       - discriminate EQ_length.
       - discriminate EQ_length.
       - inv EQ_length. unfold encode_roses in EQ'. simpl in EQ'. do 2 rewrite <- app_assoc in EQ'. fold (@encode_roses A) in EQ'.
         unfold roses_size in BOUND. simpl in BOUND. fold (@roses_size A) in BOUND.
-        assert (LT_head : rose_size t1' < S (fold_right (fun t : rose A => fun n : nat => rose_size t + n) 0 ts1)) by lia.
+        assert (LT_head : rose_size t1' < S (fold_right (fun t : B.rose A => fun n : nat => rose_size t + n) 0 ts1)) by lia.
         pose proof (IH (rose_size t1') LT_head t1' eq_refl t2' (encode_roses ts1' ++ rest1') (encode_roses ts2' ++ rest2') EQ') as [EQ_t EQ_rest].
         assert (BOUND_tail : roses_size ts1' <= roses_size ts1).
         { unfold roses_size. lia. }
@@ -5978,7 +5880,7 @@ Proof.
     pose proof (LIST ts1 ts2 rest1 rest2 BOUND_all H0 H1) as [EQ_ts EQ_rest]. split; now subst ts2.
 Qed.
 
-Lemma encode_rose_inj {A : Type} (t1 : rose A) (t2 : rose A)
+Lemma encode_rose_inj {A : Type} (t1 : B.rose A) (t2 : B.rose A)
   (EQ : encode_rose t1 = encode_rose t2)
   : t1 = t2.
 Proof.
@@ -5988,13 +5890,13 @@ Proof.
 Qed.
 
 Lemma Cardinality_ofType_rose_le_list_sum_nat (A : Type@{Set_u})
-  : Cardinality.ofType (rose A) =< Cardinality.ofType (list (A + nat)).
+  : Cardinality.ofType (B.rose A) =< Cardinality.ofType (list (A + nat)).
 Proof.
   eapply Cardinality_ofType_le_ofType with (f := @encode_rose A). intros t1 t2 EQ. now eapply encode_rose_inj.
 Qed.
 
 Lemma Cardinality_ofType_rose_unfold_eq (A : Type@{Set_u})
-  : Cardinality.ofType (rose A) == Cardinality.ofType (A + list (rose A)).
+  : Cardinality.ofType (B.rose A) == Cardinality.ofType (A + list (B.rose A)).
 Proof.
   exists (@rose_out A) (@rose_in A).
   - intros t1 t2 EQ. change (t1 = t2) in EQ. now subst t2.
@@ -6053,12 +5955,12 @@ Lemma Cardinality_ofType_option_le_self_of_nat_le `{Axms : ClassicalAxioms (b_AC
   : Cardinality.ofType (option A) =< Cardinality.ofType A.
 Proof.
   destruct NAT_LE as [f f_cong f_inj].
-  assert (Hchoice : forall a : A, exists n_opt : option nat, match n_opt with Some n => a = f n | None => forall n : nat, a <> f n end).
-  { intro a. pose proof (classic (exists n : nat, a = f n)) as [[n EQ] | NONE].
+  assert (Hchoice : forall a : A, exists n_opt : option nat, match n_opt with Some n => a = f n | None => forall n : nat, ~ a = f n end).
+  { intros a. pose proof (classic (exists n : nat, a = f n)) as [[n EQ] | NONE].
     - exists (Some n). exact EQ.
     - exists None. intros n EQ. contradiction NONE. exists n. exact EQ.
   }
-  pose proof (Axiom_of_Choice A (fun _ : A => option nat) (fun a : A => fun n_opt : option nat => match n_opt with Some n => a = f n | None => forall n : nat, a <> f n end) Hchoice) as [code CODE].
+  pose proof (Axiom_of_Choice A (fun _ : A => option nat) (fun a : A => fun n_opt : option nat => match n_opt with Some n => a = f n | None => forall n : nat, ~ a = f n end) Hchoice) as [code CODE].
   exists (fun x : option A => match x with Some a => match code a with Some n => f (S n) | None => a end | None => f O end).
   - intros x y EQ. change (x = y) in EQ. now subst y.
   - intros [a | ] [b | ] EQ; simpl in *.
@@ -6115,7 +6017,7 @@ Proof.
 Qed.
 
 Lemma Cardinality_ofType_rose_countable_le_nat {A : Type@{Set_u}} `{COUNTABLE : isCountable A}
-  : Cardinality.ofType (rose A) =< Cardinality.ofType nat.
+  : Cardinality.ofType (B.rose A) =< Cardinality.ofType nat.
 Proof.
   transitivity (Cardinality.ofType (list (A + nat))).
   - eapply Cardinality_ofType_rose_le_list_sum_nat.
@@ -6124,7 +6026,7 @@ Qed.
 
 Lemma Cardinality_ofType_rose_countable_lt_of_uncountable `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {A : Type@{Set_u}} `{COUNTABLE : isCountable A} (kappa : Cardinality.t)
   (UNCOUNTABLE : ~ kappa =< Cardinality.ofType nat)
-  : Cardinality.ofType (rose A) ≨ kappa.
+  : Cardinality.ofType (B.rose A) ≨ kappa.
 Proof.
   eapply Cardinal1.Cardinality_le_lt_lt.
   - eapply Cardinality_ofType_rose_countable_le_nat.
@@ -6366,7 +6268,7 @@ Proof.
   - intros x [Hle Hnle]. exact (Hnle Hle).
   - intros x y z [Hxy Hnxy] [Hyz Hnyz]. split.
     + transitivity y; assumption.
-    + intro Hzx. apply Hnxy. transitivity z; assumption.
+    + intros Hzx. apply Hnxy. transitivity z; assumption.
 Qed.
 
 #[local]
@@ -6599,7 +6501,7 @@ Qed.
 Lemma Cardinality_ofType_rose_le_self_of_nat_le_square_le (A : Type@{Set_u})
   (NAT_LE : Cardinality.ofType nat =< Cardinality.ofType A)
   (SQUARE_LE : Cardinality.ofType (A * A) =< Cardinality.ofType A)
-  : Cardinality.ofType (Cardinal2.rose A) =< Cardinality.ofType A.
+  : Cardinality.ofType (B.rose A) =< Cardinality.ofType A.
 Proof.
   transitivity (Cardinality.ofType (list (A + nat))).
   - eapply Cardinal2.Cardinality_ofType_rose_le_list_sum_nat.
@@ -6610,15 +6512,14 @@ Lemma Cardinality_ofType_rose_lt_of_lt_uncountable_square_le (A : Type@{Set_u}) 
   (LT : Cardinality.ofType A ≨ kappa)
   (UNCOUNTABLE : ~ kappa =< Cardinality.ofType nat)
   (SQUARE : forall B : Type@{Set_u}, Cardinality.ofType nat =< Cardinality.ofType B -> Cardinality.ofType (B * B) =< Cardinality.ofType B)
-  : Cardinality.ofType (Cardinal2.rose A) ≨ kappa.
+  : Cardinality.ofType (B.rose A) ≨ kappa.
 Proof.
   pose proof (Cardinal1.Cardinality_le_total (Cardinality.ofType A) (Cardinality.ofType nat)) as [A_LE_NAT | NAT_LE_A].
   - eapply Cardinal1.Cardinality_le_lt_lt.
     + transitivity (Cardinality.ofType (list (nat + nat))).
       * destruct A_LE_NAT as [f f_cong f_inj].
-        eapply Cardinal2.Cardinality_ofType_le_ofType with (f := fun t : Cardinal2.rose A => map (fun x : A + nat => match x with inl a => inl (f a) | inr n => inr n end) (Cardinal2.encode_rose t)).
-        intros t1 t2 EQ. eapply Cardinal2.encode_rose_inj.
-        eapply Cardinal2.list_map_inj in EQ.
+        eapply Cardinal2.Cardinality_ofType_le_ofType with (f := fun t : B.rose A => map (fun x : A + nat => match x with inl a => inl (f a) | inr n => inr n end) (Cardinal2.encode_rose t)).
+        intros t1 t2 EQ. eapply Cardinal2.encode_rose_inj. apply L.list_map_inj in EQ.
         { exact EQ. }
         intros [a | n] [a' | n'] EQ'; inv EQ'.
         { f_equal. eapply f_inj. exact H0. }
@@ -6794,7 +6695,7 @@ Instance state_le_PreOrder
   : PreOrder state_le.
 Proof.
   split.
-  - intro s.
+  - intros s.
     exists (
       {|
         st_lift := fun x : st_carrier s => x;
@@ -6813,7 +6714,7 @@ Proof.
         st_lift_code := _;
       |}
     ); [simpl | simpl | exact I].
-    + intro x. rewrite st_lift_emb. eapply st_lift_emb.
+    + intros x. rewrite st_lift_emb. eapply st_lift_emb.
     + intros x y. transitivity (st_lift t u emb_tu (st_code t (st_lift s t emb_st x, st_lift s t emb_st y))).
       * eapply st_lift_cong. eapply st_lift_code.
       * eapply st_lift_code.
@@ -6880,7 +6781,7 @@ Qed.
 Definition square_state_extend (s : square_state) (fresh : st_carrier s -> A)
   (fresh_cong : forall x : st_carrier s, forall y : st_carrier s, @eqProp (st_carrier s) (st_isSetoid s) x y -> fresh x = fresh y)
   (fresh_inj : forall x : st_carrier s, forall y : st_carrier s, fresh x = fresh y -> @eqProp (st_carrier s) (st_isSetoid s) x y)
-  (fresh_out : forall x : st_carrier s, forall y : st_carrier s, fresh x <> st_emb s y)
+  (fresh_out : forall x : st_carrier s, forall y : st_carrier s, ~ fresh x = st_emb s y)
   : square_state.
 Proof.
   pose (B := st_carrier s).
@@ -6907,7 +6808,7 @@ Proof.
     + exfalso. exact (fresh_out y x (eq_sym EQ)).
     + exfalso. exact (fresh_out x y EQ).
     + econs. eapply fresh_inj. exact EQ.
-  - intro n. eapply st_nat_emb.
+  - intros n. eapply st_nat_emb.
   - intros [x1 | x1] [x2 | x2] [y1 | y1] [y2 | y2] EQ_x EQ_y; inv EQ_x; inv EQ_y; simpl.
     + econs. eapply st_code_cong; eauto.
     + econs. eapply state_encode_pair_cong. split; econs; eauto.
@@ -6929,7 +6830,7 @@ Defined.
 Lemma square_state_extend_exists (s : square_state) (fresh : st_carrier s -> A)
   (fresh_cong : forall x : st_carrier s, forall y : st_carrier s, @eqProp (st_carrier s) (st_isSetoid s) x y -> fresh x = fresh y)
   (fresh_inj : forall x : st_carrier s, forall y : st_carrier s, fresh x = fresh y -> @eqProp (st_carrier s) (st_isSetoid s) x y)
-  (fresh_out : forall x : st_carrier s, forall y : st_carrier s, fresh x <> st_emb s y)
+  (fresh_out : forall x : st_carrier s, forall y : st_carrier s, ~ fresh x = st_emb s y)
   : exists t : square_state, state_le s t.
 Proof.
   exists (square_state_extend s fresh fresh_cong fresh_inj fresh_out).
@@ -6943,7 +6844,7 @@ Proof.
     |}
   ).
   - intros x y H. econs. exact H.
-  - intro x. reflexivity.
+  - intros x. reflexivity.
   - intros x y. reflexivity.
 Qed.
 
@@ -7009,7 +6910,7 @@ Proof.
       gs_code_inj := _;
     |}
   ).
-  - intro n. exists n. reflexivity.
+  - intros n. exists n. reflexivity.
   - intros x y z (n & m & Hx & Hy & Hz). subst. splits; eauto.
   - intros x y (n & Hx) (m & Hy). subst. exists (nat_embed (cpInv n m)). exists n, m. splits; reflexivity.
   - intros x y z1 z2 (n1 & m1 & Hx1 & Hy1 & Hz1) (n2 & m2 & Hx2 & Hy2 & Hz2). subst.
@@ -7325,7 +7226,7 @@ Lemma graph_state_cover_le_sum (s : graph_state)
   : Cardinality.ofType A =< Cardinality.ofType (graph_cover_sum_type s).
 Proof.
   assert (Hchoice : forall a : A, exists x : graph_cover_sum_type s, graph_sum_proj s x = a).
-  { intro a. pose proof (classic (gs_carrier s a)) as [Ha | Ha].
+  { intros a. pose proof (classic (gs_carrier s a)) as [Ha | Ha].
     - exists (inl (@exist A (gs_carrier s) a Ha)). reflexivity.
     - exists (inr (@exist A (fun x : A => ~ gs_carrier s x) a Ha)). reflexivity.
   }
@@ -7388,7 +7289,7 @@ Qed.
 Theorem Cardinality_ofType_rose_lt_of_lt_uncountable (A : Type@{Set_u}) (kappa : Cardinality.t)
   (LT : Cardinality.ofType A ≨ kappa)
   (UNCOUNTABLE : ~ kappa =< Cardinality.ofType nat)
-  : Cardinality.ofType (Cardinal2.rose A) ≨ kappa.
+  : Cardinality.ofType (B.rose A) ≨ kappa.
 Proof.
   eapply Cardinality_ofType_rose_lt_of_lt_uncountable_square_le; eauto.
   intros B NAT_LE. eapply Cardinality_ofType_prod_self_le_of_nat_le. exact NAT_LE.
@@ -7524,8 +7425,8 @@ Lemma tree_union_le_rev (X : Type@{Set_u}) (tr0 : tree X) (tr1 : tree X)
   : Ord_join (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr0) (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr1) ≦ᵣ @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_union tr0 tr1).
 Proof.
   eapply Ord_join_spec; eapply rLt_implies_rLe; eapply member_implies_rLt; rewrite fromWf_unfold.
-  - exists tr0. split; [now left | reflexivity].
-  - exists tr1. split; [now right | reflexivity].
+  - exists tr0. now split; [left | reflexivity].
+  - exists tr1. now split; [right | reflexivity].
 Qed.
 
 Lemma tree_top_O (X : Type@{Set_u})
@@ -7610,9 +7511,8 @@ Proof.
       * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
     + eapply H_inaccessible. exact IH.
   - eapply rLe_rLt_rLt with (y := Ord_join base1 (Ord.sup X (fun x : X => next (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x)))))).
-    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_join trs)) (mkNode X (fun x : X => @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x))) H_next_le H_next_mon (tree_join_rEq X trs)) as H_eq.
-      transitivity (Ord.orec base1 next (mkNode X (fun x : X => @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x)))).
-      * eapply H_eq.
+    + transitivity (Ord.orec base1 next (mkNode X (fun x : X => @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x)))).
+      * eapply (Ord_orec_rEq_r base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_join trs)) (mkNode X (fun x : X => @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (trs x))) H_next_le H_next_mon (tree_join_rEq X trs)).
       * rewrite Ord_orec_unfold. reflexivity.
     + eapply H_inaccessible.
       * exact H_base1.
@@ -8067,13 +7967,13 @@ Proof.
     | None, _ => False
     end
   ).
+  assert (H_some_acc : forall a : A, Acc Ropt (Some a)).
+  { intros a. induction (R_wf a) as [a _ IH]. econs. intros [b | ] H_rel.
+    - eapply IH. exact H_rel.
+    - contradiction.
+  }
   assert (Ropt_wf : well_founded Ropt).
-  { assert (H_some_acc : forall a : A, Acc Ropt (Some a)).
-    { intros a. induction (R_wf a) as [a _ IH]. econs. intros [b | ] H_rel.
-      - eapply IH. exact H_rel.
-      - contradiction.
-    }
-    intros [a | ]. eapply H_some_acc. econs. intros [a | ] H_rel.
+  { intros [a | ]. eapply H_some_acc. econs. intros [a | ] H_rel.
     - eapply H_some_acc.
     - contradiction.
   }
@@ -8119,7 +8019,20 @@ Proof.
   set (R := fun a : A => proj1_sig (projT2 (f a))).
   set (R_wf := fun a : A => proj2_sig (projT2 (f a))).
   pose (A_join := { a : A & option (B a) }).
-  pose (R_join := fun x : A_join => fun y : A_join => match y with | @existT _ _ a None => match x with | @existT _ _ a' (Some _) => a = a' | _ => False end | @existT _ _ a (Some y') => match x with | @existT _ _ a' (Some x') => exists H_eq : a' = a, R a (eq_rect a' B x' a H_eq) y' | _ => False end end).
+  pose (fun x : A_join => fun y : A_join =>
+    match y with
+    | @existT _ _ a None =>
+      match x with
+      | @existT _ _ a' (Some _) => a = a'
+      | _ => False
+      end
+    | @existT _ _ a (Some y') =>
+      match x with
+      | @existT _ _ a' (Some x') => exists H_eq : a' = a, R a (eq_rect a' B x' a H_eq) y'
+      | _ => False
+      end
+    end
+  ) as R_join.
   assert (R_join_wf : well_founded R_join).
   { intros [a [x | ]].
     + induction (R_wf a x) as [x _ IH]. econs. intros [a' [y | ]] H_rel.

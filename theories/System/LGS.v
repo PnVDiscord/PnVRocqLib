@@ -4,11 +4,11 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Control.Monad.
 Require Import PnV.Data.FiniteMap.
 Require Import PnV.Data.FiniteSet.
-Require Import PnV.Data.Graph.
+Require PnV.Data.Graph.
 Require Import PnV.System.Regex.
 
 Import DoNotations.
-Import DigraphFixedpoint.
+Import PnV.Data.Graph.API.
 
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "=~=" := (is_similar_to (Similarity := Re.in_regex eq)) : type_scope.
@@ -31,32 +31,6 @@ Instance regex_hasEqDec {A : Set}
 Proof.
   red in A_hasEqDec |- *. decide equality.
 Defined.
-
-Module Bool_FinEnum <: FINITE_ENUM.
-
-Definition t : Set :=
-  bool.
-
-Definition t_hasEqDec : hasEqDec@{Set} Bool_FinEnum.t :=
-  bool_hasEqDec.
-
-Definition all : list bool :=
-  [false; true].
-
-Lemma all_complete
-  : forall x : Bool_FinEnum.t, L.In x Bool_FinEnum.all.
-Proof.
-  intros [ | ]; simpl; tauto.
-Qed.
-
-Lemma all_no_dup
-  : NoDup Bool_FinEnum.all.
-Proof.
-  assert (EQ : L.nodup (@eq_dec@{Set} bool bool_hasEqDec) all = all) by reflexivity.
-  rewrite <- EQ. eapply L.NoDup_nodup.
-Qed.
-
-End Bool_FinEnum.
 
 Notation all_bools := Bool_FinEnum.all.
 

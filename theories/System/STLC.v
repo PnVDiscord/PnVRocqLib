@@ -1003,27 +1003,6 @@ Proof.
   - econs 3; eassumption.
 Qed.
 
-Lemma alpha_equiv_subst_shadow x A gamma M
-  : subst_trm (cons_subst x A (cons_subst x A gamma)) M ≡ₐ subst_trm (cons_subst x A gamma) M.
-Proof.
-  eapply alpha_equiv_subst_ext. intros z FREE. unfold cons_subst. destruct (eq_dec z x); reflexivity.
-Qed.
-
-Lemma alpha_equiv_subst_swap x y A B gamma M
-  (NE : y ≠ x)
-  : subst_trm (cons_subst y B (cons_subst x A gamma)) M ≡ₐ subst_trm (cons_subst x A (cons_subst y B gamma)) M.
-Proof.
-  eapply alpha_equiv_subst_ext. intros z FREE.
-  unfold cons_subst.
-  destruct (eq_dec z y) as [z_eq_y | z_ne_y].
-  - subst z. destruct (eq_dec y x) as [y_eq_x | y_ne_x].
-    + rewrite Name.ne_iff in NE. contradiction.
-    + reflexivity.
-  - destruct (eq_dec z x) as [z_eq_x | z_ne_x].
-    + reflexivity.
-    + destruct (eq_dec z y) as [z_eq_y | z_ne_y']; [contradiction | reflexivity].
-Qed.
-
 Lemma rawBetaOnce_preserves_is_fresh_in_subst_update gamma x N N' z M
   (BETA : N ~>β₀ N')
   (FRESH : is_fresh_in_subst z (cons_subst x N gamma) M = true)

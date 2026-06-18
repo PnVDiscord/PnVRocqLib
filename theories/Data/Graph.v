@@ -9,7 +9,7 @@ Require Import PnV.Data.FiniteMap.
 Module GRAPH.
 
 #[projections(primitive)]
-Record t : Type :=
+Class t : Type :=
   { vertices : Type
   ; edges : ensemble (vertices * vertices)
   } as G.
@@ -61,11 +61,11 @@ Proof.
 Qed.
 
 Lemma walk_app (v1 : V) (v2 : V) (v : V) (vs1 : list V) (vs2 : list V)
-  (PATH1 : v1 ~~~[ vs1 ]~~> v2)
-  (PATH2 : v2 ~~~[ vs2 ]~~> v)
+  (WALK1 : v1 ~~~[ vs1 ]~~> v2)
+  (WALK2 : v2 ~~~[ vs2 ]~~> v)
   : v1 ~~~[ vs1 ++ vs2 ]~~> v.
 Proof.
-  revert v1 v2 v vs2 PATH1 PATH2. induction vs1 as [ | v vs1 IH]; simpl; i; inv PATH1; eauto.
+  revert v1 v2 v vs2 WALK1 WALK2. induction vs1 as [ | v vs1 IH]; simpl; i; inv WALK1; eauto.
 Qed.
 
 Theorem walk_app_iff (v0 : V) (v' : V) (vs1 : list V) (vs2 : list V)
@@ -233,10 +233,6 @@ Notation " src ===[ t ]==>* tgt " := (trail tgt src t) : type_scope.
 
 End GraphNotations.
 
-Notation " src '~~~[' w ']~~>*(' G  ')' tgt " := (@walk G tgt src w).
-Notation " src '---[' p ']-->*(' G  ')' tgt " := (@path G tgt src p).
-Notation " src '===[' t ']==>*(' G  ')' tgt " := (@trail G tgt src t).
-
 #[projections(primitive)]
 Record Labeled {G : GRAPH.t} : Type :=
   { labels : Type
@@ -245,7 +241,7 @@ Record Labeled {G : GRAPH.t} : Type :=
 
 #[global] Arguments Labeled : clear implicits.
 
-Fixpoint labeledWalk {G} {G_labeled : Labeled G} {v} {v'} (H_Walk : `[ v -> v' ]) : ensemble (list G_labeled.(labels)) :=
+Fixpoint labeledWalk {G : GRAPH.t} {G_labeled : Labeled G} {v} {v'} (H_Walk : `[ v -> v' ]) : ensemble (list G_labeled.(labels)) :=
   match H_Walk with
   | Walk_nil => pure (@L.nil G_labeled.(labels))
   | Walk_cons H_edge H_Walk' => liftM2 (@L.cons G_labeled.(labels)) (G_labeled.(labeling) H_edge) (labeledWalk H_Walk')
@@ -257,6 +253,10 @@ Module DigraphFixedpoint.
 #[local] Infix "\subseteq" := E.isSubsetOf.
 
 Section DIGRAPH_FIXEDPOINT.
+
+#[local] Notation " src '~~~[' w ']~~>*('  G  ')' tgt " := (@walk G tgt src w).
+#[local] Notation " src '---[' p ']-->*('  G  ')' tgt " := (@path G tgt src p).
+#[local] Notation " src '===[' t ']==>*('  G  ')' tgt " := (@trail G tgt src t).
 
 #[local] Infix "=~=" := (is_similar_to (Similarity := list_corresponds_to_finite_ensemble)).
 #[local] Notation vertices := GRAPH.vertices.
@@ -287,7 +287,7 @@ Variable vertices' : list V.
 Hypothesis vertices_sim : vertices' =~= E.full.
 
 Lemma vertices'_complete (v : V)
-  : L.In v vertices'.
+  : In v vertices'.
 Proof.
   pose proof vertices_sim as SIM.
   rewrite list_corresponds_to_finite_ensemble_iff in SIM.
@@ -319,10 +319,10 @@ Proof.
     + rewrite eqb_eq in EQ. subst y.
       exists []. split; [simpl; lia | econstructor 1].
     + rewrite -> L.existsb_exists in REACH.
-      destruct REACH as [z [z_in REACH]].
+      destruct REACH as (z & z_in & REACH).
       destruct (E_dec x z) as [EDGE | NO_EDGE]; try discriminate.
-      pose proof (IH z y REACH) as [w [LENGTH WALK]].
-      exists (z :: w). split; [simpl; lia | econstructor; eauto].
+      pose proof (IH z y REACH) as (w & LENGTH & WALK).
+      exists (z :: w). split; [simpl; lia | econstructor 2; eauto].
 Qed.
 
 Lemma reachableb_complete (fuel : nat) (x : V) (y : V) (w : list V)
@@ -346,16 +346,18 @@ Lemma reachableb_iff_reachable (x : V) (y : V)
 Proof.
   split.
   - intros REACH.
-    pose proof (reachableb_sound _ _ _ REACH) as [w [_ WALK]].
-    exists w. exact WALK.
+    pose proof (reachableb_sound _ _ _ REACH) as (w & _ & WALK).
+    now exists w.
   - intros [w WALK].
-    assert (exists p : list (GRAPH.vertices G), x ---[ p ]-->*( G ) y) as [p PATH].
-    { eapply @walk_finds_path with (G := G) (w := w); eauto. now intros v vs; pose proof (L.in_dec eq_dec v vs) as [YES | NO]; [left | right]. }
+    assert (exists p, x ---[ p ]-->*( G ) y) as [p PATH].
+    { eapply @walk_finds_path with (G := G) (w := w); eauto.
+      now intros v vs; pose proof (L.in_dec eq_dec v vs) as [YES | NO]; [left | right].
+    }
     rewrite path_iff_no_dup_walk in PATH.
     clear WALK. destruct PATH as [WALK NO_DUP].
     eapply reachableb_complete; eauto.
     eapply L.NoDup_incl_length; eauto.
-    intros z z_in. eapply vertices'_complete.
+    ii; eapply vertices'_complete.
 Qed.
 
 Lemma reachable_sim (x : V)
@@ -381,9 +383,7 @@ Lemma reachable_seed_gmu (x : V) (y : V) (a : A)
   (SEED : a \in seed y)
   : a \in gmu x.
 Proof.
-  destruct REACH as [w WALK].
-  eapply walk_gmu; [exact WALK | ].
-  eapply gmu_seed. exact SEED.
+  destruct REACH as [w WALK]. eapply walk_gmu; [exact WALK | now eapply gmu_seed].
 Qed.
 
 Lemma reachable_step (x : V) (y : V) (z : V)
@@ -391,18 +391,16 @@ Lemma reachable_step (x : V) (y : V) (z : V)
   (REACH : z \in reachable y)
   : z \in reachable x.
 Proof.
-  destruct REACH as [w WALK].
-  exists (y :: w). econstructor; eauto.
+  destruct REACH as [w WALK]. exists (y :: w). econstructor; eauto.
 Qed.
 
 Lemma gmu_reachable_seed (x : V) (a : A)
   (IN : a \in gmu x)
   : exists y, y \in reachable x /\ a \in seed y.
 Proof.
-  induction IN as [x a SEED | x y EDGE a IN IH].
+  induction IN as [x a SEED | x y EDGE a IN (z & REACH & SEED)].
   - exists x. split; [exists []; econstructor 1 | exact SEED].
-  - destruct IH as [z [REACH SEED]].
-    exists z. split; [eapply reachable_step; eauto | exact SEED].
+  - exists z. split; [eapply reachable_step; eauto | exact SEED].
 Qed.
 
 Lemma gmu_iff_reachable_seed (x : V) (a : A)
@@ -410,22 +408,30 @@ Lemma gmu_iff_reachable_seed (x : V) (a : A)
 Proof.
   split.
   - eapply gmu_reachable_seed.
-  - intros [y [REACH SEED]]. eapply reachable_seed_gmu; eauto.
+  - intros (y & REACH & SEED). eapply reachable_seed_gmu; eauto.
 Qed.
 
 Definition gmu' (x : V) : list A :=
   L.flat_map seed' (reachable' x).
 
-Theorem gmu_sim (v : V)
-  : gmu' v =~= gmu v.
+Theorem gmu_sim (x : V)
+  : gmu' x =~= gmu x.
 Proof.
-  pose proof (list_corresponds_to_finite_ensemble_flat_map (reachable' v) (reachable v) seed' seed (reachable_sim v) seed_sim) as FLAT_MAP.
+  pose proof (list_corresponds_to_finite_ensemble_flat_map (reachable' x) (reachable x) seed' seed (reachable_sim x) seed_sim) as FLAT_MAP.
   rewrite list_corresponds_to_finite_ensemble_iff in FLAT_MAP |- *. intros a. rewrite FLAT_MAP. symmetry. eapply gmu_iff_reachable_seed.
 Qed.
 
 End DIGRAPH_FIXEDPOINT.
 
+#[local] Hint Rewrite @L.last_cons : simplication_hints.
+#[local] Hint Constructors walk : simplication_hints.
+#[local] Hint Constructors path : simplication_hints.
+
 Section DIGRAPH.
+
+#[local] Notation " src '~~~[' w ']~~>*('  G  ')' tgt " := (@walk G tgt src w).
+#[local] Notation " src '---[' p ']-->*('  G  ')' tgt " := (@path G tgt src p).
+#[local] Notation " src '===[' t ']==>*('  G  ')' tgt " := (@trail G tgt src t).
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "∈" := L.In.
@@ -438,58 +444,42 @@ Fixpoint digraph_value {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : X 
   | S fuel' => normalize (union (seed x) (flat_map (digraph_value fuel' seed deps) (deps x)))
   end.
 
-Inductive digraph_closure {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) : A -> Prop :=
-  | digraph_closure_seed a
+Inductive digraph_closure {A : Type} (seed : X -> list A) (deps : X -> list X) (a : A) (x : X) : Prop :=
+  | digraph_closure_seed
     (IN : a ∈ seed x)
-    : digraph_closure seed deps x a
-  | digraph_closure_step y a
+    : digraph_closure seed deps a x
+  | digraph_closure_step y
     (EDGE : y ∈ deps x)
-    (IN : digraph_closure seed deps y a)
-    : digraph_closure seed deps x a.
+    (IN : digraph_closure seed deps a y)
+    : digraph_closure seed deps a x.
 
-Inductive digraph_trace {A : Type} (seed : X -> list A) (deps : X -> list X) : X -> A -> list X -> Prop :=
-  | digraph_trace_seed x a
+Inductive digraph_trace {A : Type} (seed : X -> list A) (deps : X -> list X) (a : A) (x : X) : ensemble (list X) :=
+  | digraph_trace_seed
     (IN : a ∈ seed x)
-    : digraph_trace seed deps x a []
-  | digraph_trace_step x y a trace
+    : [] \in digraph_trace seed deps a x
+  | digraph_trace_step y trace
     (EDGE : y ∈ deps x)
-    (TRACE : digraph_trace seed deps y a trace)
-    : digraph_trace seed deps x a (y :: trace).
-
-Lemma digraph_trace_sound {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (trace : list X)
-  (TRACE : digraph_trace seed deps x a trace)
-  : digraph_closure seed deps x a.
-Proof.
-  induction TRACE as [x a IN | x y a trace EDGE TRACE IH].
-  - eapply digraph_closure_seed; eauto.
-  - eapply digraph_closure_step; eauto.
-Qed.
-
-Lemma digraph_closure_trace {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
-  (IN : digraph_closure seed deps x a)
-  : exists trace, digraph_trace seed deps x a trace.
-Proof.
-  induction IN as [x a IN | x y a EDGE IN IH].
-  - exists []. eapply digraph_trace_seed. exact IN.
-  - destruct IH as [trace TRACE]. exists (y :: trace). eapply digraph_trace_step; eauto.
-Qed.
+    (TRACE : digraph_trace seed deps a y trace)
+    : y :: trace \in digraph_trace seed deps a x.
 
 Theorem digraph_closure_iff_trace {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
-  : digraph_closure seed deps x a <-> (exists trace, digraph_trace seed deps x a trace).
+  : digraph_closure seed deps a x <-> (exists trace, trace \in digraph_trace seed deps a x).
 Proof.
   split.
-  - eapply digraph_closure_trace.
-  - intros [trace TRACE]. eapply digraph_trace_sound. exact TRACE.
+  - intros IN. induction IN as [x IN | x y EDGE IN IH].
+    + exists []. eapply digraph_trace_seed. exact IN.
+    + destruct IH as [trace TRACE]. exists (y :: trace). eapply digraph_trace_step; eauto.
+  - intros [trace TRACE]. induction TRACE as [x IN | x y trace EDGE TRACE IH].
+    + eapply digraph_closure_seed; eauto.
+    + eapply digraph_closure_step; eauto.
 Qed.
 
 Lemma digraph_trace_in_nodes {A : Type} (nodes : list X) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (trace : list X)
-  (DEPS_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
-  (TRACE : digraph_trace seed deps x a trace)
+  (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
+  (TRACE : trace \in digraph_trace seed deps a x)
   : Forall (fun y => y ∈ nodes) trace.
 Proof.
-  induction TRACE as [x a IN | x y a trace EDGE TRACE IH].
-  - constructor.
-  - constructor; [eapply DEPS_CLOSED; exact EDGE | exact IH].
+  induction TRACE as [x IN | x y trace EDGE TRACE IH]; [econs 1 | econs 2]; eauto.
 Qed.
 
 Definition digraph_graph (deps : X -> list X) : GRAPH.t :=
@@ -499,57 +489,54 @@ Definition digraph_graph (deps : X -> list X) : GRAPH.t :=
   |}.
 
 Lemma digraph_trace_seed_at_last {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (trace : list X)
-  (TRACE : digraph_trace seed deps x a trace)
+  (TRACE : trace \in digraph_trace seed deps a x)
   : a ∈ seed (last trace x).
 Proof.
-  induction TRACE as [x a IN | x y a trace EDGE TRACE IH].
-  - exact IN.
-  - now rewrite L.last_cons.
+  induction TRACE as [x IN | x y trace EDGE TRACE IH]; ss!.
 Qed.
 
 Lemma digraph_trace_walk {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (trace : list X)
-  (TRACE : digraph_trace seed deps x a trace)
+  (TRACE : trace \in digraph_trace seed deps a x)
   : x ~~~[ trace ]~~>*( digraph_graph deps ) last trace x.
 Proof.
-  induction TRACE as [x a IN | x y a trace EDGE TRACE IH].
-  - constructor.
-  - rewrite L.last_cons. econstructor; eauto.
+  induction TRACE as [x IN | x y trace EDGE TRACE IH]; ss!.
 Qed.
 
-Lemma digraph_walk_trace {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (target : X) (trace : list X)
-  (WALK : x ~~~[ trace ]~~>*(digraph_graph deps) target)
-  (IN : a ∈ seed target)
-  : digraph_trace seed deps x a trace.
+Lemma digraph_walk_trace {A : Type} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (x' : X) (trace : list X)
+  (WALK : x ~~~[ trace ]~~>*( digraph_graph deps ) x')
+  (IN : a ∈ seed x')
+  : trace \in digraph_trace seed deps a x.
 Proof.
   induction WALK as [ | v0 v1 w EDGE WALK IH]; now constructor.
 Qed.
 
 Lemma digraph_trace_simple {A : Type} `{X_hasEqDec : hasEqDec X} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (trace : list X)
-  (TRACE : digraph_trace seed deps x a trace)
-  : exists simple, digraph_trace seed deps x a simple /\ NoDup simple.
+  (TRACE : trace \in digraph_trace seed deps a x)
+  : exists simple, digraph_trace seed deps a x simple /\ NoDup simple.
 Proof.
   pose proof (digraph_trace_walk seed deps x a trace TRACE) as WALK.
   pose proof (digraph_trace_seed_at_last seed deps x a trace TRACE) as SEED.
-  assert (exists simple : list (GRAPH.vertices (digraph_graph deps)), x ---[ simple ]-->*( digraph_graph deps ) last trace x) as [simple PATH].
-  { eapply walk_finds_path with (w := trace); auto. intros v vs. now pose proof (@L.in_dec X X_hasEqDec v vs) as [YES | NO]; [left | right]. }
+  assert (exists simple, x ---[ simple ]-->*( digraph_graph deps ) last trace x) as [simple PATH].
+  { eapply walk_finds_path with (w := trace); auto. intros v vs.
+    now pose proof (@L.in_dec X X_hasEqDec v vs) as [YES | NO]; [left | right].
+  }
   rewrite path_iff_no_dup_walk in PATH. destruct PATH as [WALK' NO_DUP].
-  exists simple. split; [eapply digraph_walk_trace; eauto | exact NO_DUP].
+  exists simple; split; [eapply digraph_walk_trace; eauto | exact NO_DUP].
 Qed.
 
 Lemma digraph_trace_simple_bounded {A : Type} `{X_hasEqDec : hasEqDec X} (nodes : list X) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (trace : list X)
-  (DEPS_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
-  (TRACE : digraph_trace seed deps x a trace)
-  : exists simple, digraph_trace seed deps x a simple /\ length simple <= length nodes.
+  (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
+  (TRACE : trace \in digraph_trace seed deps a x)
+  : exists simple, simple \in digraph_trace seed deps a x /\ length simple <= length nodes.
 Proof.
-  destruct (digraph_trace_simple seed deps x a trace TRACE) as (simple & TRACE' & NO_DUP).
-  exists simple. split; trivial.
-  pose proof (digraph_trace_in_nodes nodes seed deps x a simple DEPS_CLOSED TRACE') as IN_NODES.
-  eapply L.NoDup_incl_length; [exact NO_DUP | intros y IN].
-  rewrite Forall_forall in IN_NODES. eapply IN_NODES. exact IN.
+  pose proof (digraph_trace_simple seed deps x a trace TRACE) as (simple & TRACE' & NO_DUP).
+  pose proof (digraph_trace_in_nodes nodes seed deps x a simple deps_CLOSED TRACE') as IN_NODES.
+  exists simple. split; trivial. eapply L.NoDup_incl_length; [exact NO_DUP | intros y IN].
+  rewrite Forall_forall in IN_NODES. now eapply IN_NODES.
 Qed.
 
 Definition digraph_equation {A : Type} (seed : X -> list A) (deps : X -> list X) (value : X -> list A) : Prop :=
-  forall x, forall a, a ∈ value x <-> (a ∈ seed x \/ (exists y, y ∈ deps x /\ a ∈ value y)).
+  forall x, forall a, a ∈ value x <-> ⟪ UNFOLD : a ∈ seed x \/ (exists y, y ∈ deps x /\ a ∈ value y) ⟫.
 
 Lemma digraph_value_seed {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
   (IN : a ∈ seed x)
@@ -568,15 +555,15 @@ Qed.
 
 Theorem digraph_value_sound {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
   (IN : a ∈ digraph_value fuel seed deps x)
-  : digraph_closure seed deps x a.
+  : digraph_closure seed deps a x.
 Proof.
   revert x a IN. induction fuel as [ | fuel IH]; intros x a IN; simpl in IN.
   - eapply digraph_closure_seed. eapply normalize_sound. exact IN.
   - pose proof (normalize_sound _ _ IN) as IN'.
     pose proof (union_sound (seed x) (flat_map (digraph_value fuel seed deps) (deps x)) a IN') as [IN_SEED | IN_DEPS].
-    + eapply digraph_closure_seed. exact IN_SEED.
+    + now eapply digraph_closure_seed.
     + rewrite in_flat_map in IN_DEPS. destruct IN_DEPS as (y & EDGE & IN_Y).
-      eapply digraph_closure_step; eauto.
+      eapply digraph_closure_step with (y := y); ss!.
 Qed.
 
 Lemma digraph_value_monotone_step {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
@@ -598,8 +585,8 @@ Lemma digraph_value_monotone {A : Type} `{EQ_DEC : hasEqDec A} (fuel1 : nat) (fu
   (IN : a ∈ digraph_value fuel1 seed deps x)
   : a ∈ digraph_value fuel2 seed deps x.
 Proof.
-  revert fuel1 x a LE IN. induction fuel2 as [ | fuel2 IH]; intros fuel1 x a LE IN.
-  - assert (fuel1 = O) by lia.
+  revert fuel1 x a LE IN; induction fuel2 as [ | fuel2 IH]; intros fuel1 x a LE IN.
+  - assert (fuel1 = O) as EQ by lia.
     subst fuel1. exact IN.
   - pose proof (Nat.eq_dec fuel1 (S fuel2)) as [EQ | NE].
     + subst fuel1. exact IN.
@@ -607,33 +594,514 @@ Proof.
 Qed.
 
 Theorem digraph_trace_value {A : Type} `{EQ_DEC : hasEqDec A} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A) (trace : list X) (fuel : nat)
-  (TRACE : digraph_trace seed deps x a trace)
+  (TRACE : trace \in digraph_trace seed deps a x)
   (LE : length trace <= fuel)
   : a ∈ digraph_value fuel seed deps x.
 Proof.
-  revert fuel LE. induction TRACE as [x a IN | x y a trace EDGE TRACE IH]; intros fuel LE.
+  revert fuel LE; induction TRACE as [x IN | x y trace EDGE TRACE IH]; intros fuel LE.
   - now eapply digraph_value_seed.
   - destruct fuel as [ | fuel]; simpl in LE; [lia | eapply digraph_value_propagated]; done!.
 Qed.
 
 Theorem digraph_closure_complete {A : Type} `{EQ_DEC : hasEqDec A} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
-  (IN : digraph_closure seed deps x a)
+  (IN : digraph_closure seed deps a x)
   : exists fuel, a ∈ digraph_value fuel seed deps x.
 Proof.
-  induction IN as [x a SEED_IN | x y a EDGE CLOSURE IH].
+  induction IN as [x SEED_IN | x y EDGE CLOSURE IH].
   - exists O. eapply digraph_value_seed. exact SEED_IN.
   - destruct IH as [fuel VALUE_IN]. exists (S fuel). eapply digraph_value_propagated; eauto.
 Qed.
 
-Theorem digraph_closure_least {A : Type} (seed : X -> list A) (deps : X -> list X) (value : X -> list A)
+Theorem digraph_closure_least {A : Type} (seed : X -> list A) (deps : X -> list X) (value : X -> list A) (x : X) (a : A)
   (EQUATION : digraph_equation seed deps value)
-  : forall x, forall a, digraph_closure seed deps x a -> a ∈ value x.
+  (IN : digraph_closure seed deps a x)
+  : a ∈ value x.
 Proof.
-  intros x a IN. induction IN as [x a SEED_IN | x y a EDGE CLOSURE IH].
+  induction IN as [x SEED_IN | x y EDGE CLOSURE IH].
   - exact (proj2 (EQUATION x a) (or_introl SEED_IN)).
   - exact (proj2 (EQUATION x a) (or_intror (@ex_intro _ _ y (conj EDGE IH)))).
+Qed.
+
+#[local] Open Scope function_scope.
+
+Definition digraph_fixedpoint {A : Type} (seed : X -> list A) (deps : X -> list X) (value' : X -> ensemble A) : Prop :=
+  forall x, forall a, a \in value' x <-> ⟪ STEP : a ∈ seed x \/ (exists y, y ∈ deps x /\ a \in value' y) ⟫.
+
+Theorem digraph_closure_fixedpoint {A : Type} (seed : X -> list A) (deps : X -> list X)
+  : digraph_fixedpoint seed deps (fun x => { a : A | digraph_closure seed deps a x }).
+Proof.
+  intros x a. unfold E.In; unnw. split.
+  - intros CLOSURE. destruct CLOSURE as [SEED_IN | y EDGE CLOSURE].
+    + now left.
+    + now right; exists y.
+  - intros [SEED_IN | (y & EDGE & CLOSURE)].
+    + now eapply digraph_closure_seed.
+    + now eapply digraph_closure_step with (y := y).
+Qed.
+
+Theorem digraph_closure_least_fixedpoint {A : Type} (seed : X -> list A) (deps : X -> list X) (value : X -> ensemble A)
+  (FIXPOINT : digraph_fixedpoint seed deps value)
+  : forall x, { a : A | digraph_closure seed deps a x } \subseteq value x.
+Proof.
+  intros x a CLOSURE; induction CLOSURE as [x SEED_IN | x y EDGE CLOSURE IH]; ss!.
+Qed.
+
+Theorem digraph_closure_complete_bounded {A : Type} `{EQ_DEC : hasEqDec A} `{X_hasEqDec : hasEqDec X} (fuel : nat) (nodes : list X) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
+  (fuel_ENOUGH : length nodes <= fuel)
+  (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
+  (IN : digraph_closure seed deps a x)
+  : a ∈ digraph_value fuel seed deps x.
+Proof.
+  rewrite digraph_closure_iff_trace in IN. destruct IN as [trace TRACE].
+  pose proof (digraph_trace_simple_bounded nodes seed deps x a trace deps_CLOSED TRACE) as (simple & TRACE' & LENGTH).
+  eapply digraph_trace_value with (trace := simple); ss!.
+Qed.
+
+Theorem digraph_value_iff_closure_bounded {A : Type} `{EQ_DEC : hasEqDec A} `{X_hasEqDec : hasEqDec X} (fuel : nat) (nodes : list X) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
+  (fuel_ENOUGH : length nodes <= fuel)
+  (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
+  : a ∈ digraph_value fuel seed deps x <-> digraph_closure seed deps a x.
+Proof.
+  split.
+  - exact (digraph_value_sound fuel seed deps x a).
+  - intros IN. eapply digraph_closure_complete_bounded; eauto.
 Qed.
 
 End DIGRAPH.
 
 End DigraphFixedpoint.
+
+Module API.
+
+Infix "=~=" := is_similar_to.
+
+#[projections(primitive)]
+Class FiniteGraph : Type :=
+  { G : GRAPH.t
+  ; V_dec : hasEqDec G.(GRAPH.vertices)
+  ; E_dec v v' : B.Decision ((v, v') \in G.(GRAPH.edges)) 
+  ; enum_vertices : list G.(GRAPH.vertices)
+  ; enum_vertices_all : enum_vertices =~= E.full
+  } as GRAPH.
+
+#[global] Existing Instance G.
+#[global] Existing Instance V_dec.
+#[global] Existing Instance E_dec.
+
+#[local] Notation " src '~~~[' w ']~~>*('  GRAPH  ')' tgt " := (@walk GRAPH.(G) tgt src w).
+#[local] Notation " src '---[' p ']-->*('  GRAPH  ')' tgt " := (@path GRAPH.(G) tgt src p).
+#[local] Notation " src '===[' t ']==>*('  GRAPH  ')' tgt " := (@trail GRAPH.(G) tgt src t).
+
+Notation gmu := (DigraphFixedpoint.gmu (G := G)).
+
+Section EXPORT.
+
+Context `(GRAPH : !FiniteGraph).
+
+#[local] Notation V := GRAPH.(G).(GRAPH.vertices).
+#[local] Notation E := GRAPH.(G).(GRAPH.edges).
+
+Lemma walk_last (v : V) (v' : V) (w : list V)
+  (WALK : v ~~~[ w ]~~>*( GRAPH ) v')
+  : v' = last w v.
+Proof.
+  exact (Graph.walk_last v v' w WALK).
+Qed.
+
+Theorem walk_iff (v : V) (w : list V)
+  : v ~~~[ w ]~~>*( GRAPH ) last w v <-> L.Forall E (L.mk_edge_seq v w).
+Proof.
+  exact (Graph.walk_iff v w).
+Qed.
+
+Lemma walk_app (v1 : V) (v2 : V) (v : V) (w1 : list V) (w2 : list V)
+  (WALK1 : v1 ~~~[ w1 ]~~>*( GRAPH ) v2)
+  (WALK2 : v2 ~~~[ w2 ]~~>*( GRAPH ) v)
+  : v1 ~~~[ w1 ++ w2 ]~~>*( GRAPH ) v.
+Proof.
+  exact (Graph.walk_app v1 v2 v w1 w2 WALK1 WALK2).
+Qed.
+
+Theorem walk_app_iff (v1 : V) (v : V) (w1 : list V) (w2 : list V)
+  : v1 ~~~[ w1 ++ w2 ]~~>*( GRAPH ) v <-> (exists v2, v1 ~~~[ w1 ]~~>*( GRAPH ) v2 /\ v2 ~~~[ w2 ]~~>*( GRAPH ) v).
+Proof.
+  exact (Graph.walk_app_iff v1 v w1 w2).
+Qed.
+
+Lemma path_vertices_no_dup (v : V) (v' : V) (p : list V)
+  (PATH : v ---[ p ]-->*( GRAPH ) v')
+  : NoDup p.
+Proof.
+  exact (Graph.path_vertices_no_dup v v' p PATH).
+Qed.
+
+Lemma no_dup_walk_is_path (v : V) (v' : V) (w : list V)
+  (NO_DUP : NoDup w)
+  (WALK : v ~~~[ w ]~~>*( GRAPH ) v')
+  : v ---[ w ]-->*( GRAPH ) v'.
+Proof.
+  exact (Graph.no_dup_walk_is_path v v' w NO_DUP WALK).
+Qed.
+
+Theorem path_iff_no_dup_walk (v : V) (v' : V) (w : list V)
+  : v ---[ w ]-->*( GRAPH ) v' <-> (v ~~~[ w ]~~>*( GRAPH ) v' /\ NoDup w).
+Proof.
+  exact (Graph.path_iff_no_dup_walk v v' w).
+Qed.
+
+Lemma path_app_inv (v1 : V) (v : V) (p1 : list V) (p2 : list V)
+  (PATH : v1 ---[ p1 ++ p2 ]-->*( GRAPH) v)
+  : exists v2, v1 ---[ p1 ]-->*( GRAPH ) v2 /\ v2 ---[ p2 ]-->*( GRAPH ) v.
+Proof.
+  exact (Graph.path_app_inv v1 v p1 p2 PATH).
+Qed.
+
+Lemma mk_subpath (v0 : V) (v : V) (v' : V) (p : list V)
+  (PATH : v0 ---[ p ]-->*( GRAPH ) v')
+  (ELEM : In v p)
+  : exists p', v0 ---[ p' ]-->*( GRAPH ) v /\ (exists p'', v ---[ p'' ]-->*( GRAPH ) v' /\ p = p' ++ p'').
+Proof.
+  exact (Graph.mk_subpath v0 v v' p PATH ELEM).
+Qed.
+
+Theorem walk_finds_path (v : V) (v' : V) (w : list V)
+  (WALK : v ~~~[ w ]~~>*( GRAPH ) v')
+  : exists p, v ---[ p ]-->*( GRAPH ) v'.
+Proof.
+  eapply Graph.walk_finds_path with (w := w).
+  - ii. now pose proof (L.in_dec V_dec v0 vs) as [YES | NO]; [left | right].
+  - exact WALK.
+Qed.
+
+Lemma path_implies_trail (v : V) (v' : V) (p : list V)
+  (PATH : v ---[ p ]-->*( GRAPH ) v')
+  : v ===[ p ]==>*( GRAPH ) v'.
+Proof.
+  eapply (Graph.path_implies_trail v v' p PATH).
+Qed.
+
+Definition reachable (x : V) : ensemble V :=
+  fun y => exists w, x ~~~[ w ]~~>*( GRAPH ) y.
+
+Fixpoint reachableb (fuel : nat) (x : V) (y : V) {struct fuel} : bool :=
+  match fuel with
+  | O => eqb x y
+  | S fuel' => eqb x y || L.existsb (fun z => if E_dec x z then reachableb fuel' z y else false) enum_vertices
+  end.
+
+Definition reachables (x : V) : list V :=
+  L.filter (reachableb (L.length enum_vertices) x) enum_vertices.
+
+Lemma reachableb_sound (fuel : nat) (v : V) (v' : V)
+  (REACHABLE : reachableb fuel v v' = true)
+  : exists w, L.length w <= fuel /\ v ~~~[ w ]~~>*( GRAPH ) v'.
+Proof.
+  exact (DigraphFixedpoint.reachableb_sound enum_vertices fuel v v' REACHABLE).
+Qed.
+
+Lemma reachableb_complete (fuel : nat) (v : V) (v' : V) (w : list V)
+  (WALK : v ~~~[ w ]~~>*( GRAPH ) v')
+  (LENGTH : L.length w <= fuel)
+  : reachableb fuel v v' = true.
+Proof.
+  exact (DigraphFixedpoint.reachableb_complete enum_vertices enum_vertices_all fuel v v' w WALK LENGTH).
+Qed.
+
+Theorem reachableb_iff_reachable (v : V) (v' : V)
+  : reachableb (L.length enum_vertices) v v' = true <-> v' \in reachable v.
+Proof.
+  exact (DigraphFixedpoint.reachableb_iff_reachable enum_vertices enum_vertices_all v v').
+Qed.
+
+Corollary reachable_similar (v : V)
+  : reachables v =~= reachable v.
+Proof.
+  exact (DigraphFixedpoint.reachable_sim enum_vertices enum_vertices_all v).
+Qed.
+
+Lemma reachable_step (v : V) (v' : V) (v'' : V)
+  (EDGE : (v, v') \in E)
+  (REACHABLE : v'' \in reachable v')
+  : v'' \in reachable v.
+Proof.
+  exact (DigraphFixedpoint.reachable_step v v' v'' EDGE REACHABLE).
+Qed.
+
+Section DIGRAPH.
+
+#[local] Infix "\subseteq" := E.isSubsetOf.
+
+Context (A : Type).
+
+Variable seed : V -> ensemble A.
+
+Lemma walk_gmu (v : V) (v' : V) (w : list V)
+  (WALK : v ~~~[ w ]~~>*( GRAPH ) v')
+  : gmu seed v' \subseteq gmu seed v.
+Proof.
+  exact (DigraphFixedpoint.walk_gmu seed v v' w WALK).
+Qed.
+
+Lemma reachable_seed_gmu (v : V) (v' : V) (a : A)
+  (REACHABLE : v' \in reachable v)
+  (SEED : a \in seed v')
+  : a \in gmu seed v.
+Proof.
+  exact (DigraphFixedpoint.reachable_seed_gmu seed v v' a REACHABLE SEED).
+Qed.
+
+Lemma gmu_reachable_seed (v : V) (a : A)
+  (IN : a \in gmu seed v)
+  : exists v', v' \in reachable v /\ a \in seed v'.
+Proof.
+  exact (DigraphFixedpoint.gmu_reachable_seed seed v a IN).
+Qed.
+
+Lemma gmu_iff_reachable_seed (v : V) (a : A)
+  : a \in gmu seed v <-> a \in (reachable v >>= seed).
+Proof.
+  exact (DigraphFixedpoint.gmu_iff_reachable_seed seed v a).
+Qed.
+
+Section gmu_computation.
+
+Variable seed' : V -> list A.
+
+Hypothesis seed_sim : forall v : V, seed' v =~= seed v.
+
+Definition gmu' (v : V) : list A :=
+  L.flat_map seed' (reachables v).
+
+Theorem gmu_sim (v : V)
+  : gmu' v =~= gmu seed v.
+Proof.
+  exact (DigraphFixedpoint.gmu_sim seed seed' seed_sim enum_vertices enum_vertices_all v).
+Qed.
+
+End gmu_computation.
+
+End DIGRAPH.
+
+End EXPORT.
+
+Section DIGRAPH_FIXEDPOINT.
+
+#[local] Infix "\subseteq" := E.isSubsetOf.
+
+Context `{GRAPH : !FiniteGraph}.
+
+#[local] Notation V := GRAPH.(G).(GRAPH.vertices).
+#[local] Notation E := GRAPH.(G).(GRAPH.edges).
+
+Definition deps (v : V) : list V :=
+  L.filter (fun v' => if E_dec v v' then true else false) enum_vertices.
+
+Lemma in_deps_iff (v : V) (v' : V)
+  : In v' (deps v) <-> (v, v') \in G.(GRAPH.edges).
+Proof.
+  unfold deps. pose proof enum_vertices_all. rewrite L.filter_In. destruct (E_dec _ _) as [YES | NO]; ss!.
+Qed.
+
+#[local] Hint Rewrite in_deps_iff : simplication_hints.
+
+Context {A : Type}.
+
+Variable seed : V -> list A.
+
+Definition digraph_cl (v : V) : ensemble A :=
+  fun a => DigraphFixedpoint.digraph_closure seed deps a v.
+
+Definition digraph_trace (v : V) : A -> list V -> Prop :=
+  fun a => DigraphFixedpoint.digraph_trace seed deps a v.
+
+Theorem digraph_cl_iff_digraph_trace (v : V) (a : A)
+  : a \in digraph_cl v <-> (exists trace, trace \in digraph_trace v a).
+Proof.
+  exact (DigraphFixedpoint.digraph_closure_iff_trace seed deps v a).
+Qed.
+
+Lemma digraph_trace_seed_at_last (v : V) (a : A) (trace : list V)
+  (TRACE : trace \in digraph_trace v a)
+  : L.In a (seed (last trace v)).
+Proof.
+  eapply DigraphFixedpoint.digraph_trace_seed_at_last; eauto.
+Qed.
+
+#[local] Hint Constructors walk : core.
+#[local] Hint Rewrite @L.last_cons : simplication_hints.
+
+Lemma digraph_trace_walk (v : V) (a : A) (trace : list V)
+  (TRACE : trace \in digraph_trace v a)
+  : v ~~~[ trace ]~~>*( GRAPH ) L.last trace v.
+Proof.
+  induction TRACE as [x IN | x y trace EDGE TRACE IH]; ss!.
+Qed.
+
+Lemma digraph_trace_simple (v : V) (a : A) (trace : list V)
+  (TRACE : trace \in digraph_trace v a)
+  : exists simple, simple \in digraph_trace v a /\ NoDup simple.
+Proof.
+  eapply DigraphFixedpoint.digraph_trace_simple; eauto.
+Qed.
+
+#[local] Infix "∈" := L.In.
+
+Lemma digraph_trace_in_nodes (nodes : list V) (v : V) (a : A) (trace : list V)
+  (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
+  (TRACE : trace \in digraph_trace v a)
+  : Forall (fun y => y ∈ nodes) trace.
+Proof.
+  induction TRACE as [x IN | x y trace EDGE TRACE IH]; [econs 1 | econs 2]; eauto.
+Qed.
+
+Lemma digraph_trace_simple_bounded (nodes : list V) (v : V) (a : A) (trace : list V)
+  (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
+  (TRACE : trace \in digraph_trace v a)
+  : exists simple, simple \in digraph_trace v a /\ length simple <= length nodes.
+Proof.
+  pose proof (digraph_trace_simple v a trace TRACE) as (simple & TRACE' & NO_DUP).
+  pose proof (digraph_trace_in_nodes nodes v a simple deps_CLOSED TRACE') as IN_NODES.
+  exists simple. split; trivial. eapply L.NoDup_incl_length; [exact NO_DUP | intros y IN].
+  rewrite Forall_forall in IN_NODES. now eapply IN_NODES.
+Qed.
+
+Definition is_digraph_fixedpoint (value : V -> ensemble A) : Prop :=
+  forall v, forall a, a \in value v <-> ⟪ STEP : a ∈ seed v \/ (exists v', v' ∈ deps v /\ a \in value v') ⟫.
+
+Theorem digraph_cl_is_fixedpoint
+  : is_digraph_fixedpoint digraph_cl.
+Proof.
+  exact (DigraphFixedpoint.digraph_closure_fixedpoint seed deps).
+Qed.
+
+Theorem digraph_cl_is_least_fixedpoint (value : V -> ensemble A)
+  (FIXPOINT : is_digraph_fixedpoint value)
+  : forall v, digraph_cl v \subseteq value v.
+Proof.
+  exact (DigraphFixedpoint.digraph_closure_least_fixedpoint seed deps value FIXPOINT).
+Qed.
+
+Variable A_dec : hasEqDec A.
+
+Fixpoint digraph_cl_accum (fuel : nat) (v : V) : list A :=
+  match fuel with
+  | O => normalize (seed v)
+  | S fuel' => normalize (union (seed v) (flat_map (digraph_cl_accum fuel') (deps v)))
+  end.
+
+Lemma seed_incl_digraph_cl_accum (fuel : nat) (v : V) (a : A)
+  (IN : a ∈ seed v)
+  : a ∈ digraph_cl_accum fuel v.
+Proof.
+  destruct fuel as [ | fuel]; simpl; eapply normalize_complete; auto.
+  now eapply union_complete; left.
+Qed.
+
+Lemma digraph_cl_accum_propagated (fuel : nat) (v : V) (v' : V) (a : A)
+  (EDGE : v' ∈ deps v)
+  (IN : a ∈ digraph_cl_accum fuel v')
+  : a ∈ digraph_cl_accum (S fuel) v.
+Proof.
+  simpl. eapply normalize_complete. eapply union_complete. right. rewrite in_flat_map. now exists v'.
+Qed.
+
+Theorem digraph_cl_accum_sound (fuel : nat) (v : V) (a : A)
+  (IN : a ∈ digraph_cl_accum fuel v)
+  : a \in digraph_cl v.
+Proof.
+  revert v a IN. induction fuel as [ | fuel IH]; intros x a IN; simpl in IN.
+  - eapply DigraphFixedpoint.digraph_closure_seed. eapply normalize_sound. exact IN.
+  - pose proof (normalize_sound _ _ IN) as IN'.
+    pose proof (union_sound (seed x) (flat_map (digraph_cl_accum fuel) (deps x)) a IN') as [IN_SEED | IN_DEPS].
+    + now eapply DigraphFixedpoint.digraph_closure_seed.
+    + rewrite in_flat_map in IN_DEPS. destruct IN_DEPS as (y & EDGE & IN_Y).
+      eapply DigraphFixedpoint.digraph_closure_step with (y := y); ss!.
+Qed.
+
+Lemma digraph_cl_accum_monotone_1 (fuel : nat) (v : V) (a : A)
+  (IN : a ∈ digraph_cl_accum fuel v)
+  : a ∈ digraph_cl_accum (S fuel) v.
+Proof.
+  revert v a IN. induction fuel as [ | fuel IH]; intros x a IN; simpl in IN |- *.
+  - eapply normalize_complete. eapply union_complete. left. now eapply normalize_sound.
+  - pose proof (normalize_sound _ _ IN) as IN'.
+    pose proof (union_sound (seed x) (flat_map (digraph_cl_accum fuel) (deps x)) a IN') as [IN_SEED | IN_DEPS].
+    + eapply normalize_complete. eapply union_complete. left. exact IN_SEED.
+    + rewrite in_flat_map in IN_DEPS. destruct IN_DEPS as (y & EDGE & IN_Y).
+      eapply normalize_complete. eapply union_complete. right.
+      rewrite in_flat_map. exists y. split; [exact EDGE | eapply IH; exact IN_Y].
+Qed.
+
+Lemma digraph_cl_accum_monotone (fuel : nat) (fuel' : nat) (v : V) (a : A)
+  (LE : fuel <= fuel')
+  (IN : a ∈ digraph_cl_accum fuel v)
+  : a ∈ digraph_cl_accum fuel' v.
+Proof.
+  revert fuel v a LE IN; induction fuel' as [ | fuel2 IH]; intros fuel1 x a LE IN.
+  - assert (fuel1 = O) as EQ by lia.
+    subst fuel1. exact IN.
+  - pose proof (Nat.eq_dec fuel1 (S fuel2)) as [EQ | NE].
+    + subst fuel1. exact IN.
+    + eapply digraph_cl_accum_monotone_1. eapply IH with (fuel := fuel1) (v := x) (a := a); done!.
+Qed.
+
+Theorem digraph_trace_value (v : V) (a : A) (trace : list V) (fuel : nat)
+  (TRACE : trace \in digraph_trace v a)
+  (LE : length trace <= fuel)
+  : a ∈ digraph_cl_accum fuel v.
+Proof.
+  revert fuel LE; induction TRACE as [x IN | x y trace EDGE TRACE IH]; intros fuel LE.
+  - now eapply seed_incl_digraph_cl_accum.
+  - destruct fuel as [ | fuel]; simpl in LE; [lia | eapply digraph_cl_accum_propagated]; done!.
+Qed.
+
+Theorem digraph_cl_complete (v : V) (a : A)
+  (IN : a \in digraph_cl v)
+  : exists fuel, a ∈ digraph_cl_accum fuel v.
+Proof.
+  induction IN as [x SEED_IN | x y EDGE CLOSURE IH].
+  - exists O. eapply seed_incl_digraph_cl_accum. exact SEED_IN.
+  - destruct IH as [fuel VALUE_IN]. exists (S fuel). eapply digraph_cl_accum_propagated; eauto.
+Qed.
+
+Theorem digraph_cl_complete_bounded (fuel : nat) (nodes : list V) (v : V) (a : A)
+  (fuel_ENOUGH : length nodes <= fuel)
+  (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
+  (IN : a \in digraph_cl v)
+  : a ∈ digraph_cl_accum fuel v.
+Proof.
+  rewrite digraph_cl_iff_digraph_trace in IN. destruct IN as [trace TRACE].
+  pose proof (digraph_trace_simple_bounded nodes v a trace deps_CLOSED TRACE) as (simple & TRACE' & LENGTH).
+  eapply digraph_trace_value with (trace := simple); ss!.
+Qed.
+
+Corollary digraph_cl_accum_spec (fuel : nat) (nodes : list V) (v : V) (a : A)
+  (fuel_ENOUGH : length nodes <= fuel)
+  (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
+  : a ∈ digraph_cl_accum fuel v <-> a \in digraph_cl v.
+Proof.
+  split.
+  - exact (digraph_cl_accum_sound fuel v a).
+  - intros IN. eapply digraph_cl_complete_bounded; eauto.
+Qed.
+
+Definition digraph_cl_impl (v : V) : list A :=
+  digraph_cl_accum (length enum_vertices) v.
+
+Theorem digraph_cl_impl_spec (v : V)
+  : forall a, a ∈ digraph_cl_impl v <-> a \in digraph_cl v.
+Proof.
+  i. eapply digraph_cl_accum_spec with (nodes := enum_vertices).
+  - lia.
+  - ii; pose proof enum_vertices_all; ss!.
+Qed.
+
+Corollary digraph_cl_sim
+  : forall v, digraph_cl_impl v =~= digraph_cl v.
+Proof.
+  i. s!. eapply digraph_cl_impl_spec with (v := v).
+Qed.
+
+End DIGRAPH_FIXEDPOINT.
+
+End API.
