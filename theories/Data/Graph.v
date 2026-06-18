@@ -822,7 +822,7 @@ Proof.
 Qed.
 
 Definition reachable_impl (x : V) : list V :=
-  L.filter (reachableb (L.length enum_vertices) x) enum_vertices.
+  L.filter (reachableb x) enum_vertices.
 
 Theorem reachable_sim (v : V)
   : reachable_impl v =~= reachable v.
