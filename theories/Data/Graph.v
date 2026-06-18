@@ -280,7 +280,7 @@ Inductive gmu (x : V) : ensemble A :=
 
 Variable seed' : V -> list A.
 
-Hypothesis seed_sim : forall v : V, seed' v =~= seed v.
+Hypothesis seed_sim : forall v, seed' v =~= seed v.
 
 Variable vertices' : list V.
 
@@ -750,7 +750,7 @@ Proof.
 Qed.
 
 Lemma path_app_inv (v1 : V) (v : V) (p1 : list V) (p2 : list V)
-  (PATH : v1 ---[ p1 ++ p2 ]-->*( GRAPH) v)
+  (PATH : v1 ---[ p1 ++ p2 ]-->*( GRAPH ) v)
   : exists v2, v1 ---[ p1 ]-->*( GRAPH ) v2 /\ v2 ---[ p2 ]-->*( GRAPH ) v.
 Proof.
   exact (Graph.path_app_inv v1 v p1 p2 PATH).
@@ -870,12 +870,12 @@ Variable seed' : V -> list A.
 Definition gmu' (v : V) : list A :=
   L.flat_map seed' (reachables v).
 
-Hypothesis seed_sim : forall v : V, seed' v =~= seed v.
+Hypothesis seed_sim : forall v, seed' v =~= seed v.
 
-Theorem gmu_sim (v : V)
-  : gmu' v =~= gmu seed v.
+Theorem gmu_sim
+  : forall v, gmu' v =~= gmu seed v.
 Proof.
-  exact (DigraphFixedpoint.gmu_sim seed seed' seed_sim enum_vertices enum_vertices_all v).
+  exact (DigraphFixedpoint.gmu_sim seed seed' seed_sim enum_vertices enum_vertices_all).
 Qed.
 
 End gmu_computation.
