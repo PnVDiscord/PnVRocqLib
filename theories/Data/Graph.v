@@ -813,7 +813,7 @@ Proof.
   exact (DigraphFixedpoint.reachableb_iff_reachable enum_vertices enum_vertices_all v v').
 Qed.
 
-Corollary reachable_similar (v : V)
+Corollary reachable_sim (v : V)
   : reachables v =~= reachable v.
 Proof.
   exact (DigraphFixedpoint.reachable_sim enum_vertices enum_vertices_all v).
