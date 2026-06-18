@@ -1074,8 +1074,8 @@ Proof.
   - intros IN. eapply digraph_cl_complete_bounded; eauto.
 Qed.
 
-Definition digraph_cl_impl (v : V) : list A :=
-  digraph_cl_accum (length enum_vertices) v.
+Definition digraph_cl_impl : forall v : V, list A :=
+  digraph_cl_accum (length enum_vertices).
 
 Theorem digraph_cl_impl_spec (v : V)
   : forall a, a ∈ digraph_cl_impl v <-> a \in digraph_cl v.
@@ -1088,7 +1088,7 @@ Qed.
 Corollary digraph_cl_sim
   : forall v, digraph_cl_impl v =~= digraph_cl v.
 Proof.
-  i. s!. eapply digraph_cl_impl_spec with (v := v).
+  i; s!. eapply digraph_cl_impl_spec with (v := v).
 Qed.
 
 End DIGRAPH_FIXEDPOINT.
