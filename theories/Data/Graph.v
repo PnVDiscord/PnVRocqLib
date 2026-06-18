@@ -780,8 +780,8 @@ Proof.
   eapply (Graph.path_implies_trail v v' p PATH).
 Qed.
 
-Definition reachable (x : V) : ensemble V :=
-  fun y => exists w, x ~~~[ w ]~~>*( GRAPH ) y.
+Definition reachable (v : V) : ensemble V :=
+  fun v' => exists w, v ~~~[ w ]~~>*( GRAPH ) v'.
 
 Lemma reachable_step (v : V) (v' : V) (v'' : V)
   (EDGE : (v, v') \in E)
@@ -791,29 +791,32 @@ Proof.
   exact (DigraphFixedpoint.reachable_step v v' v'' EDGE REACHABLE).
 Qed.
 
-Fixpoint reachableb (fuel : nat) (x : V) (y : V) {struct fuel} : bool :=
+Fixpoint reachableb_accum (fuel : nat) (v : V) (v' : V) {struct fuel} : bool :=
   match fuel with
-  | O => eqb x y
-  | S fuel' => eqb x y || L.existsb (fun z => if E_dec x z then reachableb fuel' z y else false) enum_vertices
+  | O => eqb v v'
+  | S fuel' => eqb v v' || L.existsb (fun v1 => if E_dec v v1 then reachableb_accum fuel' v1 v' else false) enum_vertices
   end.
 
-Lemma reachableb_sound (fuel : nat) (v : V) (v' : V)
-  (REACHABLE : reachableb fuel v v' = true)
+Lemma reachableb_accum_sound (fuel : nat) (v : V) (v' : V)
+  (REACHABLE : reachableb_accum fuel v v' = true)
   : exists w, L.length w <= fuel /\ v ~~~[ w ]~~>*( GRAPH ) v'.
 Proof.
   exact (DigraphFixedpoint.reachableb_sound enum_vertices fuel v v' REACHABLE).
 Qed.
 
-Lemma reachableb_complete (fuel : nat) (v : V) (v' : V) (w : list V)
+Lemma reachableb_accum_complete (fuel : nat) (v : V) (v' : V) (w : list V)
   (WALK : v ~~~[ w ]~~>*( GRAPH ) v')
   (LENGTH : L.length w <= fuel)
-  : reachableb fuel v v' = true.
+  : reachableb_accum fuel v v' = true.
 Proof.
   exact (DigraphFixedpoint.reachableb_complete enum_vertices enum_vertices_all fuel v v' w WALK LENGTH).
 Qed.
 
-Theorem reachableb_iff_reachable (v : V) (v' : V)
-  : reachableb (L.length enum_vertices) v v' = true <-> v' \in reachable v.
+Definition reachableb : forall v : V, forall v' : V, bool :=
+  reachableb_accum (L.length enum_vertices).
+
+Theorem reachableb_spec (v : V) (v' : V)
+  : reachableb v v' = true <-> v' \in reachable v.
 Proof.
   exact (DigraphFixedpoint.reachableb_iff_reachable enum_vertices enum_vertices_all v v').
 Qed.
@@ -821,7 +824,7 @@ Qed.
 Definition reachable_impl (x : V) : list V :=
   L.filter (reachableb (L.length enum_vertices) x) enum_vertices.
 
-Corollary reachable_sim (v : V)
+Theorem reachable_sim (v : V)
   : reachable_impl v =~= reachable v.
 Proof.
   exact (DigraphFixedpoint.reachable_sim enum_vertices enum_vertices_all v).

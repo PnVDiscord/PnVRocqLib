@@ -4,11 +4,10 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Control.Monad.
 Require Import PnV.Data.FiniteMap.
 Require Import PnV.Data.FiniteSet.
-Require PnV.Data.Graph.
+Require Import PnV.Data.Graph.
 Require Import PnV.System.Regex.
 
 Import DoNotations.
-Import PnV.Data.Graph.API.
 
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "=~=" := (is_similar_to (Similarity := Re.in_regex eq)) : type_scope.
