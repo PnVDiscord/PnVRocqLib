@@ -696,7 +696,7 @@ Notation gmu := (DigraphFixedpoint.gmu (G := G)).
 
 Section EXPORT.
 
-Context `(GRAPH : !FiniteGraph).
+Context `{GRAPH : !FiniteGraph}.
 
 #[local] Notation V := GRAPH.(G).(GRAPH.vertices).
 #[local] Notation E := GRAPH.(G).(GRAPH.edges).
@@ -831,7 +831,7 @@ Section DIGRAPH.
 
 #[local] Infix "\subseteq" := E.isSubsetOf.
 
-Context (A : Type).
+Context {A : Type}.
 
 Variable seed : V -> ensemble A.
 
@@ -867,10 +867,10 @@ Section gmu_computation.
 
 Variable seed' : V -> list A.
 
-Hypothesis seed_sim : forall v : V, seed' v =~= seed v.
-
 Definition gmu' (v : V) : list A :=
   L.flat_map seed' (reachables v).
+
+Hypothesis seed_sim : forall v : V, seed' v =~= seed v.
 
 Theorem gmu_sim (v : V)
   : gmu' v =~= gmu seed v.
