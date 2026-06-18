@@ -881,17 +881,10 @@ Qed.
 
 End DIGRAPH.
 
-End EXPORT.
-
 Section DIGRAPH_FIXEDPOINT.
 
 #[local] Infix "∈" := L.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
-
-Context `{GRAPH : !FiniteGraph}.
-
-#[local] Notation V := GRAPH.(G).(GRAPH.vertices).
-#[local] Notation E := GRAPH.(G).(GRAPH.edges).
 
 Definition deps (v : V) : list V :=
   L.filter (fun v' => if E_dec v v' then true else false) enum_vertices.
@@ -953,7 +946,7 @@ Lemma digraph_trace_in_nodes (nodes : list V) (v : V) (a : A) (trace : list V)
   (TRACE : trace \in digraph_trace v a)
   : Forall (fun y => y ∈ nodes) trace.
 Proof.
-  induction TRACE as [x IN | x y trace EDGE TRACE IH]; [econs 1 | econs 2]; eauto.
+  eapply DigraphFixedpoint.digraph_trace_in_nodes; eauto.
 Qed.
 
 Lemma digraph_trace_simple_bounded (nodes : list V) (v : V) (a : A) (trace : list V)
@@ -961,10 +954,7 @@ Lemma digraph_trace_simple_bounded (nodes : list V) (v : V) (a : A) (trace : lis
   (TRACE : trace \in digraph_trace v a)
   : exists simple, simple \in digraph_trace v a /\ length simple <= length nodes.
 Proof.
-  pose proof (digraph_trace_simple v a trace TRACE) as (simple & TRACE' & NO_DUP).
-  pose proof (digraph_trace_in_nodes nodes v a simple deps_CLOSED TRACE') as IN_NODES.
-  exists simple. split; trivial. eapply L.NoDup_incl_length; [exact NO_DUP | intros y IN].
-  rewrite Forall_forall in IN_NODES. now eapply IN_NODES.
+  eapply DigraphFixedpoint.digraph_trace_simple_bounded; eauto.
 Qed.
 
 Definition is_digraph_fixedpoint (value : V -> ensemble A) : Prop :=
@@ -1040,7 +1030,7 @@ Lemma digraph_cl_accum_monotone (fuel : nat) (fuel' : nat) (v : V) (a : A)
   : a ∈ digraph_cl_accum fuel' v.
 Proof.
   revert fuel v a LE IN; induction fuel' as [ | fuel2 IH]; intros fuel1 x a LE IN.
-  - assert (fuel1 = O) as EQ by lia.
+  - assert (EQ : fuel1 = O) by lia.
     subst fuel1. exact IN.
   - pose proof (Nat.eq_dec fuel1 (S fuel2)) as [EQ | NE].
     + subst fuel1. exact IN.
@@ -1105,5 +1095,7 @@ Proof.
 Qed.
 
 End DIGRAPH_FIXEDPOINT.
+
+End EXPORT.
 
 End API.
