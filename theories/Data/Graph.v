@@ -836,6 +836,9 @@ Section DIGRAPH.
 
 Context {A : Type}.
 
+Definition gmu_impl (seed_impl : V -> list A) (v : V) : list A :=
+  L.flat_map seed_impl (reachable_impl v).
+
 Variable seed : V -> ensemble A.
 
 Lemma walk_gmu (v : V) (v' : V) (w : list V)
@@ -866,17 +869,11 @@ Proof.
   exact (DigraphFixedpoint.gmu_iff_reachable_seed seed v a).
 Qed.
 
-Variable seed' : V -> list A.
-
-Definition gmu' (v : V) : list A :=
-  L.flat_map seed' (reachable_impl v).
-
-Hypothesis seed_sim : forall v, seed' v =~= seed v.
-
-Theorem gmu_sim
-  : forall v, gmu' v =~= gmu seed v.
+Theorem gmu_sim (seed_impl : V -> list A)
+  (seed_sim : forall v, seed_impl v =~= seed v)
+  : forall v, gmu_impl seed_impl v =~= gmu seed v.
 Proof.
-  exact (DigraphFixedpoint.gmu_sim seed seed' seed_sim enum_vertices enum_vertices_all).
+  exact (DigraphFixedpoint.gmu_sim seed seed_impl seed_sim enum_vertices enum_vertices_all).
 Qed.
 
 End DIGRAPH.
