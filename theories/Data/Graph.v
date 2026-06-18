@@ -863,8 +863,6 @@ Proof.
   exact (DigraphFixedpoint.gmu_iff_reachable_seed seed v a).
 Qed.
 
-Section gmu_computation.
-
 Variable seed' : V -> list A.
 
 Definition gmu' (v : V) : list A :=
@@ -877,8 +875,6 @@ Theorem gmu_sim
 Proof.
   exact (DigraphFixedpoint.gmu_sim seed seed' seed_sim enum_vertices enum_vertices_all).
 Qed.
-
-End gmu_computation.
 
 End DIGRAPH.
 
