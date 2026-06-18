@@ -688,9 +688,9 @@ Class FiniteGraph : Type :=
 #[global] Existing Instance V_dec.
 #[global] Existing Instance E_dec.
 
-#[local] Notation " src '~~~[' w ']~~>*('  GRAPH  ')' tgt " := (@walk GRAPH.(G) tgt src w).
-#[local] Notation " src '---[' p ']-->*('  GRAPH  ')' tgt " := (@path GRAPH.(G) tgt src p).
-#[local] Notation " src '===[' t ']==>*('  GRAPH  ')' tgt " := (@trail GRAPH.(G) tgt src t).
+Notation " src '~~~[' w ']~~>*('  GRAPH  ')' tgt " := (@walk GRAPH.(G) tgt src w).
+Notation " src '---[' p ']-->*('  GRAPH  ')' tgt " := (@path GRAPH.(G) tgt src p).
+Notation " src '===[' t ']==>*('  GRAPH  ')' tgt " := (@trail GRAPH.(G) tgt src t).
 
 Notation gmu := (DigraphFixedpoint.gmu (G := G)).
 
