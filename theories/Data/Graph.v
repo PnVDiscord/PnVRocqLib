@@ -673,7 +673,7 @@ End DigraphFixedpoint.
 
 Module API.
 
-Infix "=~=" := is_similar_to.
+#[local] Infix "=~=" := is_similar_to.
 
 #[projections(primitive)]
 Class FiniteGraph : Type :=
