@@ -866,7 +866,7 @@ Qed.
 Variable seed' : V -> list A.
 
 Definition gmu' (v : V) : list A :=
-  L.flat_map seed' (reachables v).
+  L.flat_map seed' (reachable_impl v).
 
 Hypothesis seed_sim : forall v, seed' v =~= seed v.
 
