@@ -1454,6 +1454,8 @@ Class Decision (P : Prop) : Set :=
 
 End __.
 
+#[global] Arguments decide P {Decision}.
+
 End B.
 
 Notation StateT k := {| B.runStateT := k |}.
