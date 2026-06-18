@@ -783,14 +783,19 @@ Qed.
 Definition reachable (x : V) : ensemble V :=
   fun y => exists w, x ~~~[ w ]~~>*( GRAPH ) y.
 
+Lemma reachable_step (v : V) (v' : V) (v'' : V)
+  (EDGE : (v, v') \in E)
+  (REACHABLE : v'' \in reachable v')
+  : v'' \in reachable v.
+Proof.
+  exact (DigraphFixedpoint.reachable_step v v' v'' EDGE REACHABLE).
+Qed.
+
 Fixpoint reachableb (fuel : nat) (x : V) (y : V) {struct fuel} : bool :=
   match fuel with
   | O => eqb x y
   | S fuel' => eqb x y || L.existsb (fun z => if E_dec x z then reachableb fuel' z y else false) enum_vertices
   end.
-
-Definition reachables (x : V) : list V :=
-  L.filter (reachableb (L.length enum_vertices) x) enum_vertices.
 
 Lemma reachableb_sound (fuel : nat) (v : V) (v' : V)
   (REACHABLE : reachableb fuel v v' = true)
@@ -813,18 +818,13 @@ Proof.
   exact (DigraphFixedpoint.reachableb_iff_reachable enum_vertices enum_vertices_all v v').
 Qed.
 
+Definition reachable_impl (x : V) : list V :=
+  L.filter (reachableb (L.length enum_vertices) x) enum_vertices.
+
 Corollary reachable_sim (v : V)
-  : reachables v =~= reachable v.
+  : reachable_impl v =~= reachable v.
 Proof.
   exact (DigraphFixedpoint.reachable_sim enum_vertices enum_vertices_all v).
-Qed.
-
-Lemma reachable_step (v : V) (v' : V) (v'' : V)
-  (EDGE : (v, v') \in E)
-  (REACHABLE : v'' \in reachable v')
-  : v'' \in reachable v.
-Proof.
-  exact (DigraphFixedpoint.reachable_step v v' v'' EDGE REACHABLE).
 Qed.
 
 Section DIGRAPH.
