@@ -278,13 +278,11 @@ Inductive gmu (x : V) : ensemble A :=
     (EDGE : (x, y) \in E)
     : gmu y \subseteq gmu x.
 
-Definition gmu_fixedpoint (value : V -> ensemble A) : Prop :=
-  forall x, forall a,
-    a \in value x <->
-      a \in seed x \/ (exists y, (x, y) \in E /\ a \in value y).
+Definition is_fixedpoint (value : V -> ensemble A) : Prop :=
+  forall x, forall a, a \in value x <-> (a \in seed x \/ (exists y, (x, y) \in E /\ a \in value y)).
 
 Theorem gmu_is_fixedpoint
-  : gmu_fixedpoint gmu.
+  : is_fixedpoint gmu.
 Proof.
   intros x a. split.
   - intros IN. induction IN as [x a SEED | x y EDGE a IN IH].
@@ -296,7 +294,7 @@ Proof.
 Qed.
 
 Theorem gmu_is_least_fixedpoint (value : V -> ensemble A)
-  (FIXPOINT : gmu_fixedpoint value)
+  (FIXPOINT : is_fixedpoint value)
   : forall x, gmu x \subseteq value x.
 Proof.
   intros x a IN. induction IN as [x a SEED | x y EDGE a IN IH].
