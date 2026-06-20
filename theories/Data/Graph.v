@@ -297,9 +297,9 @@ Theorem gmu_is_least_fixedpoint (value : V -> ensemble A)
   (FIXPOINT : is_fixedpoint value)
   : forall x, gmu x \subseteq value x.
 Proof.
-  intros x a IN. induction IN as [x a SEED | x y EDGE a IN IH].
-  - apply (proj2 (FIXPOINT x a)). now left.
-  - apply (proj2 (FIXPOINT x a)). right. exists y. split; eauto.
+  red in FIXPOINT. intros x a IN. induction IN as [x a SEED | x y EDGE a IN IH].
+  - rewrite -> FIXPOINT with (x := x) (a := a). now left.
+  - rewrite -> FIXPOINT with (x := x) (a := a). right. exists y. split; eauto.
 Qed.
 
 Variable seed' : V -> list A.
