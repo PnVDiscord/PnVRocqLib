@@ -893,6 +893,13 @@ Proof.
   exact (DigraphFixedpoint.gmu_iff_reachable_seed seed v a).
 Qed.
 
+Theorem gmu_sim (seed_impl : V -> list A)
+  (seed_sim : forall v, seed_impl v =~= seed v)
+  : forall v, gmu_impl seed_impl v =~= gmu seed v.
+Proof.
+  exact (DigraphFixedpoint.gmu_sim seed seed_impl seed_sim enum_vertices enum_vertices_all).
+Qed.
+
 #[local] Notation is_fixedpoint value := (forall v, forall a, a \in value v <-> ⟪ STEP : a \in seed v \/ (exists v', (v, v') \in E /\ a \in value v') ⟫).
 
 Theorem gmu_is_fixedpoint
@@ -906,13 +913,6 @@ Theorem gmu_is_least_fixedpoint (value : V -> ensemble A)
   : forall v, gmu seed v \subseteq value v.
 Proof.
   exact (DigraphFixedpoint.gmu_is_least_fixedpoint seed value FIXPOINT).
-Qed.
-
-Theorem gmu_sim (seed_impl : V -> list A)
-  (seed_sim : forall v, seed_impl v =~= seed v)
-  : forall v, gmu_impl seed_impl v =~= gmu seed v.
-Proof.
-  exact (DigraphFixedpoint.gmu_sim seed seed_impl seed_sim enum_vertices enum_vertices_all).
 Qed.
 
 End DIGRAPH.
