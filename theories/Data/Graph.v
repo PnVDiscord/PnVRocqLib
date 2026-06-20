@@ -278,6 +278,32 @@ Inductive gmu (x : V) : ensemble A :=
     (EDGE : (x, y) \in E)
     : gmu y \subseteq gmu x.
 
+Definition gmu_fixedpoint (value : V -> ensemble A) : Prop :=
+  forall x, forall a,
+    a \in value x <->
+      a \in seed x \/ (exists y, (x, y) \in E /\ a \in value y).
+
+Theorem gmu_is_fixedpoint
+  : gmu_fixedpoint gmu.
+Proof.
+  intros x a. split.
+  - intros IN. induction IN as [x a SEED | x y EDGE a IN IH].
+    + now left.
+    + now right; exists y.
+  - intros [SEED | (y & EDGE & IN)].
+    + now eapply gmu_seed.
+    + eapply gmu_propagated; eauto.
+Qed.
+
+Theorem gmu_is_least_fixedpoint (value : V -> ensemble A)
+  (FIXPOINT : gmu_fixedpoint value)
+  : forall x, gmu x \subseteq value x.
+Proof.
+  intros x a IN. induction IN as [x a SEED | x y EDGE a IN IH].
+  - apply (proj2 (FIXPOINT x a)). now left.
+  - apply (proj2 (FIXPOINT x a)). right. exists y. split; eauto.
+Qed.
+
 Variable seed' : V -> list A.
 
 Hypothesis seed_sim : forall v, seed' v =~= seed v.
@@ -867,6 +893,21 @@ Lemma gmu_iff_reachable_seed (v : V) (a : A)
   : a \in gmu seed v <-> a \in (reachable v >>= seed).
 Proof.
   exact (DigraphFixedpoint.gmu_iff_reachable_seed seed v a).
+Qed.
+
+#[local] Notation is_fixedpoint value := (forall v, forall a, a \in value v <-> ⟪ STEP : a \in seed v \/ (exists v', (v, v') \in E /\ a \in value v') ⟫).
+
+Theorem gmu_is_fixedpoint
+  : is_fixedpoint (gmu seed).
+Proof.
+  exact (DigraphFixedpoint.gmu_is_fixedpoint seed).
+Qed.
+
+Theorem gmu_is_least_fixedpoint (value : V -> ensemble A)
+  (FIXPOINT : is_fixedpoint value)
+  : forall v, gmu seed v \subseteq value v.
+Proof.
+  exact (DigraphFixedpoint.gmu_is_least_fixedpoint seed value FIXPOINT).
 Qed.
 
 Theorem gmu_sim (seed_impl : V -> list A)
