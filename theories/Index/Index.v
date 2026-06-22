@@ -22,6 +22,7 @@ Require Import PnV.Logic.MuRec.
 Require Import PnV.Logic.PrimRec.
 Require Import PnV.Logic.PropositionalLogic.
 
+Require Import PnV.Math.BasicTopology.
 Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Math.ClassicalDomainTheory.
 Require Import PnV.Math.ClassicalSetTheory.
