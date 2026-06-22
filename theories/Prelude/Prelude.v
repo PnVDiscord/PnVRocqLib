@@ -2527,6 +2527,7 @@ Parameter all_complete : forall x : t, L.In x all.
 Parameter all_no_dup : NoDup all.
 
 End FINITE_ENUM.
+
 Module Option (E : FINITE_ENUM) <: FINITE_ENUM.
 
 Definition t : Set :=

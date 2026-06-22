@@ -36,6 +36,7 @@ Require Import PnV.Prelude.Notations.
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.Quotient.
 Require Import PnV.Prelude.SfLib.
+Require Import PnV.Prelude.X.
 
 Require Import PnV.System.BasicITreeTh.
 Require Import PnV.System.FolFramework.
