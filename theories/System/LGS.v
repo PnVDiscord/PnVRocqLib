@@ -44,17 +44,16 @@ Definition t : Set :=
 Definition t_hasEqDec : hasEqDec@{Set} Ascii_FinEnum.t :=
   ascii_hasEqDec.
 
-Definition all : list ascii :=
-  do
-    'b0 <- all_bools;
-    'b1 <- all_bools;
-    'b2 <- all_bools;
-    'b3 <- all_bools;
-    'b4 <- all_bools;
-    'b5 <- all_bools;
-    'b6 <- all_bools;
-    'b7 <- all_bools;
-    ret (Ascii b0 b1 b2 b3 b4 b5 b6 b7).
+Definition all : list ascii := do
+  'b0 <- all_bools;
+  'b1 <- all_bools;
+  'b2 <- all_bools;
+  'b3 <- all_bools;
+  'b4 <- all_bools;
+  'b5 <- all_bools;
+  'b6 <- all_bools;
+  'b7 <- all_bools;
+  ret (Ascii b0 b1 b2 b3 b4 b5 b6 b7).
 
 Lemma all_complete
   : forall x : Ascii_FinEnum.t, L.In x Ascii_FinEnum.all.
@@ -94,10 +93,6 @@ Parameter rules : list (TOKEN_SPEC.t * regex ascii).
 
 End TOKEN_SPEC.
 
-Module LGS (Token : TOKEN_SPEC).
-
-#[global] Existing Instance Token.t_hasEqDec.
-
 Module BuildError.
 
 Inductive t : Set :=
@@ -112,7 +107,7 @@ Definition BuildErrorM@{u} (A : Type@{u}) : Type@{u} :=
 #[universes(polymorphic=yes)]
 Instance BuildErrorM_isMonad@{u} : isMonad@{u u} BuildErrorM@{u} :=
   { pure {A : Type@{u}} (x : A) := inr x
-  ; bind {A : Type@{u}} {B : Type@{u}} (m : BuildErrorM A) (k : A -> BuildErrorM B) := B.either (@inl _ _) k m
+  ; bind {A : Type@{u}} {B : Type@{u}} (m : BuildErrorM A) (k : A -> BuildErrorM B) := B.either (@inl BuildError.t B) k m
   }.
 
 Fact mem_spec (A : Set) `(A_hasEqDec : hasEqDec@{Set} A) (x : A) (xs : list A) (b : bool)
@@ -122,7 +117,7 @@ Proof.
 Qed.
 
 Fact eqb_iff (A : Set) `(A_hasEqDec : hasEqDec@{Set} A) (x : A) (y : A) (b : bool)
-  : eqb@{Set} x y = b <-> (if b then x = y else ~ x = y).
+  : eqb@{Set} x y = b <-> (if b then x = y else x ≠ y).
 Proof.
   eapply eqb_spec.
 Qed.
@@ -139,9 +134,16 @@ Proof.
   eapply L.forallb_forall.
 Qed.
 
-#[local] Hint Rewrite mem_spec eqb_iff existsb_iff forallb_iff : simplication_hints.
+#[local] Hint Rewrite mem_spec : simplication_hints.
+#[local] Hint Rewrite eqb_iff : simplication_hints.
+#[local] Hint Rewrite existsb_iff : simplication_hints.
+#[local] Hint Rewrite forallb_iff : simplication_hints.
 
 #[local] Existing Instance list_corresponds_to_finite_ensemble.
 #[local] Existing Instance alist_corresponds_to_finite_partial_map.
+
+Module LGS (Token : TOKEN_SPEC).
+
+#[global] Existing Instance Token.t_hasEqDec.
 
 End LGS.
