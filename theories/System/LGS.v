@@ -54,8 +54,7 @@ Definition all : list ascii :=
     'b5 <- all_bools;
     'b6 <- all_bools;
     'b7 <- all_bools;
-    ret (Ascii b0 b1 b2 b3 b4 b5 b6 b7)
-  end.
+    ret (Ascii b0 b1 b2 b3 b4 b5 b6 b7).
 
 Lemma all_complete
   : forall x : Ascii_FinEnum.t, L.In x Ascii_FinEnum.all.
