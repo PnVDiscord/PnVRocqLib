@@ -387,7 +387,7 @@ Lemma supremum_of_map_suprema_ge_suprema (sup : D) (Xs : ensemble (ensemble D)) 
   (SUPREMUM' : is_supremum_of sup_X X)
   : sup_X =< sup.
 Proof with eauto with *.
-  eapply SUPREMUM... rewrite in_map_suprema_iff...
+  eapply SUPREMUM; eauto with *. rewrite in_map_suprema_iff; eauto with *.
 Qed.
 
 #[local] Hint Resolve supremum_of_map_suprema_ge_suprema : poset_hints.
@@ -400,20 +400,20 @@ Proof with eauto with *.
   - rewrite E.in_unions_iff in IN. destruct IN as [X_i [x_in_X_i X_i_in_Xs]].
     pose proof (SUPS_EXIST X_i X_i_in_Xs) as [sup_X_i sup_X_i_isSupremumOf_X_i].
     transitivity sup_X_i.
-    + eapply sup_X_i_isSupremumOf_X_i...
-    + transitivity sup...
+    + eapply sup_X_i_isSupremumOf_X_i; eauto with *.
+    + transitivity sup; eauto with *.
   - eapply H_supremum. intros sup_X_i sup_X_i_in_MapSuprema.
     rewrite in_map_suprema_iff in sup_X_i_in_MapSuprema.
     destruct sup_X_i_in_MapSuprema as [X_i [X_i_in_Xs sup_X_i_isSupremumOf_X_i]].
-    eapply sup_X_i_isSupremumOf_X_i. ii. eapply H. rewrite E.in_unions_iff...
+    eapply sup_X_i_isSupremumOf_X_i. ii. eapply H. rewrite E.in_unions_iff; eauto with *.
   - rewrite in_map_suprema_iff in IN. destruct IN as [X [X_in_Xs sup_X_isSupremumOf_X]].
     rename x into sup_X. enough (to_show : sup_X =< sup) by now transitivity sup.
-    eapply sup_X_isSupremumOf_X. ii. eapply H_supremum... rewrite E.in_unions_iff...
+    eapply sup_X_isSupremumOf_X. ii. eapply H_supremum; eauto with *. rewrite E.in_unions_iff; eauto with *.
   - eapply H_supremum. ii. rewrite E.in_unions_iff in IN.
     destruct IN as [X [x_in_X X_in_Xs]]. pose proof (SUPS_EXIST X X_in_Xs) as [sup_X sup_X_isSupremumOf_X].
     transitivity sup_X.
-    + eapply sup_X_isSupremumOf_X...
-    + eapply H; rewrite in_map_suprema_iff...
+    + eapply sup_X_isSupremumOf_X; eauto with *.
+    + eapply H; rewrite in_map_suprema_iff; eauto with *.
 Qed.
 
 Theorem infimum_of_upperbounds_is_supremum (sup_X : D) (X : ensemble D)
@@ -421,13 +421,13 @@ Theorem infimum_of_upperbounds_is_supremum (sup_X : D) (X : ensemble D)
 Proof with eauto with *.
   split.
   - intros sup_X_isSupremumOf_X z. split; ii.
-    + rewrite H. eapply sup_X_isSupremumOf_X...
-    + eapply H, sup_X_isSupremumOf_X...
+    + rewrite H. eapply sup_X_isSupremumOf_X; eauto with *.
+    + eapply H, sup_X_isSupremumOf_X; eauto with *.
   - intros H_supremum z. split; ii.
     + rewrite <- H. eapply H_supremum.
       intros upper_bound upper_bound_in.
       exact (upper_bound_in x IN).
-    + eapply H_supremum...
+    + eapply H_supremum; eauto with *.
 Qed.
 
 Theorem supremum_of_lowerbounds_is_infimum (inf_X : D) (X : ensemble D)
@@ -435,13 +435,13 @@ Theorem supremum_of_lowerbounds_is_infimum (inf_X : D) (X : ensemble D)
 Proof with eauto with *.
   split.
   - intros inf_X_isInfimumOf_X z. split; ii.
-    + rewrite <- H. eapply inf_X_isInfimumOf_X...
-    + eapply H, inf_X_isInfimumOf_X...
+    + rewrite <- H. eapply inf_X_isInfimumOf_X; eauto with *.
+    + eapply H, inf_X_isInfimumOf_X; eauto with *.
   - intros H_infimum z. split; ii.
     + rewrite H. eapply H_infimum .
       intros lower_bound lower_bound_in. unnw.
       exact (lower_bound_in x IN).
-    + eapply H_infimum...
+    + eapply H_infimum; eauto with *.
 Qed.
 
 Lemma infimum_monotonic (X1 : ensemble D) (X2 : ensemble D) (inf_X1 : D) (inf_X2 : D)
@@ -472,8 +472,8 @@ Lemma infimum_congruence (inf_X : D) (inf_Y : D) (X : ensemble D) (Y : ensemble 
   : is_infimum_of inf_Y Y.
 Proof with eauto with *.
   intros z. unnw. rewrite <- inf_EQ. split.
-  - intros z_le_inf_X. rewrite <- EQ. eapply INFIMUM...
-  - intros z_isLowerBoundOf_Y. eapply INFIMUM. rewrite -> EQ...
+  - intros z_le_inf_X. rewrite <- EQ. eapply INFIMUM; eauto with *.
+  - intros z_isLowerBoundOf_Y. eapply INFIMUM. rewrite -> EQ; eauto with *.
 Qed.
 
 #[local] Hint Resolve infimum_unique infimum_congruence : core.
@@ -493,16 +493,16 @@ Theorem prefixedpoint_is_lfpOf (f : D -> D) (lfp : D)
 Proof with eauto with *.
   assert (claim1 : forall x, x \in fixedpointsOf f -> lfp =< x).
   { intros x H_IN. transitivity (f x).
-    - eapply INFIMUM... eapply MONOTONIC...
-    - eapply eqProp_implies_leProp...
+    - eapply INFIMUM; eauto with *. eapply MONOTONIC; eauto with *.
+    - eapply eqProp_implies_leProp; eauto with *.
   }
   assert (claim2 : f lfp =< lfp).
   { eapply INFIMUM. ii. transitivity (f x); trivial.
-    eapply MONOTONIC, INFIMUM...
+    eapply MONOTONIC, INFIMUM; eauto with *.
   }
   assert (claim3 : lfp =< f lfp).
-  { eapply INFIMUM... eapply MONOTONIC... }
-  split... eapply leProp_antisymmetry...
+  { eapply INFIMUM; eauto with *. eapply MONOTONIC; eauto with *. }
+  split; eauto with *. eapply leProp_antisymmetry; eauto with *.
 Qed.
 
 Lemma postfixedpoint_is_gfpOf (f : D -> D) (gfp : D)
@@ -511,16 +511,16 @@ Lemma postfixedpoint_is_gfpOf (f : D -> D) (gfp : D)
   : is_gfpOf gfp f.
 Proof with eauto with *.
   assert (claim1 : gfp =< f gfp).
-  { eapply SUPREMUM... ii. transitivity (f x); trivial.
-    eapply MONOTONIC, SUPREMUM...
+  { eapply SUPREMUM; eauto with *. ii. transitivity (f x); trivial.
+    eapply MONOTONIC, SUPREMUM; eauto with *.
   }
   assert (claim2 : f gfp =< gfp).
-  { eapply SUPREMUM... eapply MONOTONIC... }
+  { eapply SUPREMUM; eauto with *. eapply MONOTONIC; eauto with *. }
   split.
-  - eapply leProp_antisymmetry...
+  - eapply leProp_antisymmetry; eauto with *.
   - intros fix_f H_in.
-    eapply SUPREMUM...
-    eapply eqProp_implies_leProp...
+    eapply SUPREMUM; eauto with *.
+    eapply eqProp_implies_leProp; eauto with *.
 Qed.
 
 Definition is_supremum_in (sup : D) (X : ensemble D) (phi : D -> Prop) : Prop :=
@@ -531,21 +531,21 @@ Theorem is_supremum_in_iff (phi : D -> Prop) (sup_X : @sig D phi) (X : ensemble 
 Proof with eauto with *. 
   split.
   { intros [? ?] z; split.
-    - ii. eapply H0... rewrite E.in_image_iff...
+    - ii. eapply H0; eauto with *. rewrite E.in_image_iff; eauto with *.
     - ii. eapply H0.
       intros x H_in_image. rewrite E.in_image_iff in H_in_image.
       destruct H_in_image as [[x' phi_x] [x_eq x_in]]. simpl in x_eq; subst x'.
-      change (@exist D phi x phi_x =< z)...
+      change (@exist D phi x phi_x =< z); eauto with *.
   }
   { intros sup_X_isSupremumOf_X. split.
     - property sup_X.
     - split; ii.
       + rewrite E.in_image_iff in IN. destruct IN as [[x' phi_x] [x_eq x_in]].
         simpl in x_eq; subst x'. rewrite <- H.
-        change (@exist D phi x phi_x =< sup_X). eapply sup_X_isSupremumOf_X...
+        change (@exist D phi x phi_x =< sup_X). eapply sup_X_isSupremumOf_X; eauto with *.
       + change (sup_X =< upper_bound). eapply sup_X_isSupremumOf_X.
         intros x x_in. change (proj1_sig x =< proj1_sig upper_bound).
-        eapply H; rewrite E.in_image_iff...
+        eapply H; rewrite E.in_image_iff; eauto with *.
   }
 Qed.
 
@@ -560,7 +560,7 @@ Class isWoset (A : Type) {SETOID : isSetoid A} : Type :=
     : x == y
   }.
 
-Notation isExtensional R := (forall x, forall y, (forall z, R z x <-> R z y) -> x == y).
+Abbreviation isExtensional R := (forall x, forall y, (forall z, R z x <-> R z y) -> x == y).
 
 Definition wlt {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (x : A) (y : A) : Prop :=
   wltProp (isWellPoset := @Woset_isWellPoset A SETOID WOSET) x y.
@@ -1218,18 +1218,18 @@ Instance lex_eq_Equivalence
   : Equivalence lex_eq.
 Proof with discriminate || eauto with *.
   unfold lex_eq. split.
-  - intros xs1; induction xs1 as [ | x1 xs1 IH]; simpl...
+  - intros xs1; induction xs1 as [ | x1 xs1 IH]; simpl; discriminate || eauto with *.
     pose proof (claim1 := compare_spec x1 x1).
-    destruct (compare x1 x1) eqn: H_OBS1...
-    all: contradiction (proj2 claim1)...
-  - intros xs1 xs2; revert xs1 xs2; induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl...
+    destruct (compare x1 x1) eqn: H_OBS1; discriminate || eauto with *.
+    all: contradiction (proj2 claim1); discriminate || eauto with *.
+  - intros xs1 xs2; revert xs1 xs2; induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl; discriminate || eauto with *.
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x1).
-    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2...
-    all: contradiction (proj2 claim2)...
-  - intros xs1 xs2 xs3; revert xs1 xs3; induction xs2 as [ | x2 xs2 IH]; destruct xs1 as [ | x1 xs1]; destruct xs3 as [ | x3 xs3]; simpl...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2; discriminate || eauto with *.
+    all: contradiction (proj2 claim2); discriminate || eauto with *.
+  - intros xs1 xs2 xs3; revert xs1 xs3; induction xs2 as [ | x2 xs2 IH]; destruct xs1 as [ | x1 xs1]; destruct xs3 as [ | x3 xs3]; simpl; discriminate || eauto with *.
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x3); pose proof (claim3 := compare_spec x1 x3).
-    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x3) eqn: H_OBS2; destruct (compare x1 x3) eqn: H_OBS3...
-    all: contradiction (proj2 claim3)...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x3) eqn: H_OBS2; destruct (compare x1 x3) eqn: H_OBS3; discriminate || eauto with *.
+    all: contradiction (proj2 claim3); discriminate || eauto with *.
 Qed.
 
 #[local]
@@ -1242,27 +1242,27 @@ Instance list_isSetoid_of_elementwise_comparison : isSetoid (list A) :=
 Instance lex_le_PreOrder
   : PreOrder lex_le.
 Proof with discriminate || eauto with *.
-  assert (lemma1 : forall x1 : A, forall x2 : A, x1 =< x2 -> x2 =< x1 -> x1 == x2). { ii... }
-  assert (lemma2 : forall x1 : A, forall x2 : A, x1 == x2 -> x1 =< x2). { ii... }
-  assert (lemma3 : forall x1 : A, forall x2 : A, x1 == x2 -> x2 =< x1). { ii... }
+  assert (lemma1 : forall x1 : A, forall x2 : A, x1 =< x2 -> x2 =< x1 -> x1 == x2). { ii; discriminate || eauto with *. }
+  assert (lemma2 : forall x1 : A, forall x2 : A, x1 == x2 -> x1 =< x2). { ii; discriminate || eauto with *. }
+  assert (lemma3 : forall x1 : A, forall x2 : A, x1 == x2 -> x2 =< x1). { ii; discriminate || eauto with *. }
   unfold lex_le. split.
   - intros xs1; right. eapply lex_eq_Equivalence.
-  - intros xs1 xs2 xs3; revert xs1 xs3; induction xs2 as [ | x2 xs2 IH]; destruct xs1 as [ | x1 xs1]; destruct xs3 as [ | x3 xs3]; simpl...
-    intros [H_false | H_false]...
+  - intros xs1 xs2 xs3; revert xs1 xs3; induction xs2 as [ | x2 xs2 IH]; destruct xs1 as [ | x1 xs1]; destruct xs3 as [ | x3 xs3]; simpl; discriminate || eauto with *.
+    intros [H_false | H_false]; discriminate || eauto with *.
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x3); pose proof (claim3 := compare_spec x1 x3); pose proof (claim4 := IH xs1 xs3).
-    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x3) eqn: H_OBS2; destruct (compare x1 x3) eqn: H_OBS3...
-    + contradiction (proj2 claim3)...
-    + contradiction (proj2 claim2)...
-    + contradiction (proj2 claim3); eapply lemma1; [transitivity x2 | exact (proj1 claim3)]. eapply lemma2... exact (proj1 claim2).
-    + contradiction (proj2 claim2)...
-    + contradiction (proj2 claim1)...
-    + contradiction (proj2 claim3); eapply lemma1; [transitivity x2 | exact (proj1 claim3)]. exact (proj1 claim1). eapply lemma2...
-    + contradiction (proj2 claim1); eapply lemma1; [exact (proj1 claim1) | transitivity x3]. exact (proj1 claim2). eapply lemma2...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x3) eqn: H_OBS2; destruct (compare x1 x3) eqn: H_OBS3; discriminate || eauto with *.
+    + contradiction (proj2 claim3); discriminate || eauto with *.
+    + contradiction (proj2 claim2); discriminate || eauto with *.
+    + contradiction (proj2 claim3); eapply lemma1; [transitivity x2 | exact (proj1 claim3)]. eapply lemma2; discriminate || eauto with *. exact (proj1 claim2).
+    + contradiction (proj2 claim2); discriminate || eauto with *.
+    + contradiction (proj2 claim1); discriminate || eauto with *.
+    + contradiction (proj2 claim3); eapply lemma1; [transitivity x2 | exact (proj1 claim3)]. exact (proj1 claim1). eapply lemma2; discriminate || eauto with *.
+    + contradiction (proj2 claim1); eapply lemma1; [exact (proj1 claim1) | transitivity x3]. exact (proj1 claim2). eapply lemma2; discriminate || eauto with *.
     + contradiction (proj2 claim1); eapply lemma1; [exact (proj1 claim1) | transitivity x3]. exact (proj1 claim2). exact (proj1 claim3).
-    + intros ? [? | ?]...
-    + intros [? | ?]...
-    + intros [? | ?]...
-    + intros [? | ?]...
+    + intros ? [? | ?]; discriminate || eauto with *.
+    + intros [? | ?]; discriminate || eauto with *.
+    + intros [? | ?]; discriminate || eauto with *.
+    + intros [? | ?]; discriminate || eauto with *.
 Qed.
 
 Lemma lex_le_flip_spec lhs rhs :
@@ -1273,30 +1273,30 @@ Lemma lex_le_flip_spec lhs rhs :
   end.
 Proof with discriminate || eauto with *.
   revert lhs rhs.
-  assert (lemma1 : forall x1 : A, forall x2 : A, x1 =< x2 -> x2 =< x1 -> x1 == x2). { ii... }
-  assert (lemma2 : forall x1 : A, forall x2 : A, x1 == x2 -> x1 =< x2). { ii... }
-  assert (lemma3 : forall x1 : A, forall x2 : A, x1 == x2 -> x2 =< x1). { ii... }
+  assert (lemma1 : forall x1 : A, forall x2 : A, x1 =< x2 -> x2 =< x1 -> x1 == x2). { ii; discriminate || eauto with *. }
+  assert (lemma2 : forall x1 : A, forall x2 : A, x1 == x2 -> x1 =< x2). { ii; discriminate || eauto with *. }
+  assert (lemma3 : forall x1 : A, forall x2 : A, x1 == x2 -> x2 =< x1). { ii; discriminate || eauto with *. }
   assert (lemma4 : forall xs1 : list A, forall xs2 : list A, lex_compare xs1 xs2 = Lt <-> lex_compare xs2 xs1 = Gt).
-  { induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl... split...
+  { induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl; discriminate || eauto with *. split; discriminate || eauto with *.
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x1); pose proof (claim3 := IH xs2).
-    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2...
-    - contradiction (proj2 claim2)...
-    - contradiction (proj2 claim2)...
-    - contradiction (proj2 claim1)...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2; discriminate || eauto with *.
+    - contradiction (proj2 claim2); discriminate || eauto with *.
+    - contradiction (proj2 claim2); discriminate || eauto with *.
+    - contradiction (proj2 claim1); discriminate || eauto with *.
     - contradiction (proj2 claim1). eapply lemma1; [exact (proj1 claim1) | exact (proj1 claim2)].
-    - contradiction (proj2 claim1)...
+    - contradiction (proj2 claim1); discriminate || eauto with *.
     - contradiction (proj2 claim1). eapply lemma1; [exact (proj1 claim2) | exact (proj1 claim1)].
   }
   assert (lemma5 : forall xs1 : list A, forall xs2 : list A, lex_compare xs1 xs2 = Eq <-> lex_compare xs2 xs1 = Eq).
-  { induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl... split... split...
+  { induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl; discriminate || eauto with *. split; discriminate || eauto with *. split; discriminate || eauto with *.
     pose proof (claim1 := compare_spec x1 x2); pose proof (claim2 := compare_spec x2 x1); pose proof (claim3 := IH xs2).
-    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2...
-    - contradiction (proj2 claim2)...
-    - contradiction (proj2 claim2)...
-    - contradiction (proj2 claim1)...
-    - split...
-    - contradiction (proj2 claim1)...
-    - split...
+    destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x1) eqn: H_OBS2; discriminate || eauto with *.
+    - contradiction (proj2 claim2); discriminate || eauto with *.
+    - contradiction (proj2 claim2); discriminate || eauto with *.
+    - contradiction (proj2 claim1); discriminate || eauto with *.
+    - split; discriminate || eauto with *.
+    - contradiction (proj2 claim1); discriminate || eauto with *.
+    - split; discriminate || eauto with *.
   }
   assert (lemma6 : forall xs1 : list A, forall xs2 : list A, lex_compare xs1 xs2 = Gt <-> lex_compare xs2 xs1 = Lt) by firstorder.
   intros lhs rhs; destruct (lex_compare lhs rhs) eqn: H_OBS; now firstorder.
@@ -1323,10 +1323,10 @@ Proof with discriminate || eauto with *.
   intros xs1 xs2; cbn. unfold flip, lex_eq, lex_le.
   pose proof (claim1 := lex_le_flip_spec xs1 xs2).
   destruct (lex_compare xs1 xs2) eqn: H_OBS.
-  - split...
-  - split... intros [? [H_false | H_false]].
-    all: rewrite H_false in claim1...
-  - split... intros [[? | ?] ?]...
+  - split; discriminate || eauto with *.
+  - split; discriminate || eauto with *. intros [? [H_false | H_false]].
+    all: rewrite H_false in claim1; discriminate || eauto with *.
+  - split; discriminate || eauto with *. intros [[? | ?] ?]; discriminate || eauto with *.
 Qed.
 
 #[local]

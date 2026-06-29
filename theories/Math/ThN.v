@@ -55,8 +55,8 @@ Lemma greater_than_iff (x : nat) (y : nat)
   : x > y <-> (exists z : nat, x = S (y + z)).
 Proof with try (lia || eauto).
   split.
-  - intros Hgt. induction Hgt as [ | m Hgt [z x_eq]]; [exists 0 | rewrite x_eq]...
-  - intros [z Heq]...
+  - intros Hgt. induction Hgt as [ | m Hgt [z x_eq]]; [exists 0 | rewrite x_eq]; try (lia || eauto).
+  - intros [z Heq]; try (lia || eauto).
 Qed.
 
 Section CANTOR_PAIRING.
@@ -91,24 +91,24 @@ Definition cpInv (x : nat) (y : nat) : nat :=
 Lemma cpInv_leftInv (n : nat)
   : cpInv (fst (cp n)) (snd (cp n)) = n.
 Proof with lia || eauto.
-  induction n as [ | n IH]; simpl...
+  induction n as [ | n IH]; simpl; lia || eauto.
   destruct (cp n) as [x y] eqn: H_OBS. simpl in *. destruct x as [ | x']; subst n; cbn.
-  - repeat rewrite add_0_r...
-  - rewrite add_comm with (n := x'). simpl. rewrite add_comm with (m := x')... 
+  - repeat rewrite add_0_r; lia || eauto.
+  - rewrite add_comm with (n := x'). simpl. rewrite add_comm with (m := x'); lia || eauto. 
 Qed.
 
 Lemma cpInv_rightInv (x : nat) (y : nat)
   : cp (cpInv x y) = (x, y).
 Proof with lia || eauto.
   unfold cpInv. remember (x + y) as z eqn: z_eq. revert y x z_eq. induction z as [ | z IH].
-  - simpl; ii. destruct x as [ | x'], y as [ | y']...
+  - simpl; ii. destruct x as [ | x'], y as [ | y']; lia || eauto.
   - induction y as [ | y IHy]; ii.
     + rewrite z_eq. rewrite add_0_r with (n := x). rewrite add_0_r with (n := x) in z_eq. subst x.
-      rewrite add_0_r with (n := sum_from_0_to (S z)). simpl. rewrite <- add_comm. erewrite -> IH with (x := 0)...
+      rewrite add_0_r with (n := sum_from_0_to (S z)). simpl. rewrite <- add_comm. erewrite -> IH with (x := 0); lia || eauto.
     + assert (claim1 : z = x + y) by lia. subst z. clear z_eq. rename x into n, y into m. rewrite add_comm with (m := S m).
       assert (claim2 : S (n + m) = (S n) + m) by lia. apply IHy in claim2.
       simpl in *. rewrite add_comm. simpl. destruct (cp (n + m + sum_from_0_to (n + m) + m)) as [x y] eqn: H_OBS.
-      destruct x as [ | x']; inv claim2...
+      destruct x as [ | x']; inv claim2; lia || eauto.
 Qed.
 
 Theorem cp_spec (n : nat) (x : nat) (y : nat)
@@ -168,13 +168,13 @@ Proof with try (lia || now (firstorder; eauto)).
   assert (claim2 : 0 <= a mod b /\ a mod b < b) by now eapply Nat.mod_bound_pos with (x := a) (y := b); lia.
   assert (claim3 : ~ q > a / b).
   { intros H_false. pose proof (proj1 (greater_than_iff q (a / b)) H_false) as [z q_eq].
-    enough (so_we_obatain : b * q + r >= b * S (a / b) + r)...
+    enough (so_we_obatain : b * q + r >= b * S (a / b) + r); try (lia || now (firstorder; eauto)).
   }
   assert (claim4 : ~ q < a / b).
   { intros H_false. pose proof (proj1 (greater_than_iff (a / b) q) H_false) as [z a_div_b_eq].
-    enough (so_we_obtain : b * q + a mod b >= b * S (a / b) + a mod b)...
+    enough (so_we_obtain : b * q + a mod b >= b * S (a / b) + a mod b); try (lia || now (firstorder; eauto)).
   }
-  enough (therefore : q = a / b)...
+  enough (therefore : q = a / b); try (lia || now (firstorder; eauto)).
 Qed.
 
 Theorem div_mod_inv a b q r
@@ -183,19 +183,19 @@ Theorem div_mod_inv a b q r
 Proof with lia || eauto.
   pose proof (lemma1 := @Nat.div_mod). pose proof (lemma2 := @greater_than_iff). split.
   - intros [H_a H_r_bound].
-    assert (claim1 : a = b * (a / b) + (a mod b))...
+    assert (claim1 : a = b * (a / b) + (a mod b)); lia || eauto.
     assert (claim2 : 0 <= a mod b /\ a mod b < b). 
-    { eapply Nat.mod_bound_pos with (x := a) (y := b)... }
-    assert (claim3 : a >= r)...
-    enough (claim4 : ~ q > a / b). enough (claim5 : ~ q < a / b). enough (claim6 : q = a / b)...
-    + split... replace (a - r) with (q * b)... symmetry; eapply Nat.div_mul...
-    + intros H_false. pose proof (proj1 (lemma2 (a / b) q) H_false) as [x Hx]...
-    + intros H_false. pose proof (proj1 (lemma2 q (a / b)) H_false) as [x Hx]...
+    { eapply Nat.mod_bound_pos with (x := a) (y := b); lia || eauto. }
+    assert (claim3 : a >= r); lia || eauto.
+    enough (claim4 : ~ q > a / b). enough (claim5 : ~ q < a / b). enough (claim6 : q = a / b); lia || eauto.
+    + split; lia || eauto. replace (a - r) with (q * b); lia || eauto. symmetry; eapply Nat.div_mul; lia || eauto.
+    + intros H_false. pose proof (proj1 (lemma2 (a / b) q) H_false) as [x Hx]; lia || eauto.
+    + intros H_false. pose proof (proj1 (lemma2 q (a / b)) H_false) as [x Hx]; lia || eauto.
   - intros [H_q [H_r H_a_ge_r]].
-    pose proof (claim1 := Nat.mod_bound_pos a b). split...
-    assert (claim2 : r < b)... assert (claim3 := Nat.div_mod a b b_ne_0).
-    rewrite <- H_r in claim3. enough (claim4 : q = a / b)...
-    rewrite H_q; symmetry. eapply Nat.div_unique with (r := 0)...
+    pose proof (claim1 := Nat.mod_bound_pos a b). split; lia || eauto.
+    assert (claim2 : r < b); lia || eauto. assert (claim3 := Nat.div_mod a b b_ne_0).
+    rewrite <- H_r in claim3. enough (claim4 : q = a / b); lia || eauto.
+    rewrite H_q; symmetry. eapply Nat.div_unique with (r := 0); lia || eauto.
 Qed.
 
 Theorem sqrt2irrat (p : nat) (q : nat)
@@ -206,40 +206,40 @@ Proof with try lia.
     forall n, P n
   ) as STRONG_INDUCTION.
   { intros P IH_claim n. eapply IH_claim with (n := n).
-    induction n as [ | n IH]; simpl...
+    induction n as [ | n IH]; simpl; try lia.
     intros m m_lt_S_n. eapply IH_claim with (n := m).
-    intros i i_lt_S_m. eapply IH with (m := i)...
+    intros i i_lt_S_m. eapply IH with (m := i); try lia.
   }
   split; [lia | revert p q].
   assert (lemma1 : forall n : nat, n mod 2 = 1 <-> (exists k : nat, n = 2 * k + 1)).
   { intros n. split.
     - pose proof (Nat.div_mod n 2) as H1. intros H2.
-      rewrite H2 in H1. exists (n / 2)...
-    - intros [k ->]. eapply div_mod_uniqueness with (q := k)...
+      rewrite H2 in H1. exists (n / 2); try lia.
+    - intros [k ->]. eapply div_mod_uniqueness with (q := k); try lia.
   }
   assert (lemma2 : forall n : nat, n mod 2 = 0 <-> (exists k : nat, n = 2 * k)).
   { intros n. split.
     - pose proof (Nat.div_mod n 2) as H1. intros H2.
-      rewrite H2, Nat.add_0_r in H1. exists (n / 2)...
-    - intros [k ->]. eapply div_mod_uniqueness with (q := k)...
+      rewrite H2, Nat.add_0_r in H1. exists (n / 2); try lia.
+    - intros [k ->]. eapply div_mod_uniqueness with (q := k); try lia.
   }
   assert (lemma3 : forall n : nat, n mod 2 = 0 \/ n mod 2 = 1).
-  { intros n. pose proof (Nat.mod_bound_pos n 2) as H1... }
-  assert (lemma4 : 0 <> 1)...
+  { intros n. pose proof (Nat.mod_bound_pos n 2) as H1; try lia. }
+  assert (lemma4 : 0 <> 1); try lia.
   assert (claim1 : forall p : nat, forall q : nat, p * p = 2 * q * q -> p mod 2 = 0).
   { intros p q pp_eq_2qq.
-    enough (to_show : p mod 2 <> 1) by now pose proof (lemma3 p) as H2; lia...
-    intros H_contradiction. pose proof (proj1 (lemma1 p) H_contradiction) as [k H2]...
+    enough (to_show : p mod 2 <> 1) by now pose proof (lemma3 p) as H2; lia; try lia.
+    intros H_contradiction. pose proof (proj1 (lemma1 p) H_contradiction) as [k H2]; try lia.
   }
-  - intros p q pp_eq_2qq. enough (p_eq_0 : p = 0)... revert p q pp_eq_2qq.
+  - intros p q pp_eq_2qq. enough (p_eq_0 : p = 0); try lia. revert p q pp_eq_2qq.
     induction p as [p IH] using @STRONG_INDUCTION. unnw. ii.
     pose proof (proj1 (lemma2 p) (claim1 p q pp_eq_2qq)) as [p' p_eq_2p'].
-    assert (p <= 0 \/ p > 0) as [p_le_0 | p_gt_0]...
-    assert (p_gt_p' : p' < p)...
-    assert (H1 : q * q = 2 * p' * p')...
+    assert (p <= 0 \/ p > 0) as [p_le_0 | p_gt_0]; try lia.
+    assert (p_gt_p' : p' < p); try lia.
+    assert (H1 : q * q = 2 * p' * p'); try lia.
     pose proof (proj1 (lemma2 q) (claim1 q p' H1)) as [q' p_eq_2q'].
-    assert (H2 : p' * p' = 2 * q' * q')...
-    assert (therefore : p' = 0) by exact (IH p' p_gt_p' q' H2)...
+    assert (H2 : p' * p' = 2 * q' * q'); try lia.
+    assert (therefore : p' = 0) by exact (IH p' p_gt_p' q' H2); try lia.
 Qed.
 
 Theorem mod_congruence_r (a : nat) (b : nat) (q : nat) (r : nat)
@@ -253,16 +253,16 @@ Proof with lia || eauto.
     pose proof (H1 (conj a_b_q_r r_lt_b)) as [H3 [H4 H5]].
     clear H1 H2. rename H3 into H1, H4 into H2, H5 into H3.
     rewrite <- H2. clear IH a q a_b_q_r H1 H2 H3.
-    pose proof (div_mod_inv r b 0 r b_ne_0) as [? ?]...
+    pose proof (div_mod_inv r b 0 r b_ne_0) as [? ?]; lia || eauto.
   - pose proof (Nat.mod_bound_pos r b) as H0.
-    assert (H1 : r - b < r)... clear H0.
+    assert (H1 : r - b < r); lia || eauto. clear H0.
     pose proof (IH (r - b) H1 a b (q + 1) b_ne_0) as IH'.
-    assert (H2 : a = b * (q + 1) + (r - b))...
+    assert (H2 : a = b * (q + 1) + (r - b)); lia || eauto.
     pose proof (IH' H2) as H3. rewrite H3.
     remember (r - b) as r' eqn: H_r'.
-    assert (H_r : r = r' + b)... subst r.
+    assert (H_r : r = r' + b); lia || eauto. subst r.
     rename r' into r; clear H_r' IH'.
-    symmetry. eapply IH with (q := 1)...
+    symmetry. eapply IH with (q := 1); lia || eauto.
 Qed.
 
 Corollary mod_eq_intro (a1 : nat) (a2 : nat) (b : nat) q1 q2
@@ -283,9 +283,9 @@ Lemma n_mod_b_le_n (n : nat) (b : nat)
 Proof with lia || eauto.
   revert b b_ne_0. induction n as [n IH] using lt_wf_ind.
   i. assert (n <= b \/ n > b) as [H_le | H_gt] by lia.
-  - pose proof (Nat.div_mod n b b_ne_0) as H. rewrite H at 2...
-  - transitivity ((n mod b) + b)... enough (n mod b <= n - b)...
-    erewrite mod_congruence_r with (q := 1) (r := n - b)... eapply IH...
+  - pose proof (Nat.div_mod n b b_ne_0) as H. rewrite H at 2; lia || eauto.
+  - transitivity ((n mod b) + b); lia || eauto. enough (n mod b <= n - b); lia || eauto.
+    erewrite mod_congruence_r with (q := 1) (r := n - b); lia || eauto. eapply IH; lia || eauto.
 Qed.
 
 Lemma mod_eq_elim (a1 : nat) (a2 : nat) (b : nat)
@@ -297,11 +297,11 @@ Proof with lia || eauto.
   symmetry in H_mod_eq. rename H_kr into H_r2, H_mod_eq into H_r1.
   exists (a2 / b), (a1 / b). transitivity (a1 + a2 - r).
   - pose proof (n_mod_b_le_n r b b_ne_0).
-    enough (b * (a2 / b) + r = a2)... symmetry. rewrite H_r2.
-    pose proof (Nat.div_mod a2 b)...
+    enough (b * (a2 / b) + r = a2); lia || eauto. symmetry. rewrite H_r2.
+    pose proof (Nat.div_mod a2 b); lia || eauto.
   - pose proof (n_mod_b_le_n r b b_ne_0).
-    enough (b * (a1 / b) + r = a1)... symmetry. rewrite H_r1.
-    pose proof (Nat.div_mod a1 b)...
+    enough (b * (a1 / b) + r = a1); lia || eauto. symmetry. rewrite H_r1.
+    pose proof (Nat.div_mod a1 b); lia || eauto.
 Qed.
 
 Lemma mod_add (a : nat) (b : nat) (c : nat)
@@ -316,10 +316,10 @@ Lemma plus_a_b_divmod_b a b
   : ((a + b) / b = (a / b) + 1)%nat /\ ((a + b) mod b = a mod b)%nat.
 Proof with try lia.
   eapply div_mod_uniqueness with (a := a + b) (b := b) (q := (a / b) + 1) (r := a mod b).
-  - replace (b * (a / b + 1) + a mod b) with ((b * (a / b) + a mod b) + b)...
+  - replace (b * (a / b + 1) + a mod b) with ((b * (a / b) + a mod b) + b); try lia.
     enough (claim1 : a = b * (a / b) + a mod b) by congruence.
     exact (Nat.div_mod a b b_ne_0).
-  - assert (claim2 : b > 0)... eapply Nat.mod_bound_pos...
+  - assert (claim2 : b > 0); try lia. eapply Nat.mod_bound_pos; try lia.
 Qed.
 
 Lemma positive_odd (n_odd : nat) n
@@ -333,21 +333,21 @@ Lemma positive_even (n_even : nat) n
 Proof with lia || eauto.
   pose proof (claim1 := div_mod_inv (n_even - 2) 2 n 0). split.
   - intros ->.
-    assert (claim2 : n = (2 * n + 2 - 2 - 0) / 2 /\ 0 = (2 * n + 2 - 2) mod 2 /\ 2 * n + 2 - 2 >= 0)...
-    split. rewrite (proj1 claim2) at 1. replace (2 * n + 2 - 2 - 0) with (2 * n + 2 - 2)...
-    split... replace (2 * n + 2) with (2 + n * 2)... rewrite mod_add...
+    assert (claim2 : n = (2 * n + 2 - 2 - 0) / 2 /\ 0 = (2 * n + 2 - 2) mod 2 /\ 2 * n + 2 - 2 >= 0); lia || eauto.
+    split. rewrite (proj1 claim2) at 1. replace (2 * n + 2 - 2 - 0) with (2 * n + 2 - 2); lia || eauto.
+    split; lia || eauto. replace (2 * n + 2) with (2 + n * 2); lia || eauto. rewrite mod_add; lia || eauto.
   - intros [H_n [H_r H_gt_0]].
     assert (claim2 : n_even >= 2).
-    { destruct n_even as [ | [ | n_even]]... inversion H_r. }
+    { destruct n_even as [ | [ | n_even]]; lia || eauto. inversion H_r. }
     assert (claim3 : n_even = 2 * (n_even / 2) + n_even mod 2).
-    { eapply Nat.div_mod... }
+    { eapply Nat.div_mod; lia || eauto. }
     enough (claim4 : (n_even - 2) mod 2 = 0).
-    + assert (claim5 : n_even - 2 = 2 * n + 0 /\ 0 < 2)...
-      rewrite H_r, Nat.add_0_r in claim3. eapply claim1...
-      replace (n_even - 2 - 0) with (n_even - 2)...
-    + transitivity (n_even mod 2)...
-      symmetry; replace (n_even) with ((n_even - 2) + 1 * 2) at 1...
-      eapply mod_add...
+    + assert (claim5 : n_even - 2 = 2 * n + 0 /\ 0 < 2); lia || eauto.
+      rewrite H_r, Nat.add_0_r in claim3. eapply claim1; lia || eauto.
+      replace (n_even - 2 - 0) with (n_even - 2); lia || eauto.
+    + transitivity (n_even mod 2); lia || eauto.
+      symmetry; replace (n_even) with ((n_even - 2) + 1 * 2) at 1; lia || eauto.
+      eapply mod_add; lia || eauto.
 Qed.
 
 Section LOGARITHM.
@@ -475,7 +475,7 @@ End LOGARITHM.
 
 Section section_for_maxs.
 
-#[local] Notation In := List.In.
+#[local] Abbreviation In := List.In.
 
 Definition maxs : list nat -> nat := fold_right max 0.
 
@@ -483,16 +483,16 @@ Lemma in_maxs_ge (ns : list nat) (n : nat)
   (H_IN : In n ns)
   : maxs ns >= n.
 Proof with (lia || eauto).
-  unfold maxs. revert n H_IN. induction ns as [ | n' ns IH]; simpl...
-  intros n [H_eq | H_in]... enough (ENOUGH: fold_right max 0 ns >= n)...
+  unfold maxs. revert n H_IN. induction ns as [ | n' ns IH]; simpl; (lia || eauto).
+  intros n [H_eq | H_in]; (lia || eauto). enough (ENOUGH: fold_right max 0 ns >= n); (lia || eauto).
 Qed.
 
 Lemma maxs_app (ns1 : list nat) (ns2 : list nat)
   : maxs (ns1 ++ ns2) = max (maxs ns1) (maxs ns2).
 Proof with (lia || eauto).
   unfold maxs. revert ns2.
-  induction ns1 as [ | n1 ns1 IH]; simpl... 
-  intros n; rewrite IH...
+  induction ns1 as [ | n1 ns1 IH]; simpl; (lia || eauto). 
+  intros n; rewrite IH; (lia || eauto).
 Qed.
 
 Lemma maxs_ind (phi : nat -> Prop) (ns : list nat)
@@ -500,32 +500,32 @@ Lemma maxs_ind (phi : nat -> Prop) (ns : list nat)
   (phi_in : forall i, phi i -> In i ns)
   : forall n, phi n -> maxs ns >= n.
 Proof with try now (lia || firstorder; eauto).
-  unfold maxs. induction ns as [ | n1 ns1 IH]; simpl... intros n phi_n.
-  destruct (le_gt_dec n n1) as [H_le | H_gt]... enough (claim1 : fold_right max 0 ns1 >= n)...
-  destruct (phi_dec n) as [H_yes | H_no]... destruct (phi_in n H_yes)...
-  enough (claim2 : forall ks : list nat, forall k : nat, In k ks -> fold_right max 0 ks >= k)...
-  induction ks; simpl... intros k [H_eq | H_in]... enough (claim3: fold_right Init.Nat.max 0 ks >= k)...
+  unfold maxs. induction ns as [ | n1 ns1 IH]; simpl; try now (lia || firstorder; eauto). intros n phi_n.
+  destruct (le_gt_dec n n1) as [H_le | H_gt]; try now (lia || firstorder; eauto). enough (claim1 : fold_right max 0 ns1 >= n); try now (lia || firstorder; eauto).
+  destruct (phi_dec n) as [H_yes | H_no]; try now (lia || firstorder; eauto). destruct (phi_in n H_yes); try now (lia || firstorder; eauto).
+  enough (claim2 : forall ks : list nat, forall k : nat, In k ks -> fold_right max 0 ks >= k); try now (lia || firstorder; eauto).
+  induction ks; simpl; try now (lia || firstorder; eauto). intros k [H_eq | H_in]; try now (lia || firstorder; eauto). enough (claim3: fold_right Init.Nat.max 0 ks >= k); try now (lia || firstorder; eauto).
 Qed.
 
 Lemma maxs_lt_iff (ns : list nat)
   : forall z, maxs ns > z <-> exists i, In i ns /\ i > z.
 Proof with try now (lia || firstorder; eauto).
-  unfold maxs. induction ns as [ | n1 ns1 IH]; simpl... intros n.
+  unfold maxs. induction ns as [ | n1 ns1 IH]; simpl; try now (lia || firstorder; eauto). intros n.
   destruct (le_gt_dec n1 (fold_right Init.Nat.max 0 ns1)); split.
-  - intros H_gt. assert (claim1: fold_right Init.Nat.max 0 ns1 > n)...
-  - intros [i [[H_eq | H_in] H_gt]]... enough (claim2: fold_right max 0 ns1 > n)...
-  - intros H_gt. exists n1...
-  - intros [i [[H_eq | H_in] H_gt]]... enough (claim3: fold_right Init.Nat.max 0 ns1 > n)...
+  - intros H_gt. assert (claim1: fold_right Init.Nat.max 0 ns1 > n); try now (lia || firstorder; eauto).
+  - intros [i [[H_eq | H_in] H_gt]]; try now (lia || firstorder; eauto). enough (claim2: fold_right max 0 ns1 > n); try now (lia || firstorder; eauto).
+  - intros H_gt. exists n1; try now (lia || firstorder; eauto).
+  - intros [i [[H_eq | H_in] H_gt]]; try now (lia || firstorder; eauto). enough (claim3: fold_right Init.Nat.max 0 ns1 > n); try now (lia || firstorder; eauto).
 Qed.
 
 Lemma maxs_subset (ns1 : list nat) (ns2 : list nat)
   (H_SUBSET : forall n, In n ns1 -> In n ns2)
   : maxs ns1 <= maxs ns2.
 Proof with try now (lia || firstorder; eauto).
-  unfold maxs. revert ns2 H_SUBSET; induction ns1 as [ | n1 ns1 IH]; simpl...
+  unfold maxs. revert ns2 H_SUBSET; induction ns1 as [ | n1 ns1 IH]; simpl; try now (lia || firstorder; eauto).
   intros ns2 H. destruct (le_gt_dec n1 (fold_right max 0 ns1)).
-  - enough (ENOUGH : fold_right max 0 ns1 <= fold_right max 0 ns2)...
-  - enough (ENOUGH : n1 <= fold_right max 0 ns2)... eapply in_maxs_ge...
+  - enough (ENOUGH : fold_right max 0 ns1 <= fold_right max 0 ns2); try now (lia || firstorder; eauto).
+  - enough (ENOUGH : n1 <= fold_right max 0 ns2); try now (lia || firstorder; eauto). eapply in_maxs_ge; try now (lia || firstorder; eauto).
 Qed.
 
 Lemma maxs_ext (ns1 : list nat) (ns2 : list nat)
@@ -533,7 +533,7 @@ Lemma maxs_ext (ns1 : list nat) (ns2 : list nat)
   : maxs ns1 = maxs ns2.
 Proof with try now firstorder.
   unfold maxs. enough (claim1 : fold_right max 0 ns1 <= fold_right max 0 ns2 /\ fold_right max 0 ns2 <= fold_right max 0 ns1) by lia.
-  split; eapply maxs_subset...
+  split; eapply maxs_subset; try now firstorder.
 Qed.
 
 Lemma maxs_sim ns1 ns2
@@ -564,8 +564,8 @@ Proof.
   pose proof (LT_EXT x); pose proof (LT_EXT y); lia.
 Qed.
 
-#[local] Notation zero := O.
-#[local] Notation suc := S.
+#[local] Abbreviation zero := O.
+#[local] Abbreviation suc := S.
 
 Definition is_suc (n : nat) : Prop :=
   match n with
@@ -935,10 +935,10 @@ Theorem AckermannSpec_ackermann1
   : AckermannSpec ackermann1.
 Proof with lia || eauto.
   split.
-  - intros n; replace (n + 1) with (S n)...
-  - intros m; replace (m + 1) with (S m)...
-  - intros [ | m']; induction n as [ | n IH]; cbn in *...
-    all: replace (m' + 1) with (S m') in *...
+  - intros n; replace (n + 1) with (S n); lia || eauto.
+  - intros m; replace (m + 1) with (S m); lia || eauto.
+  - intros [ | m']; induction n as [ | n IH]; cbn in *; lia || eauto.
+    all: replace (m' + 1) with (S m') in *; lia || eauto.
 Qed.
 
 End ACKERMANN.

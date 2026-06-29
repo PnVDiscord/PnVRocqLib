@@ -253,8 +253,8 @@ Fixpoint incrFin {m : nat} (n : nat) (i : Fin.t m) {struct n} : Fin.t (n + m) :=
 Lemma incrFin_spec {m : nat} (n : nat) (i : Fin.t m)
   : evalFin (incrFin n i) = n + evalFin i.
 Proof with eauto.
-  induction n as [ | n IH]; simpl...
-  rewrite evalFin_unfold. f_equal...
+  induction n as [ | n IH]; simpl; eauto.
+  rewrite evalFin_unfold. f_equal; eauto.
 Qed.
 
 #[global, program]
@@ -283,8 +283,8 @@ Inductive Similarity_Fin : forall n : nat, Similarity (Fin.t n) nat :=
 
 End Fin.
 
-Notation FZ := Fin.FZ.
-Notation FS := Fin.FS.
+Abbreviation FZ := Fin.FZ.
+Abbreviation FS := Fin.FS.
 
 #[global] Declare Scope vec_scope.
 
@@ -308,8 +308,8 @@ Notation " [ ] " := (@Vector.VNil _) : vec_scope.
 Notation " x :: xs " := (@Vector.VCons _ _ x xs) : vec_scope.
 Notation " [ x ] " := (@Vector.VCons _ _ x (@Vector.VNil _)) : vec_scope.
 
-Notation VNil := Vector.VNil.
-Notation VCons := Vector.VCons.
+Abbreviation VNil := Vector.VNil.
+Abbreviation VCons := Vector.VCons.
 
 Module V.
 
@@ -319,7 +319,7 @@ Section Accessories.
 
 Context {A : Type}.
 
-#[local] Notation vec := (Vector.t A).
+#[local] Abbreviation vec := (Vector.t A).
 
 Lemma case0 (phi : Vector.t A O -> Type)
   (phi_nil : phi (@VNil A))
@@ -614,6 +614,8 @@ Inductive vec_heq (n : nat) (xs : Vector.t A n) : forall m : nat, Vector.t A m -
   | vec_ext_heq_refl
     : vec_heq n xs n xs.
 
+Scheme Rewriting for vec_heq.
+
 #[local] Notation " xs =~= xs' " := (vec_heq _ xs _ xs') : type_scope.
 
 Lemma len_eq_from_vec_heq (n : nat) (m : nat) (xs : Vector.t A n) (xs' : Vector.t A m)
@@ -839,4 +841,4 @@ Ltac introVCons x' xs' :=
 
 Infix "!!" := V.nth.
 
-Notation nth_list := V.nth_list.
+Abbreviation nth_list := V.nth_list.

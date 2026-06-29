@@ -32,9 +32,9 @@ Proof.
   red in A_hasEqDec |- *. decide equality.
 Defined.
 
-Notation all_bools := Bool_FinEnum.all.
+Abbreviation all_bools := Bool_FinEnum.all.
 
-Notation all_bools_complete := Bool_FinEnum.all_complete.
+Abbreviation all_bools_complete := Bool_FinEnum.all_complete.
 
 Module Ascii_FinEnum <: FINITE_ENUM.
 
@@ -81,9 +81,9 @@ Qed.
 
 End Ascii_FinEnum.
 
-Notation all_asciis := Ascii_FinEnum.all.
+Abbreviation all_asciis := Ascii_FinEnum.all.
 
-Notation all_asciis_complete := Ascii_FinEnum.all_complete.
+Abbreviation all_asciis_complete := Ascii_FinEnum.all_complete.
 
 Module Type TOKEN_SPEC.
 

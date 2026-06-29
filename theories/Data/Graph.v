@@ -4,7 +4,7 @@ Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.FiniteMap.
 Require Import PnV.Prelude.X.
 
-#[local] Notation In := L.In.
+#[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 
 Module GRAPH.
@@ -19,13 +19,13 @@ End GRAPH.
 
 Section GraphTheory_basic1.
 
-#[local] Notation vertices := GRAPH.vertices.
-#[local] Notation edges := GRAPH.edges.
+#[local] Abbreviation vertices := GRAPH.vertices.
+#[local] Abbreviation edges := GRAPH.edges.
 
 Context {G : GRAPH.t}.
 
-#[local] Notation V := G.(vertices).
-#[local] Notation E := G.(edges).
+#[local] Abbreviation V := G.(vertices).
+#[local] Abbreviation E := G.(edges).
 
 Inductive walk (v : V) : V -> list V -> Prop :=
   | walk_refl
@@ -115,10 +115,10 @@ Theorem path_iff_no_dup_walk (v0 : V) (v : V) (vs : list V)
 Proof with eauto.
   split.
   - intros H_path. split.
-    + induction H_path; simpl...
-    + eapply path_vertices_no_dup...
+    + induction H_path; simpl; eauto.
+    + eapply path_vertices_no_dup; eauto.
   - intros [H_walk NO_DUP].
-    eapply no_dup_walk_is_path...
+    eapply no_dup_walk_is_path; eauto.
 Qed.
 
 Lemma path_app_inv (v0 : V) (v' : V) (vs1 : list V) (vs2 : list V)
@@ -257,13 +257,13 @@ Section DIGRAPH_FIXEDPOINT.
 #[local] Notation " src '===[' t ']==>*('  G  ')' tgt " := (@trail G tgt src t).
 
 #[local] Infix "=~=" := (is_similar_to (Similarity := list_corresponds_to_finite_ensemble)).
-#[local] Notation vertices := GRAPH.vertices.
-#[local] Notation edges := GRAPH.edges.
+#[local] Abbreviation vertices := GRAPH.vertices.
+#[local] Abbreviation edges := GRAPH.edges.
 
 Context {G : GRAPH.t}.
 
-#[local] Notation V := G.(vertices).
-#[local] Notation E := G.(edges).
+#[local] Abbreviation V := G.(vertices).
+#[local] Abbreviation E := G.(edges).
 
 #[local] Notation " src ~~~[ w ]~~> tgt " := (walk tgt src w) : type_scope.
 
@@ -714,14 +714,14 @@ Notation " src '~~~[' w ']~~>*('  GRAPH  ')' tgt " := (@walk GRAPH.(G) tgt src w
 Notation " src '---[' p ']-->*('  GRAPH  ')' tgt " := (@path GRAPH.(G) tgt src p).
 Notation " src '===[' t ']==>*('  GRAPH  ')' tgt " := (@trail GRAPH.(G) tgt src t).
 
-Notation gmu := (DigraphFixedpoint.gmu (G := G)).
+Abbreviation gmu := (DigraphFixedpoint.gmu (G := G)).
 
 Section EXPORT.
 
 Context `{GRAPH : !FiniteGraph}.
 
-#[local] Notation V := GRAPH.(G).(GRAPH.vertices).
-#[local] Notation E := GRAPH.(G).(GRAPH.edges).
+#[local] Abbreviation V := GRAPH.(G).(GRAPH.vertices).
+#[local] Abbreviation E := GRAPH.(G).(GRAPH.edges).
 
 Lemma walk_last (v : V) (v' : V) (w : list V)
   (WALK : v ~~~[ w ]~~>*( GRAPH ) v')
@@ -898,7 +898,7 @@ Proof.
   exact (DigraphFixedpoint.gmu_sim seed seed_impl seed_sim enum_vertices enum_vertices_all).
 Qed.
 
-#[local] Notation is_fixedpoint value := (forall v, forall a, a \in value v <-> ⟪ STEP : a \in seed v \/ (exists v', (v, v') \in E /\ a \in value v') ⟫).
+#[local] Abbreviation is_fixedpoint value := (forall v, forall a, a \in value v <-> ⟪ STEP : a \in seed v \/ (exists v', (v, v') \in E /\ a \in value v') ⟫).
 
 Theorem gmu_is_fixedpoint
   : is_fixedpoint (gmu seed).

@@ -24,9 +24,9 @@ CoInductive itree (E : Type@{U_discourse} -> Type@{U_discourse}) (R : Type@{U_di
 Bind Scope itree_scope with itree.
 Delimit Scope itree_scope with itree.
 
-Notation Ret r := (go (RetF r)).
-Notation Tau t := (go (TauF t)).
-Notation Vis X e k := (go (VisF X e k)).
+Abbreviation Ret r := (go (RetF r)).
+Abbreviation Tau t := (go (TauF t)).
+Abbreviation Vis X e k := (go (VisF X e k)).
 
 #[universes(template)]
 Inductive callE {I : Type} {R : Type} : Type -> Type :=
@@ -119,7 +119,7 @@ End CATEGORY.
 
 Section RECURSION.
 
-#[local] Notation endo X := (X -> X).
+#[local] Abbreviation endo X := (X -> X).
 
 Definition itree_interpret_mrec {E1 : handlerCat.(CAT.ob)} {E2 : handlerCat.(CAT.ob)} (ctx : E1 ~~> itree (E1 +' E2)) : itree (E1 +' E2) ~~> itree E2 :=
   fun R : Type@{U_discourse} => monad_iter (M := itree E2) (fun t0 : itree (E1 +' E2) R =>

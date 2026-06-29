@@ -13,7 +13,7 @@ Inductive bit : Set :=
 Definition t : Set :=
   list bit.
 
-Notation pos := POS.t.
+Abbreviation pos := POS.t.
 
 Definition to_nat (p : pos) : nat :=
   fold_left (fun i : nat => bit_rec _ (i * 2) (i * 2 + 1)) p 1.
@@ -35,13 +35,13 @@ Proof with lia || eauto.
   generalize (rev p2) as bs2. generalize (rev p1) as bs1. clear p1 p2.
   set (myF := fold_right (fun d : bit => fun i : nat => bit_rec _ (i * 2) (i * 2 + 1) d) 1).
   assert (claim : forall bs, myF bs > 0).
-  { induction bs as [ | b bs IH]... simpl... destruct b as [ | ]; simpl bit_rec... }
-  induction bs1 as [ | b1 bs1 IH], bs2 as [ | b2 bs2]; simpl...
-  - destruct b2; simpl bit_rec... pose proof (claim bs2)...
-  - destruct b1; simpl bit_rec... pose proof (claim bs1)...
-  - destruct b1, b2; simpl bit_rec...
-    all: intros ?; assert (claim1: myF bs1 = myF bs2)...
-    all: f_equal...
+  { induction bs as [ | b bs IH]; lia || eauto. simpl; lia || eauto. destruct b as [ | ]; simpl bit_rec; lia || eauto. }
+  induction bs1 as [ | b1 bs1 IH], bs2 as [ | b2 bs2]; simpl; lia || eauto.
+  - destruct b2; simpl bit_rec; lia || eauto. pose proof (claim bs2); lia || eauto.
+  - destruct b1; simpl bit_rec; lia || eauto. pose proof (claim bs1); lia || eauto.
+  - destruct b1, b2; simpl bit_rec; lia || eauto.
+    all: intros ?; assert (claim1: myF bs1 = myF bs2); lia || eauto.
+    all: f_equal; lia || eauto.
 Qed.
 
 Lemma to_nat_last (p : pos) (b : bit) :
@@ -55,8 +55,8 @@ Proof.
   unfold to_nat. rewrite <- fold_left_rev_right. now destruct b as [ | ].
 Qed.
 
-#[local] Notation b0 := bO.
-#[local] Notation b1 := bI.
+#[local] Abbreviation b0 := bO.
+#[local] Abbreviation b1 := bI.
 
 Lemma to_nat_unfold (p : pos) :
   to_nat p =
@@ -66,17 +66,17 @@ Lemma to_nat_unfold (p : pos) :
   | bI :: p' => to_nat p' + 2^(length p' + 1)
   end.
 Proof with lia || eauto.
-  destruct p as [ | [ | ] p]...
-  - induction p as [ | [ | ] p IH] using rev_ind...
+  destruct p as [ | [ | ] p]; lia || eauto.
+  - induction p as [ | [ | ] p IH] using rev_ind; lia || eauto.
     + replace (b0 :: p ++ [b0]) with ((b0 :: p) ++ [b0]) by reflexivity.
-      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl...
+      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl; lia || eauto.
     + replace (b0 :: p ++ [b1]) with ((b0 :: p) ++ [b1]) by reflexivity.
-      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl...
-  - induction p as [ | [ | ] p IH] using rev_ind...
+      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl; lia || eauto.
+  - induction p as [ | [ | ] p IH] using rev_ind; lia || eauto.
     + replace (b1 :: p ++ [b0]) with ((b1 :: p) ++ [b0]) by reflexivity.
-      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl...
+      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl; lia || eauto.
     + replace (b1 :: p ++ [b1]) with ((b1 :: p) ++ [b1]) by reflexivity.
-      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl...
+      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl; lia || eauto.
 Qed.
 
 Lemma pos_from_nat (n : nat)
@@ -84,7 +84,7 @@ Lemma pos_from_nat (n : nat)
   : { p : pos | to_nat p = n }.
 Proof with try lia.
   revert n n_gt_0. induction n as [n IH] using lt_wf_rec. i. destruct n as [ | [ | n']].
-  - exfalso...
+  - exfalso; try lia.
   - exists []. reflexivity.
   - remember (S (S n')) as n eqn: n_is.
     assert (n_le_2 : n >= 2) by lia.
@@ -93,22 +93,22 @@ Proof with try lia.
     + assert ({ p : pos | to_nat p = n / 2 }) as [p H_p].
       { eapply IH.
         - pose proof (positive_even n ((n) / 2)) as H.
-          assert (H1 : n = 2 * ((n) / 2))...
-          pose proof (Nat.div_mod n 2)...
-        - pose proof (Nat.div_mod n 2)... 
+          assert (H1 : n = 2 * ((n) / 2)); try lia.
+          pose proof (Nat.div_mod n 2); try lia.
+        - pose proof (Nat.div_mod n 2); try lia. 
       }
       exists (p ++ [b0]). rewrite to_nat_last.
-      pose proof (Nat.div_mod n 2)...
+      pose proof (Nat.div_mod n 2); try lia.
     + assert ({ p : pos | to_nat p = (n - 1) / 2 }) as [p H_p].
       { eapply IH.
         - pose proof (positive_odd n ((n - 1) / 2)) as H.
-          assert (H1 : n = 2 * ((n - 1) / 2) + 1)...
+          assert (H1 : n = 2 * ((n - 1) / 2) + 1); try lia.
         - pose proof (Nat.div_mod (n - 1) 2) as H.
-          pose proof (positive_odd n ((n - 1) / 2))...
+          pose proof (positive_odd n ((n - 1) / 2)); try lia.
       }
       exists (p ++ [b1]). rewrite to_nat_last.
-      pose proof (positive_odd n ((n - 1) / 2))...
-    + pose proof (Nat.mod_bound_pos n 2)...
+      pose proof (positive_odd n ((n - 1) / 2)); try lia.
+    + pose proof (Nat.mod_bound_pos n 2); try lia.
 Qed.
 
 Definition of_nat (n : nat) (n_gt_0 : n > 0) : pos :=

@@ -12,7 +12,7 @@ Import FolNotations.
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
-#[local] Notation In := L.In.
+#[local] Abbreviation In := L.In.
 
 Section SOUNDNESS_OF_HilbertCalculus.
 
@@ -28,16 +28,16 @@ Theorem HilbertCalculus_sound (Gamma : ensemble (frm L)) (C : frm L)
 Proof with eauto with *.
   destruct PROVE as (ps & INCL & (PF)). revert Gamma INCL. induction PF; ii.
   - eapply SATISFY. done!.
-  - eapply MP_preserves_truth with (p := p) (ps1 := ps1) (ps2 := ps2)...
-  - eapply Gen_preserves_truth with (ps := ps)...
+  - eapply MP_preserves_truth with (p := p) (ps1 := ps1) (ps2 := ps2); eauto with *.
+  - eapply Gen_preserves_truth with (ps := ps); eauto with *.
   - done!.
   - done!.
   - simpl in H. pose proof (classic (satisfies_frm STRUCTURE env q)). done!.
   - simpl in H. rewrite <- substitution_lemma_frm. specialize (H (interpret_trm STRUCTURE env t)).
     eapply interpret_frm_ext_upto with (env := upd_env x (interpret_trm STRUCTURE env t) env); trivial.
-    ii. unfold "∘". unfold upd_env, one_subst, cons_subst, nil_subst. destruct (eq_dec z x) as [EQ | NE]... reflexivity.
-  - rewrite <- not_free_no_effect_on_interpret_frm...
-  - red in H, H0. simpl in H, H0. red. specialize (H y_value); specialize (H0 y_value)...
+    ii. unfold "∘". unfold upd_env, one_subst, cons_subst, nil_subst. destruct (eq_dec z x) as [EQ | NE]; eauto with *. reflexivity.
+  - rewrite <- not_free_no_effect_on_interpret_frm; eauto with *.
+  - red in H, H0. simpl in H, H0. red. specialize (H y_value); specialize (H0 y_value); eauto with *.
   - cbn; done!.
   - cbn in *; done!.
   - now cbn in *; transitivity (env 1).
@@ -53,7 +53,7 @@ Import FolHilbert.
 
 Context {L : language} {function_symbols_countable : isCountable L.(function_symbols)} {constant_symbols_countable : isCountable L.(constant_symbols)} {relation_symbols_countable : isCountable L.(relation_symbols)}.
 
-Notation L' := (augmented_language L Henkin_constants).
+Abbreviation L' := (augmented_language L Henkin_constants).
 
 #[local] Existing Instance trmModel.
 
@@ -66,7 +66,7 @@ Proof with eauto with *.
   eapply NNPP. intros NO.
   set (Gamma := E.insert (Neg_frm b) X).
   assert (CONSISTENT : Gamma ⊬ Bot_frm).
-  { intros INCONSISTENT. contradiction NO. eapply NegationE... }
+  { intros INCONSISTENT. contradiction NO. eapply NegationE; eauto with *. }
   pose proof (@theorem_of_1_3_10 L augmented_language_isEnumerable Gamma) as [? ? ? ? ? ?]; unnw.
   assert (claim : Gamma ⊭ Bot_frm).
   { intros SAT. contradiction (SAT (restrict_structure (trmModel Gamma)) (ivar_interpret Gamma)).

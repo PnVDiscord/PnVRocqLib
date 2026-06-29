@@ -117,7 +117,7 @@ Section NATURAL_DEDUCTION.
 
 #[local] Infix " \in " := E.In.
 #[local] Infix " \subseteq " := E.isSubsetOf.
-#[local] Notation In := List.In.
+#[local] Abbreviation In := List.In.
 
 Context {L : language}.
 

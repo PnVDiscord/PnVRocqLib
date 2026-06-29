@@ -46,7 +46,7 @@ Import ListNotations.
 
 Context {B : Type} {BA : isBA B}.
 
-#[local] Notation andB := (@andB B BA).
+#[local] Abbreviation andB := (@andB B BA).
 
 Definition andsB : list B -> B :=
   fold_right andB trueB.
@@ -282,11 +282,11 @@ Proof with eauto with *.
   eapply isFilter_intro.
   - exists (trueB). exists ([]). unnw. split.
     + intros z z_in. inversion z_in.
-    + rewrite andsB_zero...
+    + rewrite andsB_zero; eauto with *.
   - unfold cl. intros x1 x2 [xs1 ?] [xs2 ?]; des. exists (xs1 ++ xs2). unnw. split.
     + ii. rewrite L.in_app_iff in H. done!.
-    + rewrite andsB_app. eapply andB_compathWith_leProp...
-  - intros x [xs ?] ? LE; des. exists (xs). unnw. split; [ | etransitivity]...
+    + rewrite andsB_app. eapply andB_compathWith_leProp; eauto with *.
+  - intros x [xs ?] ? LE; des. exists (xs). unnw. split; [ | etransitivity]; eauto with *.
 Qed.
 
 Lemma fact2_of_1_2_8 X
@@ -302,8 +302,8 @@ Lemma fact3_of_1_2_8 X
   : X \subseteq cl X.
 Proof with eauto with *.
   intros b b_in. exists ([b]). unnw. split.
-  - intros z [z_eq_b | []]; subst z...
-  - rewrite andsB_one...
+  - intros z [z_eq_b | []]; subst z; eauto with *.
+  - rewrite andsB_one; eauto with *.
 Qed.
 
 Lemma fact4_of_1_2_8 X X'
@@ -380,7 +380,7 @@ Add Parametric Morphism :
   as insertion_lifts_eqProp.
 Proof with eauto with *.
   enough (to_show : forall X, forall X', X == X' -> forall n, insertion X n \subseteq insertion X' n).
-  { ii. split; eapply to_show... }
+  { ii. split; eapply to_show; eauto with *. }
   intros X X' X_eq_X' n b b_in.
   inversion b_in; subst. econstructor. rewrite <- X_eq_X' at 1.
   rewrite EQUICONSISTENT. clear EQUICONSISTENT b_in.
@@ -413,10 +413,10 @@ Lemma lemma1_of_1_2_12 (n1 : nat) (n2 : nat)
   : forall X, improveFilter X n1 \subseteq improveFilter X n2.
 Proof with eauto with *.
   change (forall X : ensemble B, improveFilter X n1 =< improveFilter X n2).
-  induction n1_le_n2 as [ | n2 n1_le_n2 IH]; intros X...
+  induction n1_le_n2 as [ | n2 n1_le_n2 IH]; intros X; eauto with *.
   rewrite IH with (X := X). transitivity (Insertion (improveFilter X n2) n2).
-  - intros z z_in; left...
-  - simpl; eapply fact3_of_1_2_8...
+  - intros z z_in; left; eauto with *.
+  - simpl; eapply fact3_of_1_2_8; eauto with *.
 Qed.
 
 Lemma lemma1_of_1_2_13_aux1 bs F n

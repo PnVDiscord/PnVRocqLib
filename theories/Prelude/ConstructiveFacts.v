@@ -157,19 +157,19 @@ Theorem first_nat_spec (p : nat -> bool) (n : nat)
   : p m = true /\ ⟪ MIN : forall i, p i = true -> i >= m ⟫.
 Proof with eauto.
   assert (claim1 : forall x, p x = true -> p (first_nat p x) = true).
-  { induction x as [ | x IH]... simpl. destruct (p (first_nat p x)) as [ | ] eqn: ?... }
-  unnw. split... intros i p_i_eq_true.
+  { induction x as [ | x IH]; eauto. simpl. destruct (p (first_nat p x)) as [ | ] eqn: ?; eauto. }
+  unnw. split; eauto. intros i p_i_eq_true.
   enough (claim2 : forall x, first_nat p x <= x).
   enough (claim3 : forall x, p (first_nat p x) = true -> (forall y, x < y -> first_nat p x = first_nat p y)).
-  enough (claim4 : forall x, forall y, p y = true -> first_nat p x <= y)...
+  enough (claim4 : forall x, forall y, p y = true -> first_nat p x <= y); eauto.
   - intros x y p_y_eq_true. destruct (le_gt_dec x y) as [x_le_y | x_gt_y].
-    + eapply Nat.le_trans...
-    + replace (first_nat p x) with (first_nat p y)...
+    + eapply Nat.le_trans; eauto.
+    + replace (first_nat p x) with (first_nat p y); eauto.
   - intros x p_first_nat_p_x_eq_true y x_gt_y. induction x_gt_y as [ | y x_gt_y IH]; simpl.
-    + rewrite p_first_nat_p_x_eq_true...
-    + rewrite <- IH, p_first_nat_p_x_eq_true...
-  - induction x as [ | x IH]... simpl.
-    destruct (p (first_nat p x)) as [ | ]...
+    + rewrite p_first_nat_p_x_eq_true; eauto.
+    + rewrite <- IH, p_first_nat_p_x_eq_true; eauto.
+  - induction x as [ | x IH]; eauto. simpl.
+    destruct (p (first_nat p x)) as [ | ]; eauto.
 Qed.
 
 Theorem nat_search_lemma (p : nat -> bool)
@@ -278,7 +278,7 @@ Definition elim_eq_l (x1 : A) (x2 : A) (hyp_eq : x1 = x2) (pf : B x1) : B x2 :=
 Definition elim_eq_r (x1 : A) (x2 : A) (hyp_eq : x1 = x2) (pf : B x2) : B x1 :=
   eq_rect x2 B pf x1 (eq_symmetry x1 x2 hyp_eq).
 
-#[local] Notation pi_A_B := (forall x : A, B x).
+#[local] Abbreviation pi_A_B := (forall x : A, B x).
 
 Lemma elim_eq_l_spec (x1 : A) (x2 : A) (f : pi_A_B) (hyp_eq : x1 = x2)
   : elim_eq_l x1 x2 hyp_eq (f x1) = elim_eq_l x2 x2 (eq_reflexivity x2) (f x2).
@@ -541,8 +541,8 @@ Let RUSSELL : BB :=
 Let PARADOX_OF_BERARDI
   : RUSSELL = ¬ RUSSELL.
 Proof with eauto.
-  enough (it_is_sufficient_to_show : RUSSELL = russell R)...
-  replace (russell) with (fun r : UNIV => r ∈ R)...
+  enough (it_is_sufficient_to_show : RUSSELL = russell R); eauto.
+  replace (russell) with (fun r : UNIV => r ∈ R); eauto.
 Qed.
 
 Theorem exclusive_middle_implies_proof_irrelevance (P : Prop)
@@ -615,7 +615,7 @@ Section GIRARD'S_PARADOX. (* Reference: "https://leanprover.zulipchat.com/#narro
 
 Universe u.
 
-#[local] Notation star := Type@{u}.
+#[local] Abbreviation star := Type@{u}.
 
 Theorem GIRARD'S_PARADOX
   (PI : (star -> star) -> star)
