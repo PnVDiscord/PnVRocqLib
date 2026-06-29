@@ -55,7 +55,7 @@ Definition itree_guard {R1 : Type} {R2 : Type} (k0 : R1 -> itree E R2) (ot0 : it
   | VisF X e k => Vis X e (fun x : X => CIH (k x))
   end.
 
-Definition itree_bind' {R1 : Type} {R2 : Type} (k : R1 -> itree E R2) : itree E R1 -> itree E R2 :=
+Definition itree_bind' {R1 : Type} {R2 : Type} (k : R1 -> itree E R2) : forall t : itree E R1, itree E R2 :=
   cofix bind' (t : itree E R1) : itree E R2 := itree_guard (R1 := R1) (R2 := R2) k t.(observe) bind'.
 
 #[global]

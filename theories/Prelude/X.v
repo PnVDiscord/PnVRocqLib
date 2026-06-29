@@ -1,4 +1,9 @@
-Require Export PnV.Prelude.Prelude.
+Require Import PnV.Prelude.Prelude.
+
+Notation "lhs ≠ rhs" := (~ (lhs = rhs)) : type_scope.
+
+Ltac done :=
+  des; subst; done!.
 
 #[projections(primitive)]
 Class isFinite@{u} (A : Type@{u}) : Type@{u} :=
@@ -11,3 +16,11 @@ Class isFinite@{u} (A : Type@{u}) : Type@{u} :=
   }.
 
 #[global] Existing Instance finite_hasEqDec.
+
+Lemma inject_pair_eq (A : Type) (B : Type) (x : A) (x' : A) (y : B) (y' : B)
+  : (x, y) = (x', y') <-> (x = x' /\ y = y').
+Proof.
+  split; [intros EQ; split | intros [EQ1 EQ2]]; congruence.
+Qed.
+
+#[global] Hint Rewrite inject_pair_eq : simplication_hints.

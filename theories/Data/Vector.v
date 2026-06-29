@@ -483,10 +483,10 @@ Ltac red_vec :=
 
 Section INSTANCES.
 
-#[global]
-Instance vector_hasEqDec {A : Type} {n : nat}
-  (A_hasEqDec : hasEqDec A)
-  : hasEqDec (Vector.t A n).
+#[global, universes(polymorphic=yes)]
+Instance vector_hasEqDec@{u} {A : Type@{u}} {n : nat}
+  (A_hasEqDec : hasEqDec@{u} A)
+  : hasEqDec@{u} (Vector.t A n).
 Proof.
   red. induction n as [ | n IH]; intros lhs rhs.
   - left. revert lhs rhs. introVNil; introVNil; reflexivity.
@@ -502,17 +502,18 @@ Proof.
       now apply f_equal with (f := tail) in H_contradiction.
 Defined.
 
-Definition vec (n : nat) (A : Type) : Type :=
+#[universes(polymorphic=yes)]
+Definition vec@{u} (n : nat) (A : Type@{u}) : Type@{u} :=
   Vector.t A n.
 
-#[local]
-Instance vec_isMonad {n : nat} : isMonad (vec n) :=
-  { bind {A : Type} {B : Type} (m : vec n A) (k : A -> vec n B) := diagonal (map k m)
-  ; pure {A : Type} (x : A) := replicate x
+#[local, universes(polymorphic=yes)]
+Instance vec_isMonad@{u} {n : nat} : isMonad@{u u} (vec@{u} n) :=
+  { bind {A : Type@{u}} {B : Type@{u}} (m : vec n A) (k : A -> vec n B) := diagonal (map k m)
+  ; pure {A : Type@{u}} (x : A) := replicate x
   }.
 
 Definition zipWith {n : nat} {A : Type} {B : Type} {C : Type} (f : A -> B -> C) (xs : Vector.t A n) (ys : Vector.t B n) : Vector.t C n :=
-  liftM2 (MONAD := vec_isMonad) (A := A) (B := B) (C := C) f xs ys.
+  liftM2 (MONAD := @vec_isMonad n) (A := A) (B := B) (C := C) f xs ys.
 
 Lemma zipWith_spec {n : nat} {A : Type} {B : Type} {C : Type} (f : A -> B -> C) (xs : Vector.t A n) (ys : Vector.t B n)
   : forall i, f (xs !! i) (ys !! i) = zipWith f xs ys !! i.
@@ -539,19 +540,16 @@ Qed.
 
 End INSTANCES.
 
-Fixpoint foldr {A : Type} {B : Type} {n : nat} (f : A -> B -> B) (z : B) (xs : Vector.t A n) : B :=
-  match xs with
-  | [] => z
-  | x :: xs => f x (foldr f z xs)
-  end.
+Definition foldr {A : Type} {B : Type} {n : nat} (f : A -> B -> B) (z : B) : forall xs : Vector.t A n, B :=
+  @Vector.t_rect A (fun n : nat => fun _ : Vector.t A n => B) z (fun n : nat => fun x : A => fun _ : Vector.t A n => f x) n.
 
-Lemma head_unfold {A : Type} (n : nat) (x : A) (xs : Vector.t A n)
+Lemma head_unfold (A : Type) (n : nat) (x : A) (xs : Vector.t A n)
   : head (x :: xs) = x.
 Proof.
   reflexivity.
-  Defined.
+Defined.
 
-Lemma tail_unfold {A : Type} (n : nat) (x : A) (xs : Vector.t A n)
+Lemma tail_unfold (A : Type) (n : nat) (x : A) (xs : Vector.t A n)
   : tail (x :: xs) = xs.
 Proof.
   reflexivity.
@@ -790,11 +788,8 @@ Proof.
   - rewrite to_list_snoc. f_equal. exact IH.
 Qed.
 
-Fixpoint forallb {n : nat} (p : A -> bool) (xs : Vector.t A n) : bool :=
-  match xs with
-  | [] => true
-  | x :: xs => p x && forallb p xs
-  end.
+Definition forallb {n : nat} (p : A -> bool) : forall xs : Vector.t A n, bool :=
+  @Vector.t_rec A (fun n : nat => fun _ : Vector.t A n => bool) true (fun n : nat => fun x : A => fun _ : Vector.t A n => andb (p x)) n.
 
 Lemma forallb_forall (n : nat) (p : A -> bool) (xs : Vector.t A n)
   : forallb p xs = true <-> (forall i, p (xs !! i) = true).

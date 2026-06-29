@@ -2,6 +2,7 @@ Require Import PnV.Prelude.Prelude.
 Require Import PnV.Control.Category.
 Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.FiniteMap.
+Require Import PnV.Prelude.X.
 
 #[local] Notation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
@@ -218,20 +219,16 @@ Fixpoint Walk_to_walk {v} {v'} (WALK : `[ v -> v' ]) : list V :=
   | Walk_cons H_edge WALK' => v :: Walk_to_walk WALK'
   end.
 
+Definition isAcylic : Prop :=
+  forall v : V, forall w : list V, length w > 0 -> ⟪ NOT_A_CYCLE : ~ (v ~~~[ w ]~~> v) ⟫.
+
 End GraphTheory_basic1.
 
 #[global] Arguments Walk_nil {G} {v}.
 #[global] Arguments Walk_cons {G} {v} {v0} {v1}.
+#[global] Arguments isAcylic : clear implicits.
 
 #[local] Notation " `[ v -> v' ] " := (Walk v' v) : type_scope.
-
-Module GraphNotations.
-
-Notation " src ~~~[ w ]~~>* tgt " := (walk tgt src w) : type_scope.
-Notation " src ---[ p ]-->* tgt " := (path tgt src p) : type_scope.
-Notation " src ===[ t ]==>* tgt " := (trail tgt src t) : type_scope.
-
-End GraphNotations.
 
 #[projections(primitive)]
 Record Labeled {G : GRAPH.t} : Type :=
@@ -241,10 +238,11 @@ Record Labeled {G : GRAPH.t} : Type :=
 
 #[global] Arguments Labeled : clear implicits.
 
-Fixpoint labeledWalk {G : GRAPH.t} {G_labeled : Labeled G} {v} {v'} (H_Walk : `[ v -> v' ]) : ensemble (list G_labeled.(labels)) :=
+Definition labeledWalk {G : GRAPH.t} {G_labeled : Labeled G} : forall v, forall v', `[ v -> v' ] -> ensemble (list G_labeled.(labels)) :=
+  fix go (v : G.(GRAPH.vertices)) (v' : G.(GRAPH.vertices)) (H_Walk : `[ v -> v' ]) :=
   match H_Walk with
   | Walk_nil => pure (@L.nil G_labeled.(labels))
-  | Walk_cons H_edge H_Walk' => liftM2 (@L.cons G_labeled.(labels)) (G_labeled.(labeling) H_edge) (labeledWalk H_Walk')
+  | Walk_cons H_edge H_Walk' => liftM2 (@L.cons G_labeled.(labels)) (G_labeled.(labeling) H_edge) (go _ _ H_Walk')
   end.
 
 Module DigraphFixedpoint.

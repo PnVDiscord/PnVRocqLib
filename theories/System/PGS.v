@@ -5,6 +5,7 @@ Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.Graph.
 Require Import PnV.System.Regex.
 Require Import Stdlib.Logic.Eqdep_dec.
+Require Import PnV.Prelude.X.
 
 Import DoNotations.
 Import DigraphFixedpoint.

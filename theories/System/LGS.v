@@ -6,6 +6,7 @@ Require Import PnV.Data.FiniteMap.
 Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.Graph.
 Require Import PnV.System.Regex.
+Require Import PnV.Prelude.X.
 
 Import DoNotations.
 
@@ -84,15 +85,36 @@ Notation all_asciis := Ascii_FinEnum.all.
 
 Notation all_asciis_complete := Ascii_FinEnum.all_complete.
 
-Module LGS.
+Module Type TOKEN_SPEC.
 
-#[projections(primitive)]
-Class isToken `(Token : Set) : Set :=
-  { Token_hasEqDec : hasEqDec@{Set} Token
-  ; rulesForTokens : list (Token * regex ascii)
+Parameter t : Set.
+
+Parameter t_hasEqDec : hasEqDec@{Set} TOKEN_SPEC.t.
+
+Parameter rules : list (TOKEN_SPEC.t * regex ascii).
+
+End TOKEN_SPEC.
+
+Module LGS (Token : TOKEN_SPEC).
+
+#[global] Existing Instance Token.t_hasEqDec.
+
+Module BuildError.
+
+Inductive t : Set :=
+  | NullableTokenRule (idx : nat).
+
+End BuildError.
+
+#[universes(polymorphic=yes)]
+Definition BuildErrorM@{u} (A : Type@{u}) : Type@{u} :=
+  BuildError.t + A.
+
+#[universes(polymorphic=yes)]
+Instance BuildErrorM_isMonad@{u} : isMonad@{u u} BuildErrorM@{u} :=
+  { pure {A : Type@{u}} (x : A) := inr x
+  ; bind {A : Type@{u}} {B : Type@{u}} (m : BuildErrorM A) (k : A -> BuildErrorM B) := B.either (@inl _ _) k m
   }.
-
-#[global] Existing Instance Token_hasEqDec.
 
 Fact mem_spec (A : Set) `(A_hasEqDec : hasEqDec@{Set} A) (x : A) (xs : list A) (b : bool)
   : mem@{Set} x xs = b <-> (if b then x ∈ xs else ~ x ∈ xs).
@@ -122,184 +144,5 @@ Qed.
 
 #[local] Existing Instance list_corresponds_to_finite_ensemble.
 #[local] Existing Instance alist_corresponds_to_finite_partial_map.
-
-Module Input.
-
-Definition t : Set :=
-  list ascii.
-
-Fixpoint of_string (s : string) : Input.t :=
-  match s with
-  | EmptyString => []
-  | String c s' => c :: of_string s'
-  end.
-
-Fixpoint to_string (s : Input.t) : string :=
-  match s with
-  | [] => EmptyString
-  | c :: s' => String c (to_string s')
-  end.
-
-Fact to_of_string (s : string)
-  : to_string (of_string s) = s.
-Proof.
-  induction s as [ | c s IH]; simpl; congruence.
-Qed.
-
-Fact of_to_string (s : Input.t)
-  : of_string (to_string s) = s.
-Proof.
-  induction s as [ | c s IH]; simpl; congruence.
-Qed.
-
-Fact length_of_string (s : string)
-  : length (of_string s) = String.length s.
-Proof.
-  induction s as [ | c s IH]; simpl; congruence.
-Qed.
-
-Fact to_string_app (s1 : Input.t) (s2 : Input.t)
-  : to_string (s1 ++ s2) = String.append (to_string s1) (to_string s2).
-Proof.
-  induction s1 as [ | c s1 IH]; simpl; congruence.
-Qed.
-
-Fact prefix_suffix_decompose (s : Input.t) (n : nat)
-  (LE : n <= length s)
-  : exists prefix, exists suffix, s = prefix ++ suffix /\ length prefix = n.
-Proof.
-  exists (firstn n s). exists (skipn n s). rewrite firstn_skipn. split; [reflexivity | rewrite length_firstn; lia].
-Qed.
-
-Fact app_cancel_prefix (prefix : Input.t) (s1 : Input.t) (s2 : Input.t)
-  (EQ : prefix ++ s1 = prefix ++ s2)
-  : s1 = s2.
-Proof.
-  eapply L.app_cancel_l; eauto.
-Qed.
-
-Fact app_cancel_suffix (s1 : Input.t) (s2 : Input.t) (suffix : Input.t)
-  (EQ : s1 ++ suffix = s2 ++ suffix)
-  : s1 = s2.
-Proof.
-  eapply L.app_cancel_r; eauto.
-Qed.
-
-Fact empty_or_nonempty (s : Input.t)
-  : { s = [] } + { exists c, exists s', s = c :: s' }.
-Proof.
-  destruct s as [ | c s']; [left; reflexivity | right; exists c, s'; reflexivity].
-Defined.
-
-Fact nonempty_prefix_rest_shorter (consumed : Input.t) (rest : Input.t)
-  (NONEMPTY : ~ consumed = [])
-  : length rest < length (consumed ++ rest).
-Proof.
-  destruct consumed as [ | c consumed]; [contradiction | simpl; rewrite length_app; simpl; lia].
-Qed.
-
-End Input.
-
-Module REGEX.
-
-Fixpoint nullable (e : regex ascii) {struct e} : bool :=
-  match e with
-  | Re.Null => false
-  | Re.Empty => true
-  | Re.Char c => false
-  | Re.Union e1 e2 => nullable e1 || nullable e2
-  | Re.Append e1 e2 => nullable e1 && nullable e2
-  | Re.Star e1 => true
-  end.
-
-Lemma nullable_spec (e : regex ascii)
-  : nullable e = true <-> [] =~= e.
-Proof.
-  split.
-  - induction e as [ | | c | e1 IH1 e2 IH2 | e1 IH1 e2 IH2 | e IH]; simpl; i; try congruence.
-    + econs.
-    + rewrite orb_true_iff in H. destruct H as [H | H]; eauto with *.
-    + rewrite andb_true_iff in H. destruct H as [H1 H2]. change (@nil ascii) with (@nil ascii ++ @nil ascii). eauto with *.
-    + econs.
-  - revert e.
-    enough (CLAIM : forall s : list ascii, forall e : regex ascii, s =~= e -> s = [] -> nullable e = true).
-    { i; eapply CLAIM; eauto. }
-    intros s e H_IN. induction H_IN; simpl; i; subst; try congruence; eauto.
-    + rewrite orb_true_iff. left. eauto.
-    + rewrite orb_true_iff. right. eauto.
-    + pose proof (app_eq_nil _ _ H) as [EQ1 EQ2]; ss!.
-Qed.
-
-Theorem nullable_true_iff (e : regex ascii)
-  : nullable e = true <-> [] \in eval_regex e.
-Proof.
-  rewrite eval_regex_good. eapply nullable_spec.
-Qed.
-
-Theorem nullable_false_iff (e : regex ascii)
-  : nullable e = false <-> (~ [] \in eval_regex e).
-Proof.
-  destruct (nullable e) eqn: H_OBS; split; intros H.
-  - congruence.
-  - contradiction H. rewrite <- nullable_true_iff. exact H_OBS.
-  - intros IN. rewrite <- nullable_true_iff in IN. congruence.
-  - reflexivity.
-Qed.
-
-Corollary nullable_refines (e : regex ascii)
-  : (nullable e) ⊑ ([] \in eval_regex e).
-Proof.
-  destruct (nullable e) as [ | ] eqn: H_OBS; red; simpl.
-  - now rewrite nullable_true_iff in H_OBS.
-  - now rewrite nullable_false_iff in H_OBS.
-Qed.
-
-Theorem empty_inv (s : Input.t)
-  : s \in eval_regex (Re.Empty) <-> s = [].
-Proof.
-  ss!.
-Qed.
-
-Theorem null_inv (s : Input.t)
-  : s \in eval_regex (Re.Null) <-> False.
-Proof.
-  ss!.
-Qed.
-
-Theorem char_inv (s : Input.t) (c : ascii)
-  : s \in eval_regex (Re.Char c) <-> s = [c].
-Proof.
-  ss!.
-Qed.
-
-Theorem union_inv (s : Input.t) (e1 : regex ascii) (e2 : regex ascii)
-  : s \in eval_regex (Re.Union e1 e2) <-> (s \in eval_regex e1 \/ s \in eval_regex e2).
-Proof.
-  ss!.
-Qed.
-
-Theorem append_inv (s : Input.t) (e1 : regex ascii) (e2 : regex ascii)
-  : s \in eval_regex (Re.Append e1 e2) <-> (exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e1 /\ s2 \in eval_regex e2).
-Proof.
-  ss!.
-Qed.
-
-Theorem star_inv (s : Input.t) (e : regex ascii)
-  : s \in eval_regex (Re.Star e) <-> (s = [] \/ (exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e /\ s2 \in eval_regex (Re.Star e))).
-Proof.
-  split; intros IN.
-  - now inv IN; firstorder.
-  - destruct IN as [EQ | (s1 & s2 & EQ & H_s1 & H_s2)]; subst s; [econs 1 | econs 2]; eauto.
-Qed.
-
-Fact star_nil (e : regex ascii)
-  : [] \in eval_regex (Re.Star e).
-Proof.
-  econs 1.
-Qed.
-
-End REGEX.
-
-#[local] Hint Resolve star_nil : core.
 
 End LGS.
