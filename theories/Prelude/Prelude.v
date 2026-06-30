@@ -14,6 +14,9 @@ Require Export Stdlib.Relations.Relation_Definitions.
 Require Export Stdlib.Relations.Relation_Operators.
 Require Export Stdlib.Setoids.Setoid.
 
+Scheme All for and.
+Scheme All for ex.
+
 #[local] Obligation Tactic := idtac.
 
 Create Rewrite HintDb simplication_hints.

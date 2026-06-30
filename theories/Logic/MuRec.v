@@ -229,9 +229,6 @@ Defined.
 Let Value : Set :=
   nat.
 
-Scheme All for and.
-Scheme All for ex.
-
 Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t Value n -> Value -> Prop :=
   | MR_succ_spec x
     : MuRecSpec 1 (MR_succ) [x] (S x)
