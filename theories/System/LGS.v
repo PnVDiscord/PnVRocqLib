@@ -123,3 +123,84 @@ Instance BuildErrorM_isMonad@{u} : isMonad@{u u} BuildErrorM@{u} :=
 
 #[local] Existing Instance list_corresponds_to_finite_ensemble.
 #[local] Existing Instance alist_corresponds_to_finite_partial_map.
+
+Module MkLGS (Token : TOKEN_SPEC).
+
+Module Input.
+
+Definition t : Set :=
+  list ascii.
+
+Fixpoint of_string (s : string) : Input.t :=
+  match s with
+  | EmptyString => []
+  | String c s' => c :: of_string s'
+  end.
+
+Fixpoint to_string (s : Input.t) : string :=
+  match s with
+  | [] => EmptyString
+  | c :: s' => String c (to_string s')
+  end.
+
+Theorem to_of_string (s : string)
+  : to_string (of_string s) = s.
+Proof.
+  induction s as [ | c s IH]; simpl; congruence.
+Qed.
+
+Theorem of_to_string (s : Input.t)
+  : of_string (to_string s) = s.
+Proof.
+  induction s as [ | c s IH]; simpl; congruence.
+Qed.
+
+Theorem length_of_string (s : string)
+  : length (of_string s) = String.length s.
+Proof.
+  induction s as [ | c s IH]; simpl; congruence.
+Qed.
+
+Theorem to_string_app (s1 : Input.t) (s2 : Input.t)
+  : to_string (s1 ++ s2) = String.append (to_string s1) (to_string s2).
+Proof.
+  induction s1 as [ | c s1 IH]; simpl; congruence.
+Qed.
+
+Theorem prefix_suffix_decompose (s : Input.t) (n : nat)
+  (LE : n <= length s)
+  : exists prefix, exists suffix, s = prefix ++ suffix /\ length prefix = n.
+Proof.
+  exists (firstn n s), (skipn n s). rewrite firstn_skipn. rewrite length_firstn. done.
+Qed.
+
+Theorem app_cancel_prefix (prefix : Input.t) (s1 : Input.t) (s2 : Input.t)
+  (EQ : prefix ++ s1 = prefix ++ s2)
+  : s1 = s2.
+Proof.
+  eapply L.app_cancel_l. exact EQ.
+Qed.
+
+Theorem app_cancel_suffix (s1 : Input.t) (s2 : Input.t) (suffix : Input.t)
+  (EQ : s1 ++ suffix = s2 ++ suffix)
+  : s1 = s2.
+Proof.
+  eapply L.app_cancel_r. exact EQ.
+Qed.
+
+Theorem empty_or_nonempty (s : Input.t)
+  : { s = [] } + { exists c, exists s', s = c :: s' }.
+Proof.
+  destruct s as [ | c s']; [left; reflexivity | right; exists c, s'; reflexivity].
+Defined.
+
+Theorem nonempty_prefix_rest_shorter (consumed : Input.t) (rest : Input.t)
+  (NONEMPTY : consumed ≠ [])
+  : length rest < length (consumed ++ rest).
+Proof.
+  destruct consumed as [ | c consumed]; done.
+Qed.
+
+End Input.
+
+End MkLGS.
