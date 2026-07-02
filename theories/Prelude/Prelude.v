@@ -2528,7 +2528,7 @@ Parameter t_hasEqDec : hasEqDec@{Set} t.
 
 Parameter all : list t.
 
-Parameter all_complete : forall x : t, L.In x all.
+Parameter in_all_intro : forall x : t, L.In x all.
 
 Parameter all_no_dup : NoDup all.
 
@@ -2546,11 +2546,11 @@ Instance t_hasEqDec : hasEqDec@{Set} Option.t :=
 Definition all : list Option.t :=
   None :: map Some E.all.
 
-Lemma all_complete
+Lemma in_all_intro
   : forall x : Option.t, L.In x Option.all.
 Proof.
   intros [x | ]; simpl.
-  - right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E.all_complete].
+  - right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E.in_all_intro].
   - left. reflexivity.
 Qed.
 
@@ -2578,12 +2578,12 @@ Instance t_hasEqDec : hasEqDec@{Set} Sum.t :=
 Definition all : list Sum.t :=
   map inl E1.all ++ map inr E2.all.
 
-Lemma all_complete
+Lemma in_all_intro
   : forall x : Sum.t, L.In x Sum.all.
 Proof.
   intros [x | x]; unfold all; rewrite L.in_app_iff.
-  - left. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E1.all_complete].
-  - right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E2.all_complete].
+  - left. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E1.in_all_intro].
+  - right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E2.in_all_intro].
 Qed.
 
 Lemma all_no_dup
@@ -2615,7 +2615,7 @@ Definition t_hasEqDec : hasEqDec@{Set} Bool_FinEnum.t :=
 Definition all : list bool :=
   [false; true].
 
-Lemma all_complete
+Lemma in_all_intro
   : forall x : Bool_FinEnum.t, L.In x Bool_FinEnum.all.
 Proof.
   intros [ | ]; simpl; tauto.

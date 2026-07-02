@@ -1002,3 +1002,9 @@ Proof.
   refine {| encode := encode_list (@encode A COUNTABLE); decode := decode_list (@decode A COUNTABLE); decode_encode := _ |}.
   exact (decode_encode_list (@encode A COUNTABLE) (@decode A COUNTABLE) (@decode_encode A COUNTABLE)).
 Defined.
+
+Fixpoint pow2 (n : nat) {struct n} : nat :=
+  match n with
+  | O => 1
+  | S n' => 2 * pow2 n'
+  end.

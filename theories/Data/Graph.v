@@ -250,6 +250,8 @@ Module DigraphFixedpoint.
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
 
+#[local] Hint Rewrite L.in_flat_map : simplication_hints.
+
 Section DIGRAPH_FIXEDPOINT.
 
 #[local] Notation " src '~~~[' w ']~~>*('  G  ')' tgt " := (@walk G tgt src w).
@@ -308,7 +310,7 @@ Variable vertices' : list V.
 
 Hypothesis vertices_sim : vertices' =~= E.full.
 
-Lemma vertices'_complete (v : V)
+Lemma vertices'_intro (v : V)
   : In v vertices'.
 Proof.
   pose proof vertices_sim as SIM.
@@ -330,7 +332,7 @@ Fixpoint reachableb (fuel : nat) (x : V) (y : V) {struct fuel} : bool :=
 Definition reachable' (x : V) : list V :=
   L.filter (reachableb (L.length vertices') x) vertices'.
 
-Lemma reachableb_sound (fuel : nat) (x : V) (y : V)
+Lemma reachableb_elim (fuel : nat) (x : V) (y : V)
   (REACH : reachableb fuel x y = true)
   : exists w, L.length w <= fuel /\ x ~~~[ w ]~~> y.
 Proof.
@@ -347,7 +349,7 @@ Proof.
       exists (z :: w). split; [simpl; lia | econstructor 2; eauto].
 Qed.
 
-Lemma reachableb_complete (fuel : nat) (x : V) (y : V) (w : list V)
+Lemma reachableb_intro (fuel : nat) (x : V) (y : V) (w : list V)
   (WALK : x ~~~[ w ]~~> y)
   (LENGTH : L.length w <= fuel)
   : reachableb fuel x y = true.
@@ -359,7 +361,7 @@ Proof.
     + rewrite orb_true_iff. left. now rewrite eqb_eq.
   - destruct fuel as [ | fuel]; simpl in LENGTH; [lia | ].
     simpl. rewrite orb_true_iff. right. rewrite L.existsb_exists.
-    exists v1. split; [eapply vertices'_complete | ].
+    exists v1. split; [eapply vertices'_intro | ].
     destruct (E_dec v0 v1) as [EDGE' | NO_EDGE]; ss!.
 Qed.
 
@@ -368,7 +370,7 @@ Lemma reachableb_iff_reachable (x : V) (y : V)
 Proof.
   split.
   - intros REACH.
-    pose proof (reachableb_sound _ _ _ REACH) as (w & _ & WALK).
+    pose proof (reachableb_elim _ _ _ REACH) as (w & _ & WALK).
     now exists w.
   - intros [w WALK].
     assert (exists p, x ---[ p ]-->*( G ) y) as [p PATH].
@@ -377,9 +379,9 @@ Proof.
     }
     rewrite path_iff_no_dup_walk in PATH.
     clear WALK. destruct PATH as [WALK NO_DUP].
-    eapply reachableb_complete; eauto.
+    eapply reachableb_intro; eauto.
     eapply L.NoDup_incl_length; eauto.
-    ii; eapply vertices'_complete.
+    ii; eapply vertices'_intro.
 Qed.
 
 Lemma reachable_sim (x : V)
@@ -389,7 +391,7 @@ Proof.
   intros y. unfold reachable'. rewrite -> L.filter_In. split.
   - intros [_ REACH]. now rewrite <- reachableb_iff_reachable.
   - intros REACH. split.
-    + eapply vertices'_complete.
+    + eapply vertices'_intro.
     + now rewrite reachableb_iff_reachable.
 Qed.
 
@@ -564,7 +566,7 @@ Lemma digraph_value_seed {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : 
   (IN : a ∈ seed x)
   : a ∈ digraph_value fuel seed deps x.
 Proof.
-  destruct fuel as [ | fuel]; simpl; eapply normalize_complete; auto. now eapply union_complete; left.
+  destruct fuel as [ | fuel]; ss!.
 Qed.
 
 Lemma digraph_value_propagated {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : X -> list A) (deps : X -> list X) (x : X) (y : X) (a : A)
@@ -572,34 +574,25 @@ Lemma digraph_value_propagated {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (s
   (IN : a ∈ digraph_value fuel seed deps y)
   : a ∈ digraph_value (S fuel) seed deps x.
 Proof.
-  simpl. eapply normalize_complete. eapply union_complete. right. rewrite in_flat_map. now exists y.
+  ss!.
 Qed.
 
-Theorem digraph_value_sound {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
+Theorem digraph_value_elim {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
   (IN : a ∈ digraph_value fuel seed deps x)
   : digraph_closure seed deps a x.
 Proof.
   revert x a IN. induction fuel as [ | fuel IH]; intros x a IN; simpl in IN.
-  - eapply digraph_closure_seed. eapply normalize_sound. exact IN.
-  - pose proof (normalize_sound _ _ IN) as IN'.
-    pose proof (union_sound (seed x) (flat_map (digraph_value fuel seed deps) (deps x)) a IN') as [IN_SEED | IN_DEPS].
+  - eapply digraph_closure_seed. ss!.
+  - ss!.
     + now eapply digraph_closure_seed.
-    + rewrite in_flat_map in IN_DEPS. destruct IN_DEPS as (y & EDGE & IN_Y).
-      eapply digraph_closure_step with (y := y); ss!.
+    + eapply digraph_closure_step; ss!.
 Qed.
 
 Lemma digraph_value_monotone_step {A : Type} `{EQ_DEC : hasEqDec A} (fuel : nat) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
   (IN : a ∈ digraph_value fuel seed deps x)
   : a ∈ digraph_value (S fuel) seed deps x.
 Proof.
-  revert x a IN. induction fuel as [ | fuel IH]; intros x a IN; simpl in IN |- *.
-  - eapply normalize_complete. eapply union_complete. left. now eapply normalize_sound.
-  - pose proof (normalize_sound _ _ IN) as IN'.
-    pose proof (union_sound (seed x) (flat_map (digraph_value fuel seed deps) (deps x)) a IN') as [IN_SEED | IN_DEPS].
-    + eapply normalize_complete. eapply union_complete. left. exact IN_SEED.
-    + rewrite in_flat_map in IN_DEPS. destruct IN_DEPS as (y & EDGE & IN_Y).
-      eapply normalize_complete. eapply union_complete. right.
-      rewrite in_flat_map. exists y. split; [exact EDGE | eapply IH; exact IN_Y].
+  revert x a IN; induction fuel as [ | fuel IH]; intros x a IN; simpl in IN |- *; ss!.
 Qed.
 
 Lemma digraph_value_monotone {A : Type} `{EQ_DEC : hasEqDec A} (fuel1 : nat) (fuel2 : nat) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
@@ -609,9 +602,9 @@ Lemma digraph_value_monotone {A : Type} `{EQ_DEC : hasEqDec A} (fuel1 : nat) (fu
 Proof.
   revert fuel1 x a LE IN; induction fuel2 as [ | fuel2 IH]; intros fuel1 x a LE IN.
   - assert (fuel1 = O) as EQ by lia.
-    subst fuel1. exact IN.
+    done!.
   - pose proof (Nat.eq_dec fuel1 (S fuel2)) as [EQ | NE].
-    + subst fuel1. exact IN.
+    + done!.
     + eapply digraph_value_monotone_step. eapply IH with (fuel1 := fuel1) (x := x) (a := a); done!.
 Qed.
 
@@ -625,7 +618,7 @@ Proof.
   - destruct fuel as [ | fuel]; simpl in LE; [lia | eapply digraph_value_propagated]; done!.
 Qed.
 
-Theorem digraph_closure_complete {A : Type} `{EQ_DEC : hasEqDec A} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
+Theorem digraph_closure_intro {A : Type} `{EQ_DEC : hasEqDec A} (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
   (IN : digraph_closure seed deps a x)
   : exists fuel, a ∈ digraph_value fuel seed deps x.
 Proof.
@@ -668,7 +661,7 @@ Proof.
   intros x a CLOSURE; induction CLOSURE as [x SEED_IN | x y EDGE CLOSURE IH]; ss!.
 Qed.
 
-Theorem digraph_closure_complete_bounded {A : Type} `{EQ_DEC : hasEqDec A} `{X_hasEqDec : hasEqDec X} (fuel : nat) (nodes : list X) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
+Theorem digraph_closure_intro_bounded {A : Type} `{EQ_DEC : hasEqDec A} `{X_hasEqDec : hasEqDec X} (fuel : nat) (nodes : list X) (seed : X -> list A) (deps : X -> list X) (x : X) (a : A)
   (fuel_ENOUGH : length nodes <= fuel)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
   (IN : digraph_closure seed deps a x)
@@ -685,8 +678,8 @@ Theorem digraph_value_iff_closure_bounded {A : Type} `{EQ_DEC : hasEqDec A} `{X_
   : a ∈ digraph_value fuel seed deps x <-> digraph_closure seed deps a x.
 Proof.
   split.
-  - exact (digraph_value_sound fuel seed deps x a).
-  - intros IN. eapply digraph_closure_complete_bounded; eauto.
+  - exact (digraph_value_elim fuel seed deps x a).
+  - intros IN. eapply digraph_closure_intro_bounded; eauto.
 Qed.
 
 End DIGRAPH.
@@ -819,19 +812,19 @@ Fixpoint reachableb_accum (fuel : nat) (v : V) (v' : V) {struct fuel} : bool :=
   | S fuel' => eqb v v' || L.existsb (fun v1 => if E_dec v v1 then reachableb_accum fuel' v1 v' else false) enum_vertices
   end.
 
-Lemma reachableb_accum_sound (fuel : nat) (v : V) (v' : V)
+Lemma reachableb_accum_elim (fuel : nat) (v : V) (v' : V)
   (REACHABLE : reachableb_accum fuel v v' = true)
   : exists w, L.length w <= fuel /\ v ~~~[ w ]~~>*( GRAPH ) v'.
 Proof.
-  exact (DigraphFixedpoint.reachableb_sound enum_vertices fuel v v' REACHABLE).
+  exact (DigraphFixedpoint.reachableb_elim enum_vertices fuel v v' REACHABLE).
 Qed.
 
-Lemma reachableb_accum_complete (fuel : nat) (v : V) (v' : V) (w : list V)
+Lemma reachableb_accum_intro (fuel : nat) (v : V) (v' : V) (w : list V)
   (WALK : v ~~~[ w ]~~>*( GRAPH ) v')
   (LENGTH : L.length w <= fuel)
   : reachableb_accum fuel v v' = true.
 Proof.
-  exact (DigraphFixedpoint.reachableb_complete enum_vertices enum_vertices_all fuel v v' w WALK LENGTH).
+  exact (DigraphFixedpoint.reachableb_intro enum_vertices enum_vertices_all fuel v v' w WALK LENGTH).
 Qed.
 
 Definition reachableb : forall v : V, forall v' : V, bool :=
@@ -1027,11 +1020,11 @@ Proof.
   exact (DigraphFixedpoint.digraph_value_propagated fuel seed deps v v' a EDGE IN).
 Qed.
 
-Theorem digraph_cl_accum_sound (fuel : nat) (v : V) (a : A)
+Theorem digraph_cl_accum_elim (fuel : nat) (v : V) (a : A)
   (IN : a ∈ digraph_cl_accum fuel v)
   : a \in digraph_cl v.
 Proof.
-  exact (DigraphFixedpoint.digraph_value_sound fuel seed deps v a IN).
+  exact (DigraphFixedpoint.digraph_value_elim fuel seed deps v a IN).
 Qed.
 
 Lemma digraph_cl_accum_monotone (fuel : nat) (fuel' : nat) (v : V) (a : A)
@@ -1050,11 +1043,11 @@ Proof.
   exact (DigraphFixedpoint.digraph_trace_value seed deps v a tr fuel TRACE LE).
 Qed.
 
-Theorem digraph_cl_complete (v : V) (a : A)
+Theorem digraph_cl_intro (v : V) (a : A)
   (IN : a \in digraph_cl v)
   : exists fuel, a ∈ digraph_cl_accum fuel v.
 Proof.
-  exact (DigraphFixedpoint.digraph_closure_complete seed deps v a IN).
+  exact (DigraphFixedpoint.digraph_closure_intro seed deps v a IN).
 Qed.
 
 Theorem digraph_cl_accum_good (fuel : nat) (nodes : list V) (v : V) (a : A)
@@ -1063,8 +1056,8 @@ Theorem digraph_cl_accum_good (fuel : nat) (nodes : list V) (v : V) (a : A)
   : a ∈ digraph_cl_accum fuel v <-> a \in digraph_cl v.
 Proof.
   split.
-  - exact (digraph_cl_accum_sound fuel v a).
-  - exact (DigraphFixedpoint.digraph_closure_complete_bounded fuel nodes seed deps v a fuel_ENOUGH deps_CLOSED).
+  - exact (digraph_cl_accum_elim fuel v a).
+  - exact (DigraphFixedpoint.digraph_closure_intro_bounded fuel nodes seed deps v a fuel_ENOUGH deps_CLOSED).
 Qed.
 
 Definition digraph_cl_impl : forall v : V, list A :=
