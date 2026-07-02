@@ -38,11 +38,11 @@ End StlcLang.
 
 Module ChurchStyleStlc.
 
-Notation language := StlcLang.language.
-Notation basic_types := StlcLang.basic_types.
-Notation constants := StlcLang.constants.
-Notation signature := StlcLang.signature.
-Notation bty := StlcLang.bty.
+Abbreviation language := StlcLang.language.
+Abbreviation basic_types := StlcLang.basic_types.
+Abbreviation constants := StlcLang.constants.
+Abbreviation signature := StlcLang.signature.
+Abbreviation bty := StlcLang.bty.
 
 Definition typ (L : language) : Set :=
   StlcLang.typ L.(basic_types).
@@ -58,11 +58,11 @@ Section STLC.
 
 #[local] Hint Resolve Name.ne_pirrel : core.
 
-#[local] Notation bty := (StlcLang.bty _).
+#[local] Abbreviation bty := (StlcLang.bty _).
 
 Context `{L : !language}.
 
-#[local] Notation typ := (typ L).
+#[local] Abbreviation typ := (typ L).
 
 #[global]
 Instance typ_hasEqDec
@@ -1102,7 +1102,7 @@ Section BASIC_THEORY2_ON_SYNTAX.
 
 #[local] Opaque chi.
 
-#[local] Notation bty := (bty _).
+#[local] Abbreviation bty := (bty _).
 #[local] Infix "≡ₐ" := alpha_equiv : type_scope.
 
 Lemma alpha_equiv_subst_shadow x e gamma M

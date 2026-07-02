@@ -142,10 +142,10 @@ Proof with eauto with *.
   - eapply Prelude.fmap_compose.
   - eapply Prelude.fmap_id.
   - red. intros f fmap_f. split.
-    + intros (f'&f_EQ&fmap_f_EQ). exists fmap_f. split...
-      intros x. rewrite <- fmap_f_EQ with (x := x). eapply Prelude.fmap_lifts_ext_eq...
-    + intros (fmap_f'&fmap_f_EQ&fmap_f_EQ'). exists f. split...
-      intros x. rewrite -> fmap_f_EQ with (x := x)...
+    + intros (f'&f_EQ&fmap_f_EQ). exists fmap_f. split; eauto with *.
+      intros x. rewrite <- fmap_f_EQ with (x := x). eapply Prelude.fmap_lifts_ext_eq; eauto with *.
+    + intros (fmap_f'&fmap_f_EQ&fmap_f_EQ'). exists f. split; eauto with *.
+      intros x. rewrite -> fmap_f_EQ with (x := x); eauto with *.
 Qed.
 
 #[local, universes(polymorphic=yes)]
@@ -160,17 +160,17 @@ Proof with reflexivity || eauto with *.
     + exact (@Prelude.fmap_compose F _ _ LAW A B C f g).
     + exact (@Prelude.fmap_id F _ _ LAW A).
     + intros f fmap_f'. split.
-      * intros (f'&f_EQ&fmap_f_EQ). exists (map_hom f); split...
+      * intros (f'&f_EQ&fmap_f_EQ). exists (map_hom f); split; reflexivity || eauto with *.
         rewrite <- fmap_f_EQ. exact (@Prelude.fmap_lifts_ext_eq F _ _ LAW _ _ _ _ f_EQ).
-      * intros (fmap_f&fmap_f_EQ&fmap_f_EQ'). exists f; split...
-        rewrite -> fmap_f_EQ, <- fmap_f_EQ'...
+      * intros (fmap_f&fmap_f_EQ&fmap_f_EQ'). exists f; split; reflexivity || eauto with *.
+        rewrite -> fmap_f_EQ, <- fmap_f_EQ'; reflexivity || eauto with *.
   - split; i.
-    + cbv; intros x1 x2 ->...
-    + unfold fmap. unfold CovariantFunctor_isFunctor. rewrite CAT.fmap_compose...
-    + unfold fmap. unfold CovariantFunctor_isFunctor. rewrite CAT.fmap_id...
+    + cbv; intros x1 x2 ->; reflexivity || eauto with *.
+    + unfold fmap. unfold CovariantFunctor_isFunctor. rewrite CAT.fmap_compose; reflexivity || eauto with *.
+    + unfold fmap. unfold CovariantFunctor_isFunctor. rewrite CAT.fmap_id; reflexivity || eauto with *.
     + exploit (proj1 (CAT.fmap_comm f1 (fmap f2))).
-      { exists f2; split... }
-      intros (fmap_f&EQ1&EQ2). rewrite -> EQ1, <- EQ2...
+      { exists f2; split; reflexivity || eauto with *. }
+      intros (fmap_f&EQ1&EQ2). rewrite -> EQ1, <- EQ2; reflexivity || eauto with *.
 Qed.
 
 End HASK.
@@ -203,7 +203,7 @@ Instance SliceCategory_good (CAT : isCategory@{U_ob U_discourse}) (SETOID : fora
   : isLawfulCategory (SliceCategory (CAT := CAT) (SETOID := SETOID) (CATEGORY_LAW := CATEGORY_LAW) C) (SETOID := fun Dom => fun Cod => @subSetoid (CAT.(hom) (projT1 Dom) (projT1 Cod)) (SETOID (projT1 Dom) (projT1 Cod)) (fun arr : CAT.(hom) (projT1 Dom) (projT1 Cod) => projT2 Dom == CAT.(compose) (projT2 Cod) arr)).
 Proof with eauto with *.
   split; cbn.
-  - intros [X f] [Y g] [Z h] [arr2' EQ2'] [arr2 EQ2] [arr1' EQ1'] [arr1 EQ1]; simpl in *; intros arr2_EQ arr1_EQ. eapply compose_compatWith_eqProp...
+  - intros [X f] [Y g] [Z h] [arr2' EQ2'] [arr2 EQ2] [arr1' EQ1'] [arr1 EQ1]; simpl in *; intros arr2_EQ arr1_EQ. eapply compose_compatWith_eqProp; eauto with *.
   - intros [X f] [Y g] [Z h] [W i]; simpl in *; intros [arr'' EQ''] [arr' EQ'] [arr EQ]; simpl in *. eapply compose_assoc.
   - intros [X f] [Y g]; simpl in *; intros [arr EQ]; simpl in *. eapply compose_id_l.
   - intros [X f] [Y g]; simpl in *; intros [arr EQ]; simpl in *. eapply compose_id_r.

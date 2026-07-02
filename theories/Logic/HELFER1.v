@@ -32,7 +32,7 @@ Class abstract_Henkin_constants (Henkin_constants : Set) (L : language) {Henkin_
 
 Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
 
-#[local] Notation L' := (augmented_language L Henkin_constants).
+#[local] Abbreviation L' := (augmented_language L Henkin_constants).
 
 Context {AHC : abstract_Henkin_constants Henkin_constants L}.
 
@@ -55,9 +55,9 @@ Context {L : language} {constant_symbols1 : Set} {constant_symbols2 : Set}.
 
 Variable constant_symbols_mapping : constant_symbols1 -> constant_symbols2.
 
-#[local] Notation L1 := (augmented_language L constant_symbols1).
+#[local] Abbreviation L1 := (augmented_language L constant_symbols1).
 
-#[local] Notation L2 := (augmented_language L constant_symbols2).
+#[local] Abbreviation L2 := (augmented_language L constant_symbols2).
 
 Fixpoint trm_mapping (t : trm L1) : trm L2 :=
   match t with
@@ -102,7 +102,7 @@ Definition L_stage (k : nat) : language :=
 Definition Henkin_constants : Set :=
   { k : nat & ivar * frm (L_stage k) }.
 
-#[local] Notation L_infty := (augmented_language L Henkin_constants).
+#[local] Abbreviation L_infty := (augmented_language L Henkin_constants).
 
 Fixpoint hc_k_to_hc_infty (k : nat) : Henkin_constants_stage k -> Henkin_constants :=
   match k as k return Henkin_constants_stage k -> Henkin_constants with
@@ -462,7 +462,7 @@ Section HSUBST.
 
 Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
 
-#[local] Notation L' := (augmented_language L Henkin_constants).
+#[local] Abbreviation L' := (augmented_language L Henkin_constants).
 
 Lemma HC_occurs_in_embed_trm_false (t : trm L)
   : forall hc : Henkin_constants, HC_occurs_in_trm hc (embed_trm t) = false
@@ -490,9 +490,9 @@ Qed.
 
 #[local] Hint Rewrite HC_occurs_in_embed_frm_false : simplication_hints.
 
-#[local] Notation hatom := (ivar + Henkin_constants)%type.
+#[local] Abbreviation hatom := (ivar + Henkin_constants)%type.
 
-#[local] Notation hsubst := (hatom -> trm L').
+#[local] Abbreviation hsubst := (hatom -> trm L').
 
 #[local] Open Scope list_scope.
 
@@ -1282,10 +1282,10 @@ Import HELFER1_i.
 Context {L : language} {constant_symbols1 : Set} {constant_symbols2 : Set}.
 Variable constant_symbols_mapping : constant_symbols1 -> constant_symbols2.
 
-#[local] Notation L1 := (augmented_language L constant_symbols1).
-#[local] Notation L2 := (augmented_language L constant_symbols2).
+#[local] Abbreviation L1 := (augmented_language L constant_symbols1).
+#[local] Abbreviation L2 := (augmented_language L constant_symbols2).
 
-#[local] Notation h := constant_symbols_mapping.
+#[local] Abbreviation h := constant_symbols_mapping.
 
 Definition subst_mapping (s : subst L1) : subst L2 :=
   fun z => trm_mapping h (s z).
@@ -1472,10 +1472,10 @@ Context {L : language} {K1 : Set} {K2 : Set}.
 
 Variable h : K1 -> K2.
 
-#[local] Notation L1 := (augmented_language L K1).
-#[local] Notation L2 := (augmented_language L K2).
-#[local] Notation hatom1 := (ivar + K1)%type.
-#[local] Notation hatom2 := (ivar + K2)%type.
+#[local] Abbreviation L1 := (augmented_language L K1).
+#[local] Abbreviation L2 := (augmented_language L K2).
+#[local] Abbreviation hatom1 := (ivar + K1)%type.
+#[local] Abbreviation hatom2 := (ivar + K2)%type.
 
 Inductive constant_symbols_similarity : Similarity L1.(constant_symbols) L2.(constant_symbols) :=
   | constant_symbols_similarity_inl (c : L.(constant_symbols))
@@ -1787,7 +1787,7 @@ Section DEDUCTION.
 #[local] Infix "\subseteq" := E.isSubsetOf.
 #[local] Notation "x ≠ y" := (~ eq x y) : type_scope.
 #[local] Infix "⊢" := HilbertFol.proves : type_scope.
-#[local] Notation inconsistent := FolHilbert.inconsistent.
+#[local] Abbreviation inconsistent := FolHilbert.inconsistent.
 
 Context {L : language}.
 
@@ -1797,9 +1797,9 @@ Context {K1 : Set} {K2 : Set} {K1_hasEqDec : hasEqDec@{Set} K1} {K2_hasEqDec : h
 
 Variable h : K1 -> K2.
 
-#[local] Notation L1 := (augmented_language L K1).
+#[local] Abbreviation L1 := (augmented_language L K1).
 
-#[local] Notation L2 := (augmented_language L K2).
+#[local] Abbreviation L2 := (augmented_language L K2).
 
 Hypothesis h_inj : forall c1, forall c2, h c1 = h c2 -> c1 = c2.
 
@@ -1837,7 +1837,7 @@ End MAPPING_REPLACE_CONSTANT.
 
 Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
 
-#[local] Notation L' := (augmented_language L Henkin_constants).
+#[local] Abbreviation L' := (augmented_language L Henkin_constants).
 #[local] Infix "≡" := alpha_equiv.
 
 Section BOUNDED_HC.
@@ -1980,9 +1980,9 @@ Section FINITE_TO_NAT_FIX.
 
 Context (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L').
 
-#[local] Notation K := (Kf hc0 ps p).
-#[local] Notation LK := (augmented_language L K).
-#[local] Notation LN := (augmented_language L nat).
+#[local] Abbreviation K := (Kf hc0 ps p).
+#[local] Abbreviation LK := (augmented_language L K).
+#[local] Abbreviation LN := (augmented_language L nat).
 
 Variable g : K -> nat.
 Variable g_back : nat -> K.
@@ -2254,9 +2254,9 @@ Qed.
 
 Section HENKIN_STAGES.
 
-#[local] Notation hatom := (ivar + Henkin_constants)%type.
+#[local] Abbreviation hatom := (ivar + Henkin_constants)%type.
 
-#[local] Notation hsubst := (hatom -> trm L').
+#[local] Abbreviation hsubst := (hatom -> trm L').
 
 Definition HenkinAxms_upto (n : nat) : ensemble (frm L') :=
   fun A => exists hc, (hc_stage hc < n)%nat /\ A = HenkinAxiom hc.
@@ -2570,7 +2570,7 @@ Proof.
     eapply remove_Henkin_axioms_list; eauto.
 Qed.
 
-#[local] Notation embed_frm := (embed_frm (Henkin_constants := Henkin_constants)).
+#[local] Abbreviation embed_frm := (embed_frm (Henkin_constants := Henkin_constants)).
 
 Lemma AddHenkin_stage0_equiconsistent (X : ensemble (frm L))
   : inconsistent (E.image embed_frm X) <-> inconsistent (AddHenkin_stage X O).

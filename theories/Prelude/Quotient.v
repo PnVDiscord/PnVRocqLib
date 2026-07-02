@@ -49,7 +49,7 @@ Axiom Quotient_always_exists : forall X : Type, forall SETOID : isSetoid X, isQu
 
 End Quotient.
 
-Notation Quot := Quotient.t@{_}.
+Abbreviation Quot := Quotient.t@{_}.
 
 Section UNIVERSE_TEST.
 

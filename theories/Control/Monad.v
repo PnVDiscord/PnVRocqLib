@@ -15,40 +15,34 @@ Definition monad@{u v | } {M : Type@{u} -> Type@{v}} {MONAD : isMonad@{u v} M} {
 
 Open Scope monad_scope.
 
-Reserved Notation "'do' m 'end'" (m custom do_notation at level 10, at level 0, format "'do' '//' '[hv' m ']'  '//' 'end'  '//'").
-Notation "'do' m 'end'" := m : monad_scope.
+Reserved Notation "'do' m" (m custom do_notation at level 10, at level 100, format "'do' '//' '[hv' m ']'  '//'").
+Notation "'do' m" := m : monad_scope.
 
-Notation "x '<-' m1 ';' m2" := (bind m1 (fun x => m2)) (in custom do_notation at level 0, x ident, m1 constr, m2 custom do_notation at level 10, format "x  '<-'  m1 ';' '//' m2").
-Notation "'let' x ':=' t ';' m" := (let x := t in m) (in custom do_notation at level 0, x pattern, t constr, m custom do_notation at level 10, format "'let'  x  ':='  t ';' '//' m").
-Notation "''' x '<-' m1 ';' m2" := (bind m1 (fun 'x => m2)) (in custom do_notation at level 0, x pattern, m1 constr, m2 custom do_notation at level 10, format "''' x  '<-'  m1 ';' '//' m2").
-Notation "m1 ';' m2" := (bind m1 (fun _ => m2)) (in custom do_notation at level 0, m1 constr, m2 custom do_notation at level 10, format "m1 ';' '//' m2").
+Notation "'let' x ':=' t ';' m" := (let x := t in m) (in custom do_notation at level 1, x pattern, t constr, m custom do_notation at level 10, format "'let'  x  ':='  t ';' '//' m").
+Notation "''' x '<-' m1 ';' m2" := (bind m1 (fun 'x => m2)) (in custom do_notation at level 1, x pattern, m1 constr, m2 custom do_notation at level 10, format "''' x  '<-'  m1 ';' '//' m2").
 Notation "'ret' t" := (pure t) (in custom do_notation at level 10, t constr at level 0, format "'ret'  t").
 Notation "t" := t (in custom do_notation at level 0, t constr).
 
 Section EXAMPLE.
 
 Let do_notation_example1 : option nat := do
-  Some 1;
+  '_ <- Some 1;
   'x <- Some 2;
-  Some 3;
+  '_ <- Some 3;
   let y := 4;
-  Some 5;
-  ret (x + y)
-  end.
+  '_ <- Some 5;
+  ret (x + y).
 
-Let do_notation_example2 (a : nat) : option nat :=
-  do
-    Some 1;
-    'x <- Some 2;
-    Some 3;
-    let y := 4;
-    match a with
-    | O => pure (x + y)
-    | S a' => do
-      Some 5;
-      ret 6
-      end
-    end
+Let do_notation_example2 (a : nat) : option nat := do
+  '_ <- Some 1;
+  'x <- Some 2;
+  '_ <- Some 3;
+  let y := 4;
+  match a with
+  | O => pure (x + y)
+  | S a' => do
+    '_ <- Some 5;
+    ret 6
   end.
 
 End EXAMPLE.

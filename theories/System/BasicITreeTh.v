@@ -27,7 +27,7 @@ Module ItreeBisimulation.
 
 Section ITREE_BISIMULATION.
 
-#[local] Notation In := L.In.
+#[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
 
@@ -114,7 +114,7 @@ Qed.
 Lemma eqITree_reflexivity
   : B.Rel_id \subseteq eqITreeF' bot_lattice.
 Proof with eauto with *.
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice B.Rel_id).
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice B.Rel_id).
   rewrite <- paco_fold. intros [lhs rhs] lhs_eq_rhs. repeat red. do 2 red in lhs_eq_rhs.
   destruct lhs.(observe) as [r1 | t1 | X1 e1 k1] eqn: H_lhs_obs; destruct rhs.(observe) as [r2 | t2 | X2 e2 k2] eqn: H_rhs_obs; try congruence.
   - econstructor 1. replace r2 with r1 by congruence. reflexivity.
@@ -126,36 +126,36 @@ Qed.
 Lemma eqITree_symmetry
   : B.Rel_flip (eqITreeF' bot_lattice) \subseteq eqITreeF' bot_lattice.
 Proof with eauto with *.
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice (B.Rel_flip (eqITreeF' bot_lattice))).
-  rewrite <- paco_fold. intros [lhs rhs] lhs_eq_rhs. apply paco_unfold in lhs_eq_rhs... repeat red in lhs_eq_rhs. repeat red.
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice (B.Rel_flip (eqITreeF' bot_lattice))).
+  rewrite <- paco_fold. intros [lhs rhs] lhs_eq_rhs. apply paco_unfold in lhs_eq_rhs; eauto with *. repeat red in lhs_eq_rhs. repeat red.
   destruct lhs_eq_rhs as [r1 r2 REL | t1 t2 REL | X e k1 k2 REL].
-  - econstructor 1. symmetry...
-  - econstructor 2. apply E.in_union_iff in REL. destruct REL as [REL | REL]; [inversion REL | left; right]...
+  - econstructor 1. symmetry; eauto with *.
+  - econstructor 2. apply E.in_union_iff in REL. destruct REL as [REL | REL]; [inversion REL | left; right]; eauto with *.
   - econstructor 3. intros x. specialize REL with (x := x).
-    apply E.in_union_iff in REL. destruct REL as [REL | REL]; [inversion REL | left; right]...
+    apply E.in_union_iff in REL. destruct REL as [REL | REL]; [inversion REL | left; right]; eauto with *.
 Qed.
 
 Lemma eqITree_transitivity
   : B.Rel_compose (eqITreeF' bot_lattice) (eqITreeF' bot_lattice) \subseteq eqITreeF' bot_lattice.
 Proof with eauto with *.
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice (B.Rel_compose (eqITreeF' bot_lattice) (eqITreeF' bot_lattice))).
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice (B.Rel_compose (eqITreeF' bot_lattice) (eqITreeF' bot_lattice))).
   assert (INIT : eqITreeF (join_lattice bot_lattice (eqITreeF' bot_lattice)) =< eqITreeF (join_lattice Rel_focus (eqITreeF' Rel_focus))).
-  { eapply eqITreeF_isMonotonic1. intros [lhs rhs] [lhs_eq_rhs | lhs_eq_rhs]; [inversion lhs_eq_rhs | right]. eapply paco_preserves_monotonicity with (x1 := bot_lattice)... eapply bot_lattice_spec. now ii. }
-  rewrite <- paco_fold. intros [lhs rhs] [t [lhs_eq_t t_eq_rhs]]. apply paco_unfold in lhs_eq_t... apply paco_unfold in t_eq_rhs... repeat red in lhs_eq_t, t_eq_rhs |- *.
+  { eapply eqITreeF_isMonotonic1. intros [lhs rhs] [lhs_eq_rhs | lhs_eq_rhs]; [inversion lhs_eq_rhs | right]. eapply paco_preserves_monotonicity with (x1 := bot_lattice); eauto with *. eapply bot_lattice_spec. now ii. }
+  rewrite <- paco_fold. intros [lhs rhs] [t [lhs_eq_t t_eq_rhs]]. apply paco_unfold in lhs_eq_t; eauto with *. apply paco_unfold in t_eq_rhs; eauto with *. repeat red in lhs_eq_t, t_eq_rhs |- *.
   destruct t.(observe) as [r3 | t3 | X3 e3 k3] eqn: H_t_obs.
   - inversion lhs_eq_t; subst. rename REL into REL1, H0 into H_lhs_obs. 
     inversion t_eq_rhs; subst. rename REL into REL2, H into H_rhs_obs.
-    econstructor 1. transitivity r3...
+    econstructor 1. transitivity r3; eauto with *.
   - inversion lhs_eq_t; subst. rename REL into REL1, H0 into H_lhs_obs. 
     inversion t_eq_rhs; subst. rename REL into REL2, H into H_rhs_obs.
     apply E.in_union_iff in REL1, REL2. destruct REL1 as [REL1 | REL1]; [inversion REL1 | ]. destruct REL2 as [REL2 | REL2]; [inversion REL2 | ].
-    econstructor 2. left. right. exists t3...
+    econstructor 2. left. right. exists t3; eauto with *.
   - rewrite <- H_t_obs in lhs_eq_t, t_eq_rhs. revert H_t_obs. destruct t_eq_rhs as [r2' r2 REL2 | t2' t2 REL | X2 e2 k2' k2 REL2]; try congruence.
     ii. rewrite H_t_obs in lhs_eq_t. destruct lhs_eq_t as [r1 r1' REL1 | t1 t1' REL1 | X1 e1 k1 k1' REL1]; try congruence. 
     apply VisF_eq_VisF_elim in H_t_obs. destruct H_t_obs as [<- H_EQ]. simpl in H_EQ. inv H_EQ. rename e1 into e, k1' into k.
     econstructor 3. intros x. specialize REL1 with (x := x). specialize REL2 with (x := x).
     apply E.in_union_iff in REL1, REL2. destruct REL1 as [REL1 | REL1]; [inversion REL1 | ]. destruct REL2 as [REL2 | REL2]; [inversion REL2 | ].
-    left. right. exists (k x)...
+    left. right. exists (k x); eauto with *.
 Qed.
 
 #[global]
@@ -283,31 +283,31 @@ Qed.
 
 End ITREE_BIND_CASES.
 
-#[local] Notation eqITreeF1 := (eqITreeF' (SETOID := mkSetoid_from_eq)).
+#[local] Abbreviation eqITreeF1 := (eqITreeF' (SETOID := mkSetoid_from_eq)).
 
 Lemma itree_bind_assoc {R1 : Type} {R2 : Type} {R3 : Type} (t_0 : itree E R1) (k_1 : R1 -> itree E R2) (k_2 : R2 -> itree E R3)
-  : (t_0 >>= fun x_1 => k_1 x_1 >>= k_2) == (t_0 >>= k_1 >>= k_2).
+  : (t_0 >>= fun x_1 => (k_1 x_1 >>= k_2)) == ((t_0 >>= k_1) >>= k_2).
 Proof with eauto with *.
-  symmetry. revert t_0. set (Rel_image := E.image (fun '(lhs, rhs) => (lhs >>= k_1 >>= k_2, rhs >>= fun x_1 => k_1 x_1 >>= k_2))).
+  symmetry. revert t_0. set (Rel_image := E.image (fun '(lhs, rhs) => ((lhs >>= k_1) >>= k_2, rhs >>= fun x_1 => (k_1 x_1 >>= k_2)))).
   enough (to_show : Rel_image (eqITreeF1 bot_lattice) \subseteq eqITreeF1 bot_lattice).
-  { intros t0. eapply to_show. exists (t0, t0)... change (t0 == t0)... }
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice (Rel_image (eqITreeF1 bot_lattice))).
+  { intros t0. eapply to_show. exists (t0, t0); eauto with *. change (t0 == t0); eauto with *. }
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice (Rel_image (eqITreeF1 bot_lattice))).
   assert (INIT : join_lattice bot_lattice (eqITreeF1 bot_lattice) =< join_lattice Rel_focus (eqITreeF1 Rel_focus)).
-  { intros z [z_in | z_in]; [inversion z_in | right]. revert z z_in. change (eqITreeF1 bot_lattice =< eqITreeF1 Rel_focus). eapply paco_preserves_monotonicity... eapply bot_lattice_spec. now ii. }
+  { intros z [z_in | z_in]; [inversion z_in | right]. revert z z_in. change (eqITreeF1 bot_lattice =< eqITreeF1 Rel_focus). eapply paco_preserves_monotonicity; eauto with *. eapply bot_lattice_spec. now ii. }
   rewrite <- paco_fold. intros [k0_lhs k0_rhs] k0_lhs_eq_k0_rhs. apply E.in_image_iff in k0_lhs_eq_k0_rhs.
   destruct k0_lhs_eq_k0_rhs as [[lhs rhs] [H_EQ H_IN]].
   pose proof (@f_equal _ _ fst _ _ H_EQ) as k0_lhs_is.
   pose proof (@f_equal _ _ snd _ _ H_EQ) as k0_rhs_is.
   simpl in k0_lhs_is, k0_rhs_is. subst k0_lhs k0_rhs. clear H_EQ.
-  apply paco_unfold in H_IN... do 2 red in H_IN |- *.
+  apply paco_unfold in H_IN; eauto with *. do 2 red in H_IN |- *.
   repeat rewrite itree_bind_unfold_observed. destruct H_IN as [r1 r2 REL | t1 t2 REL | X e k1 k2 REL]; simpl in REL; simpl.
   - subst r2. rewrite <- itree_bind_unfold_observed. pose proof (eqITree_reflexivity (SETOID := mkSetoid_from_eq) (itree_bind' k_2 (k_1 r1), (itree_bind' k_2 (k_1 r1))) eq_refl) as claim1.
-    apply paco_unfold in claim1... pose proof (eqITreeF_isMonotonic1 _ _ INIT _ claim1) as claim2. simpl in claim2. exact claim2.
+    apply paco_unfold in claim1; eauto with *. pose proof (eqITreeF_isMonotonic1 _ _ INIT _ claim1) as claim2. simpl in claim2. exact claim2.
   - destruct REL as [REL | REL]; [inversion REL | ].
-    econstructor 2. left. right. exists (t1, t2)...
+    econstructor 2. left. right. exists (t1, t2); eauto with *.
   - econstructor 3. intros x. specialize REL with (x := x).
     apply E.in_union_iff in REL. destruct REL as [REL | REL]; [inversion REL | ].
-    left. right. exists (k1 x, k2 x)...
+    left. right. exists (k1 x, k2 x); eauto with *.
 Qed.
 
 Lemma itree_pure_left_id_bind {R1 : Type} {R2 : Type} (k : R1 -> itree E R2) (x : R1)
@@ -321,23 +321,23 @@ Lemma itree_pure_right_id_bind {R1 : Type} (t : itree E R1)
 Proof with eauto with *.
   revert t. set (Rel_image := E.image (B := itree E R1 * itree E R1) (fun '(lhs, rhs) => (lhs >>= pure, rhs))).
   enough (to_show : Rel_image (eqITreeF1 bot_lattice) \subseteq eqITreeF1 bot_lattice).
-  { intros t0. eapply to_show. exists (t0, t0)... change (t0 == t0)... }
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice (Rel_image (eqITreeF1 bot_lattice))).
+  { intros t0. eapply to_show. exists (t0, t0); eauto with *. change (t0 == t0); eauto with *. }
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice (Rel_image (eqITreeF1 bot_lattice))).
   assert (INIT : join_lattice bot_lattice (eqITreeF1 bot_lattice) =< join_lattice Rel_focus (eqITreeF1 Rel_focus)).
-  { intros z [z_in | z_in]; [inversion z_in | right]. revert z z_in. change (eqITreeF1 bot_lattice =< eqITreeF1 Rel_focus). eapply paco_preserves_monotonicity... eapply bot_lattice_spec. now ii. }
+  { intros z [z_in | z_in]; [inversion z_in | right]. revert z z_in. change (eqITreeF1 bot_lattice =< eqITreeF1 Rel_focus). eapply paco_preserves_monotonicity; eauto with *. eapply bot_lattice_spec. now ii. }
   rewrite <- paco_fold. intros [k0_lhs k0_rhs] k0_lhs_eq_k0_rhs. apply E.in_image_iff in k0_lhs_eq_k0_rhs.
   destruct k0_lhs_eq_k0_rhs as [[lhs rhs] [H_EQ H_IN]].
   pose proof (@f_equal _ _ fst _ _ H_EQ) as k0_lhs_is.
   pose proof (@f_equal _ _ snd _ _ H_EQ) as k0_rhs_is.
   simpl in k0_lhs_is, k0_rhs_is. subst k0_lhs k0_rhs. clear H_EQ.
-  apply paco_unfold in H_IN... do 2 red in H_IN |- *.
+  apply paco_unfold in H_IN; eauto with *. do 2 red in H_IN |- *.
   repeat rewrite itree_bind_unfold_observed. destruct H_IN as [r1 r2 REL | t1 t2 REL | X e k1 k2 REL]; simpl in REL; simpl.
-  - econstructor 1...
+  - econstructor 1; eauto with *.
   - destruct REL as [REL | REL]; [inversion REL | ].
-    econstructor 2. left. right. exists (t1, t2)...
+    econstructor 2. left. right. exists (t1, t2); eauto with *.
   - econstructor 3. intros x. specialize REL with (x := x).
     apply E.in_union_iff in REL. destruct REL as [REL | REL]; [inversion REL | ].
-    left. right. exists (k1 x, k2 x)...
+    left. right. exists (k1 x, k2 x); eauto with *.
 Qed.
 
 Lemma itree_bind_compatWith_eqProp_on_1st_arg {R1 : Type} {R2 : Type} (t_1 : itree E R1) (t_2 : itree E R1) (k_0 : R1 -> itree E R2)
@@ -346,25 +346,25 @@ Lemma itree_bind_compatWith_eqProp_on_1st_arg {R1 : Type} {R2 : Type} (t_1 : itr
 Proof with eauto with *.
   revert t_1 t_2 HYP_FST_ARG_EQ. rename k_0 into k0. set (Rel_image := E.image (fun '(lhs, rhs) => (lhs >>= k0, rhs >>= k0))).
   enough (to_show : Rel_image (eqITreeF1 bot_lattice) \subseteq eqITreeF1 bot_lattice).
-  { ii. eapply to_show. exists (t_1, t_2)... }
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice (Rel_image (eqITreeF1 bot_lattice))).
+  { ii. eapply to_show. exists (t_1, t_2); eauto with *. }
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice (Rel_image (eqITreeF1 bot_lattice))).
   assert (INIT : join_lattice bot_lattice (eqITreeF1 bot_lattice) =< join_lattice Rel_focus (eqITreeF1 Rel_focus)).
-  { intros z [z_in | z_in]; [inversion z_in | right]. revert z z_in. change (eqITreeF1 bot_lattice =< eqITreeF1 Rel_focus). eapply paco_preserves_monotonicity... eapply bot_lattice_spec. now ii. }
+  { intros z [z_in | z_in]; [inversion z_in | right]. revert z z_in. change (eqITreeF1 bot_lattice =< eqITreeF1 Rel_focus). eapply paco_preserves_monotonicity; eauto with *. eapply bot_lattice_spec. now ii. }
   rewrite <- paco_fold. intros [k0_lhs k0_rhs] k0_lhs_eq_k0_rhs. apply E.in_image_iff in k0_lhs_eq_k0_rhs.
   destruct k0_lhs_eq_k0_rhs as [[lhs rhs] [H_EQ H_IN]].
   assert (k0_lhs_is : k0_lhs = (lhs >>= k0)) by exact (@f_equal _ _ fst _ _ H_EQ).
   assert (k0_rhs_is : k0_rhs = (rhs >>= k0)) by exact (@f_equal _ _ snd _ _ H_EQ).
-  clear H_EQ. subst k0_lhs k0_rhs. apply paco_unfold in H_IN...
+  clear H_EQ. subst k0_lhs k0_rhs. apply paco_unfold in H_IN; eauto with *.
   do 2 red in H_IN |- *. simpl (itree_isMonad.(bind)). cbn beta. do 2 rewrite itree_bind_unfold_observed.
   destruct H_IN as [r1 r2 REL | t1 t2 REL | X e k1 k2 REL]; simpl in *.
   - assert (claim1 : (k0 r1, k0 r2) \in B.Rel_id) by congruence.
     pose proof (eqITree_reflexivity (SETOID := mkSetoid_from_eq) (k0 r1, k0 r2) claim1) as claim2.
-    apply paco_unfold in claim2... do 2 red in claim2.
+    apply paco_unfold in claim2; eauto with *. do 2 red in claim2.
     exact (eqITreeF_isMonotonic1 _ _ INIT (k0 r1, k0 r2) claim2).
   - destruct REL as [REL | REL]; [inversion REL | ].
-    econstructor 2. left. right... unfold Rel_image. econstructor... reflexivity.
+    econstructor 2. left. right; eauto with *. unfold Rel_image. econstructor; eauto with *. reflexivity.
   - econstructor 3. intros x. specialize REL with (x := x).
-    destruct REL as [REL | REL]; [inversion REL | ]. left. right. unfold Rel_image. econstructor... reflexivity.
+    destruct REL as [REL | REL]; [inversion REL | ]. left. right. unfold Rel_image. econstructor; eauto with *. reflexivity.
 Qed.
 
 Lemma itree_bind_compatWith_eqProp_on_2nd_arg {R1 : Type} {R2 : Type} (t_0 : itree E R1) (k_1 : R1 -> itree E R2) (k_2 : R1 -> itree E R2)
@@ -373,24 +373,24 @@ Lemma itree_bind_compatWith_eqProp_on_2nd_arg {R1 : Type} {R2 : Type} (t_0 : itr
 Proof with eauto with *.
   set (Rel_image := E.image (B := itree E R2 * itree E R2) (fun '(lhs, rhs) => (lhs >>= k_1, rhs >>= k_2))).
   enough (to_show : Rel_image (eqITreeF1 bot_lattice) \subseteq eqITreeF1 bot_lattice).
-  { rename t_0 into t0. eapply to_show. exists (t0, t0)... change (t0 == t0)... }
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice (Rel_image (eqITreeF1 bot_lattice))).
+  { rename t_0 into t0. eapply to_show. exists (t0, t0); eauto with *. change (t0 == t0); eauto with *. }
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice (Rel_image (eqITreeF1 bot_lattice))).
   assert (INIT : join_lattice bot_lattice (eqITreeF1 bot_lattice) =< join_lattice Rel_focus (eqITreeF1 Rel_focus)).
-  { intros z [z_in | z_in]; [inversion z_in | right]. revert z z_in. change (eqITreeF1 bot_lattice =< eqITreeF1 Rel_focus). eapply paco_preserves_monotonicity... eapply bot_lattice_spec. now ii. }
+  { intros z [z_in | z_in]; [inversion z_in | right]. revert z z_in. change (eqITreeF1 bot_lattice =< eqITreeF1 Rel_focus). eapply paco_preserves_monotonicity; eauto with *. eapply bot_lattice_spec. now ii. }
   rewrite <- paco_fold. intros [k0_lhs k0_rhs] k0_lhs_eq_k0_rhs. apply E.in_image_iff in k0_lhs_eq_k0_rhs.
   destruct k0_lhs_eq_k0_rhs as [[lhs rhs] [H_EQ H_IN]].
   pose proof (@f_equal _ _ fst _ _ H_EQ) as k0_lhs_is.
   pose proof (@f_equal _ _ snd _ _ H_EQ) as k0_rhs_is.
   simpl in k0_lhs_is, k0_rhs_is. subst k0_lhs k0_rhs. clear H_EQ.
-  apply paco_unfold in H_IN... do 2 red in H_IN |- *.
+  apply paco_unfold in H_IN; eauto with *. do 2 red in H_IN |- *.
   repeat rewrite itree_bind_unfold_observed. destruct H_IN as [r1 r2 REL | t1 t2 REL | X e k1 k2 REL]; simpl in REL; simpl.
   - subst r2. rename r1 into x. specialize HYP_SND_ARG_EQ with (x := x).
-    apply paco_unfold in HYP_SND_ARG_EQ... exact (eqITreeF_isMonotonic1 _ _ INIT _ HYP_SND_ARG_EQ).
+    apply paco_unfold in HYP_SND_ARG_EQ; eauto with *. exact (eqITreeF_isMonotonic1 _ _ INIT _ HYP_SND_ARG_EQ).
   - apply E.in_union_iff in REL. destruct REL as [REL | REL]; [inversion REL | ].
-    econstructor 2. left. right. exists (t1, t2)...
+    econstructor 2. left. right. exists (t1, t2); eauto with *.
   - econstructor 3. intros x. specialize REL with (x := x).
     destruct REL as [REL | REL]; [inversion REL | ].
-    left. right. exists (k1 x, k2 x)...
+    left. right. exists (k1 x, k2 x); eauto with *.
 Qed.
 
 #[local]
@@ -410,7 +410,7 @@ Module EQIT.
 
 Section eqit_defn.
 
-#[local] Notation In := L.In.
+#[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
 
@@ -480,12 +480,12 @@ Instance eqit : Similarity (itree E R) (itree E R') :=
 
 Section eqitF_elim.
 
-#[local] Notation R1 := R.
-#[local] Notation R2 := R'.
-#[local] Notation RR := R_sim.
-#[local] Notation b1 := skip_l.
-#[local] Notation b2 := skip_r.
-#[local] Notation SIM := (Similarity (itree E R1) (itree E R2)).
+#[local] Abbreviation R1 := R.
+#[local] Abbreviation R2 := R'.
+#[local] Abbreviation RR := R_sim.
+#[local] Abbreviation b1 := skip_l.
+#[local] Abbreviation b2 := skip_r.
+#[local] Abbreviation SIM := (Similarity (itree E R1) (itree E R2)).
 
 Let __LocalInstance_eqitF : forall vclo : SIM -> SIM, forall sim : SIM, Similarity (@itreeF (itree E R1) E R1) (@itreeF (itree E R2) E R2) :=
   @eqitF b1 b2.
@@ -507,8 +507,8 @@ Proof with eauto.
     | EqTauL _ _ _ _ _ _ => _
     | _ => I
     end
-  )...
-  match goal with [ t : @itreeF (itree E R2) E R2 |- _ ] => destruct t end...
+  ); eauto.
+  match goal with [ t : @itreeF (itree E R2) E R2 |- _ ] => destruct t end; eauto.
 Qed.
 
 Lemma eqitF_VisF_X1_e1_k1_t2_elim {vclo : SIM -> SIM} {sim : SIM} (X1 : Type) (e1 : E X1) (k1 : X1 -> itree E R1) (t2 : @itreeF (itree E R2) E R2)
@@ -526,8 +526,8 @@ Proof with eauto.
     | EqTauR _ _ _ _ _ _ => _
     | _ => I
     end
-  )...
-  match goal with [ t : @itreeF (itree E R1) E R1 |- _ ] => destruct t end...
+  ); eauto.
+  match goal with [ t : @itreeF (itree E R1) E R1 |- _ ] => destruct t end; eauto.
 Qed.
 
 Lemma eqitF_t1_RetF_r2_elim {vclo : SIM -> SIM} {sim : SIM} (t1 : @itreeF (itree E R1) E R1) (r2 : R2)
@@ -545,8 +545,8 @@ Proof with eauto.
     | EqTauL _ _ _ _ _ _ => _
     | _ => I
     end
-  )...
-  match goal with [ t : @itreeF (itree E R2) E R2 |- _ ] => destruct t end...
+  ); eauto.
+  match goal with [ t : @itreeF (itree E R2) E R2 |- _ ] => destruct t end; eauto.
 Qed.
 
 Lemma eqitF_RetF_r1_t2_elim {vclo : SIM -> SIM} {sim : SIM} (r1 : R1) (t2 : @itreeF (itree E R2) E R2)
@@ -564,8 +564,8 @@ Proof with eauto.
     | EqTauR _ _ _ _ _ _ => _
     | _ => I
     end
-  )...
-  match goal with [ t : @itreeF (itree E R1) E R1 |- _ ] => destruct t end...
+  ); eauto.
+  match goal with [ t : @itreeF (itree E R1) E R1 |- _ ] => destruct t end; eauto.
 Qed.
 
 Lemma eqitF_t1_TauF_u2_elim {vclo : SIM -> SIM} {sim : SIM} (t1 : @itreeF (itree E R1) E R1) (u2 : itree E R2)
@@ -584,8 +584,8 @@ Proof with eauto.
     | EqTauR _ _ _ _ _ _ => _
     | _ => I
     end
-  ); clear H_eqitF...
-  destruct i0; eauto; cbv in *. right; left...
+  ); clear H_eqitF; eauto.
+  destruct i0; eauto; cbv in *. right; left; eauto.
 Qed.
 
 Lemma eqitF_TauF_u1_t2_elim {vclo : SIM -> SIM} {sim : SIM} (u1 : itree E R1) (t2 : @itreeF (itree E R2) E R2)
@@ -604,8 +604,8 @@ Proof with eauto.
     | EqTauR _ _ _ _ _ _ => _
     | _ => I
     end
-  ); clear H_eqitF...
-  destruct i; eauto; cbv in *. right; right...
+  ); clear H_eqitF; eauto.
+  destruct i; eauto; cbv in *. right; right; eauto.
 Qed.
 
 Theorem VisF_eqitF_VisF_iff {vclo : SIM -> SIM} {sim : SIM} (X1 : Type) (X2 : Type) (e1 : E X1) (e2 : E X2) (k1 : X1 -> itree E R1) (k2 : X2 -> itree E R2)
@@ -622,10 +622,10 @@ Proof with eauto.
       | EqVis _ _ _ _ _ _ _ => _
       | _ => _
       end
-    )...
-    + exists eq_refl; cbn...
-    + match goal with [ t : @itreeF (itree E R1) E R1 |- _ ] => destruct t end...
-  - intros (X_EQ & ? & ?); destruct X_EQ; cbn in *; subst. econs...
+    ); eauto.
+    + exists eq_refl; cbn; eauto.
+    + match goal with [ t : @itreeF (itree E R1) E R1 |- _ ] => destruct t end; eauto.
+  - intros (X_EQ & ? & ?); destruct X_EQ; cbn in *; subst. econs; eauto.
 Qed.
 
 End eqitF_elim.
@@ -636,7 +636,7 @@ Section eqit_prop.
 
 #[local] Hint Unfold is_similar_to : core.
 
-#[local] Notation In := L.In.
+#[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
 
@@ -745,11 +745,11 @@ Proof with eauto with *.
   set (Y := fun p : itree E R * itree E R' => is_similar_to (Similarity := @eqit E R R' R_sim b1 b2) (fst p) (snd p)).
   enough (CLAIM : Y \subseteq paco (eqit_op b1' b2') bot_lattice).
   { intros u1 u2 H. exact (CLAIM (u1, u2) H). }
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice Y).
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice Y).
   rewrite <- paco_fold. intros [u1 u2] H_IN.
   apply eqit_unfold in H_IN. red.
-  eapply eqitF_skip_mon with (b1 := b1) (b2 := b2) (sim := is_similar_to (Similarity := @eqit E R R' R_sim b1 b2))...
-  ii; left; right...
+  eapply eqitF_skip_mon with (b1 := b1) (b2 := b2) (sim := is_similar_to (Similarity := @eqit E R R' R_sim b1 b2)); eauto with *.
+  ii; left; right; eauto with *.
 Qed.
 
 Corollary eq_sub_eqit b1 b2 (t1 : itree E R) (t2 : itree E R')
@@ -764,9 +764,9 @@ Lemma eqit_Tau_inv_l b1 (t1 : itree E R) (t2 : itree E R')
   : is_similar_to (Similarity := @eqit E R R' R_sim b1 true) t1 t2.
 Proof with eauto.
   apply eqit_unfold in H_eqit; simpl in H_eqit. apply eqit_fold. revert H_eqit.
-  remember (TauF t1) as ot eqn: H_ot. intros H. revert t1 H_ot. induction H; ii; inv H_ot...
-  - econs 5... eapply eqit_unfold...
-  - econs 5...
+  remember (TauF t1) as ot eqn: H_ot. intros H. revert t1 H_ot. induction H; ii; inv H_ot; eauto.
+  - econs 5; eauto. eapply eqit_unfold; eauto.
+  - econs 5; eauto.
 Qed.
 
 Lemma eqit_Tau_inv_r b2 (t1 : itree E R) (t2 : itree E R')
@@ -774,9 +774,9 @@ Lemma eqit_Tau_inv_r b2 (t1 : itree E R) (t2 : itree E R')
   : is_similar_to (Similarity := @eqit E R R' R_sim true b2) t1 t2.
 Proof with eauto.
   apply eqit_unfold in H_eqit; simpl in H_eqit. apply eqit_fold. revert H_eqit.
-  remember (TauF t2) as ot eqn: H_ot. intros H. revert t2 H_ot. induction H; ii; inv H_ot...
-  - econs 4... eapply eqit_unfold...
-  - econs 4...
+  remember (TauF t2) as ot eqn: H_ot. intros H. revert t2 H_ot. induction H; ii; inv H_ot; eauto.
+  - econs 4; eauto. eapply eqit_unfold; eauto.
+  - econs 4; eauto.
 Qed.
 
 Theorem TauF_eqit_TauF_iff b1 b2 (t1 : itree E R) (t2 : itree E R')
@@ -786,14 +786,14 @@ Proof with eauto.
   - intros H_eqit. apply eqit_unfold in H_eqit; simpl in H_eqit. apply eqit_fold. revert H_eqit.
     remember (TauF t1) as ot1 eqn: H_ot1. remember (TauF t2) as ot2 eqn: H_ot2.
     intros H. revert t1 t2 H_ot1 H_ot2. induction H; ii; try congruence.
-    + inv H_ot1. inv H_ot2. eapply eqit_unfold...
-    + inv H_ot1. inv H...
-      * econs...
-      * econs... 
-    + inv H_ot2. inv H...
-      * econs...
-      * econs...
-  - intros H_eqit. eapply eqit_fold. econs 2...
+    + inv H_ot1. inv H_ot2. eapply eqit_unfold; eauto.
+    + inv H_ot1. inv H; eauto.
+      * econs; eauto.
+      * econs; eauto. 
+    + inv H_ot2. inv H; eauto.
+      * econs; eauto.
+      * econs; eauto.
+  - intros H_eqit. eapply eqit_fold. econs 2; eauto.
 Qed.
 
 End GENERAL.
@@ -812,10 +812,10 @@ Proof with eauto with *.
   revert t.
   enough (CLAIM : @B.Rel_id (itree E R) \subseteq paco (eqit_op (R' := R) (R_sim := R_sim) b b') bot_lattice).
   { intros t. exact (CLAIM (t, t) eq_refl). }
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice (@B.Rel_id (itree E R))).
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice (@B.Rel_id (itree E R))).
   rewrite <- paco_fold. intros [t1 t2] H_EQ. repeat red. do 2 red in H_EQ.
   destruct t1.(observe) as [r1 | u1 | X1 e1 k1] eqn: H_obs1; destruct t2.(observe) as [r2 | u2 | X2 e2 k2] eqn: H_obs2; try congruence.
-  - econstructor. assert (r1 = r2) by congruence. subst r2...
+  - econstructor. assert (r1 = r2) by congruence. subst r2; eauto with *.
   - econstructor. left. right. red. congruence.
   - assert (obs_eq : @eq (itreeF (itree E R) E R) (VisF X1 e1 k1) (VisF X2 e2 k2)) by congruence.
     rewrite obs_eq. econstructor. intros x. left. right. red. reflexivity.
@@ -846,11 +846,11 @@ Proof with eauto with *.
   set (Y := fun p : itree E R2 * itree E R1 => is_similar_to (Similarity := @eqit E R1 R2 R12 b b') (snd p) (fst p)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R := R2) (R' := R1) (R_sim := R21) b' b) bot_lattice).
   { intros t1 t2 H. exact (CLAIM (t2, t1) H). }
-  eapply paco_accum... set (Rel_focus := join_lattice bot_lattice Y).
+  eapply paco_accum; eauto with *. set (Rel_focus := join_lattice bot_lattice Y).
   rewrite <- paco_fold. intros [u2 u1] H_IN.
-  apply eqit_unfold in H_IN. red. eapply eqitF_symmetry...
-  - unfold id...
-  - ii; left; right...
+  apply eqit_unfold in H_IN. red. eapply eqitF_symmetry; eauto with *.
+  - unfold id; eauto with *.
+  - ii; left; right; eauto with *.
 Qed.
 
 End symmetry.
@@ -868,46 +868,46 @@ Theorem eqit_transitivity (b : bool) (b' : bool) (t1 : itree E R1) (t2 : itree E
 Proof with eauto.
   revert t1 t2 t3 H_12 H_23. set (Y := fun p : itree E R1 * itree E R3 => exists s2 : itree E R2, is_similar_to (Similarity := @eqit E R1 R2 R12 b b') (fst p) s2 /\ is_similar_to (Similarity := @eqit E R2 R3 R23 b b') s2 (snd p)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := R13) b b') bot_lattice).
-  { intros t1 t2 t3 H_12 H_23. eapply CLAIM. exists t2... }
+  { intros t1 t2 t3 H_12 H_23. eapply CLAIM. exists t2; eauto. }
   change (Y =< paco (eqit_op b b') bot_lattice). eapply pcofix.
   intros K _ CIH [t1 t3] (t2 & H_12 & H_23); simpl in H_12, H_23. eapply paco_fold. do 4 red.
   apply eqit_unfold in H_12, H_23. revert H_12 H_23. generalize t3.(observe) as ot3. generalize t2.(observe) as ot2. generalize t1.(observe) as ot1.
   clear t1 t2 t3. intros ot1 ot2 ot3 H H_23. revert ot3 H_23. induction H.
   - remember (RetF r2) as ot2 eqn: H_ot2. ii. revert r2 H_ot2 REL. induction H_23; ii; try inv H_ot2.
-    + econs 1...
-    + econs 5...
+    + econs 1; eauto.
+    + econs 5; eauto.
   - ii.
     assert (DEC : ⟪ EQ : exists t3, ot3 = TauF t3 ⟫ \/ ⟪ NE : forall t3, ot3 ≠ TauF t3 ⟫).
     { destruct ot3 as [ | | ]; [right | left | right]; eauto; intros; congruence. }
     des.
-    + subst ot3. econs 2. red. left. eapply CIH. exists t2; simpl. split...
-      rewrite <- TauF_eqit_TauF_iff. eapply eqit_fold...
-    + inv H_23; try contradiction (NE _ eq_refl). econs 4... apply eqit_unfold in REL.
+    + subst ot3. econs 2. red. left. eapply CIH. exists t2; simpl. split; eauto.
+      rewrite <- TauF_eqit_TauF_iff. eapply eqit_fold; eauto.
+    + inv H_23; try contradiction (NE _ eq_refl). econs 4; eauto. apply eqit_unfold in REL.
       revert REL REL0. generalize t2.(observe) as ot2. generalize t1.(observe) as ot1. clear t1 t2.
       intros ot1 ot2 H_12 H. revert ot1 H_12. induction H; ii; try contradiction (NE _ eq_refl).
       { clear NE. remember (RetF r1) as ot eqn: H_ot. revert r1 r2 REL H_ot. rename H_12 into H. induction H; ii; inv H_ot.
-        - econs 1...
-        - econs 4...
+        - econs 1; eauto.
+        - econs 4; eauto.
       }
       { clear NE. remember (VisF X e k1) as ot eqn: H_ot. revert X e k1 k2 REL H_ot. rename H_12 into H. induction H; ii; try congruence.
         apply VisF_eq_VisF_elim in H_ot. destruct H_ot as [X_EQ EQ]. destruct X_EQ; simpl in *. inv EQ.
-        - econs 3. intros x. left. eapply CIH. exists (k0 x); simpl. unfold id in *. split...
-        - econs 4...
+        - econs 3. intros x. left. eapply CIH. exists (k0 x); simpl. unfold id in *. split; eauto.
+        - econs 4; eauto.
       }
-      { eapply IHeqitF... apply eqitF_t1_TauF_u2_elim in H_12. set (t := {| observe := ot1 |}). change ot1 with t.(observe). eapply eqit_unfold. subst t. des; subst.
-        - eapply eqit_fold. econs 4... eapply eqit_unfold...
-        - eapply eqit_fold. econs 4... eapply eqit_unfold... eapply eqit_Tau_inv_r. eapply eqit_fold...
-        - eapply eqit_fold...
+      { eapply IHeqitF; eauto. apply eqitF_t1_TauF_u2_elim in H_12. set (t := {| observe := ot1 |}). change ot1 with t.(observe). eapply eqit_unfold. subst t. des; subst.
+        - eapply eqit_fold. econs 4; eauto. eapply eqit_unfold; eauto.
+        - eapply eqit_fold. econs 4; eauto. eapply eqit_unfold; eauto. eapply eqit_Tau_inv_r. eapply eqit_fold; eauto.
+        - eapply eqit_fold; eauto.
       }
   - remember (VisF X e k2) as ot2 eqn: H_ot2. ii. revert k2 H_ot2 REL. induction H_23; ii; try congruence.
     + apply VisF_eq_VisF_elim in H_ot2. destruct H_ot2 as [X_EQ EQ]. destruct X_EQ; simpl in *. inv EQ.
-      econs 3. intros x. left. eapply CIH. exists (k3 x); simpl. unfold id in *. split...
-    + econs 5...
-  - ii. econs 4...
+      econs 3. intros x. left. eapply CIH. exists (k3 x); simpl. unfold id in *. split; eauto.
+    + econs 5; eauto.
+  - ii. econs 4; eauto.
   - remember (TauF t2) as ot2 eqn: H_ot2. ii. revert t2 H_ot2 H IHeqitF. induction H_23; ii; inv H_ot2.
-    + eapply IHeqitF. apply eqit_unfold in REL. econs 5...
-    + eapply IHeqitF...
-    + econs 5...
+    + eapply IHeqitF. apply eqit_unfold in REL. econs 5; eauto.
+    + eapply IHeqitF; eauto.
+    + econs 5; eauto.
 Qed.
 
 End transitivity.
@@ -954,9 +954,9 @@ Instance equality_upto_tau (R : Type@{U_discourse}) (R_isSetoid : isSetoid R) : 
   { eqProp := eqit (R_sim := @eqProp R R_isSetoid) true true }.
 Next Obligation with eauto.
   split; ii.
-  - eapply eqit_reflexivity... ii; reflexivity...
-  - eapply eqit_symmetry... ii; symmetry...
-  - eapply eqit_transitivity... ii; etransitivity...
+  - eapply eqit_reflexivity; eauto. ii; reflexivity; eauto.
+  - eapply eqit_symmetry; eauto. ii; symmetry; eauto.
+  - eapply eqit_transitivity; eauto. ii; etransitivity; eauto.
 Qed.
 
 #[global]
@@ -975,13 +975,13 @@ Proof with eauto with *.
   revert t.
   set (Y := fun p : itree E R * itree E R => exists t : itree E R, p = (t >>= pure, t)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R) true true) bot_lattice).
-  { intros t. eapply CLAIM. exists t... }
+  { intros t. eapply CLAIM. exists t; eauto with *. }
   change (Y =< paco (eqit_op (R_sim := @eq R) true true) bot_lattice). eapply pcofix.
   intros K _ CIH p H_in. destruct H_in as (t & ?); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
   cbn beta iota. simpl bind. rewrite itree_bind_obs_eq. generalize t.(observe); clear t; intros [r | t | X e k].
-  - econs 1...
-  - econs 2. left. eapply CIH. exists t...
-  - econs 3. intros x. left. eapply CIH. exists (k x)...
+  - econs 1; eauto with *.
+  - econs 2. left. eapply CIH. exists t; eauto with *.
+  - econs 3. intros x. left. eapply CIH. exists (k x); eauto with *.
 Qed.
 
 Lemma bind_assoc_eutt {R1 : Type} {R2 : Type} {R3 : Type} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R2 -> itree E R3)
@@ -990,7 +990,7 @@ Proof with eauto with *.
   revert m.
   set (Y := fun p : itree E R3 * itree E R3 => exists m : itree E R1, p = (m >>= fun x : R1 => k1 x >>= k2, (m >>= k1) >>= k2)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R3) true true) bot_lattice).
-  { intros m. eapply CLAIM. exists m... }
+  { intros m. eapply CLAIM. exists m; eauto with *. }
   change (Y =< paco (eqit_op (R_sim := @eq R3) true true) bot_lattice). eapply pcofix.
   intros K _ CIH p H_in. destruct H_in as (m & ?); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
   cbn beta iota. simpl bind. rewrite !itree_bind_obs_eq. generalize m.(observe); clear m; intros [r | t | X e k]; simpl.
@@ -1008,8 +1008,8 @@ Proof with eauto with *.
       { eapply eqit_op_isMonotonic1. }
       { eapply bot_lattice_le_intro. }
       { exact (eqit_reflexivity (@eq_refl R3) true true (itree_bind' k2 (k' x))). }
-  - econs 2. left. eapply CIH. exists t...
-  - econs 3. intros x. left. eapply CIH. exists (k x)...
+  - econs 2. left. eapply CIH. exists t; eauto with *.
+  - econs 3. intros x. left. eapply CIH. exists (k x); eauto with *.
 Qed.
 
 Lemma bind_compatWith_eqProp_l_eutt {R1 : Type} {R2 : Type} (t1 : itree E R1) (t2 : itree E R1) (k0 : R1 -> itree E R2)
@@ -1019,20 +1019,20 @@ Proof with eauto with *.
   revert t1 t2 t1_eq_t2.
   set (Y := fun p : itree E R2 * itree E R2 => exists s1 s2 : itree E R1, p = (s1 >>= k0, s2 >>= k0) /\ is_similar_to (Similarity := @eqit E R1 R1 eq true true) s1 s2).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R2) true true) bot_lattice).
-  { intros t1 t2 H. eapply CLAIM. exists t1, t2... }
+  { intros t1 t2 H. eapply CLAIM. exists t1, t2; eauto with *. }
   change (Y =< paco (eqit_op (R_sim := @eq R2) true true) bot_lattice). eapply pcofix.
   intros K _ CIH p H_in. destruct H_in as (s1 & s2 & ? & H_eutt); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
   cbn beta iota. apply eqit_unfold in H_eutt. simpl bind. rewrite !itree_bind_obs_eq.
   induction H_eutt as [r1 r2 REL | t1 t2 REL | X e k1 k2 REL | t1 ot2_inner SK_l REL IH | ot1_inner t2 SK_r REL IH]; simpl.
   - change (r1 = r2) in REL. subst r2. eapply eqitF_id_monotonic; cycle -1.
     + eapply eqit_unfold. exact (eqit_reflexivity (@eq_refl R2) true true (k0 r1)).
-    + intros t1 t2 SIM. right. red. eapply paco_preserves_monotonicity with (x1 := E.empty)...
+    + intros t1 t2 SIM. right. red. eapply paco_preserves_monotonicity with (x1 := E.empty); eauto with *.
       * eapply eqit_op_isMonotonic1.
       * done!.
-  - econs 2. left. eapply CIH. exists t1, t2...
-  - econs 3. intros x. left. eapply CIH. unfold id in *. exists (k1 x), (k2 x)...
-  - econs 4; auto. rewrite itree_bind_obs_eq...
-  - econs 5; auto. rewrite itree_bind_obs_eq...
+  - econs 2. left. eapply CIH. exists t1, t2; eauto with *.
+  - econs 3. intros x. left. eapply CIH. unfold id in *. exists (k1 x), (k2 x); eauto with *.
+  - econs 4; auto. rewrite itree_bind_obs_eq; eauto with *.
+  - econs 5; auto. rewrite itree_bind_obs_eq; eauto with *.
 Qed.
 
 Lemma bind_compatWith_eqProp_r_eutt {R1 : Type} {R2 : Type} (m : itree E R1) (k1 : R1 -> itree E R2) (k2 : R1 -> itree E R2)
@@ -1042,17 +1042,17 @@ Proof with eauto with *.
   revert m.
   set (Y := fun p : itree E R2 * itree E R2 => exists m : itree E R1, p = (m >>= k1, m >>= k2)).
   enough (CLAIM : Y \subseteq paco (eqit_op (R_sim := @eq R2) true true) bot_lattice).
-  { intros m. eapply CLAIM. exists m... }
+  { intros m. eapply CLAIM. exists m; eauto with *. }
   change (Y =< paco (eqit_op (R_sim := @eq R2) true true) bot_lattice). eapply pcofix.
   intros K _ CIH p H_in. destruct H_in as (m & ?); subst p. eapply paco_fold. cbv [eqit_op eqitF' E.In].
   cbn beta iota. simpl bind. rewrite !itree_bind_obs_eq. generalize m.(observe); clear m; intros [r | t | X e k]; simpl.
   - eapply eqitF_id_monotonic; cycle -1.
-    + eapply eqit_unfold...
-    + intros t1 t2 SIM. right. red. eapply paco_preserves_monotonicity with (x1 := E.empty)...
+    + eapply eqit_unfold; eauto with *.
+    + intros t1 t2 SIM. right. red. eapply paco_preserves_monotonicity with (x1 := E.empty); eauto with *.
       * eapply eqit_op_isMonotonic1.
       * done!.
-  - econs 2. left. eapply CIH. exists t...
-  - econs 3. intros x. left. eapply CIH. exists (k x)...
+  - econs 2. left. eapply CIH. exists t; eauto with *.
+  - econs 3. intros x. left. eapply CIH. exists (k x); eauto with *.
 Qed.
 
 #[global]
@@ -1067,7 +1067,7 @@ Instance itree_MonadLaws_eutt : MonadLaws (itree E) (SETOID1 := eutt) (MONAD := 
 Lemma Tau_t_eutt_t_intro {b2 : bool} {R : Type} (t : itree E R)
   : eqit (R_sim := @eqProp R mkSetoid_from_eq) true b2 (Tau t) t.
 Proof with simpl; auto.
-  eapply eqit_fold... econs 4... eapply eqit_unfold. eapply eqit_reflexivity...
+  eapply eqit_fold; simpl; auto. econs 4; simpl; auto. eapply eqit_unfold. eapply eqit_reflexivity; simpl; auto.
 Qed.
 
 #[global]
@@ -1076,13 +1076,13 @@ Instance itree_MonadIterSpec_eutt
 Proof with eauto with *.
   intros I R step i.
   assert (STEP1 : is_similar_to (Similarity := @eqit E R R eq true true) (monad_iter step i) (step i >>= fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end)).
-  { eapply observe_eq_observe_implies_eqit... }
+  { eapply observe_eq_observe_implies_eqit; eauto with *. }
   assert (STEP2 : is_similar_to (Similarity := @eqit E R R eq true true) (step i >>= fun res : I + R => match res with inl arg' => Tau (monad_iter step arg') | inr res' => Ret res' end) (step i >>= B.either (monad_iter step) pure)).
   { eapply bind_compatWith_eqProp_r_eutt. intros [i' | r'].
     - eapply Tau_t_eutt_t_intro.
-    - eapply observe_eq_observe_implies_eqit...
+    - eapply observe_eq_observe_implies_eqit; eauto with *.
   }
-  eapply eqit_transitivity...
+  eapply eqit_transitivity; eauto with *.
 Qed.
 
 Corollary itree_monad_iter_unfold_eutt {I : Type@{U_discourse}} {R : Type@{U_discourse}} (step : I -> itree E (I + R)%type) (i : I)
@@ -1100,33 +1100,33 @@ Proof with eauto with *.
   change (forall i : I, step i == step' i) in step_eq_step'.
   set (Y1 := fun p : itree E R * itree E R => exists i : I, p = (monad_iter step i, monad_iter step' i)).
   enough (CLAIM1 : Y1 \subseteq paco (eqit_op (R_sim := @eq R) true true) bot_lattice).
-  { intros i. eapply CLAIM1. exists i... }
+  { intros i. eapply CLAIM1. exists i; eauto with *. }
   eapply pcofix. intros K1 _ CIH1 p (i & ?); subst p.
   set (k := B.either (A := I) (B := R) (C := fun _ : I + R => itree E R) (fun i' : I => Tau (monad_iter step i')) (fun r' : R => Ret r')). cbn beta in k.
   set (k' := B.either (A := I) (B := R) (C := fun _ : I + R => itree E R) (fun i' : I => Tau (monad_iter step' i')) (fun r' : R => Ret r')). cbn beta in k'.
   enough (WTS : forall t : itree E (I + R), forall t' : itree E (I + R), @eqit E (I + R) (I + R) eq true true t t' -> (t >>= k, t' >>= k') \in paco (eqit_op (R_sim := @eq R) true true) K1).
   { assert (OBS_L : (monad_iter step i).(observe) = (step i >>= k).(observe)).
-    { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. subst k k'. destruct (step i).(observe) as [[i' | r'] | t | X e k]... }
+    { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. subst k k'. destruct (step i).(observe) as [[i' | r'] | t | X e k]; eauto with *. }
     assert (OBS_R : (monad_iter step' i).(observe) = (step' i >>= k').(observe)).
-    { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. subst k k'. destruct (step' i).(observe) as [[i' | r'] | t | X e k]... }
-    pose proof (WTS (step i) (step' i) (step_eq_step' i)) as H_bind. apply paco_unfold in H_bind...
+    { rewrite itree_monad_iter_obs_eq. simpl bind. rewrite itree_bind_obs_eq. subst k k'. destruct (step' i).(observe) as [[i' | r'] | t | X e k]; eauto with *. }
+    pose proof (WTS (step i) (step' i) (step_eq_step' i)) as H_bind. apply paco_unfold in H_bind; eauto with *.
     eapply paco_fold. do 3 red in H_bind |- *. rewrite -> OBS_L, -> OBS_R. exact H_bind.
   }
   clear i.
   set (Y2 := fun p : itree E R * itree E R => exists m : itree E (I + R), exists m' : itree E (I + R), p = (m >>= k, m' >>= k') /\ @eqit E (I + R) (I + R) eq true true m m').
   enough (CLAIM2 : Y2 \subseteq paco (eqit_op (R_sim := @eq R) true true) K1).
-  { intros t t' t_eq_t'. eapply CLAIM2. exists t, t'... }
+  { intros t t' t_eq_t'. eapply CLAIM2. exists t, t'; eauto with *. }
   eapply pcofix. intros K2 K1_LE_K2 CIH2 p (t & t' & ? & H_eutt); subst p.
   eapply paco_fold. do 3 red. apply eqit_unfold in H_eutt. simpl bind. rewrite !itree_bind_obs_eq.
   revert H_eutt. generalize t'.(observe) as ot'. generalize t.(observe) as ot. clear t t'. intros ? ? H.
   induction H as [r1 r2 REL | t1 t2 REL | X e k1 k2 REL | t1 ot2 ? REL IH | ot1 t2 ? REL IH]; simpl; subst k k'.
   - change (r1 = r2) in REL. subst r2. destruct r1 as [i' | r']; simpl.
-    + econs 2. left. eapply K1_LE_K2. eapply CIH1. exists i'...
-    + econs 1...
-  - econs 2. left. eapply CIH2. exists t1, t2...
-  - econs 3. intros x. left. eapply CIH2. exists (k1 x), (k2 x). split... eapply REL with (x := x).
-  - econs 4... rewrite itree_bind_obs_eq...
-  - econs 5... rewrite itree_bind_obs_eq...
+    + econs 2. left. eapply K1_LE_K2. eapply CIH1. exists i'; eauto with *.
+    + econs 1; eauto with *.
+  - econs 2. left. eapply CIH2. exists t1, t2; eauto with *.
+  - econs 3. intros x. left. eapply CIH2. exists (k1 x), (k2 x). split; eauto with *. eapply REL with (x := x).
+  - econs 4; eauto with *. rewrite itree_bind_obs_eq; eauto with *.
+  - econs 5; eauto with *. rewrite itree_bind_obs_eq; eauto with *.
 Qed.
 
 Section instances.

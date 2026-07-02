@@ -24,3 +24,19 @@ Proof.
 Qed.
 
 #[global] Hint Rewrite inject_pair_eq : simplication_hints.
+
+#[universes(polymorphic=yes)]
+Fixpoint iter@{u | } {A : Type@{u}} (fuel : nat) (step : A -> A) (x : A) {struct fuel} : A :=
+  match fuel with
+  | O => x
+  | S fuel' => iter fuel' step (step x)
+  end.
+
+#[universes(polymorphic=yes)]
+Lemma iter_succ@{u | } {A : Type@{u}} (fuel : nat) (step : A -> A) (x : A)
+  : iter (S fuel) step x = step (iter fuel step x).
+Proof.
+  revert x; induction fuel as [ | fuel IH]; intros x; simpl.
+  - reflexivity.
+  - eapply IH.
+Qed.

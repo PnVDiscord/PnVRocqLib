@@ -703,11 +703,11 @@ Lemma rec_succ (o : Tree) (alpha : Tree)
   (SUCC : o =ᵣ succ alpha)
   : rec o ≡ next (rec alpha).
 Proof with auto.
-  eapply deq_trans with (d2 := rec (succ alpha))... simpl.
+  eapply deq_trans with (d2 := rec (succ alpha)); auto. simpl.
   change (djoin bool (j { b : bool & children (if b then alpha else singleton alpha) } (fun c => childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))) ≡ next (rec alpha)). split.
-  - eapply djoin_supremum... intros [ | ]; eauto. eapply djoin_supremum... intros [[ | ] c]; simpl; eapply rec_next_dle.
-    + eapply rLt_implies_rLe. econs. exists c...
-    + simpl in c. destruct c as [ | ]...
+  - eapply djoin_supremum; auto. intros [ | ]; eauto. eapply djoin_supremum; auto. intros [[ | ] c]; simpl; eapply rec_next_dle.
+    + eapply rLt_implies_rLe. econs. exists c; auto.
+    + simpl in c. destruct c as [ | ]; auto.
   - refine (let c : { b : bool & children (if b then alpha else singleton alpha) } := @existT _ _ false true in _).
     eapply dle_trans with (d2 := djoin { b : bool & children (if b then alpha else singleton alpha) } (fun c => next (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))))); auto.
     + eapply djoin_upperbound with (ds := fun c : {b : bool & children (if b then alpha else singleton alpha)} => next (rec (childnodes (if projT1 c then alpha else singleton alpha) (projT2 c)))) (i := c); eauto.
@@ -722,22 +722,22 @@ Lemma rec_lim' (o : Tree) (cs : Type) (ts : cs -> Tree)
 Proof with auto.
   destruct INHABITED as [c]. destruct o as [cs' ts']; simpl. change (djoin bool (j cs' ts') ≡ djoin cs (fun i : cs => rec (ts i))); split.
   - eapply djoin_supremum; eauto. intros [ | ]; simpl.
-    + eapply dle_trans with (d2 := rec (ts c))... eapply djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto.
-    + eapply djoin_supremum... clear c. intros c'. destruct LIM' as [LE1 LE2]; simpl in *. destruct LE1 as [H_rLt]; simpl in *.
-      pose proof (H_rLt c') as [[c H_rLe]]; simpl in *. eapply dle_trans with (d2 := rec (ts (projT1 c)))...
+    + eapply dle_trans with (d2 := rec (ts c)); auto. eapply djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto.
+    + eapply djoin_supremum; auto. clear c. intros c'. destruct LIM' as [LE1 LE2]; simpl in *. destruct LE1 as [H_rLt]; simpl in *.
+      pose proof (H_rLt c') as [[c H_rLe]]; simpl in *. eapply dle_trans with (d2 := rec (ts (projT1 c))); auto.
       * eapply lt_rec. econs. exists (projT2 c). exact H_rLe.
       * eapply djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := projT1 c); eauto.
-  - eapply djoin_supremum... clear c. intros c. eapply dle_trans with (d2 := djoin cs (fun c => rec (ts c)))...
+  - eapply djoin_supremum; auto. clear c. intros c. eapply dle_trans with (d2 := djoin cs (fun c => rec (ts c))); auto.
     + eapply djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto.
     + clear c. eapply djoin_supremum; eauto. intros c1. simpl in *. pose proof (APPROX c1) as [c2 H_rLt].
       destruct H_rLt as [[c H_rLe]]. destruct LIM' as [LE1 LE2]. destruct LE2 as [LE2]; simpl in *.
       pose proof (LE2 (@existT cs (fun i : cs => children (ts i)) c2 c)) as claim1. simpl in *. destruct claim1 as [[c' H_rLe']]. simpl in *.
-      eapply dle_trans with (d2 := rec (ts' c')); eauto. eapply dle_trans with (d2 := djoin cs' (fun i : cs' => next (rec (ts' i))))...
-      * eapply dle_trans with (d2 := next (rec (ts' c')))... eapply djoin_upperbound with (ds := fun i : cs' => next (rec (ts' i))) (i := c'); eauto.
+      eapply dle_trans with (d2 := rec (ts' c')); eauto. eapply dle_trans with (d2 := djoin cs' (fun i : cs' => next (rec (ts' i)))); auto.
+      * eapply dle_trans with (d2 := next (rec (ts' c'))); auto. eapply djoin_upperbound with (ds := fun i : cs' => next (rec (ts' i))) (i := c'); eauto.
       * eapply djoin_upperbound with (ds := j cs' ts') (i := false); eauto.
 Qed.
 
-#[local] Notation dunion := (Ord.join djoin).
+#[local] Abbreviation dunion := (Ord.join djoin).
 
 Lemma dunion_good (d1 : D) (d2 : D)
   (GOOD1 : good d1)
@@ -1080,7 +1080,7 @@ Section GENERALISED_KLEENE_FIXEDPOINT_THEOREM.
 
 Context {D : Type} {PROSET : isProset D}.
 
-#[local] Notation range ds := (fun d : D => exists i, d = ds i).
+#[local] Abbreviation range ds := (fun d : D => exists i, d = ds i).
 
 Variable ipo_sup : forall I : Type, forall ds : I -> D, D.
 
@@ -2133,30 +2133,30 @@ Lemma Ordinal_comparison__aux1 (x : Tree) (alpha : Tree) (beta : Tree)
 Proof with eauto with *.
   revert alpha beta x_rGe1 x_rGe2 H_isOrdinal1 H_isOrdinal2. pose proof (rLt_wf x) as H_ACC. induction H_ACC as [x _ IH].
   destruct alpha as [cs1 ts1], beta as [cs2 ts2]; ii. split; intros H.
-  - destruct H as [[c2 H_rLe]]. simpl in *. exploit (IH (ts2 c2) _ (mkNode cs1 ts1) (ts2 c2))...
-    { eapply rLt_rLe_rLt... }
+  - destruct H as [[c2 H_rLe]]. simpl in *. exploit (IH (ts2 c2) _ (mkNode cs1 ts1) (ts2 c2)); eauto with *.
+    { eapply rLt_rLe_rLt; eauto with *. }
     intros (H1 & H2). rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. destruct H_rLe as [H_LT | H_EQ].
-    + pose proof (H1 H_LT) as H1'. inversion H_isOrdinal2. eapply TRANS with (y := ts2 c2)...
-    + pose proof (H2 H_EQ) as H2'. rewrite -> H2'...
+    + pose proof (H1 H_LT) as H1'. inversion H_isOrdinal2. eapply TRANS with (y := ts2 c2); eauto with *.
+    + pose proof (H2 H_EQ) as H2'. rewrite -> H2'; eauto with *.
   - eapply extensionality. intros z; split; intros [c z_eq].
     + simpl in *. change (z == ts1 c) in z_eq. destruct H as [H_rLe1 H_rLe2]. destruct H_rLe1. simpl in H_rLt. pose proof (H_rLt c) as [[c' H_rLe]].
       simpl in c', H_rLe. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. rewrite z_eq. clear z z_eq. destruct H_rLe as [H_LT | H_EQ].
-      * exploit (IH (ts2 c') _ (ts1 c) (ts2 c'))...
-        { eapply rLt_rLe_rLt... }
-        intros (H1 & H2). pose proof (H1 H_LT) as H1'. inversion H_isOrdinal2. eapply TRANS with (y := ts2 c')...
-      * exploit (IH (ts2 c') _ (ts1 c) (ts2 c'))...
-        { eapply rLt_rLe_rLt... }
-        { rewrite -> H_EQ... }
-        intros (H1 & H2). pose proof (H2 H_EQ) as H2'. rewrite -> H2...
+      * exploit (IH (ts2 c') _ (ts1 c) (ts2 c')); eauto with *.
+        { eapply rLt_rLe_rLt; eauto with *. }
+        intros (H1 & H2). pose proof (H1 H_LT) as H1'. inversion H_isOrdinal2. eapply TRANS with (y := ts2 c'); eauto with *.
+      * exploit (IH (ts2 c') _ (ts1 c) (ts2 c')); eauto with *.
+        { eapply rLt_rLe_rLt; eauto with *. }
+        { rewrite -> H_EQ; eauto with *. }
+        intros (H1 & H2). pose proof (H2 H_EQ) as H2'. rewrite -> H2; eauto with *.
     + simpl in *. change (z == ts2 c) in z_eq. destruct H as [H_rLe1 H_rLe2]. destruct H_rLe2. simpl in H_rLt. pose proof (H_rLt c) as [[c' H_rLe]].
       simpl in c', H_rLe. rewrite InducedOrdinal.rLe_iff_rLt_or_rEq in H_rLe. rewrite z_eq. clear z z_eq. destruct H_rLe as [H_LT | H_EQ].
-      * exploit (IH (ts1 c') _ (ts2 c) (ts1 c'))...
-        { eapply rLt_rLe_rLt... }
-        intros (H1 & H2). pose proof (H1 H_LT). inversion H_isOrdinal1. eapply TRANS with (y := ts1 c')...
-      * exploit (IH (ts1 c') _ (ts2 c) (ts1 c'))...
-        { eapply rLt_rLe_rLt... }
-        { rewrite -> H_EQ... }
-        intros (H1 & H2). pose proof (H2 H_EQ) as H2'. rewrite -> H2...
+      * exploit (IH (ts1 c') _ (ts2 c) (ts1 c')); eauto with *.
+        { eapply rLt_rLe_rLt; eauto with *. }
+        intros (H1 & H2). pose proof (H1 H_LT). inversion H_isOrdinal1. eapply TRANS with (y := ts1 c'); eauto with *.
+      * exploit (IH (ts1 c') _ (ts2 c) (ts1 c')); eauto with *.
+        { eapply rLt_rLe_rLt; eauto with *. }
+        { rewrite -> H_EQ; eauto with *. }
+        intros (H1 & H2). pose proof (H2 H_EQ) as H2'. rewrite -> H2; eauto with *.
 Qed.
 
 Lemma Ordinal_rLt_Ordinal_elim (alpha : Tree) (beta : Tree)
@@ -2469,7 +2469,7 @@ Variable X_bot : X.
 Definition base : pair :=
   {| P := eqProp X_bot; R _ _ := False |}.
 
-#[local] Notation good s := (good (X := X) (SETOID := SETOID) s.(P) s.(R)).
+#[local] Abbreviation good s := (good (X := X) (SETOID := SETOID) s.(P) s.(R)).
 
 Lemma pair_sup_good (I : Type) (chain : I -> pair)
   (H_chain : forall i1 : I, forall i2 : I, chain i1 =< chain i2 \/ chain i2 =< chain i1)
@@ -4411,35 +4411,35 @@ Proof.
   eapply indexed_union_ofCardinals_isSupremum; eauto.
 Qed.
 
-#[local] Notation rank_trichotomy := (O.wlt_trichotomous (classic := classic) (WOSET := rLt_isWellOrdering)).
+#[local] Abbreviation rank_trichotomy := (O.wlt_trichotomous (classic := classic) (WOSET := rLt_isWellOrdering)).
 
 #[local] Infix "⊑" := rLe.
 
 #[local] Infix "≡" := rEq.
 
-#[local] Notation good := isCardinal.
+#[local] Abbreviation good := isCardinal.
 
-#[local] Notation rec := aleph.
+#[local] Abbreviation rec := aleph.
 
-#[local] Notation dbase := aleph0.
+#[local] Abbreviation dbase := aleph0.
 
-#[local] Notation next := alephS.
+#[local] Abbreviation next := alephS.
 
-#[local] Notation djoin := indexed_union.
+#[local] Abbreviation djoin := indexed_union.
 
-#[local] Notation dle_refl := aleph_dle_refl.
+#[local] Abbreviation dle_refl := aleph_dle_refl.
 
-#[local] Notation dle_trans := aleph_dle_trans.
+#[local] Abbreviation dle_trans := aleph_dle_trans.
 
-#[local] Notation djoin_good := aleph_djoin_good.
+#[local] Abbreviation djoin_good := aleph_djoin_good.
 
-#[local] Notation djoin_supremum := aleph_djoin_isSupremum.
+#[local] Abbreviation djoin_supremum := aleph_djoin_isSupremum.
 
-#[local] Notation next_good := aleph_next_good.
+#[local] Abbreviation next_good := aleph_next_good.
 
-#[local] Notation next_extensive := aleph_next_extensive.
+#[local] Abbreviation next_extensive := aleph_next_extensive.
 
-#[local] Notation next_congruence := aleph_next_congruence.
+#[local] Abbreviation next_congruence := aleph_next_congruence.
 
 Let aleph_djoin_upperbound (I : Type@{Set_u}) (ds : I -> Tree)
   (CHAIN : forall i1, forall i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1)
@@ -5017,31 +5017,31 @@ Qed.
 Definition beth : Tree -> Tree :=
   Ord.orec beth0 bethS.
 
-#[local] Notation rank_trichotomy := (O.wlt_trichotomous (classic := classic) (WOSET := rLt_isWellOrdering)).
+#[local] Abbreviation rank_trichotomy := (O.wlt_trichotomous (classic := classic) (WOSET := rLt_isWellOrdering)).
 
 #[local] Infix "⊑" := rLe.
 
 #[local] Infix "≡" := rEq.
 
-#[local] Notation good := isCardinal.
+#[local] Abbreviation good := isCardinal.
 
-#[local] Notation rec := beth.
+#[local] Abbreviation rec := beth.
 
-#[local] Notation dbase := beth0.
+#[local] Abbreviation dbase := beth0.
 
-#[local] Notation next := bethS.
+#[local] Abbreviation next := bethS.
 
-#[local] Notation djoin := indexed_union.
+#[local] Abbreviation djoin := indexed_union.
 
-#[local] Notation djoin_good := beth_djoin_good.
+#[local] Abbreviation djoin_good := beth_djoin_good.
 
-#[local] Notation djoin_supremum := beth_djoin_isSupremum.
+#[local] Abbreviation djoin_supremum := beth_djoin_isSupremum.
 
-#[local] Notation next_good := beth_next_good.
+#[local] Abbreviation next_good := beth_next_good.
 
-#[local] Notation next_extensive := beth_next_extensive.
+#[local] Abbreviation next_extensive := beth_next_extensive.
 
-#[local] Notation next_congruence := beth_next_congruence.
+#[local] Abbreviation next_congruence := beth_next_congruence.
 
 Let beth_djoin_upperbound (I : Type@{Set_u}) (ds : I -> Tree)
   (CHAIN : forall i1, forall i2, ds i1 ⊑ ds i2 \/ ds i2 ⊑ ds i1)

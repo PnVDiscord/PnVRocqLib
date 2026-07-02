@@ -7,7 +7,7 @@ Require Import PnV.Logic.BasicFol.
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
-#[local] Notation In := L.In.
+#[local] Abbreviation In := L.In.
 
 #[local] Hint Rewrite @L.forallb_forall @Prelude.eqb_spec@{Set} : simplication_hints.
 
@@ -36,7 +36,7 @@ Section __.
 
 Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
 
-Notation L' := (augmented_language L Henkin_constants).
+Abbreviation L' := (augmented_language L Henkin_constants).
 
 Fixpoint HC_occurs_in_trm (hc : Henkin_constants) (t : trm L') : bool :=
   match t with
@@ -184,7 +184,7 @@ End __.
 Definition Henkin_constants : Set :=
   nat.
 
-Notation L' := (augmented_language L Henkin_constants).
+Abbreviation L' := (augmented_language L Henkin_constants).
 
 Lemma last_HC_gt_frm (hc : Henkin_constants)
   : forall p : frm L', hc > maxs (accum_HCs_frm p) -> HC_occurs_in_frm hc p = false.
@@ -205,9 +205,9 @@ Proof.
     + eapply IH; trivial. lia.
 Qed.
 
-#[local] Notation hatom := (ivar + Henkin_constants)%type.
+#[local] Abbreviation hatom := (ivar + Henkin_constants)%type.
 
-#[local] Notation hsubst := (hatom -> trm L').
+#[local] Abbreviation hsubst := (hatom -> trm L').
 
 Section HSUBST.
 

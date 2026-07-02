@@ -198,10 +198,10 @@ Add Parametric Morphism
   as isSubsetOf_compatWith_eqProp.
 Proof with eauto with *.
   intros x1 y1 EQ1 x2 y2 EQ2. transitivity (x1 \subseteq y2); unfold "\subseteq"; split; intros SUBSET z H_in.
-  - rewrite <- EQ2...
-  - rewrite -> EQ2...
-  - rewrite <- EQ1 in H_in...
-  - rewrite -> EQ1 in H_in...
+  - rewrite <- EQ2; eauto with *.
+  - rewrite -> EQ2; eauto with *.
+  - rewrite <- EQ1 in H_in; eauto with *.
+  - rewrite -> EQ1 in H_in; eauto with *.
 Qed.
 
 #[global]
@@ -671,10 +671,10 @@ Theorem AxiomOfChoice_implies_StrongCollection (P : Tree -> Tree -> Prop)
 Proof with eauto with *.
   intros X NONEMPTY. set (base_set := children X).
   assert (claim : exists f : base_set -> Tree, forall x : base_set, P (childnodes X x) (f x)).
-  { eapply AC with (P := fun x : base_set => fun y : Tree => P (childnodes X x) y)... }
+  { eapply AC with (P := fun x : base_set => fun y : Tree => P (childnodes X x) y); eauto with *. }
   destruct claim as [f claim]. exists (mkNode base_set (fun x => f x)). split.
-  - intros x [c EQ]. exists (f c). split... eapply COMPAT1...
-  - intros x [c EQ]. exists (childnodes X c). split... eapply COMPAT2...
+  - intros x [c EQ]. exists (f c). split; eauto with *. eapply COMPAT1; eauto with *.
+  - intros x [c EQ]. exists (childnodes X c). split; eauto with *. eapply COMPAT2; eauto with *.
 Qed.
 
 End STRONG_COLLECTION.
@@ -1458,7 +1458,7 @@ Section well_founded_to_Woset.
 
 Context {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R).
 
-#[local] Notation hash := (@fromWf A R R_wf).
+#[local] Abbreviation hash := (@fromWf A R R_wf).
 
 #[local]
 Instance mkSetoid_from_wellfounded : isSetoid A :=

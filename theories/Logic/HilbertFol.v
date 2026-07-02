@@ -1971,7 +1971,7 @@ Definition augmented_language (L : language) (Henkin_constants : Set) : language
     relation_arity_gt_0 := L.(relation_arity_gt_0);
   |}.
 
-#[local] Notation L' := (augmented_language L Henkin_constants).
+#[local] Abbreviation L' := (augmented_language L Henkin_constants).
 
 #[local] Existing Instance constant_symbols_sim.
 

@@ -6,7 +6,7 @@ Require Import Stdlib.Arith.Wf_nat.
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
-#[local] Notation In := List.In.
+#[local] Abbreviation In := List.In.
 
 Module InternalSyntax.
 
@@ -186,17 +186,17 @@ with trms_eq_dec n (ts1 : trms L n) (ts2 : trms L n)
 Proof with try first [now right; congruence | now left; congruence].
   - pose proof ivar_hasEqDec as ivar_hasEqDec.
     red in ivar_hasEqDec, function_symbols_hasEqDec, constant_symbols_hasEqDec.
-    clear trm_eq_dec. trm_ind2 t1 t2...
-    + pose proof (ivar_hasEqDec x x') as [? | ?]...
-    + pose proof (function_symbols_hasEqDec f f') as [f_eq_f' | f_ne_f']...
-      subst f'. pose proof (trms_eq_dec (L.(function_arity_table) f) ts ts') as [EQ | NE]...
+    clear trm_eq_dec. trm_ind2 t1 t2; try first [now right; congruence | now left; congruence].
+    + pose proof (ivar_hasEqDec x x') as [? | ?]; try first [now right; congruence | now left; congruence].
+    + pose proof (function_symbols_hasEqDec f f') as [f_eq_f' | f_ne_f']; try first [now right; congruence | now left; congruence].
+      subst f'. pose proof (trms_eq_dec (L.(function_arity_table) f) ts ts') as [EQ | NE]; try first [now right; congruence | now left; congruence].
       right. intros CONTRA. eapply NE. inv CONTRA.
       apply @projT2_eq_fromEqDec with (B := fun f : L.(function_symbols) => trms L (function_arity_table L f)) in H0.
       * exact H0.
       * exact function_symbols_hasEqDec.
-    + pose proof (constant_symbols_hasEqDec c c') as [? | ?]...
-  - clear trms_eq_dec. trms_ind2 ts1 ts2...
-    pose proof (trm_eq_dec t t') as [? | ?]; pose proof (IH ts2) as [EQ | NE]...
+    + pose proof (constant_symbols_hasEqDec c c') as [? | ?]; try first [now right; congruence | now left; congruence].
+  - clear trms_eq_dec. trms_ind2 ts1 ts2; try first [now right; congruence | now left; congruence].
+    pose proof (trm_eq_dec t t') as [? | ?]; pose proof (IH ts2) as [EQ | NE]; try first [now right; congruence | now left; congruence].
 Defined.
 
 #[global]
@@ -212,17 +212,17 @@ Hypothesis relation_symbols_hasEqDec : hasEqDec@{Set} L.(relation_symbols).
 Lemma frm_eq_dec (p : frm L) (p' : frm L)
   : {p = p'} + {p <> p'}.
 Proof with try first [now right; congruence | now left; congruence].
-  pose proof ivar_hasEqDec as ivar_hasEqDec. red in ivar_hasEqDec. frm_ind2 p p'...
-  - pose proof (relation_symbols_hasEqDec R R') as [R_eq_R' | R_ne_R']...
-    subst R'. pose proof (trms_eq_dec (L.(relation_arity_table) R) ts ts') as [EQ | NE]...
+  pose proof ivar_hasEqDec as ivar_hasEqDec. red in ivar_hasEqDec. frm_ind2 p p'; try first [now right; congruence | now left; congruence].
+  - pose proof (relation_symbols_hasEqDec R R') as [R_eq_R' | R_ne_R']; try first [now right; congruence | now left; congruence].
+    subst R'. pose proof (trms_eq_dec (L.(relation_arity_table) R) ts ts') as [EQ | NE]; try first [now right; congruence | now left; congruence].
     right. intros CONTRA. eapply NE. inv CONTRA.
     apply @projT2_eq_fromEqDec with (B := fun R : L.(relation_symbols) => trms L (relation_arity_table L R)) in H0.
     + exact H0.
     + exact relation_symbols_hasEqDec.
-  - pose proof (trm_eq_dec t1 t1') as [? | ?]; pose proof (trm_eq_dec t2 t2') as [? | ?]...
-  - pose proof (IH1 p1') as [? | ?]...
-  - pose proof (IH1 p1') as [? | ?]; pose proof (IH2 p2') as [? | ?]...
-  - pose proof (ivar_hasEqDec y y') as [? | ?]; pose proof (IH1 p1') as [? | ?]...
+  - pose proof (trm_eq_dec t1 t1') as [? | ?]; pose proof (trm_eq_dec t2 t2') as [? | ?]; try first [now right; congruence | now left; congruence].
+  - pose proof (IH1 p1') as [? | ?]; try first [now right; congruence | now left; congruence].
+  - pose proof (IH1 p1') as [? | ?]; pose proof (IH2 p2') as [? | ?]; try first [now right; congruence | now left; congruence].
+  - pose proof (ivar_hasEqDec y y') as [? | ?]; pose proof (IH1 p1') as [? | ?]; try first [now right; congruence | now left; congruence].
 Defined.
 
 #[global]
@@ -2004,7 +2004,7 @@ Definition mkL_with_constant_symbols (_constant_symbols : Set) : language :=
 
 Context (_constant_symbols : Set).
 
-#[local] Notation L := (mkL_with_constant_symbols _constant_symbols).
+#[local] Abbreviation L := (mkL_with_constant_symbols _constant_symbols).
 
 Section GENERAL_CASE.
 
@@ -2070,16 +2070,16 @@ Proof with eauto with *.
     + reflexivity.
   - induction ts_SIM.
     + reflexivity.
-    + change (fvs_trm t ++ fvs_trms ts = fvs_trm t' ++ fvs_trms ts'). f_equal...
+    + change (fvs_trm t ++ fvs_trms ts = fvs_trm t' ++ fvs_trms ts'). f_equal; eauto with *.
 Qed.
 
 Lemma fvs_frm_compat_similarity (p : frm L) (p' : frm L')
   (p_SIM : p =~= p')
   : fvs_frm p = fvs_frm p'.
 Proof with try done!.
-  induction p_SIM; simpl...
-  - eapply fvs_trms_compat_similarity...
-  - f_equal; eapply fvs_trm_compat_similarity...
+  induction p_SIM; simpl; try done!.
+  - eapply fvs_trms_compat_similarity; try done!.
+  - f_equal; eapply fvs_trm_compat_similarity; try done!.
 Qed.
 
 Variant frms_similarity (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L')) : Prop :=
@@ -2136,10 +2136,10 @@ Proof with eauto.
   change (maxs (L.map (maxs ∘ (fvs_trm ∘ s))%prg (fvs_frm p)) = maxs (L.map (maxs ∘ (fvs_trm ∘ s'))%prg (fvs_frm p'))).
   do 2 rewrite ENOUGH. eapply maxs_ext. intros z. do 2 rewrite in_flat_map. unfold "∘"%prg. clear ENOUGH.
   split; intros [x [FREE FREE']]; exists x; split.
-  - erewrite <- fvs_frm_similarity...
-  - erewrite <- fvs_trm_similarity...
-  - erewrite -> fvs_frm_similarity...
-  - erewrite -> fvs_trm_similarity...
+  - erewrite <- fvs_frm_similarity; eauto.
+  - erewrite <- fvs_trm_similarity; eauto.
+  - erewrite -> fvs_frm_similarity; eauto.
+  - erewrite -> fvs_trm_similarity; eauto.
 Qed.
 
 Lemma subst_trm_similiarity (s : subst L) (s' : subst L') (t : trm L) (t' : trm L')
@@ -2188,7 +2188,7 @@ End GENERAL_CASE.
 
 Context (Henkin_constants : Set).
 
-#[local] Notation L' := (mkL_with_constant_symbols (_constant_symbols + Henkin_constants)).
+#[local] Abbreviation L' := (mkL_with_constant_symbols (_constant_symbols + Henkin_constants)).
 
 #[global]
 Instance constant_symbols_sim : Similarity _constant_symbols (_constant_symbols + Henkin_constants) :=
@@ -3221,7 +3221,7 @@ Section RESTRICT_STRUCTURE.
 
 Context {L : language} {Henkin_constants : Set}.
 
-#[local] Notation L' := (mkL_with_constant_symbols L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(function_arity_gt_0) L.(relation_arity_gt_0) (L.(constant_symbols) + Henkin_constants)).
+#[local] Abbreviation L' := (mkL_with_constant_symbols L.(function_symbols) L.(relation_symbols) L.(function_arity_table) L.(relation_arity_table) L.(function_arity_gt_0) L.(relation_arity_gt_0) (L.(constant_symbols) + Henkin_constants)).
 
 #[local]
 Instance restrict_structure (STRUCTURE : isStructureOf L') : isStructureOf L :=

@@ -104,8 +104,8 @@ Proof with eauto with *.
   assert (W_hat_closed_under_f : forall x : D, x \in W_hat -> f x \in W_hat).
   { intros x q_le_x. eapply q_is_lub_of_W.
     intros w w_in_W. transitivity (f w).
-    - eapply eqProp_implies_leProp, W_is_a_set_of_fixed_points_of_f...
-    - eapply f_isMonotonic. transitivity q; trivial. eapply q_is_lub_of_W...
+    - eapply eqProp_implies_leProp, W_is_a_set_of_fixed_points_of_f; eauto with *.
+    - eapply f_isMonotonic. transitivity q; trivial. eapply q_is_lub_of_W; eauto with *.
   }
   assert (q_le_f_q : q =< f q) by exact (W_hat_closed_under_f q q_in_W_hat).
   pose proof (infimum_cola (E.intersection (prefixedpointsOf f) W_hat)) as [fix_f fix_f_isInfimum].
@@ -115,17 +115,17 @@ Proof with eauto with *.
   - exists fix_f. split; trivial.
     intros [x x_in]. simpl. split.
     + intros fix_f_le_x d d_in. transitivity q.
-      * eapply q_is_lub_of_W...
-      * transitivity fix_f...
-    + intros x_is_upper_bound_of_W. eapply fix_f_isInfimum... split.
+      * eapply q_is_lub_of_W; eauto with *.
+      * transitivity fix_f; eauto with *.
+    + intros x_is_upper_bound_of_W. eapply fix_f_isInfimum; eauto with *. split.
       * eapply eqProp_implies_leProp. now symmetry.
-      * eapply q_is_lub_of_W...
+      * eapply q_is_lub_of_W; eauto with *.
   - eapply leProp_antisymmetry; trivial.
-    eapply fix_f_isInfimum... done!.
-  - eapply fix_f_isInfimum. ii; s!. destruct IN as [f_x_le_x q_le_x]...
+    eapply fix_f_isInfimum; eauto with *. done!.
+  - eapply fix_f_isInfimum. ii; s!. destruct IN as [f_x_le_x q_le_x]; eauto with *.
   - eapply fix_f_isInfimum. intros x x_in. s!. destruct x_in as [f_x_le_x q_le_x].
     rewrite <- f_x_le_x. eapply f_isMonotonic.
-    eapply fix_f_isInfimum... split; eauto.
+    eapply fix_f_isInfimum; eauto with *. split; eauto.
 Qed.
 
 Corollary fixedpointsOf_asCoLa (f : `[D -> D])
@@ -194,10 +194,10 @@ Proof with eauto with *.
   assert (claim1 : proj1_sig f (proj1_sig (nu f)) =< proj1_sig f (join_lattice x (proj1_sig (nu f)))).
   { property f. eapply join_lattice_spec; done!. }
   pose proof (proj2_sig (nu f)) as [claim2 claim3]. split.
-  - intros x_le. rewrite -> x_le at 1. transitivity (proj1_sig f (proj1_sig (nu f)))...
+  - intros x_le. rewrite -> x_le at 1. transitivity (proj1_sig f (proj1_sig (nu f))); eauto with *.
   - intros x_le. unnw. exploit (join_lattice_le_intro x (proj1_sig (nu f)) _ x_le).
-    + do 2 red in claim2. rewrite -> claim2 at 1. property f. eapply le_join_lattice_intror...
-    + intros H. rewrite -> x_le. eapply postfixedpoint_le_gfpOf. property f...
+    + do 2 red in claim2. rewrite -> claim2 at 1. property f. eapply le_join_lattice_intror; eauto with *.
+    + intros H. rewrite -> x_le. eapply postfixedpoint_le_gfpOf. property f; eauto with *.
 Qed.
 
 Definition G_aux0 {UPPER_LATTICE : isUpperSemilattice D} (f : `[D -> D]) (x : D) : D -> D :=
@@ -225,9 +225,9 @@ Proof with eauto with *.
   assert (claim1 : G0 f x1 == proj1_sig f (join_lattice x1 (G0 f x1))) by property (nu (G_aux f x1)).
   rewrite -> claim1 at 1. property f. transitivity (join_lattice x2 (G0 f x1)).
   - eapply join_lattice_le_intro.
-    + rewrite -> x1_le_x2 at 1. eapply le_join_lattice_introl...
-    + eapply le_join_lattice_intror...
-  - eapply join_lattice_le_intro...
+    + rewrite -> x1_le_x2 at 1. eapply le_join_lattice_introl; eauto with *.
+    + eapply le_join_lattice_intror; eauto with *.
+  - eapply join_lattice_le_intro; eauto with *.
 Qed.
 
 Definition G1 (f : `[D -> D]) : `[D -> D] :=
@@ -262,15 +262,15 @@ Proof with eauto with *.
   pose proof (fun x : D => proj1 (nu_f_is_gfpOf_f (G_aux f x))) as claim3.
   split.
   - eapply leProp_antisymmetry.
-    + eapply claim2. ii. eapply claim1... s!. rewrite IN at 1. property f...
-    + eapply claim1. ii. eapply claim2... s!. rewrite IN at 1. property f...
+    + eapply claim2. ii. eapply claim1; eauto with *. s!. rewrite IN at 1. property f; eauto with *.
+    + eapply claim1. ii. eapply claim2; eauto with *. s!. rewrite IN at 1. property f; eauto with *.
   - exact (claim3).
   - ii; split; intros y_le.
-    + rewrite y_le at 1. eapply G0_isMonotonic1...
+    + rewrite y_le at 1. eapply G0_isMonotonic1; eauto with *.
     + rewrite y_le at 1. eapply postfixedpoint_le_gfpOf.
       transitivity (proj1_sig f (join_lattice (join_lattice x y) (proj1_sig (proj1_sig G f) (join_lattice x y)))).
       { eapply eqProp_implies_leProp. exact (claim3 (join_lattice x y)). }
-      { property f. eapply join_lattice_le_intro... }
+      { property f. eapply join_lattice_le_intro; eauto with *. }
 Qed.
 
 Theorem G_compositionality (f : `[D -> D]) (r : D) (r1 : D) (r2 : D) (g1 : D) (g2 : D)
@@ -281,10 +281,10 @@ Theorem G_compositionality (f : `[D -> D]) (r : D) (r1 : D) (r2 : D) (g1 : D) (g
   : join_lattice g1 g2 =< proj1_sig (proj1_sig G f) r.
 Proof with eauto with *.
   assert (claim1 : g1 =< proj1_sig (proj1_sig G f) (join_lattice r (join_lattice g1 g2))).
-  { rewrite g1_le_G_f_r1 at 1. eapply G0_isMonotonic1. rewrite r1_le. eapply join_lattice_le_intro... }
+  { rewrite g1_le_G_f_r1 at 1. eapply G0_isMonotonic1. rewrite r1_le. eapply join_lattice_le_intro; eauto with *. }
   assert (claim2 : g2 =< proj1_sig (proj1_sig G f) (join_lattice r (join_lattice g1 g2))).
-  { rewrite g2_le_G_f_r2 at 1. eapply G0_isMonotonic1. rewrite r2_le. eapply join_lattice_le_intro... }
-  pose proof (G_specification f) as [? ? ?]. eapply ACCUM_COFIXPOINT...
+  { rewrite g2_le_G_f_r2 at 1. eapply G0_isMonotonic1. rewrite r2_le. eapply join_lattice_le_intro; eauto with *. }
+  pose proof (G_specification f) as [? ? ?]. eapply ACCUM_COFIXPOINT; eauto with *.
 Qed.
 
 Theorem G_characterization (f : `[D -> D]) (G_f : `[D -> D])
@@ -293,13 +293,13 @@ Theorem G_characterization (f : `[D -> D]) (G_f : `[D -> D])
 Proof with eauto with *.
   destruct G_f_spec as [INIT_COFIXPOINT' UNFOLD_COFIXPOINT' ACCUM_COFIXPOINT'].
   assert (claim1 : forall x : D, proj1_sig G_f x =< proj1_sig (proj1_sig G f) x).
-  { ii. eapply postfixedpoint_le_gfpOf... }
+  { ii. eapply postfixedpoint_le_gfpOf; eauto with *. }
   pose proof (G_specification f) as [? ? ?].
   assert (claim2 : forall x : D, proj1_sig (proj1_sig G f) x =< proj1_sig G_f (join_lattice x (proj1_sig (proj1_sig G f) x))).
-  { ii. rewrite UNFOLD_COFIXPOINT with (x := x) at 1. rewrite UNFOLD_COFIXPOINT'. property f. eapply join_lattice_le_intro... }
+  { ii. rewrite UNFOLD_COFIXPOINT with (x := x) at 1. rewrite UNFOLD_COFIXPOINT'. property f. eapply join_lattice_le_intro; eauto with *. }
   ii. eapply leProp_antisymmetry.
   - eapply claim1.
-  - eapply ACCUM_COFIXPOINT'...
+  - eapply ACCUM_COFIXPOINT'; eauto with *.
 Qed.
 
 End PACO_METATHEORY.
@@ -406,8 +406,8 @@ Proof with eauto with *.
   assert (claim2 : paco F bot_lattice =< F (join_lattice bot_lattice (paco F bot_lattice))) by exact (paco_unfold F bot_lattice (proj2_sig f)).
   assert (FIXEDPOINT : paco F bot_lattice == F (paco F bot_lattice)).
   { eapply @leProp_antisymmetry with (A_isProset := E.ensemble_isProset).
-    - rewrite -> claim2 at 1. property f. eapply join_lattice_le_intro...
-    - rewrite <- claim1 at 2. property f. eapply le_join_lattice_intror...
+    - rewrite -> claim2 at 1. property f. eapply join_lattice_le_intro; eauto with *.
+    - rewrite <- claim1 at 2. property f. eapply le_join_lattice_intror; eauto with *.
   }
   assert (IS_SUPREMUM : is_supremum_of (proj1_sig (nu f)) (postfixedpointsOf F)) by eapply nu_is_supremum_of_postfixedpointsOf.
   pose proof (nu_f_is_gfpOf_f f) as [claim3 claim4]; unnw.
@@ -416,7 +416,7 @@ Proof with eauto with *.
   { cofix CIH. intros z z_in. econstructor. revert z z_in. apply mk_paco'.
     intros z z_in. right. eapply CIH. rewrite <- claim3. exact (z_in).
   }
-  rewrite <- claim3 in to_show. eapply @leProp_antisymmetry with (A_isProset := E.ensemble_isProset)...
+  rewrite <- claim3 in to_show. eapply @leProp_antisymmetry with (A_isProset := E.ensemble_isProset); eauto with *.
 Qed.
 
 Theorem paco_init (F : D -> D)
@@ -440,29 +440,29 @@ Proof with eauto with *.
   pose (proj1_sig f) as F. split.
   - intros Y_le_paco_f_X z z_in. apply Y_le_paco_f_X in z_in.
     revert z z_in. change (proj1_sig (Paco f) X =< proj1_sig (Paco f) (join_lattice X Y)).
-    eapply paco_preserves_monotonicity; [exact (proj2_sig f) | eapply le_join_lattice_introl]...
+    eapply paco_preserves_monotonicity; [exact (proj2_sig f) | eapply le_join_lattice_introl]; eauto with *.
   - intros COIND. rewrite COIND at 1. change (paco F (join_lattice X Y) =< paco F X). pose (G_aux0 f X) as F'.
     assert (claim1 : paco F (join_lattice X Y) =< F (join_lattice (join_lattice X Y) (paco F (join_lattice X Y)))).
     { exact (paco_unfold (proj1_sig f) (join_lattice X Y) (proj2_sig f)). }
     assert (claim2 : F (join_lattice (join_lattice X Y) (paco F (join_lattice X Y))) =< F (join_lattice X (paco F (join_lattice X Y)))).
     { property f. eapply join_lattice_le_intro.
-      - intros z [z_in_X | z_in_Y]; [left | right]...
-      - eapply le_join_lattice_intror...
+      - intros z [z_in_X | z_in_Y]; [left | right]; eauto with *.
+      - eapply le_join_lattice_intror; eauto with *.
     }
     assert (claim3 : paco F (join_lattice X Y) \in postfixedpointsOf F').
-    { intros z z_in. property f; [reflexivity | eapply claim2]... }
+    { intros z z_in. property f; [reflexivity | eapply claim2]; eauto with *. }
     assert (claim4 : isMonotonic1 F').
     { eapply G_aux0_isMonotionicMap. }
     set (G_f_X := proj1_sig (nu (@exist (D -> D) isMonotonic1 F' claim4))).
     assert (claim5 : paco F (join_lattice X Y) =< F' (paco F (join_lattice X Y))).
-    { intros z z_in. property f; [reflexivity | eapply claim2]... }
+    { intros z z_in. property f; [reflexivity | eapply claim2]; eauto with *. }
     assert (claim6 : paco F (join_lattice X Y) =< G_f_X).
-    { eapply postfixedpoint_le_gfpOf... }
+    { eapply postfixedpoint_le_gfpOf; eauto with *. }
     assert (claim7 : is_supremum_of G_f_X (postfixedpointsOf F')).
     { eapply nu_is_supremum_of_postfixedpointsOf. }
     pose proof (postfixedpoint_is_gfpOf (PROSET := E.ensemble_isProset) F' G_f_X claim4 claim7) as [? ?]; s!.
     assert (claim8 : G_f_X =< F (join_lattice X G_f_X)).
-    { eapply eqProp_implies_leProp... }
+    { eapply eqProp_implies_leProp; eauto with *. }
     assert (claim9 : F (join_lattice X G_f_X) =< paco F X).
     { simpl. cofix CIH. intros z z_in. econstructor. revert z z_in. eapply mk_paco'.
       intros z z_in. destruct z_in as [? | ?]; simpl.
@@ -513,7 +513,7 @@ Corollary paco_compositionality (F : D -> D) (r : D) (r1 : D) (r2 : D) (g1 : D) 
   : join_lattice g1 g2 =< paco F r.
 Proof with eauto.
   rewrite paco_eq_G with (F := F) (F_monotonic := F_monotonic).
-  eapply G_compositionality... all: rewrite <- paco_eq_G...
+  eapply G_compositionality; eauto. all: rewrite <- paco_eq_G; eauto.
 Qed.
 
 Section PCOFIX.

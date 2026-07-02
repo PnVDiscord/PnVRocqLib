@@ -45,7 +45,7 @@ Class ClassicalAxioms `{b_AC : bool} `{b_fun_ext : bool} `{b_prop_ext : bool} : 
     : if b_prop_ext then P = P' else True
   } as ClassicalAxioms.
 
-#[global] Notation flagsOfClassicalAxioms := @ClassicalAxioms.
+#[global] Abbreviation flagsOfClassicalAxioms := @ClassicalAxioms.
 
 Lemma AC_implies_DC `{Axms : ClassicalAxioms (b_AC := true)} {X : Type} (step : X -> X -> Prop) (x0 : X)
   (Hstep : forall x : X, exists x' : X, step x x')

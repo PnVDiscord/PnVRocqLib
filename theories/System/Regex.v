@@ -42,11 +42,11 @@ Inductive in_regex {A : Type} {A' : Type} (SIM : Similarity A A') : Similarity (
 
 End Re.
 
-Notation regex := Re.t.
+Abbreviation regex := Re.t.
 
 Section REGULAR_LANGUAGE.
 
-#[local] Notation In := L.In.
+#[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 #[local] Infix "\subseteq" := E.isSubsetOf : type_scope.
 
@@ -86,11 +86,11 @@ Theorem eval_regex_good e s
   : s \in eval_regex e <-> s ∈ e.
 Proof with eauto with *.
   split.
-  - revert s; induction e; simpl; intros s H_IN; rewrite!; subst...
-    + destruct H_IN...
-    + des; subst...
-    + induction H_IN...
-  - intros H_in; induction H_in; simpl; rewrite!...
+  - revert s; induction e; simpl; intros s H_IN; rewrite!; subst; eauto with *.
+    + destruct H_IN; eauto with *.
+    + des; subst; eauto with *.
+    + induction H_IN; eauto with *.
+  - intros H_in; induction H_in; simpl; rewrite!; eauto with *.
     red in c_corres; congruence.
 Qed.
 
@@ -103,9 +103,9 @@ Fixpoint fromString (s : list A) : regex A :=
 Lemma fromString_spec (s : list A)
   : eval_regex (fromString s) == E.singleton s.
 Proof with eauto with *.
-  induction s as [ | c s IH]; simpl... intros xs; (do 3 red in IH); rewrite!; split.
-  - intros ?; des. subst xs. rewrite!. rewrite IH in H0. rewrite!. subst...
-  - intros ->. exists [c]; rewrite!; split... exists s; split... rewrite IH; rewrite!...
+  induction s as [ | c s IH]; simpl; eauto with *. intros xs; (do 3 red in IH); rewrite!; split.
+  - intros ?; des. subst xs. rewrite!. rewrite IH in H0. rewrite!. subst; eauto with *.
+  - intros ->. exists [c]; rewrite!; split; eauto with *. exists s; split; eauto with *. rewrite IH; rewrite!; eauto with *.
 Qed.
 
 Fixpoint pow (s : list A) (n : nat) {struct n} : list A :=

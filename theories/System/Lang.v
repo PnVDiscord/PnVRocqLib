@@ -9,8 +9,8 @@ Variant alphabet : Set :=
   | L
   | R.
 
-#[local] Notation string := (list alphabet).
-#[local] Notation lang := (ensemble string).
+#[local] Abbreviation string := (list alphabet).
+#[local] Abbreviation lang := (ensemble string).
 #[local] Infix " \in " := E.In : type_scope.
 
 #[global]
@@ -36,7 +36,7 @@ Inductive L_cfg1 : lang :=
 
 #[local] Hint Constructors L_cfg1 : core.
 
-#[local] Notation count a s := (count_occ eq_dec s a).
+#[local] Abbreviation count a s := (count_occ eq_dec s a).
 
 Variant cfg1_spec LANG : Prop :=
   | cfg1_lang_spec
@@ -73,12 +73,12 @@ Lemma cfg1_soundness s
   (H_in : s \in L_cfg1)
   : count L s = count R s.
 Proof with eauto.
-  induction H_in as [ | s1 H_in1 IH1 | s2 H_in2 IH2 | s1 s2 H_in1 IH1 H_in2 IH2]; simpl...
+  induction H_in as [ | s1 H_in1 IH1 | s2 H_in2 IH2 | s1 s2 H_in1 IH1 H_in2 IH2]; simpl; eauto.
   - rewrite <- rev_involutive with (l := _ ++ [_]). rewrite rev_unit.
-    do 2 rewrite count_occ_rev. simpl. do 2 rewrite count_occ_rev...
+    do 2 rewrite count_occ_rev. simpl. do 2 rewrite count_occ_rev; eauto.
   - rewrite <- rev_involutive with (l := _ ++ [_]). rewrite rev_unit.
-    do 2 rewrite count_occ_rev. simpl. do 2 rewrite count_occ_rev...
-  - do 2 rewrite count_occ_app...
+    do 2 rewrite count_occ_rev. simpl. do 2 rewrite count_occ_rev; eauto.
+  - do 2 rewrite count_occ_app; eauto.
 Qed.
 
 Inductive isLast a : string -> Prop :=
@@ -113,13 +113,13 @@ Proof with eauto.
   revert count_L_s_lt_count_R_s; set (black := L); set (white := R).
   induction s as [ | [ | ] s IHs]; simpl; try lia; i.
   - assert (IH : count black s < count white s) by lia.
-    apply IHs in IH. destruct IH as [IH | IH]...
-    inversion IH; subst. left. eapply string_cut_intro with (s' := s') (s_prefix := black :: s_prefix)...
+    apply IHs in IH. destruct IH as [IH | IH]; eauto.
+    inversion IH; subst. left. eapply string_cut_intro with (s' := s') (s_prefix := black :: s_prefix); eauto.
   - assert (count black s = count white s \/ count black s < count white s) as [IH | IH] by lia.
-    + destruct s as [ | a' s']...
-      left. eapply string_cut_intro with (s' := a' :: s') (s_prefix := [white])... simpl; lia.
-    + apply IHs in IH. destruct IH as [IH | IH]...
-      left. inversion IH; subst. eapply string_cut_intro with (s' := s') (s_prefix := white :: s_prefix)...
+    + destruct s as [ | a' s']; eauto.
+      left. eapply string_cut_intro with (s' := a' :: s') (s_prefix := [white]); eauto. simpl; lia.
+    + apply IHs in IH. destruct IH as [IH | IH]; eauto.
+      left. inversion IH; subst. eapply string_cut_intro with (s' := s') (s_prefix := white :: s_prefix); eauto.
 Qed.
 
 Lemma if_count_L_s_gt_count_R_s s
@@ -129,13 +129,13 @@ Proof with eauto.
   revert count_L_s_gt_count_R_s; set (black := R); set (white := L).
   induction s as [ | [ | ] s IHs]; simpl; try lia; i; cycle -1.
   - assert (IH : count black s < count white s) by lia.
-    apply IHs in IH. destruct IH as [IH | IH]...
-    inversion IH; subst. left. eapply string_cut_intro with (s' := s') (s_prefix := black :: s_prefix)...
+    apply IHs in IH. destruct IH as [IH | IH]; eauto.
+    inversion IH; subst. left. eapply string_cut_intro with (s' := s') (s_prefix := black :: s_prefix); eauto.
   - assert (count black s = count white s \/ count black s < count white s) as [IH | IH] by lia.
-    + destruct s as [ | a' s']...
-      left. eapply string_cut_intro with (s' := a' :: s') (s_prefix := [white])... simpl; lia.
-    + apply IHs in IH. destruct IH as [IH | IH]...
-      left. inversion IH; subst. eapply string_cut_intro with (s' := s') (s_prefix := white :: s_prefix)...
+    + destruct s as [ | a' s']; eauto.
+      left. eapply string_cut_intro with (s' := a' :: s') (s_prefix := [white]); eauto. simpl; lia.
+    + apply IHs in IH. destruct IH as [IH | IH]; eauto.
+      left. inversion IH; subst. eapply string_cut_intro with (s' := s') (s_prefix := white :: s_prefix); eauto.
 Qed.
 
 Theorem cfg1_completeness s
@@ -143,7 +143,7 @@ Theorem cfg1_completeness s
   : s \in L_cfg1.
 Proof with eauto.
   revert count_L_eq_count_R. pose proof (relation_on_image_liftsWellFounded lt (@length alphabet) lt_wf s) as H_ACC.
-  unfold binary_relation_on_image in H_ACC. induction H_ACC as [[ | [ | ] s] _ IHs]; simpl in *; i...
+  unfold binary_relation_on_image in H_ACC. induction H_ACC as [[ | [ | ] s] _ IHs]; simpl in *; i; eauto.
   - assert (count_L_s_lt_count_R_s : count L s < count R s) by lia.
     apply if_count_L_s_lt_count_R_s in count_L_s_lt_count_R_s.
     destruct count_L_s_lt_count_R_s as [[? ? ? ? ?] | H_last_R].
@@ -151,18 +151,18 @@ Proof with eauto.
       pose proof (IHs s' IH1 H_cut) as H_s'.
       assert (IH2 : length (L :: s_prefix) < S (length s)) by now simpl; pose proof (@length_app _ s_prefix s'); subst s; lia.
       assert (CLAIM : count L (L :: s_prefix) = count R (L :: s_prefix)).
-      { eapply count_app_cancel_r with (s := L :: s_prefix) (s' := s') (n' := count R s')...
-        simpl. rewrite <- H_app. rewrite <- count_app. rewrite <- H_app...
+      { eapply count_app_cancel_r with (s := L :: s_prefix) (s' := s') (n' := count R s'); eauto.
+        simpl. rewrite <- H_app. rewrite <- count_app. rewrite <- H_app; eauto.
       }
-      assert (H_prefix : L :: s_prefix \in L_cfg1)...
-      rewrite H_app. eapply cfg1_rule4 with (str1 := L :: s_prefix) (str2 := s')...
+      assert (H_prefix : L :: s_prefix \in L_cfg1); eauto.
+      rewrite H_app. eapply cfg1_rule4 with (str1 := L :: s_prefix) (str2 := s'); eauto.
     + apply isLast_elim in H_last_R. destruct H_last_R as [s' ->]; simpl in *. eapply cfg1_rule2. eapply IHs.
       * replace (length (s' ++ [R])) with (length (rev (R :: rev s'))) by now simpl; f_equal; rewrite rev_involutive.
         rewrite length_rev. simpl. rewrite length_rev. lia.
       * rewrite <- rev_involutive with (l := s' ++ [R]) in count_L_eq_count_R.
         rewrite -> rev_unit in count_L_eq_count_R. do 2 rewrite count_occ_rev in count_L_eq_count_R.
         simpl in count_L_eq_count_R. apply f_equal with (f := Nat.pred) in count_L_eq_count_R.
-        simpl in count_L_eq_count_R. do 2 rewrite count_occ_rev in count_L_eq_count_R...
+        simpl in count_L_eq_count_R. do 2 rewrite count_occ_rev in count_L_eq_count_R; eauto.
   - assert (count_L_s_gt_count_R_s : count L s > count R s) by lia.
     apply if_count_L_s_gt_count_R_s in count_L_s_gt_count_R_s.
     destruct count_L_s_gt_count_R_s as [[? ? ? ? ?] | H_last_L].
@@ -170,18 +170,18 @@ Proof with eauto.
       pose proof (IHs s' IH1 H_cut) as H_s'.
       assert (IH2 : length (R :: s_prefix) < S (length s)) by now simpl; pose proof (@length_app _ s_prefix s'); subst s; lia.
       assert (CLAIM : count L (R :: s_prefix) = count R (R :: s_prefix)).
-      { eapply count_app_cancel_r with (s := R :: s_prefix) (s' := s') (n' := count R s')...
-        simpl. rewrite <- H_app. rewrite <- count_app. rewrite <- H_app...
+      { eapply count_app_cancel_r with (s := R :: s_prefix) (s' := s') (n' := count R s'); eauto.
+        simpl. rewrite <- H_app. rewrite <- count_app. rewrite <- H_app; eauto.
       }
-      assert (H_prefix : R :: s_prefix \in L_cfg1)...
-      rewrite H_app. eapply cfg1_rule4 with (str1 := R :: s_prefix) (str2 := s')...
+      assert (H_prefix : R :: s_prefix \in L_cfg1); eauto.
+      rewrite H_app. eapply cfg1_rule4 with (str1 := R :: s_prefix) (str2 := s'); eauto.
     + apply isLast_elim in H_last_L. destruct H_last_L as [s' ->]; simpl in *. eapply cfg1_rule3. eapply IHs.
       * replace (length (s' ++ [L])) with (length (rev (L :: rev s'))) by now simpl; f_equal; rewrite rev_involutive.
         rewrite length_rev. simpl. rewrite length_rev. lia.
       * rewrite <- rev_involutive with (l := s' ++ [L]) in count_L_eq_count_R.
         rewrite -> rev_unit in count_L_eq_count_R. do 2 rewrite count_occ_rev in count_L_eq_count_R.
         simpl in count_L_eq_count_R. apply f_equal with (f := Nat.pred) in count_L_eq_count_R.
-        simpl in count_L_eq_count_R. do 2 rewrite count_occ_rev in count_L_eq_count_R...
+        simpl in count_L_eq_count_R. do 2 rewrite count_occ_rev in count_L_eq_count_R; eauto.
 Qed.
 
 Corollary L_cfg1_satisfies_its_spec
@@ -200,8 +200,8 @@ Module LANG2.
 
 Import LANG1.
 
-#[local] Notation string := (list alphabet).
-#[local] Notation lang := (ensemble string).
+#[local] Abbreviation string := (list alphabet).
+#[local] Abbreviation lang := (ensemble string).
 #[local] Infix " \in " := E.In : type_scope.
 
 Inductive L_cfg2 : lang :=
@@ -219,7 +219,7 @@ Section THEORY.
 
 #[local] Hint Constructors L_cfg2 : core.
 
-#[local] Notation count a s := (count_occ eq_dec s a).
+#[local] Abbreviation count a s := (count_occ eq_dec s a).
 
 Lemma count_L_sum_count_R s
   : count L s + count R s = length s.
@@ -314,7 +314,7 @@ Lemma WellParen_iff_WellParen' s
   : WellParen s <-> WellParen' s.
 Proof with eauto.
   split; intros [? ?].
-  - econs... intros ? POS ? POS' H.
+  - econs; eauto. intros ? POS ? POS' H.
     destruct prefix as [ | [ | ] prefix]; s!; cycle -1.
     { congruence. }
     { exfalso; lia. }
@@ -322,16 +322,16 @@ Proof with eauto.
     { exfalso. lia. }
     { enough (R = L) by congruence.
       assert (H_view : R = last (L :: s ++ [R]) R).
-      { rewrite L.last_cons. rewrite L.last_last... }
+      { rewrite L.last_cons. rewrite L.last_last; eauto. }
       assert (H_view' : L = last (L :: (prefix ++ suffix) ++ [L]) R).
-      { rewrite L.last_cons. rewrite L.last_last... }
+      { rewrite L.last_cons. rewrite L.last_last; eauto. }
       congruence.
     }
     { apply L.app_cancel_l with (prefix := [L]) in H.
       apply L.app_cancel_r with (suffix := [R]) in H.
       exploit (PREFIX prefix); ss!.
     }
-  - split... intros ? H_prefix; inversion H_prefix.
+  - split; eauto. intros ? H_prefix; inversion H_prefix.
     rename s_prefix into s1, s_suffix into s2. subst s.
     enough (count L ([L] ++ s1) > count R ([L] ++ s1)) by ss!.
     eapply PREFIX with (prefix := [L] ++ s1) (suffix := s2 ++ [R]); ss!.
@@ -356,9 +356,9 @@ Proof with eauto.
     { apply L.app_cancel_l with (prefix := [L]) in H0. subst s_prefix. s!. lia. }
     { enough (R = L) by congruence.
       assert (H_view : R = last (L :: s ++ [R]) R).
-      { rewrite L.last_cons. rewrite L.last_last... }
+      { rewrite L.last_cons. rewrite L.last_last; eauto. }
       assert (H_view' : L = last (L :: (s_prefix ++ s_suffix) ++ [L]) R).
-      { rewrite L.last_cons. rewrite L.last_last... }
+      { rewrite L.last_cons. rewrite L.last_last; eauto. }
       congruence.
     }
     { apply L.app_cancel_l with (prefix := [L]) in H0.

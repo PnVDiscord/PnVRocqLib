@@ -545,7 +545,7 @@ Section STLC_SN.
 
 #[local] Opaque chi.
 
-#[local] Notation bty := (bty _).
+#[local] Abbreviation bty := (bty _).
 #[local] Infix "≡ₐ" := alpha_equiv : type_scope.
 #[local] Infix "~>β₁" := fullBetaOnce : type_scope.
 #[local] Infix "~>β*" := fullBetaMany : type_scope.

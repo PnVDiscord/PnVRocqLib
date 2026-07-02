@@ -7,7 +7,7 @@ Import PropositialLogicNotations.
 
 #[local] Infix " \in " := E.In.
 #[local] Infix " \subseteq " := E.isSubsetOf.
-#[local] Notation In := List.In.
+#[local] Abbreviation In := List.In.
 
 #[local] Hint Resolve E.insert_monotonic : core.
 
@@ -136,22 +136,22 @@ Theorem the_propositional_soundness_theorem (X : ensemble formula) (b : formula)
   : X ⊨ b.
 Proof with eauto.
   induction INFERS.
-  - eapply ByAssumption_preserves with (C := C)...
-  - eapply ContradictionI_preserves with (A := A)...
-  - eapply ContradictionE_preserves with (A := A)...
-  - eapply NegationI_preserves with (A := A)...
-  - eapply NegationE_preserves with (A := A)...
-  - eapply ConjunctionI_preserves with (A := A) (B := B)...
-  - eapply ConjunctionE1_preserves with (A := A) (B := B)...
-  - eapply ConjunctionE2_preserves with (A := A) (B := B)...
-  - eapply DisjunctionI1_preserves with (A := A) (B := B)...
-  - eapply DisjunctionI2_preserves with (A := A) (B := B)...
-  - eapply DisjunctionE_preserves with (A := A) (B := B) (C := C)...
-  - eapply ImplicationI_preserves with (A := A) (B := B)...
-  - eapply ImplicationE_preserves with (A := A) (B := B)...
-  - eapply BiconditionalI_preserves with (A := A) (B := B)...
-  - eapply BiconditionalE1_preserves with (A := A) (B := B)...
-  - eapply BiconditionalE2_preserves with (A := A) (B := B)...
+  - eapply ByAssumption_preserves with (C := C); eauto.
+  - eapply ContradictionI_preserves with (A := A); eauto.
+  - eapply ContradictionE_preserves with (A := A); eauto.
+  - eapply NegationI_preserves with (A := A); eauto.
+  - eapply NegationE_preserves with (A := A); eauto.
+  - eapply ConjunctionI_preserves with (A := A) (B := B); eauto.
+  - eapply ConjunctionE1_preserves with (A := A) (B := B); eauto.
+  - eapply ConjunctionE2_preserves with (A := A) (B := B); eauto.
+  - eapply DisjunctionI1_preserves with (A := A) (B := B); eauto.
+  - eapply DisjunctionI2_preserves with (A := A) (B := B); eauto.
+  - eapply DisjunctionE_preserves with (A := A) (B := B) (C := C); eauto.
+  - eapply ImplicationI_preserves with (A := A) (B := B); eauto.
+  - eapply ImplicationE_preserves with (A := A) (B := B); eauto.
+  - eapply BiconditionalI_preserves with (A := A) (B := B); eauto.
+  - eapply BiconditionalE1_preserves with (A := A) (B := B); eauto.
+  - eapply BiconditionalE2_preserves with (A := A) (B := B); eauto.
 Qed.
 
 Lemma hasModel_ifConsistent (X : ensemble formula)
@@ -170,11 +170,11 @@ Proof with first [eassumption | trivial]. (* Infinitely grateful for Paul Sohn(a
   assert (claim3 : equiconsistent (cl X) X_dagger).
   { transitivity (Th X); trivial. now rewrite cl_eq_Th. }
   assert (claim4 : ~ inconsistent X_dagger).
-  { intros INCONSISTENT. contradiction CONSISTENT. eapply inconsistent_cl_iff, claim3... }
+  { intros INCONSISTENT. contradiction CONSISTENT. eapply inconsistent_cl_iff, claim3; first [eassumption | trivial]. }
   assert (claim5 : ~ inconsistent (cl X_dagger)).
   { intros INCONSISTENT. contradiction claim4. pose proof (fact5_of_1_2_8 X_dagger IS_FILTER').
-    rewrite -> filters_is_inconsistent_iff... eapply extend_infers with (Gamma := cl X_dagger)...
-    rewrite <- filters_is_inconsistent_iff... eapply fact1_of_1_2_8...
+    rewrite -> filters_is_inconsistent_iff; first [eassumption | trivial]. eapply extend_infers with (Gamma := cl X_dagger); first [eassumption | trivial].
+    rewrite <- filters_is_inconsistent_iff; first [eassumption | trivial]. eapply fact1_of_1_2_8; first [eassumption | trivial].
   }
   assert (
     forall i : propLetter,
@@ -182,8 +182,8 @@ Proof with first [eassumption | trivial]. (* Infinitely grateful for Paul Sohn(a
   ) as caseAtomF.
   { ii. change (AtomF i \in X_dagger <-> i \in E.preimage AtomF X_dagger). s!.
     rewrite CLOSED_infers. split.
-    - intros INFERS. exists (AtomF i). split... rewrite CLOSED_infers...
-    - intros [? [-> IN]]. rewrite <- CLOSED_infers...
+    - intros INFERS. exists (AtomF i). split; first [eassumption | trivial]. rewrite CLOSED_infers; first [eassumption | trivial].
+    - intros [? [-> IN]]. rewrite <- CLOSED_infers; first [eassumption | trivial].
   }
   assert (
     ContradictionF \in X_dagger <-> evalFormula (E.preimage AtomF X_dagger) ContradictionF
@@ -196,18 +196,18 @@ Proof with first [eassumption | trivial]. (* Infinitely grateful for Paul Sohn(a
   ) as caseNegationF.
   { ii. simpl. rewrite <- IH1, CLOSED_infers. split.
     - intros INFERS H_in. contradiction claim5.
-      eapply inconsistent_cl_iff. eapply ContradictionI with (A := p1)...
-      eapply CLOSED_infers...
+      eapply inconsistent_cl_iff. eapply ContradictionI with (A := p1); first [eassumption | trivial].
+      eapply CLOSED_infers; first [eassumption | trivial].
     - intros H_not_in.
       eapply CLOSED_infers, META_DN. unnw. intros H_in.
       eapply CLOSED_infers. eapply ContradictionI with (A := NegationF p1).
       + enough (claim6 : MaximallyConsistentSet X ⊢ ImplicationF p1 ContradictionF).
         { eapply NegationI. eapply ImplicationE with (A := p1).
-          - eapply extend_infers... ss!.
-          - eapply ByAssumption... ss!.
+          - eapply extend_infers; first [eassumption | trivial]. ss!.
+          - eapply ByAssumption; first [eassumption | trivial]. ss!.
         }
         eapply CLOSED_infers, IMPLICATION_FAITHFUL. tauto.
-      + eapply ByAssumption...
+      + eapply ByAssumption; first [eassumption | trivial].
   }
   assert (
     forall p1 : formula,
@@ -218,10 +218,10 @@ Proof with first [eassumption | trivial]. (* Infinitely grateful for Paul Sohn(a
   ) as caseConjunctionF.
   { ii. simpl. rewrite <- IH1, <- IH2. split.
     - intros H_in. split.
-      + eapply CLOSED_infers, ConjunctionE1, CLOSED_infers...
-      + eapply CLOSED_infers, ConjunctionE2, CLOSED_infers...
+      + eapply CLOSED_infers, ConjunctionE1, CLOSED_infers; first [eassumption | trivial].
+      + eapply CLOSED_infers, ConjunctionE2, CLOSED_infers; first [eassumption | trivial].
     - intros [H_in1 H_in2].
-      eapply CLOSED_infers, ConjunctionI; eapply CLOSED_infers...
+      eapply CLOSED_infers, ConjunctionI; eapply CLOSED_infers; first [eassumption | trivial].
   }
   assert (
     forall p1 : formula,
@@ -232,23 +232,23 @@ Proof with first [eassumption | trivial]. (* Infinitely grateful for Paul Sohn(a
   ) as caseDisjunctionF.
   { ii. simpl. rewrite <- IH1, <- IH2. split.
     - intros H_in. pose proof (classic (X_dagger ⊢ p1)) as [H_yes | H_no].
-      + left. eapply CLOSED_infers...
+      + left. eapply CLOSED_infers; first [eassumption | trivial].
       + right. eapply CLOSED_infers.
         eapply ImplicationE with (A := NegationF p1).
         { eapply DisjunctionE with (A := p1) (B := p2) (C := ImplicationF (NegationF p1) p2).
-          - eapply CLOSED_infers...
+          - eapply CLOSED_infers; first [eassumption | trivial].
           - eapply ImplicationI, ContradictionE. eapply ContradictionI with (A := p1).
-            + eapply ByAssumption. right; left...
-            + eapply ByAssumption. left...
-          - eapply ImplicationI, ByAssumption. right; left...
+            + eapply ByAssumption. right; left; first [eassumption | trivial].
+            + eapply ByAssumption. left; first [eassumption | trivial].
+          - eapply ImplicationI, ByAssumption. right; left; first [eassumption | trivial].
         }
-        { eapply CLOSED_infers, caseNegationF...
+        { eapply CLOSED_infers, caseNegationF; first [eassumption | trivial].
           simpl. rewrite <- IH1. intros H_false.
-          apply CLOSED_infers in H_false... ss!.
+          apply CLOSED_infers in H_false; first [eassumption | trivial]. ss!.
         }
     - intros [H_in | H_in].
-      + eapply CLOSED_infers, DisjunctionI1, CLOSED_infers...
-      + eapply CLOSED_infers, DisjunctionI2, CLOSED_infers...
+      + eapply CLOSED_infers, DisjunctionI1, CLOSED_infers; first [eassumption | trivial].
+      + eapply CLOSED_infers, DisjunctionI2, CLOSED_infers; first [eassumption | trivial].
   }
   assert (
     forall p1 : formula,
@@ -269,35 +269,35 @@ Proof with first [eassumption | trivial]. (* Infinitely grateful for Paul Sohn(a
     { split.
       - intros H_in. split.
         { eapply CLOSED_infers, ImplicationI. eapply BiconditionalE1 with (A := p1) (B := p2).
-          - eapply extend_infers with (Gamma := X_dagger)...
-            eapply CLOSED_infers... ss!.
-          - eapply ByAssumption. left...
+          - eapply extend_infers with (Gamma := X_dagger); first [eassumption | trivial].
+            eapply CLOSED_infers; first [eassumption | trivial]. ss!.
+          - eapply ByAssumption. left; first [eassumption | trivial].
         }
         { eapply CLOSED_infers, ImplicationI. eapply BiconditionalE2 with (A := p1) (B := p2).
-          - eapply extend_infers with (Gamma := X_dagger)...
-            eapply CLOSED_infers... ss!.
-          - eapply ByAssumption. left...
+          - eapply extend_infers with (Gamma := X_dagger); first [eassumption | trivial].
+            eapply CLOSED_infers; first [eassumption | trivial]. ss!.
+          - eapply ByAssumption. left; first [eassumption | trivial].
         }
       - intros [H_in1 H_in2].
         eapply CLOSED_infers, BiconditionalI.
         { eapply ImplicationE with (A := p1).
-          - eapply extend_infers with (Gamma := X_dagger)...
-            eapply CLOSED_infers... ss!.
-          - eapply ByAssumption. left...
+          - eapply extend_infers with (Gamma := X_dagger); first [eassumption | trivial].
+            eapply CLOSED_infers; first [eassumption | trivial]. ss!.
+          - eapply ByAssumption. left; first [eassumption | trivial].
         }
         { eapply ImplicationE with (A := p2).
-          - eapply extend_infers with (Gamma := X_dagger)...
-            eapply CLOSED_infers... ss!.
-          - eapply ByAssumption. left...
+          - eapply extend_infers with (Gamma := X_dagger); first [eassumption | trivial].
+            eapply CLOSED_infers; first [eassumption | trivial]. ss!.
+          - eapply ByAssumption. left; first [eassumption | trivial].
         }
     }
     { split.
-      - intros [H_in1 H_in2]. eapply caseImplicationF in H_in1, H_in2... ss!.
-      - intros [H_in1 H_in2]. eapply caseImplicationF in H_in1, H_in2... ss!.
+      - intros [H_in1 H_in2]. eapply caseImplicationF in H_in1, H_in2; first [eassumption | trivial]. ss!.
+      - intros [H_in1 H_in2]. eapply caseImplicationF in H_in1, H_in2; first [eassumption | trivial]. ss!.
     }
   }
   split.
-  { transitivity (Th X)... ii. econstructor. eapply ByAssumption... }
+  { transitivity (Th X); first [eassumption | trivial]. ii. econstructor. eapply ByAssumption; first [eassumption | trivial]. }
   { unfold is_structure. induction p; done!. }
 Qed.
 
@@ -308,7 +308,7 @@ Proof with eauto with *.
   eapply NNPP. intros it_is_false_that_Gamma_infers_C.
   set (X := E.insert (NegationF C) Gamma).
   assert (CONSISTENT : X ⊬ ContradictionF).
-  { intros INCONSISTENT. contradiction it_is_false_that_Gamma_infers_C. eapply NegationE... }
+  { intros INCONSISTENT. contradiction it_is_false_that_Gamma_infers_C. eapply NegationE; eauto with *. }
   pose proof (theorem_of_1_2_14 (Th X) (lemma1_of_1_3_8 X)) as [SUBSET' IS_FILTER' COMPLETE' EQUICONSISTENT'].
   fold (MaximallyConsistentSet X) in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.
   pose proof (hasModel_ifConsistent X CONSISTENT) as [INCL IS_STRUCTURE].
@@ -317,13 +317,13 @@ Proof with eauto with *.
   contradiction it_is_false_that_Gamma_infers_C.
   eapply completeness_theorem_prototype with (env := E.preimage AtomF (MaximallyConsistentSet X)); trivial.
   - unfold equiconsistent in *.
-    transitivity (inconsistent (MaximallyConsistentSet X))...
+    transitivity (inconsistent (MaximallyConsistentSet X)); eauto with *.
     split; intros [botB [botB_in botB_eq_falseB]].
-    + exists botB. split... eapply IS_STRUCTURE...
-    + exists botB. split... eapply IS_STRUCTURE...
-  - transitivity (MaximallyConsistentSet X)...
-    ii. eapply IS_STRUCTURE...
-  - eapply isFilter_compatWith_eqProp...
+    + exists botB. split; eauto with *. eapply IS_STRUCTURE; eauto with *.
+    + exists botB. split; eauto with *. eapply IS_STRUCTURE; eauto with *.
+  - transitivity (MaximallyConsistentSet X); eauto with *.
+    ii. eapply IS_STRUCTURE; eauto with *.
+  - eapply isFilter_compatWith_eqProp; eauto with *.
 Qed.
 
 Corollary the_propositional_compactness_theorem (Gamma : ensemble formula) (C : formula)
@@ -333,6 +333,6 @@ Proof with eauto.
   - intros ENTAILS.
     apply the_propositional_completeness_theorem in ENTAILS.
     apply inference_is_finite in ENTAILS. des. exists (xs), (X').
-    split... split... eapply the_propositional_soundness_theorem...
-  - i; des. eapply extend_entails... now firstorder.
+    split; eauto. split; eauto. eapply the_propositional_soundness_theorem; eauto.
+  - i; des. eapply extend_entails; eauto. now firstorder.
 Qed.
