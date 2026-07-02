@@ -163,31 +163,31 @@ Fixpoint to_string (s : Input.t) : string :=
   | c :: s' => String c (to_string s')
   end.
 
-Theorem to_of_string (s : string)
+Lemma to_of_string (s : string)
   : to_string (of_string s) = s.
 Proof.
   induction s as [ | c s IH]; simpl; congruence.
 Qed.
 
-Theorem of_to_string (s : Input.t)
+Lemma of_to_string (s : Input.t)
   : of_string (to_string s) = s.
 Proof.
   induction s as [ | c s IH]; simpl; congruence.
 Qed.
 
-Theorem length_of_string (s : string)
+Lemma length_of_string (s : string)
   : length (of_string s) = String.length s.
 Proof.
   induction s as [ | c s IH]; simpl; congruence.
 Qed.
 
-Theorem to_string_app (s1 : Input.t) (s2 : Input.t)
+Lemma to_string_app (s1 : Input.t) (s2 : Input.t)
   : to_string (s1 ++ s2) = String.append (to_string s1) (to_string s2).
 Proof.
   induction s1 as [ | c s1 IH]; simpl; congruence.
 Qed.
 
-Theorem prefix_suffix_decompose (s : Input.t) (n : nat)
+Lemma prefix_suffix_decompose (s : Input.t) (n : nat)
   (LE : n <= length s)
   : exists prefix, exists suffix, s = prefix ++ suffix /\ length prefix = n.
 Proof.
@@ -196,27 +196,27 @@ Proof.
   rewrite length_firstn. lia.
 Qed.
 
-Theorem app_cancel_prefix (prefix : Input.t) (s1 : Input.t) (s2 : Input.t)
+Lemma app_cancel_prefix (prefix : Input.t) (s1 : Input.t) (s2 : Input.t)
   (EQ : prefix ++ s1 = prefix ++ s2)
   : s1 = s2.
 Proof.
   eapply L.app_cancel_l. exact EQ.
 Qed.
 
-Theorem app_cancel_suffix (s1 : Input.t) (s2 : Input.t) (suffix : Input.t)
+Lemma app_cancel_suffix (s1 : Input.t) (s2 : Input.t) (suffix : Input.t)
   (EQ : s1 ++ suffix = s2 ++ suffix)
   : s1 = s2.
 Proof.
   eapply L.app_cancel_r. exact EQ.
 Qed.
 
-Theorem empty_or_nonempty (s : Input.t)
+Lemma empty_or_nonempty (s : Input.t)
   : s = [] \/ (exists c, exists s', s = c :: s').
 Proof.
   destruct s as [ | c s']; [left; reflexivity | right; exists c, s'; reflexivity].
 Qed.
 
-Theorem nonempty_prefix_rest_shorter (consumed : Input.t) (rest : Input.t)
+Lemma nonempty_prefix_rest_shorter (consumed : Input.t) (rest : Input.t)
   (NONEMPTY : ~ consumed = [])
   : length rest < length (consumed ++ rest).
 Proof.
@@ -279,13 +279,13 @@ Proof.
     + pose proof (app_eq_nil _ _ H) as [EQ1 EQ2]. subst s1 s2. ss!.
 Qed.
 
-Theorem nullable_true_iff (e : regex ascii)
+Lemma nullable_true_iff (e : regex ascii)
   : nullable e = true <-> [] \in eval_regex e.
 Proof.
   rewrite eval_regex_good. eapply nullable_similar_spec.
 Qed.
 
-Theorem nullable_false_iff (e : regex ascii)
+Lemma nullable_false_iff (e : regex ascii)
   : nullable e = false <-> (~ [] \in eval_regex e).
 Proof.
   destruct (nullable e) eqn: EQ; split; intros H.
@@ -323,7 +323,7 @@ Proof.
   econs 1.
 Qed.
 
-Theorem star_inv (s : Input.t) (e : regex ascii)
+Lemma star_inv (s : Input.t) (e : regex ascii)
   (IN : s \in eval_regex (Re.Star e))
   : s = [] \/ (exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e /\ s2 \in eval_regex (Re.Star e)).
 Proof.
@@ -353,7 +353,7 @@ Definition compileRule (rule : Rule.t) : BuildErrorM Rule.t :=
   else
     pure rule.
 
-Theorem compileRule_spec (rule : Rule.t) (rule' : Rule.t)
+Lemma compileRule_spec (rule : Rule.t) (rule' : Rule.t)
   (COMPILE : compileRule rule = inr rule')
   : forall s, s \in eval_regex rule.(Rule.regex) <-> s \in eval_regex rule'.(Rule.regex).
 Proof.
@@ -408,7 +408,7 @@ Proof.
     + now eapply IH.
 Qed.
 
-Theorem compileRules_sound (rules : list Rule.t) (rules' : list Rule.t) (rule : Rule.t)
+Lemma compileRules_sound (rules : list Rule.t) (rules' : list Rule.t) (rule : Rule.t)
   (COMPILE : compileRules rules = inr rules')
   (IN : rule ∈ rules')
   : rule ∈ rules /\ (~ accepts rule []).
@@ -429,7 +429,7 @@ Proof.
       * eapply IH with (rule := rule0) (rules' := rules0); eauto.
 Qed.
 
-Theorem compileRules_complete (rules : list Rule.t)
+Lemma compileRules_complete (rules : list Rule.t)
   (NONNULL : forall rule, rule ∈ rules -> nullable rule.(Rule.regex) = false)
   : compileRules rules = inr rules.
 Proof.
@@ -438,7 +438,7 @@ Proof.
   cbn. rewrite IH; ss!.
 Qed.
 
-Theorem compileRules_failure_nullable (rules : list Rule.t) (err : BuildError.t)
+Lemma compileRules_failure_nullable (rules : list Rule.t) (err : BuildError.t)
   (COMPILE : compileRules rules = inl err)
   : exists rule, rule ∈ rules /\ nullable rule.(Rule.regex) = true /\ err = BuildError.NullableTokenRule rule.(Rule.index).
 Proof.
@@ -449,7 +449,7 @@ Proof.
     inv COMPILE. pose proof (IH err eq_refl) as (bad_rule & IN_RULES & NULLABLE & ERR). exists bad_rule; ss!.
 Qed.
 
-Theorem compileRules_has_nullable_failure (rules : list Rule.t)
+Lemma compileRules_has_nullable_failure (rules : list Rule.t)
   (NULLABLE : exists rule, rule ∈ rules /\ nullable rule.(Rule.regex) = true)
   : exists idx, compileRules rules = inl (BuildError.NullableTokenRule idx).
 Proof.
@@ -796,7 +796,7 @@ Variant TaggedENFA_FRAGMENTS (frags : list (Rule.t * fragment)) (rule : Rule.t) 
     (eps_in : forall q, forall q', (q, q') ∈ frag.(frag_eps_edges) -> q' ∈ eps_step_from_edges q (fragment_eps_edges frags))
     (char_in : forall edge, edge ∈ frag.(frag_char_edges) -> edge.(char_edge_dst) ∈ char_step_from_edges edge.(char_edge_src) edge.(char_edge_label) (fragment_char_edges frags)).
 
-Theorem mkUnitedTaggedENFA_spec (M : TaggedENFA.t)
+Lemma mkUnitedTaggedENFA_spec (M : TaggedENFA.t)
   (COMPILE : fmap mkUnitedTaggedENFA Rule.compileds = inr M)
   : exists rules, exists qmax, exists frags, TaggedENFA_COMPILED M rules qmax frags /\ (forall rule, forall frag, (rule, frag) ∈ frags -> TaggedENFA_FRAGMENTS frags rule frag).
 Proof.
@@ -1133,7 +1133,7 @@ Proof.
     + eapply TAIL. exact IN_REGEX.
 Qed.
 
-Theorem regex2fragment_complete frags rule qi qf frag s
+Lemma regex2fragment_complete frags rule qi qf frag s
   (REGEX2FRAGMENT : regex2fragment rule.(Rule.regex) qi = (qf, frag))
   (FRAGMENTS : TaggedENFA_FRAGMENTS frags rule frag)
   (IN_REGEX : s \in eval_regex rule.(Rule.regex))
@@ -1142,7 +1142,7 @@ Proof.
   eapply regex2fragment_complete_aux; eauto.
 Qed.
 
-Theorem TaggedENFA_FRAGMENTS_complete qmax frags rule qi qf frag s
+Lemma TaggedENFA_FRAGMENTS_complete qmax frags rule qi qf frag s
   (REGEX2FRAGMENT : regex2fragment rule.(Rule.regex) qi = (qf, frag))
   (FRAGMENTS : TaggedENFA_FRAGMENTS frags rule frag)
   (IN_REGEX : s \in eval_regex rule.(Rule.regex))
@@ -1156,7 +1156,7 @@ Proof.
   - eapply regex2fragment_complete; eauto. econs; eauto.
 Qed.
 
-Theorem rules2fragments_complete qi rules qmax frags rule
+Lemma rules2fragments_complete qi rules qmax frags rule
   (FRAGS : rules2fragments qi rules = (qmax, frags))
   (IN_RULE : rule ∈ rules)
   : exists qi_rule, exists qf, exists frag, regex2fragment rule.(Rule.regex) qi_rule = (qf, frag) /\ (rule, frag) ∈ frags.
@@ -1327,7 +1327,7 @@ Proof.
     unfold char_edge_in_range in RANGE'. simpl in RANGE'. rewrite in_seq. lia.
 Qed.
 
-Theorem mkUnitedTaggedENFA_okay rules
+Lemma mkUnitedTaggedENFA_okay rules
   : TaggedENFA.okay (mkUnitedTaggedENFA rules).
 Proof.
   unfold mkUnitedTaggedENFA. destruct (rules2fragments 1 rules) as [qmax frags] eqn: FRAGS.
@@ -1737,7 +1737,7 @@ Proof.
     + right. exists (edge.(char_edge_label) :: s1), s2. splits; eauto. econs 3; eauto.
 Qed.
 
-Theorem regex2fragment_sound_Null qi qf frag s
+Lemma regex2fragment_sound_Null qi qf frag s
   (REGEX : regex2fragment Re.Null qi = (qf, frag))
   (DELTA : frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s)
   : s \in eval_regex Re.Null.
@@ -1748,7 +1748,7 @@ Proof.
   - des; contradiction.
 Qed.
 
-Theorem regex2fragment_sound_Empty qi qf frag s
+Lemma regex2fragment_sound_Empty qi qf frag s
   (REGEX : regex2fragment Re.Empty qi = (qf, frag))
   (DELTA : frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s)
   : s \in eval_regex Re.Empty.
@@ -1762,7 +1762,7 @@ Proof.
   - des; contradiction.
 Qed.
 
-Theorem regex2fragment_sound_Char c qi qf frag s
+Lemma regex2fragment_sound_Char c qi qf frag s
   (REGEX : regex2fragment (Re.Char c) qi = (qf, frag))
   (DELTA : frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s)
   : s \in eval_regex (Re.Char c).
@@ -1776,7 +1776,7 @@ Proof.
     ss!.
 Qed.
 
-Theorem regex2fragment_sound_Union e1 e2
+Lemma regex2fragment_sound_Union e1 e2
   (SOUND1 : forall qi, forall qf, forall frag, forall s, regex2fragment e1 qi = (qf, frag) -> frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s -> s \in eval_regex e1)
   (SOUND2 : forall qi, forall qf, forall frag, forall s, regex2fragment e2 qi = (qf, frag) -> frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s -> s \in eval_regex e2)
   : forall qi, forall qf, forall frag, forall s, regex2fragment (Re.Union e1 e2) qi = (qf, frag) -> frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s -> s \in eval_regex (Re.Union e1 e2).
@@ -1796,7 +1796,7 @@ Proof.
     rewrite app_nil_r in EQ; subst s. s!. right. eapply SOUND2; done!.
 Qed.
 
-Theorem regex2fragment_sound_Append e1 e2
+Lemma regex2fragment_sound_Append e1 e2
   (SOUND1 : forall qi, forall qf, forall frag, forall s, regex2fragment e1 qi = (qf, frag) -> frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s -> s \in eval_regex e1)
   (SOUND2 : forall qi, forall qf, forall frag, forall s, regex2fragment e2 qi = (qf, frag) -> frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s -> s \in eval_regex e2)
   : forall qi, forall qf, forall frag, forall s, regex2fragment (Re.Append e1 e2) qi = (qf, frag) -> frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s -> s \in eval_regex (Re.Append e1 e2).
@@ -1819,7 +1819,7 @@ Proof.
   red; reflexivity.
 Qed.
 
-Theorem regex2fragment_sound_Star e1
+Lemma regex2fragment_sound_Star e1
   (SOUND : forall qi, forall qf, forall frag, forall s, regex2fragment e1 qi = (qf, frag) -> frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s -> s \in eval_regex e1)
   : forall qi, forall qf, forall frag, forall s, regex2fragment (Re.Star e1) qi = (qf, frag) -> frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s -> s \in eval_regex (Re.Star e1).
 Proof.
@@ -1885,7 +1885,7 @@ Proof.
   - split; eauto. eapply regex2fragment_sound; eauto. eapply fragments_delta_star_start_to_fragment; eauto.
 Qed.
 
-Theorem mkUnitedTaggedENFA_sound (M : TaggedENFA.t)
+Lemma mkUnitedTaggedENFA_sound (M : TaggedENFA.t)
   (COMPILE : fmap mkUnitedTaggedENFA Rule.compileds = inr M)
   : exists rules, Rule.compileds = inr rules /\ ⟪ ACCEPT : forall s : Input.t, forall tag : Token.t, accepts M s tag -> (exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex)) ⟫.
 Proof.
@@ -1897,7 +1897,7 @@ Proof.
   rewrite ENFA_EQ in ACCEPTS. eapply TaggedENFA_FRAGMENTS_sound; eauto.
 Qed.
 
-Theorem mkUnitedTaggedENFA_complete (M : TaggedENFA.t)
+Lemma mkUnitedTaggedENFA_complete (M : TaggedENFA.t)
   (COMPILE : fmap mkUnitedTaggedENFA Rule.compileds = inr M)
   : exists rules, Rule.compileds = inr rules /\ ⟪ ACCEPT : forall s : Input.t, forall tag : Token.t, (exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex)) -> accepts M s tag ⟫.
 Proof.
@@ -1921,14 +1921,14 @@ Definition accepts_global (frags : list (Rule.t * fragment)) (frag : fragment) (
 Definition accepts_local (frag : fragment) (s : Input.t) : Prop :=
   frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s.
 
-Theorem regex2fragment_invariant (e : regex ascii) (qi : nat) (qf : nat) (frag : fragment)
+Lemma regex2fragment_invariant (e : regex ascii) (qi : nat) (qf : nat) (frag : fragment)
   (REGEX : regex2fragment e qi = (qf, frag))
   : FRAGMENT_BOUNDS qi qf frag.
 Proof.
   now eapply regex2fragment_bounds with (e := e).
 Qed.
 
-Theorem regex2fragment_start_accept (e : regex ascii) (qi : nat) (qf : nat) (frag : fragment)
+Lemma regex2fragment_start_accept (e : regex ascii) (qi : nat) (qf : nat) (frag : fragment)
   (REGEX : regex2fragment e qi = (qf, frag))
   : frag.(frag_start) = qi /\ frag.(frag_accept) = qf.
 Proof.
@@ -1940,14 +1940,14 @@ Variant REGEX2FRAGMENT_CORRECT (frags : list (Rule.t * fragment)) (rule : Rule.t
     (regex2fragment_local_sound : forall s : Input.t, frag.(frag_accept) \in fragment_delta_star frag frag.(frag_start) s -> s \in eval_regex rule.(Rule.regex))
     (regex2fragment_global_complete : forall s : Input.t, s \in eval_regex rule.(Rule.regex) -> frag.(frag_accept) \in fragments_delta_star frags frag.(frag_start) s).
 
-Theorem regex2fragment_correct frags rule qi qf frag
+Lemma regex2fragment_correct frags rule qi qf frag
   (REGEX : regex2fragment rule.(Rule.regex) qi = (qf, frag))
   (FRAGMENTS : TaggedENFA_FRAGMENTS frags rule frag)
   : REGEX2FRAGMENT_CORRECT frags rule qi qf frag.
 Proof.
-  constructor.
-  - intros s ACCEPT. eapply regex2fragment_sound; eauto.
-  - intros s ACCEPT. eapply regex2fragment_complete; eauto.
+  constructor; i.
+  - eapply regex2fragment_sound; eauto.
+  - eapply regex2fragment_complete; eauto.
 Qed.
 
 Theorem mkUnitedTaggedENFA_correct (M : TaggedENFA.t)
