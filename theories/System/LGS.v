@@ -126,6 +126,8 @@ Instance BuildErrorM_isMonad@{u} : isMonad@{u u} BuildErrorM@{u} :=
 
 Module MkLGS (Token : TOKEN_SPEC).
 
+#[global] Existing Instance Token.t_hasEqDec.
+
 Module Input.
 
 Definition t : Set :=
@@ -202,5 +204,206 @@ Proof.
 Qed.
 
 End Input.
+
+Fixpoint nullable (e : regex ascii) {struct e} : bool :=
+  match e with
+  | Re.Null => false
+  | Re.Empty => true
+  | Re.Char c => false
+  | Re.Union e1 e2 => nullable e1 || nullable e2
+  | Re.Append e1 e2 => nullable e1 && nullable e2
+  | Re.Star e1 => true
+  end.
+
+Lemma nullable_similar_spec (e : regex ascii)
+  : nullable e = true <-> [] =~= e.
+Proof.
+  split.
+  - induction e as [ | | c | e1 IH1 e2 IH2 | e1 IH1 e2 IH2 | e IH]; simpl; i; try congruence.
+    + econs.
+    + rewrite orb_true_iff in H. destruct H as [H | H]; eauto with *.
+    + rewrite andb_true_iff in H. destruct H as [H1 H2].
+      change (@nil ascii) with (@nil ascii ++ @nil ascii); eauto with *.
+    + econs.
+  - revert e.
+    enough (CLAIM : forall s, forall e, s =~= e -> s = [] -> nullable e = true).
+    { i. eapply CLAIM; eauto. }
+    intros s e H_IN; induction H_IN; simpl; i; subst; try congruence.
+    + rewrite orb_true_iff. left. eauto.
+    + rewrite orb_true_iff. right. eauto.
+    + pose proof (app_eq_nil _ _ H) as [EQ1 EQ2]. done.
+Qed.
+
+Theorem nullable_true_iff (e : regex ascii)
+  : nullable e = true <-> [] \in eval_regex e.
+Proof.
+  rewrite eval_regex_good. eapply nullable_similar_spec.
+Qed.
+
+Theorem nullable_false_iff (e : regex ascii)
+  : nullable e = false <-> (~ [] \in eval_regex e).
+Proof.
+  destruct (nullable e) eqn: EQ; split; intros H.
+  - congruence.
+  - contradiction H. rewrite <- nullable_true_iff. exact EQ.
+  - intros IN. rewrite <- nullable_true_iff in IN. congruence.
+  - reflexivity.
+Qed.
+
+Corollary nullable_refines (e : regex ascii)
+  : nullable e ⊑ ([] \in eval_regex e).
+Proof.
+  destruct (nullable e) as [ | ] eqn: H_OBS.
+  - now rewrite nullable_true_iff in H_OBS.
+  - now rewrite nullable_false_iff in H_OBS.
+Qed.
+
+Lemma union_inv (s : Input.t) (e1 : regex ascii) (e2 : regex ascii)
+  (IN : s \in eval_regex (Re.Union e1 e2))
+  : s \in eval_regex e1 \/ s \in eval_regex e2.
+Proof.
+  ss!.
+Qed.
+
+Theorem append_inv (s : Input.t) (e1 : regex ascii) (e2 : regex ascii)
+  (IN : s \in eval_regex (Re.Append e1 e2))
+  : exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e1 /\ s2 \in eval_regex e2.
+Proof.
+  ss!.
+Qed.
+
+Lemma star_nil (e : regex ascii)
+  : [] \in eval_regex (Re.Star e).
+Proof.
+  ss!.
+Qed.
+
+Lemma star_inv (s : Input.t) (e : regex ascii)
+  (IN : s \in eval_regex (Re.Star e))
+  : s = [] \/ (exists s1, exists s2, s = s1 ++ s2 /\ s1 \in eval_regex e /\ s2 \in eval_regex (Re.Star e)).
+Proof.
+  simpl in IN; inv IN; ss!.
+Qed.
+
+Module Rule.
+
+#[projections(primitive)]
+Record t : Set :=
+  mk
+  { index : nat
+  ; token : Token.t
+  ; regex : Re.t ascii
+  } as rule.
+
+#[global]
+Instance Rule_hasEqDec
+  : hasEqDec@{Set} Rule.t.
+Proof.
+  red; decide equality; eapply eq_dec.
+Defined.
+
+Definition compileRule (rule : Rule.t) : BuildErrorM@{Set} Rule.t :=
+  if nullable rule.(Rule.regex) then
+    inl (BuildError.NullableTokenRule rule.(Rule.index))
+  else
+    pure rule.
+
+Lemma compileRule_preserves (rule : Rule.t) (rule' : Rule.t)
+  (COMPILE : compileRule rule = inr rule')
+  : rule = rule'.
+Proof.
+  unfold compileRule in COMPILE. now destruct (nullable rule.(Rule.regex)); inv COMPILE.
+Qed.
+
+Theorem compileRule_spec (rule : Rule.t) (rule' : Rule.t)
+  (COMPILE : compileRule rule = inr rule')
+  : forall s, s \in eval_regex rule.(Rule.regex) <-> s \in eval_regex rule'.(Rule.regex).
+Proof.
+  now i; rewrite compileRule_preserves with (rule := rule) (rule' := rule').
+Qed.
+
+Lemma compileRule_guarantees_consumption (rule : Rule.t) (rule' : Rule.t)
+  (COMPILE : compileRule rule = inr rule')
+  : ~ ([] \in eval_regex rule'.(Rule.regex)).
+Proof.
+  rewrite <- nullable_false_iff. now cbv [compileRule] in COMPILE; destruct (nullable rule.(Rule.regex)) eqn: NULLABLE; inv COMPILE.
+Qed.
+
+Fixpoint compileRules (rules : list Rule.t) {struct rules} : BuildErrorM (list Rule.t) :=
+  match rules with
+  | [] => pure (@nil Rule.t)
+  | rule :: rules => liftM2 (@cons Rule.t) (compileRule rule) (compileRules rules)
+  end.
+
+Theorem compileRules_preserves (rules : list Rule.t) (rules' : list Rule.t)
+  (COMPILE : compileRules rules = inr rules')
+  : rules = rules'.
+Proof.
+  revert rules' COMPILE; induction rules as [ | rule rules IH]; ii; simpl in *; try congruence.
+  destruct (compileRule rule) as [err | rule1] eqn: H_OBS1; simpl in *; try congruence.
+  destruct (compileRules rules) as [err | rules2] eqn: H_OBS2; simpl in *; try congruence.
+  rewrite compileRule_preserves with (rule := rule) (rule' := rule1) by eauto.
+  inv COMPILE. f_equal. now eapply IH.
+Qed.
+
+Definition accepts (rule : Rule.t) (s : Input.t) : Prop :=
+  s \in eval_regex rule.(Rule.regex).
+
+Theorem compileRules_success_intro (rules : list Rule.t)
+  (NONNULL : forall rule, rule ∈ rules -> nullable rule.(Rule.regex) = false)
+  : compileRules rules = inr rules.
+Proof.
+  induction rules as [ | rule rules IH]; simpl; eauto.
+  unfold compileRule at 1. rewrite NONNULL by now left.
+  cbn. now rewrite IH by ss!.
+Qed.
+
+Theorem compileRules_success_elim (rules : list Rule.t) (rules' : list Rule.t) (rule : Rule.t)
+  (COMPILE : compileRules rules = inr rules')
+  (IN : rule ∈ rules')
+  : rule ∈ rules /\ (~ accepts rule []).
+Proof.
+  revert rules' COMPILE rule IN; induction rules as [ | rule rules IH]; intros rules' COMPILE rule0 IN; simpl in COMPILE.
+  - now inv COMPILE. 
+  - destruct (compileRule rule) as [err | rule'] eqn: COMPILE_RULE; cbn in COMPILE; try congruence.
+    destruct (compileRules rules) as [err | compiled_rules_tail] eqn: COMPILE_RULES; cbn in COMPILE; try congruence.
+    inv COMPILE. simpl in IN. destruct IN as [EQ | IN]; subst.
+    + pose proof (compileRule_preserves rule rule0 COMPILE_RULE) as EQ; subst rule0.
+      split; eauto with *. eapply compileRule_guarantees_consumption. exact COMPILE_RULE.
+    + pose proof (IH _ eq_refl rule0 IN) as [IN_RULES NONEMPTY]; ss!.
+Qed.
+
+Theorem compile_rules_failure_intro (rules : list Rule.t)
+  (EXISTS : exists rule, rule ∈ rules /\ nullable rule.(Rule.regex) = true)
+  : exists idx, compileRules rules = inl (BuildError.NullableTokenRule idx).
+Proof.
+  induction rules as [ | rule rules IH].
+  - now destruct EXISTS as (rule & IN & _).
+  - destruct EXISTS as (bad_rule & [EQ | IN_RULES] & NULLABLE); subst; simpl.
+    + unfold compileRule at 1. rewrite NULLABLE. ss!.
+    + destruct (compileRule _) as [[idx] | rule'] eqn: COMPILE_RULE; cbn; eauto.
+      pose proof (IH (@ex_intro _ _ bad_rule (conj IN_RULES NULLABLE))) as (idx & FAILURE).
+      rewrite FAILURE. ss!.
+Qed.
+
+Theorem compileRules_failure_elim (rules : list Rule.t) (err : BuildError.t)
+  (COMPILE : compileRules rules = inl err)
+  : exists rule, rule ∈ rules /\ nullable rule.(Rule.regex) = true /\ err = BuildError.NullableTokenRule rule.(Rule.index).
+Proof.
+  revert err COMPILE; induction rules as [ | rule rules IH]; ii; simpl in COMPILE; try congruence.
+  destruct (compileRule _) as [err' | rule'] eqn: COMPILE_RULE; cbn in COMPILE.
+  - inv COMPILE. unfold compileRule in COMPILE_RULE.
+    destruct (nullable _) eqn: NULLABLE; inv COMPILE_RULE; ss!.
+  - destruct (compileRules _) as [err' | rules'] eqn: COMPILE_RULES; cbn in COMPILE; try congruence.
+    inv COMPILE. pose proof (IH _ eq_refl) as (? & IN_RULES & NULLABLE & ERR); ss!.
+Qed.
+
+Definition raws : list Rule.t :=
+  L.mapi_from 1%nat (fun index : nat => fun '(token, regex) => Rule.mk index token regex) Token.rules.
+
+Definition compileds : BuildErrorM@{Set} (list Rule.t) :=
+  compileRules raws.
+
+End Rule.
 
 End MkLGS.
