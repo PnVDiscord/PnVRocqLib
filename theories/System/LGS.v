@@ -1887,7 +1887,7 @@ Qed.
 
 Theorem mkUnitedTaggedENFA_sound (M : TaggedENFA.t)
   (COMPILE : fmap mkUnitedTaggedENFA Rule.compileds = inr M)
-  : exists rules, Rule.compileds = inr rules /\ ⟪ ACCEPT : forall s, forall tag, accepts M s tag -> (exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex)) ⟫.
+  : exists rules, Rule.compileds = inr rules /\ ⟪ ACCEPT : forall s : Input.t, forall tag : Token.t, accepts M s tag -> (exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex)) ⟫.
 Proof.
   pose proof (mkUnitedTaggedENFA_spec M COMPILE) as (rules & qmax & frags & COMPILED & FRAGMENTS_OF).
   destruct COMPILED as [COMPILED_RULES COMPILED_ENFA COMPILED_FRAGS].
@@ -1899,7 +1899,7 @@ Qed.
 
 Theorem mkUnitedTaggedENFA_complete (M : TaggedENFA.t)
   (COMPILE : fmap mkUnitedTaggedENFA Rule.compileds = inr M)
-  : exists rules, Rule.compileds = inr rules /\ ⟪ ACCEPT : forall s, forall tag, (exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex)) -> accepts M s tag ⟫.
+  : exists rules, Rule.compileds = inr rules /\ ⟪ ACCEPT : forall s : Input.t, forall tag : Token.t, (exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex)) -> accepts M s tag ⟫.
 Proof.
   pose proof (mkUnitedTaggedENFA_spec M COMPILE) as (rules & qmax & frags & COMPILED & FRAGMENTS_OF).
   destruct COMPILED as [COMPILED_RULES COMPILED_ENFA COMPILED_FRAGS].
@@ -1952,7 +1952,7 @@ Qed.
 
 Theorem mkUnitedTaggedENFA_correct (M : TaggedENFA.t)
   (COMPILE : fmap mkUnitedTaggedENFA Rule.compileds = inr M)
-  : exists rules, Rule.compileds = inr rules /\ ⟪ CORRECT : forall s, forall tag, accepts M s tag <-> exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex) ⟫.
+  : exists rules, Rule.compileds = inr rules /\ ⟪ CORRECT : forall s : Input.t, forall tag : Token.t, accepts M s tag <-> (exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex)) ⟫.
 Proof.
   pose proof (TaggedENFA.mkUnitedTaggedENFA_sound M COMPILE) as (rules & COMPILED & SOUND); unnw.
   pose proof (TaggedENFA.mkUnitedTaggedENFA_complete M COMPILE) as (rules' & COMPILED' & COMPLETE); unnw.
