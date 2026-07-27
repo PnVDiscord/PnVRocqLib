@@ -1518,7 +1518,7 @@ Defined.
 Instance nat_hasEqDec : hasEqDec nat :=
   Nat.eq_dec.
 
-#[global, universes(polymorphic=yes)]
+#[global]
 Instance pair_hasEqdec {A : Type} {B : Type}
   (A_hasEqDec : hasEqDec A)
   (B_hasEqDec : hasEqDec B)

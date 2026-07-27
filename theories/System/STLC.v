@@ -1312,6 +1312,20 @@ Module HOPU.
 
 Import ChurchStyleStlc1.
 
+Definition mtv_id : Set :=
+  nat.
+
+Definition augmented_language (L : language) : language :=
+  {|
+    StlcLang.basic_types := L.(StlcLang.basic_types);
+    StlcLang.constants := L.(StlcLang.constants) + (typ L * mtv_id);
+    StlcLang.signature := @B.either L.(StlcLang.constants) (typ L * mtv_id) (fun _ => typ L) L.(StlcLang.signature) (@fst (typ L) mtv_id);
+    StlcLang.basic_types_hasEqDec := L.(StlcLang.basic_types_hasEqDec);
+    StlcLang.constants_hasEqDec := sum_hasEqDec L.(StlcLang.constants_hasEqDec) (pair_hasEqdec typ_hasEqDec nat_hasEqDec);
+  |}.
+
+#[local] Abbreviation of_meta ty ell := (inr (ty, ell)).
+
 Section HigherOrderPatternUnification.
 
 Context `{L : !language}.
