@@ -3,6 +3,8 @@ Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Math.ThN.
 Require Import PnV.System.P.
 Require Import PnV.Data.Vector.
+Require Import PnV.Data.FiniteSet.
+Require Import PnV.Data.FiniteMap.
 Require Import PnV.System.Lambda1.
 
 Module ChurchStyleStlc1.
@@ -647,8 +649,8 @@ Proof.
   induction TYPING; simpl; intros gamma GAMMA_RED.
   - eapply GAMMA_RED. exact LOOKUP.
   - eapply IHTYPING1.
-    { exact GAMMA_RED. }
-    eapply IHTYPING2. exact GAMMA_RED.
+    + exact GAMMA_RED.
+    + eapply IHTYPING2. exact GAMMA_RED.
   - set (z := chi gamma (Lam_trm y ty1 e1)).
     split.
     + eapply jmSN_lam. eapply jmRed_jmSN.
@@ -1305,3 +1307,15 @@ End STLC_SN.
 End STLC_META.
 
 End ChurchStyleStlc1.
+
+Module HOPU.
+
+Import ChurchStyleStlc1.
+
+Section HigherOrderPatternUnification.
+
+Context `{L : !language}.
+
+End HigherOrderPatternUnification.
+
+End HOPU.

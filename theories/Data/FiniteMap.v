@@ -11,7 +11,7 @@ Import FS.
 
 #[universes(template), projections(primitive)]
 Record alist {K : Type} {V : Type} : Type :=
-  mk_alist { kvlist : fin_ensemble (K * V) } as al.
+  mk_alist { kvlist : list (K * V) } as al.
 
 #[global] Arguments alist : clear implicits.
 
