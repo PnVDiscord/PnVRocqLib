@@ -2,6 +2,7 @@ Require Import PnV.Prelude.Prelude.
 Require Import Stdlib.Logic.Eqdep_dec.
 Require Import Stdlib.Logic.EqdepFacts.
 Require Import Stdlib.Arith.Wf_nat.
+Require Import Stdlib.ZArith.ZArith.
 
 #[universes(polymorphic=yes)]
 Lemma eq_pirrel_fromEqDec@{u} {A : Type@{u}} {hasEqDec : hasEqDec A} (lhs : A) (rhs : A)
@@ -133,6 +134,60 @@ Proof.
   - pose proof (LEM (exists n : nat, f n = false)) as [YES | NO].
     + exact YES.
     + contradiction NOT_ALL_TRUE. intros x. destruct (f x) as [ | ] eqn: H_OBS; now firstorder.
+Defined.
+
+Lemma dec_finds_result_if_exists (P : nat -> Prop)
+  (DEC : forall n, {P n} + {~ P n})
+  (EXISTENCE : exists x, P x)
+  : { x : nat | P x }.
+Proof.
+  pose (COUNTABLE := {| encode := id; decode := @Some nat; decode_encode (x : nat) := @eq_refl (option nat) (Some x) |}).
+  exists (@search_go nat COUNTABLE P DEC 0 (@initial_step nat COUNTABLE P EXISTENCE)).
+  eapply search_go_correct.
+Defined.
+
+#[global, refine]
+Instance Z_isCountable : isCountable Z :=
+  { encode z :=
+    match z with
+    | Z0 => 0
+    | Zpos p => 2 * Pos.to_nat p - 1
+    | Zneg p => 2 * Pos.to_nat p
+    end
+  ; decode n :=
+    if Nat.even n then
+      match n with
+      | 0 => Some Z0
+      | _ => Some (Zneg (Pos.of_nat (n / 2)))
+      end
+    else
+      Some (Zpos (Pos.of_nat ((n + 1) / 2)))
+  }.
+Proof.
+  intros [ | p | p]; simpl.
+  - reflexivity.
+  - assert (POS : 0 < Pos.to_nat p) by exact (Pos2Nat.is_pos p).
+    replace (Pos.to_nat p + (Pos.to_nat p + 0) - 1) with (2 * (Pos.to_nat p - 1) + 1) by lia.
+    rewrite Nat.even_add, Nat.even_mul; simpl.
+    change (Some (Zpos (Pos.of_nat ((2 * (Pos.to_nat p - 1) + 1 + 1) / 2))) = Some (Zpos p)).
+    replace (2 * (Pos.to_nat p - 1) + 1 + 1) with (2 * Pos.to_nat p) by lia.
+    rewrite Nat.mul_comm, Nat.div_mul; [| lia].
+    rewrite Pos2Nat.id. reflexivity.
+  - assert (POS : 0 < Pos.to_nat p) by exact (Pos2Nat.is_pos p).
+    replace (Pos.to_nat p + (Pos.to_nat p + 0)) with (2 * Pos.to_nat p) by lia.
+    rewrite Nat.even_mul; simpl.
+    destruct (Pos.to_nat p) as [| n] eqn: EQ; [lia |].
+    change (Some (Zneg (Pos.of_nat ((2 * S n) / 2))) = Some (Zneg p)).
+    rewrite Nat.mul_comm, Nat.div_mul; [rewrite <- EQ, Pos2Nat.id; reflexivity | lia].
+Defined.
+
+Lemma dec_finds_result_if_exists_Z (P : Z -> Prop)
+  (DEC : forall n, {P n} + {~ P n})
+  (EXISTENCE : exists x, P x)
+  : { x : Z | P x }.
+Proof.
+  exists (@search_go Z Z_isCountable P DEC 0 (@initial_step Z Z_isCountable P EXISTENCE)).
+  eapply search_go_correct.
 Defined.
 
 Lemma dec_finds_result_if_exists (P : nat -> Prop)
