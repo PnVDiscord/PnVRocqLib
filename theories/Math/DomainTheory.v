@@ -95,7 +95,7 @@ Theorem KnasterTarski_3rd (f : D -> D) (W : ensemble D)
   (f_isMonotonic : isMonotonic1 f)
   (W_is_a_set_of_fixed_points_of_f : W \subseteq fixedpointsOf f)
   : { fix_f : D | is_supremum_in fix_f W (fixedpointsOf f) }.
-Proof with eauto with *.
+Proof.
   pose proof (supremum_cola W) as [q q_is_lub_of_W].
   pose (fun w : D => q =< w) as W_hat.
   assert (q_is_glb_of_W_hat : is_infimum_of q W_hat).
@@ -190,7 +190,7 @@ Context {D : Type} {PROSET : isProset D}.
 
 Lemma strong_coinduction {COLA : isCola D} {UPPER_LATTICE : isUpperSemilattice D} (f : `[D -> D]) (x : D)
   : x =< proj1_sig (nu f) <-> x =< proj1_sig f (join_lattice x (proj1_sig (nu f))).
-Proof with eauto with *.
+Proof.
   assert (claim1 : proj1_sig f (proj1_sig (nu f)) =< proj1_sig f (join_lattice x (proj1_sig (nu f)))).
   { property f. eapply join_lattice_spec; done!. }
   pose proof (proj2_sig (nu f)) as [claim2 claim3]. split.
@@ -220,7 +220,7 @@ Definition G0 (f : `[D -> D]) (x : D) : D :=
 
 Lemma G0_isMonotonic1 (f : `[D -> D])
   : isMonotonic1 (G0 f).
-Proof with eauto with *.
+Proof.
   intros x1 x2 x1_le_x2. eapply strong_coinduction. simpl in *.
   assert (claim1 : G0 f x1 == proj1_sig f (join_lattice x1 (G0 f x1))) by property (nu (G_aux f x1)).
   rewrite -> claim1 at 1. property f. transitivity (join_lattice x2 (G0 f x1)).
@@ -256,7 +256,7 @@ Variant paco_spec (f : `[D -> D]) (G_f : `[D -> D]) : Prop :=
 
 Theorem G_specification (f : `[D -> D])
   : paco_spec f (proj1_sig G f).
-Proof with eauto with *.
+Proof.
   pose proof (nu_is_supremum_of_postfixedpointsOf (G_aux f bot_lattice)) as claim1.
   pose proof (nu_is_supremum_of_postfixedpointsOf f) as claim2.
   pose proof (fun x : D => proj1 (nu_f_is_gfpOf_f (G_aux f x))) as claim3.
@@ -279,7 +279,7 @@ Theorem G_compositionality (f : `[D -> D]) (r : D) (r1 : D) (r2 : D) (g1 : D) (g
   (r1_le : r1 =< join_lattice r g2)
   (r2_le : r2 =< join_lattice r g1)
   : join_lattice g1 g2 =< proj1_sig (proj1_sig G f) r.
-Proof with eauto with *.
+Proof.
   assert (claim1 : g1 =< proj1_sig (proj1_sig G f) (join_lattice r (join_lattice g1 g2))).
   { rewrite g1_le_G_f_r1 at 1. eapply G0_isMonotonic1. rewrite r1_le. eapply join_lattice_le_intro; eauto with *. }
   assert (claim2 : g2 =< proj1_sig (proj1_sig G f) (join_lattice r (join_lattice g1 g2))).
@@ -290,7 +290,7 @@ Qed.
 Theorem G_characterization (f : `[D -> D]) (G_f : `[D -> D])
   (G_f_spec : paco_spec f G_f)
   : G_f == proj1_sig G f.
-Proof with eauto with *.
+Proof.
   destruct G_f_spec as [INIT_COFIXPOINT' UNFOLD_COFIXPOINT' ACCUM_COFIXPOINT'].
   assert (claim1 : forall x : D, proj1_sig G_f x =< proj1_sig (proj1_sig G f) x).
   { ii. eapply postfixedpoint_le_gfpOf; eauto with *. }
@@ -400,7 +400,7 @@ Definition Paco (f : `[D -> D]) : `[D -> D] :=
 
 Lemma initPaco (f : `[D -> D])
   : proj1_sig (nu f) == proj1_sig (Paco f) bot_lattice.
-Proof with eauto with *.
+Proof.
   pose (proj1_sig f) as F.
   assert (claim1 : F (join_lattice bot_lattice (paco F bot_lattice)) =< paco F bot_lattice) by exact (paco_fold F bot_lattice).
   assert (claim2 : paco F bot_lattice =< F (join_lattice bot_lattice (paco F bot_lattice))) by exact (paco_unfold F bot_lattice (proj2_sig f)).
@@ -436,7 +436,7 @@ Qed.
 
 Lemma accumPaco (f : `[D -> D]) (X : D) (Y : D)
   : Y =< proj1_sig (Paco f) X <-> Y =< proj1_sig (Paco f) (join_lattice X Y).
-Proof with eauto with *.
+Proof.
   pose (proj1_sig f) as F. split.
   - intros Y_le_paco_f_X z z_in. apply Y_le_paco_f_X in z_in.
     revert z z_in. change (proj1_sig (Paco f) X =< proj1_sig (Paco f) (join_lattice X Y)).
@@ -511,7 +511,7 @@ Corollary paco_compositionality (F : D -> D) (r : D) (r1 : D) (r2 : D) (g1 : D) 
   (r1_le : r1 =< join_lattice r g2)
   (r2_le : r2 =< join_lattice r g1)
   : join_lattice g1 g2 =< paco F r.
-Proof with eauto.
+Proof.
   rewrite paco_eq_G with (F := F) (F_monotonic := F_monotonic).
   eapply G_compositionality; eauto. all: rewrite <- paco_eq_G; eauto.
 Qed.

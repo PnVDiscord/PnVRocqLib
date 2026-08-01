@@ -133,7 +133,7 @@ Qed.
 
 Lemma Law_of_Excluded_Middle A
   : E.empty ⊢ DisjunctionF A (NegationF A).
-Proof with repeat ((now left) || right).
+Proof.
   eapply NegationE, ContradictionI.
   - eapply DisjunctionI2, NegationI, ContradictionI.
     + eapply DisjunctionI1, ByAssumption; repeat ((now left) || right).
@@ -155,7 +155,7 @@ Lemma extend_infers Gamma Gamma' C
   (INFERS : Gamma ⊢ C)
   (SUBSET : Gamma \subseteq Gamma')
   : Gamma' ⊢ C.
-Proof with eauto.
+Proof.
   revert Gamma' SUBSET. induction INFERS; ii.
   - eapply ByAssumption with (C := C); eauto.
   - eapply ContradictionI with (A := A); eauto.
@@ -238,7 +238,7 @@ Tactic Notation "tac" :=
 Lemma ideaOf_enumFormula' (p : formula) (rk : nat)
   (RANK_LE : depth p <= rk)
   : { seed0 : nat | enumFormula' rk seed0 = p }.
-Proof with tac.
+Proof.
   revert p rk RANK_LE.
   pose proof (claim1 := fun x : nat => fun y : nat => fun z : nat => proj2 (cp_spec x y z)).
   induction p as [i | | p1 IH1 | p1 IH1 p2 IH2 | p1 IH1 p2 IH2 | p1 IH1 p2 IH2 | p1 IH1 p2 IH2]; simpl.
@@ -716,7 +716,7 @@ Qed.
 #[global]
 Instance LBA_satisfiesBooleanAlgebraLaws
   : BooleanAlgebraLaws formula_isBA.
-Proof with done!.
+Proof.
   repeat (split; ii); simpl in *; des.
   { eapply ConjunctionI.
     - eapply Cut_property with (A := x1).
@@ -960,7 +960,7 @@ Instance LindenbaumBooleanAlgebra : @isCBA formula formula_isSetoid :=
 
 Lemma leB_iff (lhs : formula) (rhs : formula)
   : lhs =< rhs <-> E.singleton lhs ⊢ rhs.
-Proof with reflexivity || trivial.
+Proof.
   simpl. split.
   - intros [INFERS INFERS'].
     eapply Cut_property with (A := ConjunctionF lhs rhs); reflexivity || trivial.
@@ -1053,7 +1053,7 @@ Qed.
 
 Lemma lemma1_of_1_3_8 (X : ensemble formula)
   : isFilter (Th X).
-Proof with reflexivity || eauto.
+Proof.
   eapply isFilter_intro.
   - exists trueB. econstructor.
     eapply ImplicationI, ByAssumption; done!.
@@ -1066,7 +1066,7 @@ Qed.
 
 Lemma cl_isSubsetOf_Th (X : ensemble formula)
   : cl X \subseteq Th X.
-Proof with eauto.
+Proof.
   intros b [xs ?]; des. apply andsB_le_iff in andsB_LE.
   destruct andsB_LE as [X' [xs_repr_X' INFERS]].
   econstructor. eapply extend_infers; eauto.
@@ -1164,7 +1164,7 @@ Qed.
 Lemma filters_is_inconsistent_iff (F : ensemble formula)
   (F_isFilter : isFilter F)
   : inconsistent F <-> F ⊢ ContradictionF.
-Proof with eauto with *.
+Proof.
   split; intros INCONSISTENT.
   - eapply inconsistent_cl_iff.
     eapply inconsistent_compatWith_isSubsetOf with (X := F); eauto with *.
@@ -1180,7 +1180,7 @@ Fixpoint axiom_set (X : ensemble formula) (n : nat) {struct n} : ensemble formul
 
 Lemma lemma1_of_1_3_9 (X : ensemble formula) (n : nat)
   : improveFilter (Th X) n == Th (axiom_set X n).
-Proof with eauto with *.
+Proof.
   revert X. induction n as [ | n IH]; [reflexivity | intros X b].
   simpl. unfold Insertion. rewrite cl_eq_Th, IH. split; intros b_in.
   - rewrite <- cl_eq_Th. rewrite <- cl_eq_Th in b_in. revert b b_in.
@@ -1202,7 +1202,7 @@ Lemma completeness_theorem_prototype (X : ensemble formula) (b : formula) (env :
   (SUBSET : Th (E.insert (NegationF b) X) \subseteq evalFormula env)
   (IS_FILTER : isFilter (evalFormula env))
   : X ⊢ b.
-Proof with eauto with *.
+Proof.
   revert EQUICONSISTENT SUBSET IS_FILTER. pose (evalFormula env) as X'.
   fold X'. ii.
   assert (claim1 : evalFormula env b).
@@ -1240,7 +1240,7 @@ Qed.
 Lemma lemma3_of_1_3_9_aux1 (xs : list formula) (X : ensemble formula)
   (FINITE_SUBSET : L.is_finsubset_of xs (full_axiom_set X))
   : exists m, L.is_finsubset_of xs (improveFilter (Th X) m).
-Proof with eauto with *.
+Proof.
   revert X FINITE_SUBSET. induction xs as [ | x xs IH]; simpl; ii.
   - exists 0. tauto.
   - assert (claim1 : forall z : formula, In z xs -> z \in full_axiom_set X) by now firstorder.
@@ -1260,7 +1260,7 @@ Qed.
 
 Lemma lemma3_of_1_3_9 (X : ensemble formula)
   : Th (full_axiom_set X) \subseteq MaximallyConsistentSet X.
-Proof with eauto with *.
+Proof.
   intros z [INFERS].
   pose proof (inference_is_finite (full_axiom_set X) z INFERS) as [xs [X' [xs_isFiniteSubsetOf [xs_isListRepOf INFERS']]]].
   pose proof (lemma3_of_1_3_9_aux1 xs X xs_isFiniteSubsetOf) as [m claim1].
@@ -1283,7 +1283,7 @@ Variant MaximallyConsistentSet_spec (X : ensemble formula) (F : ensemble formula
 
 Theorem theorem_of_1_3_10 (X : ensemble formula)
   : MaximallyConsistentSet_spec X (MaximallyConsistentSet X).
-Proof with eauto with *.
+Proof.
   pose proof (lemma1 := @lemma1_of_1_3_8).
   pose proof (theorem_of_1_2_14 (Th X) (lemma1 X)) as [? ? ? ?].
   fold (MaximallyConsistentSet X) in SUBSET, IS_FILTER, COMPLETE, EQUICONSISTENT.

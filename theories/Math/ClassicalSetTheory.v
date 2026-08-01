@@ -702,7 +702,7 @@ Qed.
 Lemma rec_succ (o : Tree) (alpha : Tree)
   (SUCC : o =ᵣ succ alpha)
   : rec o ≡ next (rec alpha).
-Proof with auto.
+Proof.
   eapply deq_trans with (d2 := rec (succ alpha)); auto. simpl.
   change (djoin bool (j { b : bool & children (if b then alpha else singleton alpha) } (fun c => childnodes (if projT1 c then alpha else singleton alpha) (projT2 c))) ≡ next (rec alpha)). split.
   - eapply djoin_supremum; auto. intros [ | ]; eauto. eapply djoin_supremum; auto. intros [[ | ] c]; simpl; eapply rec_next_dle.
@@ -719,7 +719,7 @@ Lemma rec_lim' (o : Tree) (cs : Type) (ts : cs -> Tree)
   (INHABITED : inhabited cs)
   (LIM' : o =ᵣ indexed_union cs ts)
   : rec o ≡ djoin cs (fun c : cs => rec (ts c)).
-Proof with auto.
+Proof.
   destruct INHABITED as [c]. destruct o as [cs' ts']; simpl. change (djoin bool (j cs' ts') ≡ djoin cs (fun i : cs => rec (ts i))); split.
   - eapply djoin_supremum; eauto. intros [ | ]; simpl.
     + eapply dle_trans with (d2 := rec (ts c)); auto. eapply djoin_upperbound with (ds := fun i : cs => rec (ts i)) (i := c); eauto.
@@ -2130,7 +2130,7 @@ Lemma Ordinal_comparison__aux1 (x : Tree) (alpha : Tree) (beta : Tree)
   (H_isOrdinal1 : isOrdinal alpha)
   (H_isOrdinal2 : isOrdinal beta)
   : (alpha <ᵣ beta -> alpha \in beta) /\ (alpha =ᵣ beta -> alpha == beta).
-Proof with eauto with *.
+Proof.
   revert alpha beta x_rGe1 x_rGe2 H_isOrdinal1 H_isOrdinal2. pose proof (rLt_wf x) as H_ACC. induction H_ACC as [x _ IH].
   destruct alpha as [cs1 ts1], beta as [cs2 ts2]; ii. split; intros H.
   - destruct H as [[c2 H_rLe]]. simpl in *. exploit (IH (ts2 c2) _ (mkNode cs1 ts1) (ts2 c2)); eauto with *.

@@ -278,7 +278,7 @@ Qed.
 
 Lemma fact1_of_1_2_8 X
   : isFilter (cl X).
-Proof with eauto with *.
+Proof.
   eapply isFilter_intro.
   - exists (trueB). exists ([]). unnw. split.
     + intros z z_in. inversion z_in.
@@ -300,7 +300,7 @@ Qed.
 
 Lemma fact3_of_1_2_8 X
   : X \subseteq cl X.
-Proof with eauto with *.
+Proof.
   intros b b_in. exists ([b]). unnw. split.
   - intros z [z_eq_b | []]; subst z; eauto with *.
   - rewrite andsB_one; eauto with *.
@@ -378,7 +378,7 @@ Variant insertion X n : ensemble B :=
 Add Parametric Morphism :
   insertion with signature (eqProp ==> eq ==> eqProp)
   as insertion_lifts_eqProp.
-Proof with eauto with *.
+Proof.
   enough (to_show : forall X, forall X', X == X' -> forall n, insertion X n \subseteq insertion X' n).
   { ii. split; eapply to_show; eauto with *. }
   intros X X' X_eq_X' n b b_in.
@@ -411,7 +411,7 @@ Qed.
 Lemma lemma1_of_1_2_12 (n1 : nat) (n2 : nat)
   (n1_le_n2 : n1 <= n2)
   : forall X, improveFilter X n1 \subseteq improveFilter X n2.
-Proof with eauto with *.
+Proof.
   change (forall X : ensemble B, improveFilter X n1 =< improveFilter X n2).
   induction n1_le_n2 as [ | n2 n1_le_n2 IH]; intros X; eauto with *.
   rewrite IH with (X := X). transitivity (Insertion (improveFilter X n2) n2).

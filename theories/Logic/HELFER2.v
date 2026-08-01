@@ -431,7 +431,7 @@ Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext 
 
 Theorem HilbertCalculus_complete (L : language) `(function_symbols_hasEqDec : hasEqDec L.(function_symbols)) `(constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)) `(relation_symbols_hasEqDec : hasEqDec L.(relation_symbols))
   : forall X : ensemble (frm L), forall b : frm L, forall CONSEQUENCE : X ⊨ b, X ⊢ b.
-Proof with eauto.
+Proof.
   ii. eapply NNPP. intros NO. set (Gamma := E.insert (Neg_frm b) X).
   assert (CONSISTENT : Gamma ⊬ Bot_frm).
   { intros INCONSISTENT. contradiction NO. eapply NegationE; eauto. }

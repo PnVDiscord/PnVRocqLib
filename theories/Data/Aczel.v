@@ -196,7 +196,7 @@ Qed.
 Add Parametric Morphism
   : isSubsetOf with signature (eqProp ==> eqProp ==> iff)
   as isSubsetOf_compatWith_eqProp.
-Proof with eauto with *.
+Proof.
   intros x1 y1 EQ1 x2 y2 EQ2. transitivity (x1 \subseteq y2); unfold "\subseteq"; split; intros SUBSET z H_in.
   - rewrite <- EQ2; eauto with *.
   - rewrite -> EQ2; eauto with *.
@@ -668,7 +668,7 @@ Theorem AxiomOfChoice_implies_StrongCollection (P : Tree -> Tree -> Prop)
   (COMPAT1 : forall y, isCompatibleWith_eqProp (fun x => P x y))
   (COMPAT2 : forall x, isCompatibleWith_eqProp (fun y => P x y))
   : forall X, (forall x, x \in X -> exists y, P x y) -> exists Y, (forall x, x \in X -> exists y, y \in Y /\ P x y) /\ (forall y, y \in Y -> exists x, x \in X /\ P x y).
-Proof with eauto with *.
+Proof.
   intros X NONEMPTY. set (base_set := children X).
   assert (claim : exists f : base_set -> Tree, forall x : base_set, P (childnodes X x) (f x)).
   { eapply AC with (P := fun x : base_set => fun y : Tree => P (childnodes X x) y); eauto with *. }

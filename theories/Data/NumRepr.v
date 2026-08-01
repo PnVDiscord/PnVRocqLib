@@ -29,7 +29,7 @@ Qed.
 Lemma to_nat_inj (p1 : pos) (p2 : pos)
   (to_nat_EQ : to_nat p1 = to_nat p2)
   : p1 = p2.
-Proof with lia || eauto.
+Proof.
   revert to_nat_EQ. unfold to_nat; do 2 rewrite <- fold_left_rev_right.
   intros to_nat_EQ; eapply rev_inj; revert to_nat_EQ.
   generalize (rev p2) as bs2. generalize (rev p1) as bs1. clear p1 p2.
@@ -65,7 +65,7 @@ Lemma to_nat_unfold (p : pos) :
   | bO :: p' => to_nat p' + 2^(length p')
   | bI :: p' => to_nat p' + 2^(length p' + 1)
   end.
-Proof with lia || eauto.
+Proof.
   destruct p as [ | [ | ] p]; lia || eauto.
   - induction p as [ | [ | ] p IH] using rev_ind; lia || eauto.
     + replace (b0 :: p ++ [b0]) with ((b0 :: p) ++ [b0]) by reflexivity.
@@ -82,7 +82,7 @@ Qed.
 Lemma pos_from_nat (n : nat)
   (n_gt_0 : n > 0)
   : { p : pos | to_nat p = n }.
-Proof with try lia.
+Proof.
   revert n n_gt_0. induction n as [n IH] using lt_wf_rec. i. destruct n as [ | [ | n']].
   - exfalso; try lia.
   - exists []. reflexivity.

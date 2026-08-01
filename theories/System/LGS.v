@@ -6,6 +6,7 @@ Require Import PnV.Data.FiniteMap.
 Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.Graph.
 Require Import PnV.System.Regex.
+Require Import PnV.Prelude.ConstructiveFacts.
 Require Import PnV.Prelude.X.
 
 Import DoNotations.
@@ -366,6 +367,13 @@ End Rule.
 Definition enfa_edge_label : Set :=
   option ascii.
 
+#[global]
+Instance enfa_edge_label_hasEqDec
+  : hasEqDec enfa_edge_label.
+Proof.
+  exact (option_hasEqDec ascii_hasEqDec).
+Defined.
+
 Module TaggedENFA.
 
 #[projections(primitive)]
@@ -381,20 +389,58 @@ Record t : Type :=
 
 #[global] Existing Instance state_hasEqDec.
 
-Definition graph (M : TaggedENFA.t) : @GraphAPI.LabeledFiniteGraph M.(TaggedENFA.state) (fin_ensemble enfa_edge_label) :=
-  GraphAPI.buildLabeledFiniteGraphWithVertices M.(TaggedENFA.states) M.(TaggedENFA.labeled_edges).
+Definition atomic_edge_of_tuple {Q : Type} (edge_label : (Q * Q) * enfa_edge_label) : GraphAPI.LabeledFiniteGraph.Edge.t Q enfa_edge_label :=
+  let '((src, dst), label) := edge_label in
+  GraphAPI.LabeledFiniteGraph.Edge.mk src label dst.
+
+Definition atomic_edges_of_tuples {Q : Type} (edges : fin_ensemble ((Q * Q) * enfa_edge_label)) : fin_ensemble (GraphAPI.LabeledFiniteGraph.Edge.t Q enfa_edge_label) :=
+  map atomic_edge_of_tuple edges.
+
+Definition atomic_edges (M : TaggedENFA.t) : fin_ensemble (GraphAPI.LabeledFiniteGraph.Edge.t M.(TaggedENFA.state) enfa_edge_label) :=
+  atomic_edges_of_tuples M.(TaggedENFA.labeled_edges).
+
+Lemma atomic_edges_of_tuples_In {Q : Type} (edges : fin_ensemble ((Q * Q) * enfa_edge_label)) (src : Q) (label : enfa_edge_label) (dst : Q)
+  : GraphAPI.LabeledFiniteGraph.Edge.mk src label dst ∈ atomic_edges_of_tuples edges <-> ((src, dst), label) ∈ edges.
+Proof.
+  unfold atomic_edges_of_tuples, atomic_edge_of_tuple.
+  rewrite L.in_map_iff. split.
+  - intros ([[src' dst'] label'] & EQ & IN). cbn in EQ.
+    inv EQ. exact IN.
+  - intros IN. exists ((src, dst), label).
+    split; [reflexivity | exact IN].
+Qed.
+
+Lemma atomic_edges_In (M : TaggedENFA.t) (src : M.(TaggedENFA.state)) (label : enfa_edge_label) (dst : M.(TaggedENFA.state))
+  : GraphAPI.LabeledFiniteGraph.Edge.mk src label dst ∈ atomic_edges M <-> ((src, dst), label) ∈ M.(TaggedENFA.labeled_edges).
+Proof.
+  unfold atomic_edges. eapply atomic_edges_of_tuples_In.
+Qed.
+
+Definition graph (M : TaggedENFA.t) : GraphAPI.LabeledFiniteGraph.t M.(TaggedENFA.state) enfa_edge_label :=
+  GraphAPI.LabeledFiniteGraph.span M.(TaggedENFA.state_hasEqDec) enfa_edge_label_hasEqDec M.(TaggedENFA.states) (atomic_edges M).
 
 Definition eps_step (M : TaggedENFA.t) (q : M.(TaggedENFA.state)) : fin_ensemble M.(TaggedENFA.state) :=
-  GraphAPI.successors_by_label_of_graph (graph M) None q.
+  GraphAPI.LabeledFiniteGraph.successors_by_label (graph M) None q.
 
 Definition char_step (M : TaggedENFA.t) (q : M.(TaggedENFA.state)) (c : ascii) : fin_ensemble M.(TaggedENFA.state) :=
-  GraphAPI.successors_by_label_of_graph (graph M) (Some c) q.
+  GraphAPI.LabeledFiniteGraph.successors_by_label (graph M) (Some c) q.
 
-Lemma graph_state_vertex (M : TaggedENFA.t) (q : M.(TaggedENFA.state))
-  (IN : q ∈ M.(TaggedENFA.states))
-  : q ∈ (graph M).(GraphAPI.GRAPH).(GraphAPI.enum_vertices).
+Lemma eps_step_In (M : TaggedENFA.t) (src dst : M.(TaggedENFA.state))
+  : dst ∈ eps_step M src <-> ((src, dst), None) ∈ M.(TaggedENFA.labeled_edges).
 Proof.
-  unfold graph. eapply GraphAPI.buildLabeledFiniteGraphWithVertices_vertex. exact IN.
+  unfold eps_step, graph.
+  rewrite GraphAPI.LabeledFiniteGraph.successors_by_label_In.
+  rewrite GraphAPI.LabeledFiniteGraph.span_isLabeledEdge.
+  eapply atomic_edges_In.
+Qed.
+
+Lemma char_step_In (M : TaggedENFA.t) (src dst : M.(TaggedENFA.state)) (c : ascii)
+  : dst ∈ char_step M src c <-> ((src, dst), Some c) ∈ M.(TaggedENFA.labeled_edges).
+Proof.
+  unfold char_step, graph.
+  rewrite GraphAPI.LabeledFiniteGraph.successors_by_label_In.
+  rewrite GraphAPI.LabeledFiniteGraph.span_isLabeledEdge.
+  eapply atomic_edges_In.
 Qed.
 
 Variant okay (M : TaggedENFA.t) : Prop :=
@@ -612,15 +658,8 @@ Definition fragment_vertices (frag : fragment) : fin_ensemble nat :=
 Definition fragments_vertices (frags : list (Rule.t * fragment)) : fin_ensemble nat :=
   0 :: L.flat_map (fun '(_, frag) => fragment_vertices frag) frags.
 
-#[global]
-Instance enfa_edge_label_hasEqDec
-  : hasEqDec enfa_edge_label.
-Proof.
-  exact (option_hasEqDec ascii_hasEqDec).
-Defined.
-
 Definition eps_labeled_edges (edges : fin_ensemble (nat * nat)) : fin_ensemble (nat * nat * enfa_edge_label) :=
-  GraphAPI.const_labeled_edges None edges.
+  map (fun edge => (edge, None)) edges.
 
 Definition char_labeled_edge (edge : char_edge) : nat * nat * enfa_edge_label :=
   ((edge.(char_edge_src), edge.(char_edge_dst)), Some edge.(char_edge_label)).
@@ -631,25 +670,22 @@ Definition char_labeled_edges (edges : fin_ensemble char_edge) : fin_ensemble (n
 Definition enfa_labeled_edges (eps_edges : fin_ensemble (nat * nat)) (char_edges : fin_ensemble char_edge) : fin_ensemble (nat * nat * enfa_edge_label) :=
   eps_labeled_edges eps_edges ++ char_labeled_edges char_edges.
 
-Definition enfa_graph_from (vertices : fin_ensemble nat) (eps_edges : fin_ensemble (nat * nat)) (char_edges : fin_ensemble char_edge) : @GraphAPI.LabeledFiniteGraph nat (fin_ensemble enfa_edge_label) :=
-  GraphAPI.buildLabeledFiniteGraphWithVertices vertices (enfa_labeled_edges eps_edges char_edges).
+Definition enfa_graph_from (vertices : fin_ensemble nat) (eps_edges : fin_ensemble (nat * nat)) (char_edges : fin_ensemble char_edge) : GraphAPI.LabeledFiniteGraph.t nat enfa_edge_label :=
+  GraphAPI.LabeledFiniteGraph.span nat_hasEqDec enfa_edge_label_hasEqDec vertices (atomic_edges_of_tuples (enfa_labeled_edges eps_edges char_edges)).
 
-Definition enfa_graph (eps_edges : fin_ensemble (nat * nat)) (char_edges : fin_ensemble char_edge) : @GraphAPI.LabeledFiniteGraph nat (fin_ensemble enfa_edge_label) :=
-  enfa_graph_from [] eps_edges char_edges.
-
-Definition fragment_graph (frag : fragment) : @GraphAPI.LabeledFiniteGraph nat (fin_ensemble enfa_edge_label) :=
+Definition fragment_graph (frag : fragment) : GraphAPI.LabeledFiniteGraph.t nat enfa_edge_label :=
   enfa_graph_from (fragment_vertices frag) frag.(frag_eps_edges) frag.(frag_char_edges).
 
-Definition fragments_graph (frags : list (Rule.t * fragment)) : @GraphAPI.LabeledFiniteGraph nat (fin_ensemble enfa_edge_label) :=
+Definition fragments_graph (frags : list (Rule.t * fragment)) : GraphAPI.LabeledFiniteGraph.t nat enfa_edge_label :=
   enfa_graph_from (fragments_vertices frags) (fragment_eps_edges frags) (fragment_char_edges frags).
 
-Definition enfa_eps_step (lG : @GraphAPI.LabeledFiniteGraph nat (fin_ensemble enfa_edge_label)) (q : nat) : fin_ensemble nat :=
-  GraphAPI.successors_by_label_of_graph lG None q.
+Definition enfa_eps_step (lG : GraphAPI.LabeledFiniteGraph.t nat enfa_edge_label) (q : nat) : fin_ensemble nat :=
+  GraphAPI.LabeledFiniteGraph.successors_by_label lG None q.
 
-Definition enfa_char_step (lG : @GraphAPI.LabeledFiniteGraph nat (fin_ensemble enfa_edge_label)) (q : nat) (c : ascii) : fin_ensemble nat :=
-  GraphAPI.successors_by_label_of_graph lG (Some c) q.
+Definition enfa_char_step (lG : GraphAPI.LabeledFiniteGraph.t nat enfa_edge_label) (q : nat) (c : ascii) : fin_ensemble nat :=
+  GraphAPI.LabeledFiniteGraph.successors_by_label lG (Some c) q.
 
-Definition enfa_delta_star (lG : @GraphAPI.LabeledFiniteGraph nat (fin_ensemble enfa_edge_label)) : nat -> Input.t -> ensemble nat :=
+Definition enfa_delta_star (lG : GraphAPI.LabeledFiniteGraph.t nat enfa_edge_label) : nat -> Input.t -> ensemble nat :=
   delta_star (enfa_eps_step lG) (enfa_char_step lG).
 
 Definition fragments2TaggedENFA (qmax : nat) (frags : list (Rule.t * fragment)) : TaggedENFA.t :=
@@ -670,14 +706,17 @@ Definition mkUnitedTaggedENFA (rules : list Rule.t) : TaggedENFA.t :=
 Lemma in_eps_labeled_edges_iff (edge : nat * nat) (edges : fin_ensemble (nat * nat))
   : (edge, None) ∈ eps_labeled_edges edges <-> edge ∈ edges.
 Proof.
-  unfold eps_labeled_edges. eapply GraphAPI.const_labeled_edges_same_In.
+  unfold eps_labeled_edges. rewrite L.in_map_iff. split.
+  - intros (edge' & EQ & IN). inv EQ. exact IN.
+  - intros IN. exists edge. split; [reflexivity | exact IN].
 Qed.
 
 Lemma in_eps_labeled_edges_some_absurd (edge : nat * nat) (c : ascii) (edges : fin_ensemble (nat * nat))
   : ~ (edge, Some c) ∈ eps_labeled_edges edges.
 Proof.
   intros IN. unfold eps_labeled_edges in IN.
-  rewrite GraphAPI.const_labeled_edges_In in IN. destruct IN as [_ EQ]. inv EQ.
+  rewrite L.in_map_iff in IN.
+  destruct IN as (edge' & EQ & _). inv EQ.
 Qed.
 
 Lemma in_char_labeled_edges_iff (q : nat) (q' : nat) (c : ascii) (edges : fin_ensemble char_edge)
@@ -698,9 +737,11 @@ Proof.
 Qed.
 
 Lemma enfa_graph_eps_label_iff (vertices : fin_ensemble nat) (eps_edges : fin_ensemble (nat * nat)) (char_edges : fin_ensemble char_edge) (q : nat) (q' : nat)
-  : GraphAPI.has_label (enfa_graph_from vertices eps_edges char_edges) (q, q') None <-> (q, q') ∈ eps_edges.
+  : (enfa_graph_from vertices eps_edges char_edges).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) q None q' <-> (q, q') ∈ eps_edges.
 Proof.
-  unfold enfa_graph_from. rewrite GraphAPI.buildLabeledFiniteGraphWithVertices_has_label.
+  unfold enfa_graph_from.
+  rewrite GraphAPI.LabeledFiniteGraph.span_isLabeledEdge.
+  rewrite atomic_edges_of_tuples_In.
   unfold enfa_labeled_edges. rewrite L.in_app_iff. split.
   - intros [IN | IN].
     + now rewrite in_eps_labeled_edges_iff in IN.
@@ -709,9 +750,12 @@ Proof.
 Qed.
 
 Lemma enfa_graph_char_label_iff (vertices : fin_ensemble nat) (eps_edges : fin_ensemble (nat * nat)) (char_edges : fin_ensemble char_edge) (q : nat) (q' : nat) (c : ascii)
-  : GraphAPI.has_label (enfa_graph_from vertices eps_edges char_edges) (q, q') (Some c) <-> {| char_edge_src := q; char_edge_label := c; char_edge_dst := q' |} ∈ char_edges.
+  : (enfa_graph_from vertices eps_edges char_edges).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) q (Some c) q' <->
+    {| char_edge_src := q; char_edge_label := c; char_edge_dst := q' |} ∈ char_edges.
 Proof.
-  unfold enfa_graph_from. rewrite GraphAPI.buildLabeledFiniteGraphWithVertices_has_label.
+  unfold enfa_graph_from.
+  rewrite GraphAPI.LabeledFiniteGraph.span_isLabeledEdge.
+  rewrite atomic_edges_of_tuples_In.
   unfold enfa_labeled_edges. rewrite L.in_app_iff. split.
   - intros [IN | IN].
     + exfalso. eapply in_eps_labeled_edges_some_absurd. exact IN.
@@ -719,53 +763,15 @@ Proof.
   - intros IN. right. now rewrite in_char_labeled_edges_iff.
 Qed.
 
-Lemma fragment_graph_start_vertex (frag : fragment)
-  : frag.(frag_start) ∈ (fragment_graph frag).(GraphAPI.GRAPH).(GraphAPI.enum_vertices).
-Proof.
-  unfold fragment_graph, enfa_graph_from, fragment_vertices.
-  eapply GraphAPI.buildLabeledFiniteGraphWithVertices_vertex. simpl. left. reflexivity.
-Qed.
-
-Lemma fragment_graph_accept_vertex (frag : fragment)
-  : frag.(frag_accept) ∈ (fragment_graph frag).(GraphAPI.GRAPH).(GraphAPI.enum_vertices).
-Proof.
-  unfold fragment_graph, enfa_graph_from, fragment_vertices.
-  eapply GraphAPI.buildLabeledFiniteGraphWithVertices_vertex. simpl. right. left. reflexivity.
-Qed.
-
-Lemma fragments_graph_start_vertex (frags : list (Rule.t * fragment))
-  : 0 ∈ (fragments_graph frags).(GraphAPI.GRAPH).(GraphAPI.enum_vertices).
-Proof.
-  unfold fragments_graph, enfa_graph_from, fragments_vertices.
-  eapply GraphAPI.buildLabeledFiniteGraphWithVertices_vertex. simpl. left. reflexivity.
-Qed.
-
-Lemma fragments_graph_fragment_start_vertex (frags : list (Rule.t * fragment)) (rule : Rule.t) (frag : fragment)
-  (IN : (rule, frag) ∈ frags)
-  : frag.(frag_start) ∈ (fragments_graph frags).(GraphAPI.GRAPH).(GraphAPI.enum_vertices).
-Proof.
-  unfold fragments_graph, enfa_graph_from, fragments_vertices.
-  eapply GraphAPI.buildLabeledFiniteGraphWithVertices_vertex. simpl. right.
-  rewrite L.in_flat_map. exists (rule, frag). simpl. done.
-Qed.
-
-Lemma fragments_graph_fragment_accept_vertex (frags : list (Rule.t * fragment)) (rule : Rule.t) (frag : fragment)
-  (IN : (rule, frag) ∈ frags)
-  : frag.(frag_accept) ∈ (fragments_graph frags).(GraphAPI.GRAPH).(GraphAPI.enum_vertices).
-Proof.
-  unfold fragments_graph, enfa_graph_from, fragments_vertices.
-  eapply GraphAPI.buildLabeledFiniteGraphWithVertices_vertex. simpl. right.
-  rewrite L.in_flat_map. exists (rule, frag). simpl. done.
-Qed.
-
 Lemma fragments_graph_eps_label_iff (frags : list (Rule.t * fragment)) (q : nat) (q' : nat)
-  : GraphAPI.has_label (fragments_graph frags) (q, q') None <-> (q, q') ∈ fragment_eps_edges frags.
+  : (fragments_graph frags).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) q None q' <-> (q, q') ∈ fragment_eps_edges frags.
 Proof.
   unfold fragments_graph. eapply enfa_graph_eps_label_iff.
 Qed.
 
 Lemma fragments_graph_char_label_iff (frags : list (Rule.t * fragment)) (q : nat) (q' : nat) (c : ascii)
-  : GraphAPI.has_label (fragments_graph frags) (q, q') (Some c) <-> {| char_edge_src := q; char_edge_label := c; char_edge_dst := q' |} ∈ fragment_char_edges frags.
+  : (fragments_graph frags).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) q (Some c) q' <->
+    {| char_edge_src := q; char_edge_label := c; char_edge_dst := q' |} ∈ fragment_char_edges frags.
 Proof.
   unfold fragments_graph. eapply enfa_graph_char_label_iff.
 Qed.
@@ -773,14 +779,16 @@ Qed.
 Lemma in_enfa_eps_step_iff (vertices : fin_ensemble nat) (q : nat) (q' : nat) (eps_edges : fin_ensemble (nat * nat)) (char_edges : fin_ensemble char_edge)
   : q' ∈ enfa_eps_step (enfa_graph_from vertices eps_edges char_edges) q <-> (q, q') ∈ eps_edges.
 Proof.
-  unfold enfa_eps_step. rewrite GraphAPI.successors_by_label_of_graph_has_label.
+  unfold enfa_eps_step.
+  rewrite GraphAPI.LabeledFiniteGraph.successors_by_label_In.
   eapply enfa_graph_eps_label_iff.
 Qed.
 
 Lemma in_enfa_char_step_iff (vertices : fin_ensemble nat) (q : nat) (q' : nat) (c : ascii) (eps_edges : fin_ensemble (nat * nat)) (char_edges : fin_ensemble char_edge)
   : q' ∈ enfa_char_step (enfa_graph_from vertices eps_edges char_edges) q c <-> {| char_edge_src := q; char_edge_label := c; char_edge_dst := q' |} ∈ char_edges.
 Proof.
-  unfold enfa_char_step. rewrite GraphAPI.successors_by_label_of_graph_has_label.
+  unfold enfa_char_step.
+  rewrite GraphAPI.LabeledFiniteGraph.successors_by_label_In.
   eapply enfa_graph_char_label_iff.
 Qed.
 
@@ -856,10 +864,11 @@ Variant TaggedENFA_COMPILED (M : TaggedENFA.t) (rules : list Rule.t) (qmax : nat
 
 Variant TaggedENFA_FRAGMENTS (frags : list (Rule.t * fragment)) (rule : Rule.t) (frag : fragment) : Prop :=
   | TaggedENFA_FRAGMENTS_INTRO
-    (IN1 : GraphAPI.has_label (fragments_graph frags) (0, frag.(frag_start)) None)
+    (IN1 : (fragments_graph frags).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) 0 None frag.(frag_start))
     (IN2 : (frag.(frag_accept), rule.(Rule.token)) ∈ map (fun '(rule, frag) => (frag.(frag_accept), rule.(Rule.token))) frags)
-    (EPS : forall q, forall q', (q, q') ∈ frag.(frag_eps_edges) -> GraphAPI.has_label (fragments_graph frags) (q, q') None)
-    (CHAR : forall edge, edge ∈ frag.(frag_char_edges) -> GraphAPI.has_label (fragments_graph frags) (edge.(char_edge_src), edge.(char_edge_dst)) (Some edge.(char_edge_label))).
+    (EPS : forall q, forall q', (q, q') ∈ frag.(frag_eps_edges) -> (fragments_graph frags).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) q None q')
+    (CHAR : forall edge, edge ∈ frag.(frag_char_edges) -> (fragments_graph frags).(GraphAPI.LabeledFiniteGraph.isLabeledEdge)
+        edge.(char_edge_src) (Some edge.(char_edge_label)) edge.(char_edge_dst)).
 
 Theorem mkUnitedTaggedENFA_spec (M : TaggedENFA.t)
   (COMPILE : fmap mkUnitedTaggedENFA Rule.compileds = inr M)
@@ -892,13 +901,13 @@ Proof.
     pose proof (EPS q q' IN) as STEP.
     eapply delta_star_eps with (q1 := q').
     + unfold fragments_delta_star, enfa_delta_star, enfa_eps_step.
-      rewrite GraphAPI.successors_by_label_of_graph_has_label. exact STEP.
+      rewrite GraphAPI.LabeledFiniteGraph.successors_by_label_In. exact STEP.
     + constructor.
   - intros edge IN.
     pose proof (CHAR edge IN) as STEP.
     eapply delta_star_char with (q1 := edge.(char_edge_dst)).
     + unfold fragments_delta_star, enfa_delta_star, enfa_char_step.
-      rewrite GraphAPI.successors_by_label_of_graph_has_label. exact STEP.
+      rewrite GraphAPI.LabeledFiniteGraph.successors_by_label_In. exact STEP.
     + constructor.
 Qed.
 
@@ -1121,9 +1130,8 @@ Proof.
   - change s with ([] ++ s). eapply delta_star_app with (q2 := frag.(frag_start)).
     + eapply delta_star_eps with (q1 := frag.(frag_start)).
       * rewrite fragments_graph_eps_label_iff in START.
-        simpl. unfold TaggedENFA.eps_step, TaggedENFA.graph. simpl.
-        rewrite GraphAPI.successors_by_label_of_graph_has_label.
-        rewrite GraphAPI.buildLabeledFiniteGraphWithVertices_has_label.
+        eapply (proj2 (TaggedENFA.eps_step_In (fragments2TaggedENFA qmax frags) 0 frag.(frag_start))).
+        simpl.
         unfold enfa_labeled_edges. rewrite L.in_app_iff. left.
         now rewrite in_eps_labeled_edges_iff.
       * constructor.
@@ -1263,58 +1271,6 @@ Proof.
     + use regex2fragment_bounds as [_ _ LT _ _] with REGEX.
       use (IH (qf + 1) qmax' frags' FRAGS') as (rule' & frag' & qi_rule & qf' & IN_FRAG & REGEX' & BOUNDS & LE & LT' & RANGE & IN_EDGE') with IN_EDGE.
       exists rule', frag', qi_rule, qf'. splits; simpl; lia || eauto.
-Qed.
-
-Lemma fragments2TaggedENFA_okay rules qmax frags
-  (FRAGS : rules2fragments 1 rules = (qmax, frags))
-  : TaggedENFA.okay (fragments2TaggedENFA qmax frags).
-Proof.
-  assert (QI_POS : 0 < 1) by lia.
-  split; simpl.
-  - use rules2fragments_bounds as [LE _] with FRAGS.
-    rewrite in_seq. lia.
-  - intros q tag ACCEPT.
-    rewrite in_fragment_accept_states_iff in ACCEPT.
-    destruct ACCEPT as (rule & frag & IN_FRAG & ACCEPT_EQ & TOKEN_EQ). subst q tag.
-    use rules2fragments_bounds as [_ BOUND] with FRAGS.
-    use (BOUND rule frag) as (qi_rule & qf & REGEX & [_ ACCEPT_EQ _ _ _] & LE_START & LT_END) with IN_FRAG. subst qf.
-    rewrite in_seq. lia.
-  - intros q q' IN_STATES STEP.
-    unfold TaggedENFA.eps_step, TaggedENFA.graph in STEP. simpl in STEP.
-    rewrite GraphAPI.successors_by_label_of_graph_has_label in STEP.
-    rewrite GraphAPI.buildLabeledFiniteGraphWithVertices_has_label in STEP.
-    unfold enfa_labeled_edges in STEP. rewrite L.in_app_iff in STEP.
-    destruct STEP as [IN_EDGE | IN_EDGE].
-    2: { exfalso. eapply in_char_labeled_edges_none_absurd. exact IN_EDGE. }
-    rewrite in_eps_labeled_edges_iff in IN_EDGE.
-    pose proof (Nat.eq_dec q 0) as [EQ | NE].
-    + subst q.
-      use fragment_eps_edges_start_sound as (rule & frag & qi_rule & qf & IN_FRAG & REGEX & START_EQ) with FRAGS QI_POS IN_EDGE. subst q'.
-      use rules2fragments_bounds as [_ BOUND] with FRAGS.
-      use (BOUND rule frag) as (qi_rule' & qf' & REGEX' & [START_EQ _ LT _ _] & LE_START & LT_END) with IN_FRAG.
-      use regex2fragment_same_fragment as [EQ_QI EQ_QF] with REGEX REGEX'. subst.
-      rewrite in_seq. lia.
-    + use fragment_eps_edges_owner as (rule & frag & qi_rule & qf & IN_FRAG & REGEX & [_ _ _ EPS _] & LE_START & LT_END & RANGE & IN_EDGE') with FRAGS IN_EDGE NE.
-      use EPS as RANGE' with IN_EDGE'.
-      rewrite in_seq. lia.
-  - intros q q' c IN_STATES STEP.
-    unfold TaggedENFA.char_step, TaggedENFA.graph in STEP. simpl in STEP.
-    rewrite GraphAPI.successors_by_label_of_graph_has_label in STEP.
-    rewrite GraphAPI.buildLabeledFiniteGraphWithVertices_has_label in STEP.
-    unfold enfa_labeled_edges in STEP. rewrite L.in_app_iff in STEP.
-    destruct STEP as [STEP | STEP].
-    { exfalso. eapply in_eps_labeled_edges_some_absurd. exact STEP. }
-    rewrite in_char_labeled_edges_iff in STEP.
-    use fragment_char_edges_owner as (rule & frag & qi_rule & qf & IN_FRAG & REGEX & [_ _ _ _ CHAR] & LE_START & LT_END & RANGE & IN_EDGE') with FRAGS STEP; simpl in *.
-    use CHAR as RANGE' with IN_EDGE'; simpl in *.
-    rewrite in_seq. lia.
-Qed.
-
-Theorem mkUnitedTaggedENFA_okay rules
-  : TaggedENFA.okay (mkUnitedTaggedENFA rules).
-Proof.
-  unfold mkUnitedTaggedENFA. destruct (rules2fragments 1 rules) as [qmax frags] eqn: FRAGS.
-  eapply fragments2TaggedENFA_okay. exact FRAGS.
 Qed.
 
 Lemma fragment_eps_edges_isolate qi rules qmax frags rule frag qi_rule qf q q'
@@ -1939,6 +1895,476 @@ Qed.
 End Thompson's_construction.
 
 End TaggedENFA.
+
+Module CanonicalENFA.
+
+#[projections(primitive)]
+Record t : Type :=
+  mk
+  { state : Set
+  ; graph : GraphAPI.LabeledFiniteGraph.t state enfa_edge_label
+  ; start : state
+  ; accept_outputs : alist state Token.t
+  } as M.
+
+Definition state_hasEqDec (M : t) : hasEqDec M.(state) :=
+  (graph M).(GraphAPI.LabeledFiniteGraph.V_dec).
+
+#[global] Existing Instance state_hasEqDec.
+
+Definition vertices (M : t) : fin_ensemble M.(state) :=
+  (graph M).(GraphAPI.LabeledFiniteGraph.vertices).
+
+Definition eps_step (M : t) (q : M.(state)) : fin_ensemble M.(state) :=
+  GraphAPI.LabeledFiniteGraph.successors_by_label M.(graph) None q.
+
+Definition char_step (M : t) (q : M.(state)) (c : ascii) : fin_ensemble M.(state) :=
+  GraphAPI.LabeledFiniteGraph.successors_by_label M.(graph) (Some c) q.
+
+#[projections(primitive)]
+Record well_formed (M : t) : Prop :=
+  mkWellFormed
+  { start_vertex : (graph M).(GraphAPI.LabeledFiniteGraph.isVertex) M.(start)
+  ; accept_output_vertex q tag
+      (OUTPUT : (q, tag) ∈ M.(accept_outputs).(kvlist))
+      : (graph M).(GraphAPI.LabeledFiniteGraph.isVertex) q
+  }.
+
+Fixpoint yield (labels : list enfa_edge_label) : Input.t :=
+  match labels with
+  | [] => []
+  | None :: labels' => yield labels'
+  | Some c :: labels' => c :: yield labels'
+  end.
+
+Lemma yield_app (labels1 labels2 : list enfa_edge_label)
+  : yield (labels1 ++ labels2) = yield labels1 ++ yield labels2.
+Proof.
+  induction labels1 as [ | label labels1 IH]; simpl; [reflexivity | ].
+  destruct label as [c | ]; simpl; now rewrite IH.
+Qed.
+
+Definition runs (M : t) (src : M.(state)) (input : Input.t) (dst : M.(state)) : Prop :=
+  exists labels, exists trace, GraphAPI.LabeledFiniteGraph.walk M.(graph) src labels trace dst /\ yield labels = input.
+
+Definition accepts (M : t) (input : Input.t) (tag : Token.t) : Prop :=
+  exists dst, runs M M.(start) input dst /\ (dst, tag) ∈ M.(accept_outputs).(kvlist).
+
+Definition accepted_tags (M : t) (input : Input.t) : ensemble Token.t :=
+  fun tag => accepts M input tag.
+
+Lemma walk_delta_star (M : t) (src : M.(state)) (labels : list enfa_edge_label) (trace : list M.(state)) (dst : M.(state))
+  (WALK : GraphAPI.LabeledFiniteGraph.walk M.(graph) src labels trace dst)
+  : dst \in TaggedENFA.delta_star (eps_step M) (char_step M) src (yield labels).
+Proof.
+  induction WALK as [q VERTEX | src label mid labels trace dst EDGE REST IH].
+  - simpl. econstructor 1.
+  - destruct label as [c | ].
+    + simpl. econstructor 3.
+      * unfold char_step.
+        eapply (proj2 (GraphAPI.LabeledFiniteGraph.successors_by_label_In M.(graph) src (Some c) mid)).
+        exact EDGE.
+      * exact IH.
+    + simpl. econstructor 2.
+      * unfold eps_step.
+        eapply (proj2 (GraphAPI.LabeledFiniteGraph.successors_by_label_In M.(graph) src None mid)).
+        exact EDGE.
+      * exact IH.
+Qed.
+
+Lemma runs_delta_star (M : t) (src dst : M.(state)) (input : Input.t)
+  (RUNS : runs M src input dst)
+  : dst \in TaggedENFA.delta_star (eps_step M) (char_step M) src input.
+Proof.
+  destruct RUNS as (labels & trace & WALK & YIELD).
+  pose proof (walk_delta_star M src labels trace dst WALK) as DELTA.
+  now rewrite YIELD in DELTA.
+Qed.
+
+Lemma delta_star_runs (M : t) (src dst : M.(state)) (input : Input.t)
+  (VERTEX : M.(graph).(GraphAPI.LabeledFiniteGraph.isVertex) src)
+  (DELTA : dst \in TaggedENFA.delta_star (eps_step M) (char_step M) src input)
+  : runs M src input dst.
+Proof.
+  revert VERTEX.
+  induction DELTA as [q | src mid dst input STEP REST IH | src mid dst c input STEP REST IH]; intros VERTEX.
+  - exists [], []. split; [econstructor 1; exact VERTEX | reflexivity].
+  - assert (EDGE : M.(graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src None mid).
+    { eapply (proj1 (GraphAPI.LabeledFiniteGraph.successors_by_label_In M.(graph) src None mid)).
+      exact STEP. }
+    pose proof (GraphAPI.LabeledFiniteGraph.dst_isLabeledEdge M.(graph) src None mid EDGE) as MID_VERTEX.
+    destruct (IH MID_VERTEX) as (labels & trace & WALK & YIELD).
+    exists (None :: labels), (mid :: trace). split.
+    + econstructor 2; eauto.
+    + simpl. exact YIELD.
+  - assert (EDGE : M.(graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src (Some c) mid).
+    { eapply (proj1 (GraphAPI.LabeledFiniteGraph.successors_by_label_In M.(graph) src (Some c) mid)).
+      exact STEP. }
+    pose proof (GraphAPI.LabeledFiniteGraph.dst_isLabeledEdge M.(graph) src (Some c) mid EDGE) as MID_VERTEX.
+    destruct (IH MID_VERTEX) as (labels & trace & WALK & YIELD).
+    exists (Some c :: labels), (mid :: trace). split.
+    + econstructor 2; eauto.
+    + simpl. now rewrite YIELD.
+Qed.
+
+Theorem delta_star_iff_runs (M : t) (src dst : M.(state)) (input : Input.t)
+  (VERTEX : M.(graph).(GraphAPI.LabeledFiniteGraph.isVertex) src)
+  : dst \in TaggedENFA.delta_star (eps_step M) (char_step M) src input <-> runs M src input dst.
+Proof.
+  split.
+  - intros DELTA. eapply delta_star_runs; eauto.
+  - intros RUNS. eapply runs_delta_star. exact RUNS.
+Qed.
+
+Definition eps_atomic_edge (edge : nat * nat) : GraphAPI.LabeledFiniteGraph.Edge.t nat enfa_edge_label :=
+  let '(src, dst) := edge in
+  GraphAPI.LabeledFiniteGraph.Edge.mk src None dst.
+
+Definition eps_atomic_edges (edges : fin_ensemble (nat * nat)) : fin_ensemble (GraphAPI.LabeledFiniteGraph.Edge.t nat enfa_edge_label) :=
+  map eps_atomic_edge edges.
+
+Definition char_atomic_edge (edge : TaggedENFA.char_edge) : GraphAPI.LabeledFiniteGraph.Edge.t nat enfa_edge_label :=
+  GraphAPI.LabeledFiniteGraph.Edge.mk edge.(TaggedENFA.char_edge_src) (Some edge.(TaggedENFA.char_edge_label)) edge.(TaggedENFA.char_edge_dst).
+
+Definition char_atomic_edges (edges : fin_ensemble TaggedENFA.char_edge) : fin_ensemble (GraphAPI.LabeledFiniteGraph.Edge.t nat enfa_edge_label) :=
+  map char_atomic_edge edges.
+
+Definition fragment_atomic_edges (frags : list (Rule.t * TaggedENFA.fragment)) : fin_ensemble (GraphAPI.LabeledFiniteGraph.Edge.t nat enfa_edge_label) :=
+  eps_atomic_edges (TaggedENFA.fragment_eps_edges frags) ++ char_atomic_edges (TaggedENFA.fragment_char_edges frags).
+
+Lemma eps_atomic_edges_In (edges : fin_ensemble (nat * nat)) (src dst : nat)
+  : GraphAPI.LabeledFiniteGraph.Edge.mk src None dst ∈ eps_atomic_edges edges <-> (src, dst) ∈ edges.
+Proof.
+  unfold eps_atomic_edges, eps_atomic_edge. rewrite L.in_map_iff. split.
+  - intros ([src' dst'] & EQ & IN). cbn in EQ. inv EQ. exact IN.
+  - intros IN. exists (src, dst). split; [reflexivity | exact IN].
+Qed.
+
+Lemma eps_atomic_edges_some_absurd (edges : fin_ensemble (nat * nat)) (src dst : nat) (c : ascii)
+  : ~ (GraphAPI.LabeledFiniteGraph.Edge.mk src (Some c) dst ∈ eps_atomic_edges edges).
+Proof.
+  intros IN. unfold eps_atomic_edges, eps_atomic_edge in IN.
+  rewrite L.in_map_iff in IN.
+  destruct IN as ([src' dst'] & EQ & IN). cbn in EQ. inv EQ.
+Qed.
+
+Lemma char_atomic_edges_In (edges : fin_ensemble TaggedENFA.char_edge) (src dst : nat) (c : ascii)
+  : GraphAPI.LabeledFiniteGraph.Edge.mk src (Some c) dst ∈ char_atomic_edges edges <-> TaggedENFA.mkCharEdge src c dst ∈ edges.
+Proof.
+  unfold char_atomic_edges, char_atomic_edge. rewrite L.in_map_iff. split.
+  - intros (edge & EQ & IN). destruct edge as [src' c' dst']. cbn in EQ.
+    inv EQ. exact IN.
+  - intros IN. exists (TaggedENFA.mkCharEdge src c dst).
+    split; [reflexivity | exact IN].
+Qed.
+
+Lemma char_atomic_edges_none_absurd (edges : fin_ensemble TaggedENFA.char_edge) (src dst : nat)
+  : ~ (GraphAPI.LabeledFiniteGraph.Edge.mk src None dst ∈ char_atomic_edges edges).
+Proof.
+  intros IN. unfold char_atomic_edges, char_atomic_edge in IN.
+  rewrite L.in_map_iff in IN.
+  destruct IN as (edge & EQ & IN). destruct edge as [src' c dst'].
+  cbn in EQ. inv EQ.
+Qed.
+
+Lemma fragment_atomic_edges_eps_In (frags : list (Rule.t * TaggedENFA.fragment)) (src dst : nat)
+  : GraphAPI.LabeledFiniteGraph.Edge.mk src None dst ∈ fragment_atomic_edges frags <-> (src, dst) ∈ TaggedENFA.fragment_eps_edges frags.
+Proof.
+  unfold fragment_atomic_edges. rewrite L.in_app_iff. split.
+  - intros [IN | IN].
+    + now rewrite eps_atomic_edges_In in IN.
+    + exfalso. eapply char_atomic_edges_none_absurd. exact IN.
+  - intros IN. left. now rewrite eps_atomic_edges_In.
+Qed.
+
+Lemma fragment_atomic_edges_char_In (frags : list (Rule.t * TaggedENFA.fragment)) (src dst : nat) (c : ascii)
+  : GraphAPI.LabeledFiniteGraph.Edge.mk src (Some c) dst ∈ fragment_atomic_edges frags <-> TaggedENFA.mkCharEdge src c dst ∈ TaggedENFA.fragment_char_edges frags.
+Proof.
+  unfold fragment_atomic_edges. rewrite L.in_app_iff. split.
+  - intros [IN | IN].
+    + exfalso. eapply eps_atomic_edges_some_absurd. exact IN.
+    + now rewrite char_atomic_edges_In in IN.
+  - intros IN. right. now rewrite char_atomic_edges_In.
+Qed.
+
+Definition canonical_fragments_graph (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment)) : GraphAPI.LabeledFiniteGraph.t nat enfa_edge_label :=
+  GraphAPI.LabeledFiniteGraph.span nat_hasEqDec (option_hasEqDec ascii_hasEqDec) (seq 0 qmax) (fragment_atomic_edges frags).
+
+Definition canonical_fragment_accept_outputs (frags : list (Rule.t * TaggedENFA.fragment)) : alist nat Token.t :=
+  {| kvlist :=
+      map (fun '(rule, frag) =>
+          (frag.(TaggedENFA.frag_accept), rule.(Rule.token))) frags
+  |}.
+
+Definition canonical_fragments2ENFA (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment)) : t :=
+  {|
+    state := nat;
+    graph := canonical_fragments_graph qmax frags;
+    start := 0;
+    accept_outputs := canonical_fragment_accept_outputs frags;
+  |}.
+
+Definition mkUnitedCanonicalENFA (rules : list Rule.t) : t :=
+  let compiled := TaggedENFA.rules2fragments 1 rules in
+  {|
+    state := nat;
+    graph := canonical_fragments_graph (fst compiled) (snd compiled);
+    start := 0;
+    accept_outputs := canonical_fragment_accept_outputs (snd compiled);
+  |}.
+
+Lemma fragment_atomic_edges_closed (rules : list Rule.t) (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment))
+  (FRAGS : TaggedENFA.rules2fragments 1 rules = (qmax, frags))
+  : GraphAPI.LabeledFiniteGraph.closed (seq 0 qmax) (fragment_atomic_edges frags).
+Proof.
+  intros [src label dst] EDGE. destruct label as [c | ].
+  - rewrite fragment_atomic_edges_char_In in EDGE.
+    use TaggedENFA.fragment_char_edges_owner as (rule & frag & qi & qf & IN_FRAG & REGEX & BOUNDS & LE_START & LT_END & SRC_RANGE & IN_EDGE) with FRAGS EDGE.
+    destruct BOUNDS as [START ACCEPT LT EPS CHAR].
+    use CHAR as [SRC_BOUNDS DST_BOUNDS] with IN_EDGE.
+    cbn in SRC_BOUNDS, DST_BOUNDS.
+    cbn. rewrite !in_seq. lia.
+  - rewrite fragment_atomic_edges_eps_In in EDGE.
+    destruct (Nat.eq_dec src 0) as [EQ | NE].
+    + subst src.
+      use TaggedENFA.rules2fragments_bounds as [QMAX BOUND] with FRAGS.
+      assert (QI_POS : 0 < 1).
+      { lia. }
+      use TaggedENFA.fragment_eps_edges_start_sound as (rule & frag & qi & qf & IN_FRAG & REGEX & DST) with FRAGS QI_POS EDGE.
+      subst dst.
+      use (BOUND rule frag) as (qi' & qf' & REGEX' & [START ACCEPT LT EPS CHAR] & LE_START & LT_END) with IN_FRAG.
+      cbn. rewrite !in_seq. lia.
+    + use TaggedENFA.fragment_eps_edges_owner as (rule & frag & qi & qf & IN_FRAG & REGEX & BOUNDS & LE_START & LT_END & SRC_RANGE & IN_EDGE) with FRAGS EDGE NE.
+      destruct BOUNDS as [START ACCEPT LT EPS CHAR].
+      use EPS as [SRC_BOUNDS DST_BOUNDS] with IN_EDGE.
+      cbn. rewrite !in_seq. lia.
+Qed.
+
+Lemma canonical_fragments_vertex_In (rules : list Rule.t) (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment))
+  (FRAGS : TaggedENFA.rules2fragments 1 rules = (qmax, frags))
+  (q : nat)
+  : (canonical_fragments_graph qmax frags).(GraphAPI.LabeledFiniteGraph.isVertex) q <-> q ∈ seq 0 qmax.
+Proof.
+  unfold canonical_fragments_graph.
+  rewrite GraphAPI.LabeledFiniteGraph.span_isVertex. split.
+  - intros [IN | (edge & EDGE & [SRC | DST])].
+    + exact IN.
+    + subst q. exact (proj1 (fragment_atomic_edges_closed rules qmax frags FRAGS edge EDGE)).
+    + subst q. exact (proj2 (fragment_atomic_edges_closed rules qmax frags FRAGS edge EDGE)).
+  - intros IN. left. exact IN.
+Qed.
+
+Lemma canonical_fragments_labeled_edge_In (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment)) (src : nat) (label : enfa_edge_label) (dst : nat)
+  : (canonical_fragments2ENFA qmax frags).(graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src label dst <-> GraphAPI.LabeledFiniteGraph.Edge.mk src label dst ∈ fragment_atomic_edges frags.
+Proof.
+  unfold canonical_fragments2ENFA. cbn.
+  unfold canonical_fragments_graph.
+  exact (GraphAPI.LabeledFiniteGraph.span_isLabeledEdge nat_hasEqDec (option_hasEqDec ascii_hasEqDec) (seq 0 qmax) (fragment_atomic_edges frags) src label dst).
+Qed.
+
+Lemma canonical_fragments_eps_edge_In (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment)) (src dst : nat)
+  : (canonical_fragments2ENFA qmax frags).(graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src None dst <-> (src, dst) ∈ TaggedENFA.fragment_eps_edges frags.
+Proof.
+  rewrite canonical_fragments_labeled_edge_In.
+  eapply fragment_atomic_edges_eps_In.
+Qed.
+
+Lemma canonical_fragments_char_edge_In (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment)) (src dst : nat) (c : ascii)
+  : (canonical_fragments2ENFA qmax frags).(graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src (Some c) dst <-> TaggedENFA.mkCharEdge src c dst ∈ TaggedENFA.fragment_char_edges frags.
+Proof.
+  rewrite canonical_fragments_labeled_edge_In.
+  eapply fragment_atomic_edges_char_In.
+Qed.
+
+Lemma canonical_fragments_well_formed (rules : list Rule.t) (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment))
+  (FRAGS : TaggedENFA.rules2fragments 1 rules = (qmax, frags))
+  : well_formed (canonical_fragments2ENFA qmax frags).
+Proof.
+  econstructor.
+  - cbn. change ((canonical_fragments_graph qmax frags).(GraphAPI.LabeledFiniteGraph.isVertex) 0).
+    eapply (proj2 (canonical_fragments_vertex_In rules qmax frags FRAGS 0)).
+    use TaggedENFA.rules2fragments_bounds as [QMAX BOUND] with FRAGS.
+    rewrite in_seq. lia.
+  - intros q tag OUTPUT.
+    cbn in OUTPUT |- *.
+    unfold canonical_fragment_accept_outputs in OUTPUT. cbn in OUTPUT.
+    rewrite TaggedENFA.in_fragment_accept_states_iff in OUTPUT.
+    destruct OUTPUT as (rule & frag & IN_FRAG & ACCEPT_Q & TOKEN).
+    subst q tag.
+    change ((canonical_fragments_graph qmax frags).(GraphAPI.LabeledFiniteGraph.isVertex) frag.(TaggedENFA.frag_accept)).
+    eapply (proj2 (canonical_fragments_vertex_In rules qmax frags FRAGS frag.(TaggedENFA.frag_accept))).
+    use TaggedENFA.rules2fragments_bounds as [_ BOUND] with FRAGS.
+    use (BOUND rule frag) as (qi & qf & REGEX & [START ACCEPT LT EPS CHAR] & LE_START & LT_END) with IN_FRAG.
+    rewrite in_seq. lia.
+Qed.
+
+Lemma canonical_fragments_legacy_labeled_edge_In (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment)) (src : nat) (label : enfa_edge_label) (dst : nat)
+  : (canonical_fragments2ENFA qmax frags).(graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src label dst <-> ((src, dst), label) ∈ (TaggedENFA.fragments2TaggedENFA qmax frags).(TaggedENFA.labeled_edges).
+Proof.
+  rewrite canonical_fragments_labeled_edge_In.
+  unfold TaggedENFA.fragments2TaggedENFA. cbn.
+  destruct label as [c | ].
+  - rewrite fragment_atomic_edges_char_In.
+    unfold TaggedENFA.enfa_labeled_edges. rewrite L.in_app_iff. split.
+    + intros IN. right.
+      now rewrite TaggedENFA.in_char_labeled_edges_iff.
+    + intros [IN | IN].
+      * exfalso. eapply TaggedENFA.in_eps_labeled_edges_some_absurd.
+        exact IN.
+      * now rewrite TaggedENFA.in_char_labeled_edges_iff in IN.
+  - rewrite fragment_atomic_edges_eps_In.
+    unfold TaggedENFA.enfa_labeled_edges. rewrite L.in_app_iff. split.
+    + intros IN. left. now rewrite TaggedENFA.in_eps_labeled_edges_iff.
+    + intros [IN | IN].
+      * now rewrite TaggedENFA.in_eps_labeled_edges_iff in IN.
+      * exfalso. eapply TaggedENFA.in_char_labeled_edges_none_absurd.
+        exact IN.
+Qed.
+
+Lemma canonical_fragments_eps_step_In (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment)) (src dst : nat)
+  : dst ∈ eps_step (canonical_fragments2ENFA qmax frags) src <-> dst ∈ TaggedENFA.eps_step (TaggedENFA.fragments2TaggedENFA qmax frags) src.
+Proof.
+  unfold eps_step.
+  rewrite GraphAPI.LabeledFiniteGraph.successors_by_label_In.
+  rewrite canonical_fragments_legacy_labeled_edge_In.
+  symmetry.
+  exact (TaggedENFA.eps_step_In (TaggedENFA.fragments2TaggedENFA qmax frags) src dst).
+Qed.
+
+Lemma canonical_fragments_char_step_In (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment)) (src dst : nat) (c : ascii)
+  : dst ∈ char_step (canonical_fragments2ENFA qmax frags) src c <-> dst ∈ TaggedENFA.char_step (TaggedENFA.fragments2TaggedENFA qmax frags) src c.
+Proof.
+  unfold char_step.
+  rewrite GraphAPI.LabeledFiniteGraph.successors_by_label_In.
+  rewrite canonical_fragments_legacy_labeled_edge_In.
+  symmetry.
+  exact (TaggedENFA.char_step_In (TaggedENFA.fragments2TaggedENFA qmax frags) src dst c).
+Qed.
+
+Lemma canonical_fragments_delta_star_iff (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment)) (src dst : nat) (input : Input.t)
+  : dst \in
+      TaggedENFA.delta_star (eps_step (canonical_fragments2ENFA qmax frags)) (char_step (canonical_fragments2ENFA qmax frags)) src input <-> dst \in
+      TaggedENFA.delta_star (TaggedENFA.eps_step (TaggedENFA.fragments2TaggedENFA qmax frags)) (TaggedENFA.char_step (TaggedENFA.fragments2TaggedENFA qmax frags)) src input.
+Proof.
+  split; intros DELTA.
+  - induction DELTA as [q | src mid dst input STEP REST IH | src mid dst c input STEP REST IH].
+    + econstructor 1.
+    + econstructor 2.
+      * eapply (proj1 (canonical_fragments_eps_step_In qmax frags src mid)).
+        exact STEP.
+      * exact IH.
+    + econstructor 3.
+      * eapply (proj1 (canonical_fragments_char_step_In qmax frags src mid c)).
+        exact STEP.
+      * exact IH.
+  - induction DELTA as [q | src mid dst input STEP REST IH | src mid dst c input STEP REST IH].
+    + econstructor 1.
+    + econstructor 2.
+      * eapply (proj2 (canonical_fragments_eps_step_In qmax frags src mid)).
+        exact STEP.
+      * exact IH.
+    + econstructor 3.
+      * eapply (proj2 (canonical_fragments_char_step_In qmax frags src mid c)).
+        exact STEP.
+      * exact IH.
+Qed.
+
+Theorem canonical_fragments_runs_iff (rules : list Rule.t) (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment))
+  (FRAGS : TaggedENFA.rules2fragments 1 rules = (qmax, frags))
+  (src dst : nat) (input : Input.t)
+  (SRC : src ∈ seq 0 qmax)
+  : dst \in
+      TaggedENFA.delta_star (TaggedENFA.eps_step (TaggedENFA.fragments2TaggedENFA qmax frags)) (TaggedENFA.char_step (TaggedENFA.fragments2TaggedENFA qmax frags)) src input <-> runs (canonical_fragments2ENFA qmax frags) src input dst.
+Proof.
+  split.
+  - intros DELTA. eapply delta_star_runs.
+    + change ((canonical_fragments_graph qmax frags).(GraphAPI.LabeledFiniteGraph.isVertex) src).
+      eapply (proj2 (canonical_fragments_vertex_In rules qmax frags FRAGS src)).
+      exact SRC.
+    + eapply (proj2 (canonical_fragments_delta_star_iff qmax frags src dst input)).
+      exact DELTA.
+  - intros RUNS.
+    eapply (proj1 (canonical_fragments_delta_star_iff qmax frags src dst input)).
+    eapply runs_delta_star. exact RUNS.
+Qed.
+
+Theorem canonical_fragments_accepts_iff (rules : list Rule.t) (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment))
+  (FRAGS : TaggedENFA.rules2fragments 1 rules = (qmax, frags))
+  (input : Input.t) (tag : Token.t)
+  : TaggedENFA.accepts (TaggedENFA.fragments2TaggedENFA qmax frags) input tag <-> accepts (canonical_fragments2ENFA qmax frags) input tag.
+Proof.
+  use TaggedENFA.rules2fragments_bounds as [QMAX BOUND] with FRAGS.
+  assert (START : 0 ∈ seq 0 qmax).
+  { rewrite in_seq. lia. }
+  unfold TaggedENFA.accepts, accepts. cbn. split.
+  - intros (dst & DELTA & OUTPUT). exists dst. split; [ | exact OUTPUT].
+    eapply (proj1 (canonical_fragments_runs_iff rules qmax frags FRAGS 0 dst input START)).
+    exact DELTA.
+  - intros (dst & RUNS & OUTPUT). exists dst. split; [ | exact OUTPUT].
+    eapply (proj2 (canonical_fragments_runs_iff rules qmax frags FRAGS 0 dst input START)).
+    exact RUNS.
+Qed.
+
+Lemma mkUnitedCanonicalENFA_eq (rules : list Rule.t) (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment))
+  (FRAGS : TaggedENFA.rules2fragments 1 rules = (qmax, frags))
+  : mkUnitedCanonicalENFA rules = canonical_fragments2ENFA qmax frags.
+Proof.
+  unfold mkUnitedCanonicalENFA.
+  now rewrite FRAGS.
+Qed.
+
+Lemma mkUnitedTaggedENFA_eq (rules : list Rule.t) (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment))
+  (FRAGS : TaggedENFA.rules2fragments 1 rules = (qmax, frags))
+  : TaggedENFA.mkUnitedTaggedENFA rules = TaggedENFA.fragments2TaggedENFA qmax frags.
+Proof.
+  unfold TaggedENFA.mkUnitedTaggedENFA. now rewrite FRAGS.
+Qed.
+
+Theorem mkUnitedCanonicalENFA_well_formed (rules : list Rule.t)
+  : well_formed (mkUnitedCanonicalENFA rules).
+Proof.
+  destruct (TaggedENFA.rules2fragments 1 rules) as [qmax frags] eqn: FRAGS.
+  rewrite (mkUnitedCanonicalENFA_eq rules qmax frags FRAGS).
+  eapply canonical_fragments_well_formed. exact FRAGS.
+Qed.
+
+Theorem mkUnitedCanonicalENFA_labeled_edge_In (rules : list Rule.t) (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment))
+  (FRAGS : TaggedENFA.rules2fragments 1 rules = (qmax, frags))
+  (src : nat) (label : enfa_edge_label) (dst : nat)
+  : (mkUnitedCanonicalENFA rules).(graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src label dst <-> ((src, dst), label) ∈ (TaggedENFA.fragments2TaggedENFA qmax frags).(TaggedENFA.labeled_edges).
+Proof.
+  unfold mkUnitedCanonicalENFA. rewrite FRAGS. cbn.
+  exact (canonical_fragments_legacy_labeled_edge_In qmax frags src label dst).
+Qed.
+
+Theorem mkUnitedCanonicalENFA_runs_iff (rules : list Rule.t) (qmax : nat) (frags : list (Rule.t * TaggedENFA.fragment))
+  (FRAGS : TaggedENFA.rules2fragments 1 rules = (qmax, frags))
+  (src dst : nat) (input : Input.t)
+  (SRC : src ∈ seq 0 qmax)
+  : dst \in
+      TaggedENFA.delta_star (TaggedENFA.eps_step (TaggedENFA.fragments2TaggedENFA qmax frags)) (TaggedENFA.char_step (TaggedENFA.fragments2TaggedENFA qmax frags)) src input <-> runs (mkUnitedCanonicalENFA rules) src input dst.
+Proof.
+  unfold mkUnitedCanonicalENFA. rewrite FRAGS. cbn.
+  eapply canonical_fragments_runs_iff; eauto.
+Qed.
+
+Theorem mkUnitedCanonicalENFA_accepts_iff (rules : list Rule.t) (input : Input.t) (tag : Token.t)
+  : TaggedENFA.accepts (TaggedENFA.mkUnitedTaggedENFA rules) input tag <-> accepts (mkUnitedCanonicalENFA rules) input tag.
+Proof.
+  destruct (TaggedENFA.rules2fragments 1 rules) as [qmax frags] eqn: FRAGS.
+  rewrite (mkUnitedCanonicalENFA_eq rules qmax frags FRAGS).
+  rewrite (mkUnitedTaggedENFA_eq rules qmax frags FRAGS).
+  eapply canonical_fragments_accepts_iff. exact FRAGS.
+Qed.
+
+Theorem mkUnitedCanonicalENFA_accepted_tags_iff (rules : list Rule.t) (input : Input.t) (tag : Token.t)
+  : tag \in TaggedENFA.accepted_tags (TaggedENFA.mkUnitedTaggedENFA rules) input <-> tag \in accepted_tags (mkUnitedCanonicalENFA rules) input.
+Proof.
+  unfold TaggedENFA.accepted_tags, accepted_tags.
+  eapply mkUnitedCanonicalENFA_accepts_iff.
+Qed.
+
+End CanonicalENFA.
 
 Module TaggedDFA.
 
@@ -6183,6 +6609,1226 @@ End DeleteDead.
 
 End TaggedDFA.
 
+Module CanonicalDFA.
+
+#[projections(primitive)]
+Record t : Type :=
+  mk
+  { state : Set
+  ; machine : GraphAPI.LabeledFiniteGraph.TotalDeterministic state ascii
+  ; start : state
+  ; accept_outputs : alist state Token.t
+  } as M.
+
+Definition graph (M : t) : GraphAPI.LabeledFiniteGraph.t M.(state) ascii :=
+  M.(machine).(GraphAPI.LabeledFiniteGraph.total_graph).
+
+Definition state_hasEqDec (M : t) : hasEqDec M.(state) :=
+  (graph M).(GraphAPI.LabeledFiniteGraph.V_dec).
+
+#[global] Existing Instance state_hasEqDec.
+
+Definition vertices (M : t) : fin_ensemble M.(state) :=
+  (graph M).(GraphAPI.LabeledFiniteGraph.vertices).
+
+Definition step (M : t) (src : M.(state)) (c : ascii) : M.(state) :=
+  M.(machine).(GraphAPI.LabeledFiniteGraph.total_step) src c.
+
+Definition delta (M : t) (src : M.(state)) (input : Input.t) : M.(state) :=
+  GraphAPI.LabeledFiniteGraph.total_run_word M.(machine) src input.
+
+Definition run := delta.
+
+Definition partial (M : t) : GraphAPI.LabeledFiniteGraph.PartialDeterministic M.(state) ascii :=
+  GraphAPI.LabeledFiniteGraph.to_partial M.(machine).
+
+Definition partial_run (M : t) (src : M.(state)) (input : Input.t) : option M.(state) :=
+  GraphAPI.LabeledFiniteGraph.run_word (partial M) src input.
+
+Definition accepts (M : t) (input : Input.t) (tag : Token.t) : Prop :=
+  (delta M M.(start) input, tag) ∈ M.(accept_outputs).(kvlist).
+
+Definition accepted_tags (M : t) (input : Input.t) : ensemble Token.t :=
+  fun tag => accepts M input tag.
+
+#[projections(primitive)]
+Record well_formed (M : t) : Prop :=
+  mkWellFormed
+  { start_vertex : (graph M).(GraphAPI.LabeledFiniteGraph.isVertex) M.(start)
+  ; accept_output_vertex q tag
+      (OUTPUT : (q, tag) ∈ M.(accept_outputs).(kvlist))
+      : (graph M).(GraphAPI.LabeledFiniteGraph.isVertex) q
+  }.
+
+Definition legacy_atomic_edges (M : TaggedDFA.t) : fin_ensemble (GraphAPI.LabeledFiniteGraph.Edge.t M.(TaggedDFA.state) ascii) :=
+  L.flat_map (fun src =>
+      map (fun c =>
+          GraphAPI.LabeledFiniteGraph.Edge.mk src c (M.(TaggedDFA.transition) src c)) all_asciis) M.(TaggedDFA.states).
+
+Lemma legacy_atomic_edges_In (M : TaggedDFA.t) (src : M.(TaggedDFA.state)) (c : ascii) (dst : M.(TaggedDFA.state))
+  : GraphAPI.LabeledFiniteGraph.Edge.mk src c dst ∈ legacy_atomic_edges M <-> src ∈ M.(TaggedDFA.states) /\ dst = M.(TaggedDFA.transition) src c.
+Proof.
+  unfold legacy_atomic_edges. rewrite L.in_flat_map. split.
+  - intros (src' & SRC & EDGE).
+    rewrite L.in_map_iff in EDGE.
+    destruct EDGE as (c' & EQ & CHAR). inv EQ. done.
+  - intros [SRC EQ]. subst dst. exists src. split; [exact SRC | ].
+    rewrite L.in_map_iff. exists c. split; [reflexivity | ].
+    eapply in_all_asciis_intro.
+Qed.
+
+Lemma legacy_atomic_edges_closed (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  : GraphAPI.LabeledFiniteGraph.closed M.(TaggedDFA.states) (legacy_atomic_edges M).
+Proof.
+  intros [src c dst] EDGE.
+  rewrite legacy_atomic_edges_In in EDGE.
+  destruct EDGE as [SRC DST]. subst dst. split; [exact SRC | ].
+  destruct OKAY as [START ACCEPT TRANSITION].
+  eapply TRANSITION. exact SRC.
+Qed.
+
+Definition legacy_graph (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M) : GraphAPI.LabeledFiniteGraph.t M.(TaggedDFA.state) ascii :=
+  GraphAPI.LabeledFiniteGraph.build_closed M.(TaggedDFA.state_hasEqDec) ascii_hasEqDec M.(TaggedDFA.states) (legacy_atomic_edges M) (legacy_atomic_edges_closed M OKAY).
+
+Lemma legacy_graph_vertex_In (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (q : M.(TaggedDFA.state))
+  : (legacy_graph M OKAY).(GraphAPI.LabeledFiniteGraph.isVertex) q <-> q ∈ M.(TaggedDFA.states).
+Proof.
+  unfold legacy_graph.
+  exact (GraphAPI.LabeledFiniteGraph.build_closed_isVertex M.(TaggedDFA.state_hasEqDec) ascii_hasEqDec M.(TaggedDFA.states) (legacy_atomic_edges M) (legacy_atomic_edges_closed M OKAY) q).
+Qed.
+
+Lemma legacy_graph_labeled_edge_In (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (src : M.(TaggedDFA.state)) (c : ascii) (dst : M.(TaggedDFA.state))
+  : (legacy_graph M OKAY).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src c dst <-> src ∈ M.(TaggedDFA.states) /\ dst = M.(TaggedDFA.transition) src c.
+Proof.
+  unfold legacy_graph.
+  rewrite (GraphAPI.LabeledFiniteGraph.build_closed_isLabeledEdge M.(TaggedDFA.state_hasEqDec) ascii_hasEqDec M.(TaggedDFA.states) (legacy_atomic_edges M) (legacy_atomic_edges_closed M OKAY) src c dst).
+  eapply legacy_atomic_edges_In.
+Qed.
+
+#[refine]
+Definition legacy_machine (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M) : GraphAPI.LabeledFiniteGraph.TotalDeterministic M.(TaggedDFA.state) ascii :=
+  {|
+    GraphAPI.LabeledFiniteGraph.total_graph := legacy_graph M OKAY;
+    GraphAPI.LabeledFiniteGraph.total_step := M.(TaggedDFA.transition);
+  |}.
+Proof.
+  - intros src c VERTEX.
+    rewrite (legacy_graph_vertex_In M OKAY src) in VERTEX.
+    rewrite (legacy_graph_vertex_In M OKAY (M.(TaggedDFA.transition) src c)).
+    destruct OKAY as [START ACCEPT TRANSITION].
+    eapply TRANSITION. exact VERTEX.
+  - intros src c dst VERTEX.
+    rewrite (legacy_graph_vertex_In M OKAY src) in VERTEX.
+    rewrite (legacy_graph_labeled_edge_In M OKAY src c dst).
+    tauto.
+Defined.
+
+Definition of_legacy (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M) : t :=
+  {|
+    state := M.(TaggedDFA.state);
+    machine := legacy_machine M OKAY;
+    start := M.(TaggedDFA.start_state);
+    accept_outputs := M.(TaggedDFA.accept_states);
+  |}.
+
+Lemma of_legacy_vertex_In (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (q : M.(TaggedDFA.state))
+  : (graph (of_legacy M OKAY)).(GraphAPI.LabeledFiniteGraph.isVertex) q <-> q ∈ M.(TaggedDFA.states).
+Proof.
+  change ((legacy_graph M OKAY).(GraphAPI.LabeledFiniteGraph.isVertex) q <-> q ∈ M.(TaggedDFA.states)).
+  eapply legacy_graph_vertex_In.
+Qed.
+
+Lemma of_legacy_labeled_edge_In (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (src : M.(TaggedDFA.state)) (c : ascii) (dst : M.(TaggedDFA.state))
+  : (graph (of_legacy M OKAY)).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src c dst <-> src ∈ M.(TaggedDFA.states) /\ dst = M.(TaggedDFA.transition) src c.
+Proof.
+  change ((legacy_graph M OKAY).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src c dst <-> src ∈ M.(TaggedDFA.states) /\ dst = M.(TaggedDFA.transition) src c).
+  eapply legacy_graph_labeled_edge_In.
+Qed.
+
+Lemma of_legacy_step (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (src : M.(TaggedDFA.state)) (c : ascii)
+  : step (of_legacy M OKAY) src c = M.(TaggedDFA.transition) src c.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma of_legacy_delta (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (src : M.(TaggedDFA.state)) (input : Input.t)
+  : delta (of_legacy M OKAY) src input = TaggedDFA.delta M src input.
+Proof.
+  revert src. induction input as [ | c input IH]; intros src; simpl.
+  - reflexivity.
+  - eapply IH.
+Qed.
+
+Lemma of_legacy_word_walk_iff (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (src dst : M.(TaggedDFA.state)) (input : Input.t)
+  (SRC : src ∈ M.(TaggedDFA.states))
+  : GraphAPI.LabeledFiniteGraph.word_walk (graph (of_legacy M OKAY)) src input dst <-> TaggedDFA.delta M src input = dst.
+Proof.
+  rewrite <- (of_legacy_delta M OKAY src input).
+  symmetry. eapply GraphAPI.LabeledFiniteGraph.total_run_word_spec.
+  eapply (proj2 (of_legacy_vertex_In M OKAY src)). exact SRC.
+Qed.
+
+Lemma of_legacy_partial_run (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (src : M.(TaggedDFA.state)) (input : Input.t)
+  (SRC : src ∈ M.(TaggedDFA.states))
+  : partial_run (of_legacy M OKAY) src input = Some (TaggedDFA.delta M src input).
+Proof.
+  unfold partial_run, partial.
+  rewrite <- (of_legacy_delta M OKAY src input).
+  eapply GraphAPI.LabeledFiniteGraph.to_partial_run_word_agrees.
+  eapply (proj2 (of_legacy_vertex_In M OKAY src)). exact SRC.
+Qed.
+
+Lemma of_legacy_accepts_iff (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (input : Input.t) (tag : Token.t)
+  : accepts (of_legacy M OKAY) input tag <-> TaggedDFA.accepts M input tag.
+Proof.
+  unfold accepts, TaggedDFA.accepts. cbn.
+  now rewrite of_legacy_delta.
+Qed.
+
+Lemma of_legacy_accepted_tags_iff (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  (input : Input.t) (tag : Token.t)
+  : tag \in accepted_tags (of_legacy M OKAY) input <-> tag \in TaggedDFA.accepted_tags M input.
+Proof.
+  unfold accepted_tags, TaggedDFA.accepted_tags.
+  eapply of_legacy_accepts_iff.
+Qed.
+
+Lemma of_legacy_well_formed (M : TaggedDFA.t)
+  (OKAY : TaggedDFA.okay M)
+  : well_formed (of_legacy M OKAY).
+Proof.
+  destruct OKAY as [START ACCEPT TRANSITION]. econstructor.
+  - eapply (proj2 (of_legacy_vertex_In M (TaggedDFA.okay_intro M START ACCEPT TRANSITION) M.(TaggedDFA.start_state))).
+    exact START.
+  - intros q tag OUTPUT. cbn in OUTPUT.
+    eapply (proj2 (of_legacy_vertex_In M (TaggedDFA.okay_intro M START ACCEPT TRANSITION) q)).
+    eapply ACCEPT. exact OUTPUT.
+Qed.
+
+Definition to_legacy (M : t) : TaggedDFA.t :=
+  {|
+    TaggedDFA.state := M.(state);
+    TaggedDFA.state_hasEqDec := state_hasEqDec M;
+    TaggedDFA.states := vertices M;
+    TaggedDFA.start_state := M.(start);
+    TaggedDFA.accept_states := M.(accept_outputs);
+    TaggedDFA.transition := step M;
+  |}.
+
+Lemma to_legacy_delta (M : t) (src : M.(state)) (input : Input.t)
+  : TaggedDFA.delta (to_legacy M) src input = delta M src input.
+Proof.
+  revert src. induction input as [ | c input IH]; intros src; simpl.
+  - reflexivity.
+  - eapply IH.
+Qed.
+
+Lemma to_legacy_accepts_iff (M : t) (input : Input.t) (tag : Token.t)
+  : TaggedDFA.accepts (to_legacy M) input tag <-> accepts M input tag.
+Proof.
+  unfold TaggedDFA.accepts, accepts. cbn.
+  now rewrite to_legacy_delta.
+Qed.
+
+Lemma to_legacy_okay (M : t)
+  (WF : well_formed M)
+  : TaggedDFA.okay (to_legacy M).
+Proof.
+  destruct WF as [START ACCEPT]. econstructor; cbn.
+  - exact START.
+  - intros q tag OUTPUT. eapply ACCEPT. exact OUTPUT.
+  - intros src c VERTEX.
+    exact (M.(machine).(GraphAPI.LabeledFiniteGraph.total_step_vertex) src c VERTEX).
+Qed.
+
+Lemma partial_run_spec (M : t) (src dst : M.(state)) (input : Input.t)
+  : partial_run M src input = Some dst <-> GraphAPI.LabeledFiniteGraph.word_walk (graph M) src input dst.
+Proof.
+  unfold partial_run, partial, graph.
+  eapply GraphAPI.LabeledFiniteGraph.to_partial_run_word_spec.
+Qed.
+
+Lemma partial_run_agrees (M : t) (src : M.(state)) (input : Input.t)
+  (VERTEX : (graph M).(GraphAPI.LabeledFiniteGraph.isVertex) src)
+  : partial_run M src input = Some (delta M src input).
+Proof.
+  unfold partial_run, partial, delta, graph in *.
+  eapply GraphAPI.LabeledFiniteGraph.to_partial_run_word_agrees.
+  exact VERTEX.
+Qed.
+
+End CanonicalDFA.
+
+Module CanonicalSubset.
+
+Definition normalize_members_on {Q : Set} (Q_hasEqDec : hasEqDec Q) (vertices : list Q) (qs : list Q) : list Q :=
+  L.filter (fun q =>
+      mem (EQ_DEC := Q_hasEqDec) q qs) vertices.
+
+#[projections(primitive)]
+Record subset_state_on (Q : Set) (Q_hasEqDec : hasEqDec Q) (vertices : list Q)
+  : Set :=
+  mkSubsetStateOn
+  { members_on : list Q
+  ; members_on_canonical : normalize_members_on Q_hasEqDec vertices members_on = members_on
+  }.
+
+#[global] Arguments mkSubsetStateOn {Q Q_hasEqDec vertices}
+  members_on members_on_canonical.
+#[global] Arguments members_on {Q Q_hasEqDec vertices} _.
+#[global] Arguments members_on_canonical {Q Q_hasEqDec vertices} _.
+
+Definition normalize_members (M : CanonicalENFA.t) (qs : fin_ensemble M.(CanonicalENFA.state)) : fin_ensemble M.(CanonicalENFA.state) :=
+  normalize_members_on (CanonicalENFA.state_hasEqDec M) (CanonicalENFA.vertices M) qs.
+
+Definition subset_state (M : CanonicalENFA.t) : Set :=
+  subset_state_on M.(CanonicalENFA.state) (CanonicalENFA.state_hasEqDec M) (CanonicalENFA.vertices M).
+
+Definition members {M : CanonicalENFA.t} (qs : subset_state M) : fin_ensemble M.(CanonicalENFA.state) :=
+  members_on qs.
+
+Definition members_canonical {M : CanonicalENFA.t} (qs : subset_state M) : normalize_members M (members qs) = members qs :=
+  members_on_canonical qs.
+
+Definition mkSubsetState {M : CanonicalENFA.t} (qs : fin_ensemble M.(CanonicalENFA.state))
+  (CANONICAL : normalize_members M qs = qs) : subset_state M :=
+  mkSubsetStateOn qs CANONICAL.
+
+#[global] Arguments mkSubsetState {M} qs CANONICAL.
+#[global] Arguments members {M} _.
+#[global] Arguments members_canonical {M} _.
+
+Lemma filtered_list_extensional {A : Type} (A_dec : hasEqDec A) (base : list A) (p1 p2 : A -> bool)
+  (NO_DUP : NoDup base)
+  (MEMBERS : forall x, x ∈ L.filter p1 base <-> x ∈ L.filter p2 base)
+  : L.filter p1 base = L.filter p2 base.
+Proof.
+  revert p1 p2 MEMBERS NO_DUP.
+  induction base as [ | a base IH]; intros p1 p2 MEMBERS NO_DUP; simpl.
+  - reflexivity.
+  - assert (A_NOT_IN : ~ a ∈ base).
+    { now inversion NO_DUP. }
+    assert (BASE_NO_DUP : NoDup base).
+    { now inversion NO_DUP. }
+    destruct (p1 a) eqn: P1; destruct (p2 a) eqn: P2; simpl.
+    + f_equal. eapply IH; [ | exact BASE_NO_DUP].
+      intros x. specialize (MEMBERS x).
+      cbn [L.filter] in MEMBERS.
+      rewrite ?P1, ?P2 in MEMBERS. simpl in MEMBERS.
+      split; intros IN.
+      * destruct (proj1 MEMBERS (or_intror IN)) as [EQ | OUT].
+        -- subst x. exfalso. eapply A_NOT_IN.
+           rewrite L.filter_In in IN. exact (proj1 IN).
+        -- exact OUT.
+      * destruct (proj2 MEMBERS (or_intror IN)) as [EQ | OUT].
+        -- subst x. exfalso. eapply A_NOT_IN.
+           rewrite L.filter_In in IN. exact (proj1 IN).
+        -- exact OUT.
+    + specialize (MEMBERS a).
+      cbn [L.filter] in MEMBERS.
+      rewrite ?P1, ?P2 in MEMBERS. simpl in MEMBERS.
+      exfalso.
+      pose proof (proj1 MEMBERS (or_introl eq_refl)) as IN.
+      eapply A_NOT_IN. rewrite L.filter_In in IN. exact (proj1 IN).
+    + specialize (MEMBERS a).
+      cbn [L.filter] in MEMBERS.
+      rewrite ?P1, ?P2 in MEMBERS. simpl in MEMBERS.
+      exfalso.
+      pose proof (proj2 MEMBERS (or_introl eq_refl)) as IN.
+      eapply A_NOT_IN. rewrite L.filter_In in IN. exact (proj1 IN).
+    + eapply IH; [ | exact BASE_NO_DUP].
+      intros x. specialize (MEMBERS x).
+      cbn [L.filter] in MEMBERS.
+      rewrite ?P1, ?P2 in MEMBERS. simpl in MEMBERS.
+      exact MEMBERS.
+Qed.
+
+Lemma normalize_members_canonical (M : CanonicalENFA.t) (qs : fin_ensemble M.(CanonicalENFA.state))
+  : normalize_members M (normalize_members M qs) = normalize_members M qs.
+Proof.
+  unfold normalize_members, normalize_members_on.
+  eapply L.filter_ext_in. intros q VERTEX.
+  eapply eq_true_iff_eq.
+  rewrite !mem_spec, L.filter_In.
+  split.
+  - intros [_ IN]. rewrite mem_spec in IN. exact IN.
+  - intros IN. split; [exact VERTEX | ].
+    rewrite mem_spec. exact IN.
+Qed.
+
+Lemma subset_state_eq_intro (M : CanonicalENFA.t) (qs1 qs2 : subset_state M)
+  (MEMBERS : members qs1 = members qs2)
+  : qs1 = qs2.
+Proof.
+  destruct qs1 as [members1 canonical1].
+  destruct qs2 as [members2 canonical2]. cbn in MEMBERS.
+  subst members2. f_equal.
+  eapply (@eq_pirrel_fromEqDec (fin_ensemble M.(CanonicalENFA.state)) (list_hasEqDec (CanonicalENFA.state_hasEqDec M))).
+Qed.
+
+Lemma subset_state_extensionality (M : CanonicalENFA.t) (qs1 qs2 : subset_state M) (MEMBERS : forall q, q ∈ members qs1 <-> q ∈ members qs2)
+  : qs1 = qs2.
+Proof.
+  pose proof (members_canonical qs1) as CANONICAL1.
+  pose proof (members_canonical qs2) as CANONICAL2.
+  eapply subset_state_eq_intro.
+  rewrite <- CANONICAL1, <- CANONICAL2.
+  unfold normalize_members, normalize_members_on.
+  eapply filtered_list_extensional.
+  - exact (CanonicalENFA.state_hasEqDec M).
+  - exact M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.vertices_NoDup).
+  - intros q. rewrite !L.filter_In, !mem_spec.
+    split.
+    + intros [VERTEX IN]. split; [exact VERTEX | ].
+      eapply (proj1 (MEMBERS q)). exact IN.
+    + intros [VERTEX IN]. split; [exact VERTEX | ].
+      eapply (proj2 (MEMBERS q)). exact IN.
+Qed.
+
+#[global]
+Instance subset_state_hasEqDec (M : CanonicalENFA.t)
+  : hasEqDec (subset_state M).
+Proof.
+  red. intros qs1 qs2.
+  destruct (list_hasEqDec (CanonicalENFA.state_hasEqDec M) (members qs1) (members qs2)) as [EQ | NE].
+  - left. eapply subset_state_eq_intro. exact EQ.
+  - right. intros EQ. eapply NE. now subst qs2.
+Defined.
+
+Definition subset_of_list (M : CanonicalENFA.t) (qs : fin_ensemble M.(CanonicalENFA.state)) : subset_state M :=
+  mkSubsetState (normalize_members M qs) (normalize_members_canonical M qs).
+
+Lemma subset_of_list_In (M : CanonicalENFA.t) (qs : fin_ensemble M.(CanonicalENFA.state)) (q : M.(CanonicalENFA.state))
+  : q ∈ members (subset_of_list M qs) <-> M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.isVertex) q /\ q ∈ qs.
+Proof.
+  unfold subset_of_list. cbn.
+  unfold normalize_members, normalize_members_on.
+  rewrite L.filter_In, mem_spec.
+  reflexivity.
+Qed.
+
+Lemma subset_members_vertex (M : CanonicalENFA.t) (qs : subset_state M) (q : M.(CanonicalENFA.state))
+  (IN : q ∈ members qs)
+  : M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.isVertex) q.
+Proof.
+  pose proof (members_canonical qs) as CANONICAL.
+  rewrite <- CANONICAL in IN.
+  unfold normalize_members, normalize_members_on in IN.
+  rewrite L.filter_In in IN.
+  exact (proj1 IN).
+Qed.
+
+Lemma subset_members_NoDup (M : CanonicalENFA.t) (qs : subset_state M)
+  : NoDup (members qs).
+Proof.
+  pose proof (members_canonical qs) as CANONICAL.
+  rewrite <- CANONICAL.
+  unfold normalize_members, normalize_members_on.
+  eapply L.NoDup_filter.
+  exact M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.vertices_NoDup).
+Qed.
+
+Definition epsilon_label (label : enfa_edge_label) : bool :=
+  match label with
+  | None => true
+  | Some _ => false
+  end.
+
+Definition epsilon_graph (M : CanonicalENFA.t) : GraphAPI.LabeledFiniteGraph.t M.(CanonicalENFA.state) enfa_edge_label :=
+  GraphAPI.LabeledFiniteGraph.filter_labels M.(CanonicalENFA.graph) epsilon_label.
+
+Lemma epsilon_graph_vertex_In (M : CanonicalENFA.t) (q : M.(CanonicalENFA.state))
+  : (epsilon_graph M).(GraphAPI.LabeledFiniteGraph.isVertex) q <-> M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.isVertex) q.
+Proof.
+  unfold epsilon_graph.
+  eapply GraphAPI.LabeledFiniteGraph.filter_labels_isVertex.
+Qed.
+
+Lemma epsilon_graph_labeled_edge_In (M : CanonicalENFA.t) (src dst : M.(CanonicalENFA.state)) (label : enfa_edge_label)
+  : (epsilon_graph M).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src label dst <-> label = None /\ M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src None dst.
+Proof.
+  unfold epsilon_graph.
+  rewrite GraphAPI.LabeledFiniteGraph.filter_labels_isLabeledEdge.
+  destruct label as [c | ]; simpl.
+  - split.
+    + intros [_ FALSE]. discriminate.
+    + intros [EQ _]. discriminate.
+  - split.
+    + intros [EDGE _]. split; [reflexivity | exact EDGE].
+    + intros [_ EDGE]. split; [exact EDGE | reflexivity].
+Qed.
+
+Definition eclose (M : CanonicalENFA.t) (qs : subset_state M) : subset_state M :=
+  subset_of_list M (GraphAPI.LabeledFiniteGraph.reachable_vertices (epsilon_graph M) (members qs)).
+
+Lemma eclose_In (M : CanonicalENFA.t) (qs : subset_state M) (q : M.(CanonicalENFA.state))
+  : q ∈ members (eclose M qs) <-> q ∈ GraphAPI.LabeledFiniteGraph.reachable_vertices (epsilon_graph M) (members qs).
+Proof.
+  unfold eclose. rewrite subset_of_list_In. split.
+  - tauto.
+  - intros REACH. split; [ | exact REACH].
+    rewrite <- epsilon_graph_vertex_In.
+    eapply GraphAPI.LabeledFiniteGraph.reachable_vertices_isVertex. exact REACH.
+Qed.
+
+Theorem eclose_reachable_In (M : CanonicalENFA.t) (qs : subset_state M) (q : M.(CanonicalENFA.state))
+  : q ∈ members (eclose M qs) <-> exists seed, seed ∈ members qs /\ (epsilon_graph M).(GraphAPI.LabeledFiniteGraph.isVertex) seed /\ exists labels trace, GraphAPI.LabeledFiniteGraph.walk (epsilon_graph M) seed labels trace q.
+Proof.
+  rewrite eclose_In.
+  eapply GraphAPI.LabeledFiniteGraph.reachable_vertices_In.
+Qed.
+
+Lemma epsilon_walk_eclosure (M : CanonicalENFA.t) (src dst : M.(CanonicalENFA.state)) (labels : list enfa_edge_label) (trace : list M.(CanonicalENFA.state))
+  (WALK : GraphAPI.LabeledFiniteGraph.walk (epsilon_graph M) src labels trace dst)
+  : dst \in TaggedENFA.eclosure (CanonicalENFA.eps_step M) src.
+Proof.
+  induction WALK as [q VERTEX | src label mid labels trace dst EDGE REST IH].
+  - econstructor 1.
+  - destruct (proj1 (epsilon_graph_labeled_edge_In M src mid label) EDGE) as [LABEL ORIGINAL].
+    subst label. econstructor 2.
+    + unfold CanonicalENFA.eps_step.
+      eapply (proj2 (GraphAPI.LabeledFiniteGraph.successors_by_label_In M.(CanonicalENFA.graph) src None mid)).
+      exact ORIGINAL.
+    + exact IH.
+Qed.
+
+Lemma eclosure_epsilon_walk (M : CanonicalENFA.t) (src dst : M.(CanonicalENFA.state))
+  (VERTEX : M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.isVertex) src)
+  (CLOSURE : dst \in TaggedENFA.eclosure (CanonicalENFA.eps_step M) src)
+  : exists labels trace, GraphAPI.LabeledFiniteGraph.walk (epsilon_graph M) src labels trace dst.
+Proof.
+  revert VERTEX.
+  induction CLOSURE as [q | src mid dst STEP REST IH]; intros VERTEX.
+  - exists [], []. econstructor 1.
+    rewrite epsilon_graph_vertex_In. exact VERTEX.
+  - assert (ORIGINAL : M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src None mid).
+    { unfold CanonicalENFA.eps_step in STEP.
+      eapply (proj1 (GraphAPI.LabeledFiniteGraph.successors_by_label_In M.(CanonicalENFA.graph) src None mid)).
+      exact STEP. }
+    assert (EDGE : (epsilon_graph M).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src None mid).
+    { eapply (proj2 (epsilon_graph_labeled_edge_In M src mid None)).
+      split; [reflexivity | exact ORIGINAL]. }
+    assert (MID_VERTEX : M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.isVertex) mid).
+    { eapply GraphAPI.LabeledFiniteGraph.dst_isLabeledEdge. exact ORIGINAL. }
+    destruct (IH MID_VERTEX) as (labels & trace & WALK).
+    exists (None :: labels), (mid :: trace).
+    econstructor 2; [exact EDGE | exact WALK].
+Qed.
+
+Theorem eclose_eclosure_In (M : CanonicalENFA.t) (qs : subset_state M) (dst : M.(CanonicalENFA.state))
+  : dst ∈ members (eclose M qs) <-> exists src, src ∈ members qs /\ dst \in TaggedENFA.eclosure (CanonicalENFA.eps_step M) src.
+Proof.
+  rewrite eclose_reachable_In. split.
+  - intros (src & SRC & VERTEX & labels & trace & WALK).
+    exists src. split; [exact SRC | ].
+    eapply epsilon_walk_eclosure. exact WALK.
+  - intros (src & SRC & CLOSURE).
+    exists src. split; [exact SRC | ].
+    split.
+    + rewrite epsilon_graph_vertex_In.
+      eapply subset_members_vertex. exact SRC.
+    + eapply eclosure_epsilon_walk.
+      * eapply subset_members_vertex. exact SRC.
+      * exact CLOSURE.
+Qed.
+
+Definition move (M : CanonicalENFA.t) (qs : subset_state M) (c : ascii) : subset_state M :=
+  subset_of_list M (L.flat_map (GraphAPI.LabeledFiniteGraph.successors_by_label M.(CanonicalENFA.graph) (Some c)) (members qs)).
+
+Lemma move_In (M : CanonicalENFA.t) (qs : subset_state M) (c : ascii) (dst : M.(CanonicalENFA.state))
+  : dst ∈ members (move M qs c) <-> exists src, src ∈ members qs /\ M.(CanonicalENFA.graph).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src (Some c) dst.
+Proof.
+  unfold move. rewrite subset_of_list_In, L.in_flat_map. split.
+  - intros [VERTEX (src & SRC & STEP)].
+    exists src. split; [exact SRC | ].
+    rewrite <- GraphAPI.LabeledFiniteGraph.successors_by_label_In.
+    exact STEP.
+  - intros (src & SRC & EDGE). split.
+    + eapply GraphAPI.LabeledFiniteGraph.dst_isLabeledEdge. exact EDGE.
+    + exists src. split; [exact SRC | ].
+      rewrite GraphAPI.LabeledFiniteGraph.successors_by_label_In.
+      exact EDGE.
+Qed.
+
+Definition transition (M : CanonicalENFA.t) (qs : subset_state M) (c : ascii) : subset_state M :=
+  eclose M (move M qs c).
+
+Theorem transition_In (M : CanonicalENFA.t) (qs : subset_state M) (c : ascii) (dst : M.(CanonicalENFA.state))
+  : dst ∈ members (transition M qs c) <-> exists src mid, src ∈ members qs /\ mid ∈ CanonicalENFA.char_step M src c /\ dst \in TaggedENFA.eclosure (CanonicalENFA.eps_step M) mid.
+Proof.
+  unfold transition. rewrite eclose_eclosure_In. split.
+  - intros (mid & MOVE & CLOSURE).
+    rewrite move_In in MOVE.
+    destruct MOVE as (src & SRC & EDGE).
+    exists src, mid. split; [exact SRC | ].
+    split.
+    + unfold CanonicalENFA.char_step.
+      eapply (proj2 (GraphAPI.LabeledFiniteGraph.successors_by_label_In M.(CanonicalENFA.graph) src (Some c) mid)).
+      exact EDGE.
+    + exact CLOSURE.
+  - intros (src & mid & SRC & STEP & CLOSURE).
+    exists mid. split; [ | exact CLOSURE].
+    rewrite move_In. exists src. split; [exact SRC | ].
+    unfold CanonicalENFA.char_step in STEP.
+    eapply (proj1 (GraphAPI.LabeledFiniteGraph.successors_by_label_In M.(CanonicalENFA.graph) src (Some c) mid)).
+    exact STEP.
+Qed.
+
+Definition epsilon_closed (M : CanonicalENFA.t) (qs : subset_state M) : Prop :=
+  forall src dst, src ∈ members qs -> dst ∈ CanonicalENFA.eps_step M src -> dst ∈ members qs.
+
+Lemma epsilon_closed_eclosure (M : CanonicalENFA.t) (qs : subset_state M)
+  (CLOSED : epsilon_closed M qs)
+  (src dst : M.(CanonicalENFA.state))
+  (SRC : src ∈ members qs)
+  (CLOSURE : dst \in TaggedENFA.eclosure (CanonicalENFA.eps_step M) src)
+  : dst ∈ members qs.
+Proof.
+  induction CLOSURE as [q | src mid dst STEP REST IH].
+  - exact SRC.
+  - eapply IH. eapply CLOSED.
+    + exact SRC.
+    + exact STEP.
+Qed.
+
+Lemma eclose_epsilon_closed (M : CanonicalENFA.t) (qs : subset_state M)
+  : epsilon_closed M (eclose M qs).
+Proof.
+  unfold epsilon_closed. intros src dst SRC STEP.
+  rewrite eclose_eclosure_In in SRC |- *.
+  destruct SRC as (seed & SEED & CLOSURE).
+  exists seed. split; [exact SEED | ].
+  eapply TaggedENFA.eclosure_trans.
+  - exact CLOSURE.
+  - econstructor 2.
+    + exact STEP.
+    + econstructor 1.
+Qed.
+
+Lemma transition_epsilon_closed (M : CanonicalENFA.t) (qs : subset_state M) (c : ascii)
+  : epsilon_closed M (transition M qs c).
+Proof.
+  unfold transition. eapply eclose_epsilon_closed.
+Qed.
+
+Definition singleton (M : CanonicalENFA.t) (q : M.(CanonicalENFA.state)) : subset_state M :=
+  subset_of_list M [q].
+
+Definition start_state (M : CanonicalENFA.t) : subset_state M :=
+  eclose M (singleton M M.(CanonicalENFA.start)).
+
+Lemma start_state_contains_start (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  : M.(CanonicalENFA.start) ∈ members (start_state M).
+Proof.
+  unfold start_state. rewrite eclose_In.
+  eapply GraphAPI.LabeledFiniteGraph.reachable_vertices_seed.
+  - unfold singleton. rewrite subset_of_list_In.
+    split.
+    + exact (CanonicalENFA.start_vertex M WF).
+    + simpl. left. reflexivity.
+  - rewrite epsilon_graph_vertex_In.
+    exact (CanonicalENFA.start_vertex M WF).
+Qed.
+
+Theorem start_state_In_iff_eclosure (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  (dst : M.(CanonicalENFA.state))
+  : dst ∈ members (start_state M) <-> dst \in
+      TaggedENFA.eclosure (CanonicalENFA.eps_step M) M.(CanonicalENFA.start).
+Proof.
+  unfold start_state. rewrite eclose_eclosure_In. split.
+  - intros (src & SRC & CLOSURE).
+    unfold singleton in SRC. rewrite subset_of_list_In in SRC.
+    destruct SRC as [_ SRC]. simpl in SRC.
+    destruct SRC as [EQ | CONTRADICTION].
+    + subst src. exact CLOSURE.
+    + contradiction.
+  - intros CLOSURE.
+    exists M.(CanonicalENFA.start). split.
+    + unfold singleton. rewrite subset_of_list_In.
+      split.
+      * exact (CanonicalENFA.start_vertex M WF).
+      * simpl. left. reflexivity.
+    + exact CLOSURE.
+Qed.
+
+Lemma start_state_epsilon_closed (M : CanonicalENFA.t)
+  : epsilon_closed M (start_state M).
+Proof.
+  unfold start_state. eapply eclose_epsilon_closed.
+Qed.
+
+Definition subset_universe (M : CanonicalENFA.t) : fin_ensemble (subset_state M) :=
+  map (subset_of_list M) (powerset (CanonicalENFA.vertices M)).
+
+Lemma subset_of_members_eq (M : CanonicalENFA.t) (qs : subset_state M)
+  : subset_of_list M (members qs) = qs.
+Proof.
+  eapply subset_state_extensionality. intros q.
+  rewrite subset_of_list_In. split.
+  - tauto.
+  - intros IN. split; [ | exact IN].
+    eapply subset_members_vertex. exact IN.
+Qed.
+
+Lemma subset_universe_complete (M : CanonicalENFA.t) (qs : subset_state M)
+  : qs ∈ subset_universe M.
+Proof.
+  unfold subset_universe. rewrite L.in_map_iff.
+  exists (members qs). split.
+  - eapply subset_of_members_eq.
+  - pose proof (members_canonical qs) as CANONICAL.
+    rewrite <- CANONICAL.
+    unfold normalize_members, normalize_members_on.
+    eapply filter_in_powerset.
+Qed.
+
+Definition transition_atomic_edges (M : CanonicalENFA.t) : fin_ensemble (GraphAPI.LabeledFiniteGraph.Edge.t (subset_state M) ascii) :=
+  L.flat_map (fun qs =>
+      map (fun c =>
+          GraphAPI.LabeledFiniteGraph.Edge.mk qs c (transition M qs c)) all_asciis) (subset_universe M).
+
+Lemma transition_atomic_edges_In (M : CanonicalENFA.t) (src dst : subset_state M) (c : ascii)
+  : GraphAPI.LabeledFiniteGraph.Edge.mk src c dst ∈ transition_atomic_edges M <-> src ∈ subset_universe M /\ dst = transition M src c.
+Proof.
+  unfold transition_atomic_edges. rewrite L.in_flat_map. split.
+  - intros (src' & SRC & EDGE). rewrite L.in_map_iff in EDGE.
+    destruct EDGE as (c' & EQ & CHAR). inv EQ. done.
+  - intros [SRC EQ]. subst dst. exists src. split; [exact SRC | ].
+    rewrite L.in_map_iff. exists c. split; [reflexivity | ].
+    eapply in_all_asciis_intro.
+Qed.
+
+Lemma transition_atomic_edges_closed (M : CanonicalENFA.t)
+  : GraphAPI.LabeledFiniteGraph.closed (subset_universe M) (transition_atomic_edges M).
+Proof.
+  intros [src c dst] EDGE.
+  rewrite transition_atomic_edges_In in EDGE.
+  destruct EDGE as [SRC DST]. subst dst. split; [exact SRC | ].
+  eapply subset_universe_complete.
+Qed.
+
+Definition universe_graph (M : CanonicalENFA.t) : GraphAPI.LabeledFiniteGraph.t (subset_state M) ascii :=
+  GraphAPI.LabeledFiniteGraph.build_closed (subset_state_hasEqDec M) ascii_hasEqDec (subset_universe M) (transition_atomic_edges M) (transition_atomic_edges_closed M).
+
+Lemma universe_graph_vertex_In (M : CanonicalENFA.t) (qs : subset_state M)
+  : (universe_graph M).(GraphAPI.LabeledFiniteGraph.isVertex) qs <-> qs ∈ subset_universe M.
+Proof.
+  unfold universe_graph.
+  eapply GraphAPI.LabeledFiniteGraph.build_closed_isVertex.
+Qed.
+
+Lemma universe_graph_labeled_edge_In (M : CanonicalENFA.t) (src dst : subset_state M) (c : ascii)
+  : (universe_graph M).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src c dst <-> src ∈ subset_universe M /\ dst = transition M src c.
+Proof.
+  unfold universe_graph.
+  rewrite GraphAPI.LabeledFiniteGraph.build_closed_isLabeledEdge.
+  eapply transition_atomic_edges_In.
+Qed.
+
+#[refine]
+Definition universe_machine (M : CanonicalENFA.t) : GraphAPI.LabeledFiniteGraph.TotalDeterministic (subset_state M) ascii :=
+  {|
+    GraphAPI.LabeledFiniteGraph.total_graph := universe_graph M;
+    GraphAPI.LabeledFiniteGraph.total_step := transition M;
+  |}.
+Proof.
+  - intros src c VERTEX.
+    rewrite universe_graph_vertex_In.
+    eapply subset_universe_complete.
+  - intros src c dst VERTEX.
+    rewrite universe_graph_labeled_edge_In.
+    split.
+    + intros [_ DST]. exact DST.
+    + intros DST. split.
+      * rewrite <- universe_graph_vertex_In. exact VERTEX.
+      * exact DST.
+Defined.
+
+Definition reachable_states (M : CanonicalENFA.t) : fin_ensemble (subset_state M) :=
+  GraphAPI.LabeledFiniteGraph.reachable_vertices (universe_graph M) [start_state M].
+
+Definition reachable_graph (M : CanonicalENFA.t) : GraphAPI.LabeledFiniteGraph.t (subset_state M) ascii :=
+  GraphAPI.LabeledFiniteGraph.reachable_subgraph (universe_graph M) [start_state M].
+
+Lemma reachable_states_NoDup (M : CanonicalENFA.t)
+  : NoDup (reachable_states M).
+Proof.
+  unfold reachable_states.
+  eapply GraphAPI.LabeledFiniteGraph.reachable_vertices_NoDup.
+Qed.
+
+Lemma reachable_graph_vertex_In (M : CanonicalENFA.t) (qs : subset_state M)
+  : (reachable_graph M).(GraphAPI.LabeledFiniteGraph.isVertex) qs <-> qs ∈ reachable_states M.
+Proof.
+  unfold reachable_graph, reachable_states.
+  eapply GraphAPI.LabeledFiniteGraph.reachable_subgraph_isVertex.
+Qed.
+
+Lemma reachable_state_in_universe (M : CanonicalENFA.t) (qs : subset_state M)
+  (REACHABLE : qs ∈ reachable_states M)
+  : qs ∈ subset_universe M.
+Proof.
+  rewrite <- universe_graph_vertex_In.
+  unfold reachable_states in REACHABLE.
+  eapply GraphAPI.LabeledFiniteGraph.reachable_vertices_isVertex.
+  exact REACHABLE.
+Qed.
+
+Lemma start_state_reachable (M : CanonicalENFA.t)
+  : start_state M ∈ reachable_states M.
+Proof.
+  unfold reachable_states.
+  eapply GraphAPI.LabeledFiniteGraph.reachable_vertices_seed.
+  - simpl. left. reflexivity.
+  - rewrite universe_graph_vertex_In.
+    eapply subset_universe_complete.
+Qed.
+
+Lemma reachable_graph_labeled_edge_In (M : CanonicalENFA.t) (src dst : subset_state M) (c : ascii)
+  : (reachable_graph M).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src c dst <-> src ∈ reachable_states M /\ dst = transition M src c.
+Proof.
+  unfold reachable_graph.
+  rewrite GraphAPI.LabeledFiniteGraph.reachable_subgraph_isLabeledEdge_src.
+  rewrite universe_graph_labeled_edge_In.
+  split.
+  - intros [[_ DST] SRC]. split; [exact SRC | exact DST].
+  - intros [SRC DST]. split.
+    + split.
+      * eapply reachable_state_in_universe. exact SRC.
+      * exact DST.
+    + exact SRC.
+Qed.
+
+#[refine]
+Definition reachable_machine (M : CanonicalENFA.t) : GraphAPI.LabeledFiniteGraph.TotalDeterministic (subset_state M) ascii :=
+  {|
+    GraphAPI.LabeledFiniteGraph.total_graph := reachable_graph M;
+    GraphAPI.LabeledFiniteGraph.total_step := transition M;
+  |}.
+Proof.
+  - intros src c VERTEX.
+    rewrite reachable_graph_vertex_In in VERTEX |- *.
+    unfold reachable_states in VERTEX |- *.
+    eapply GraphAPI.LabeledFiniteGraph.reachable_vertices_edge_closed.
+    + exact VERTEX.
+    + exists c.
+      eapply (proj2 (universe_graph_labeled_edge_In M src (transition M src c) c)).
+      split.
+      * rewrite <- universe_graph_vertex_In.
+        eapply GraphAPI.LabeledFiniteGraph.reachable_vertices_isVertex.
+        exact VERTEX.
+      * reflexivity.
+  - intros src c dst VERTEX.
+    rewrite reachable_graph_labeled_edge_In.
+    split.
+    + intros [_ DST]. exact DST.
+    + intros DST. split.
+      * rewrite <- reachable_graph_vertex_In. exact VERTEX.
+      * exact DST.
+Defined.
+
+Definition accept_outputs_for (M : CanonicalENFA.t) (qs : subset_state M) : fin_ensemble (subset_state M * Token.t) :=
+  M.(CanonicalENFA.accept_outputs).(kvlist) >>= fun '(q, tag) =>
+    if mem (EQ_DEC := CanonicalENFA.state_hasEqDec M) q (members qs) then
+      [(qs, tag)]
+    else
+      [].
+
+Lemma accept_outputs_for_sound (M : CanonicalENFA.t) (qs qs' : subset_state M) (tag : Token.t)
+  (OUTPUT : (qs', tag) ∈ accept_outputs_for M qs)
+  : qs' = qs /\ exists q, (q, tag) ∈ M.(CanonicalENFA.accept_outputs).(kvlist) /\ q ∈ members qs.
+Proof.
+  unfold accept_outputs_for in OUTPUT.
+  destruct (in_fin_ensemble_bind_elim _ _ _ OUTPUT) as ([q tag'] & ACCEPT & OUT).
+  destruct (mem (EQ_DEC := CanonicalENFA.state_hasEqDec M) q (members qs)) eqn: MEMBER.
+  - simpl in OUT. destruct OUT as [EQ | CONTRADICTION].
+    + inversion EQ. subst qs' tag'. split; [reflexivity | ].
+      exists q. split; [exact ACCEPT | ].
+      rewrite mem_spec in MEMBER. exact MEMBER.
+    + contradiction.
+  - simpl in OUT. contradiction.
+Qed.
+
+Lemma accept_outputs_for_complete (M : CanonicalENFA.t) (qs : subset_state M) (q : M.(CanonicalENFA.state)) (tag : Token.t)
+  (OUTPUT : (q, tag) ∈ M.(CanonicalENFA.accept_outputs).(kvlist))
+  (MEMBER : q ∈ members qs)
+  : (qs, tag) ∈ accept_outputs_for M qs.
+Proof.
+  unfold accept_outputs_for.
+  eapply in_fin_ensemble_bind_intro with (x := (q, tag)).
+  - exact OUTPUT.
+  - assert (MEMBER_TRUE : mem (EQ_DEC := CanonicalENFA.state_hasEqDec M) q (members qs) = true).
+    { rewrite mem_spec. exact MEMBER. }
+    rewrite MEMBER_TRUE. simpl. left. reflexivity.
+Qed.
+
+Definition reachable_accept_outputs (M : CanonicalENFA.t) : fin_ensemble (subset_state M * Token.t) :=
+  reachable_states M >>= accept_outputs_for M.
+
+Lemma reachable_accept_outputs_sound (M : CanonicalENFA.t) (qs : subset_state M) (tag : Token.t)
+  (OUTPUT : (qs, tag) ∈ reachable_accept_outputs M)
+  : qs ∈ reachable_states M /\ exists q, (q, tag) ∈ M.(CanonicalENFA.accept_outputs).(kvlist) /\ q ∈ members qs.
+Proof.
+  unfold reachable_accept_outputs in OUTPUT.
+  destruct (in_fin_ensemble_bind_elim _ _ _ OUTPUT) as (qs' & REACHABLE & OUT).
+  destruct (accept_outputs_for_sound M qs' qs tag OUT) as [EQ ACCEPT].
+  subst qs'. split; assumption.
+Qed.
+
+Lemma reachable_accept_outputs_complete (M : CanonicalENFA.t) (qs : subset_state M) (q : M.(CanonicalENFA.state)) (tag : Token.t)
+  (REACHABLE : qs ∈ reachable_states M)
+  (OUTPUT : (q, tag) ∈ M.(CanonicalENFA.accept_outputs).(kvlist))
+  (MEMBER : q ∈ members qs)
+  : (qs, tag) ∈ reachable_accept_outputs M.
+Proof.
+  unfold reachable_accept_outputs.
+  eapply in_fin_ensemble_bind_intro with (x := qs).
+  - exact REACHABLE.
+  - eapply accept_outputs_for_complete.
+    + exact OUTPUT.
+    + exact MEMBER.
+Qed.
+
+Definition subset_construct (M : CanonicalENFA.t) (_ : CanonicalENFA.well_formed M) : CanonicalDFA.t :=
+  {|
+    CanonicalDFA.state := subset_state M;
+    CanonicalDFA.machine := reachable_machine M;
+    CanonicalDFA.start := start_state M;
+    CanonicalDFA.accept_outputs :=
+      {| kvlist := reachable_accept_outputs M |};
+  |}.
+
+Lemma subset_construct_q0 (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  : (subset_construct M WF).(CanonicalDFA.start) = start_state M.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma subset_construct_q0_contains_start (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  : M.(CanonicalENFA.start) ∈ members (subset_construct M WF).(CanonicalDFA.start).
+Proof.
+  change (M.(CanonicalENFA.start) ∈ members (start_state M)).
+  eapply start_state_contains_start. exact WF.
+Qed.
+
+Lemma subset_construct_vertex_In (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  (qs : subset_state M)
+  : (CanonicalDFA.graph (subset_construct M WF)).(GraphAPI.LabeledFiniteGraph.isVertex) qs <-> qs ∈ reachable_states M.
+Proof.
+  change ((reachable_graph M).(GraphAPI.LabeledFiniteGraph.isVertex) qs <-> qs ∈ reachable_states M).
+  eapply reachable_graph_vertex_In.
+Qed.
+
+Lemma subset_construct_labeled_edge_In (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  (src dst : subset_state M) (c : ascii)
+  : (CanonicalDFA.graph (subset_construct M WF)).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src c dst <-> src ∈ reachable_states M /\ dst = transition M src c.
+Proof.
+  change ((reachable_graph M).(GraphAPI.LabeledFiniteGraph.isLabeledEdge) src c dst <-> src ∈ reachable_states M /\ dst = transition M src c).
+  eapply reachable_graph_labeled_edge_In.
+Qed.
+
+Lemma subset_construct_step (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  (src : subset_state M) (c : ascii)
+  : CanonicalDFA.step (subset_construct M WF) src c = transition M src c.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma subset_construct_vertices_NoDup (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  : NoDup (CanonicalDFA.vertices (subset_construct M WF)).
+Proof.
+  exact (CanonicalDFA.graph (subset_construct M WF)).( GraphAPI.LabeledFiniteGraph.vertices_NoDup).
+Qed.
+
+Lemma subset_construct_well_formed (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  : CanonicalDFA.well_formed (subset_construct M WF).
+Proof.
+  econstructor.
+  - change ((reachable_graph M).(GraphAPI.LabeledFiniteGraph.isVertex) (start_state M)).
+    rewrite reachable_graph_vertex_In.
+    eapply start_state_reachable.
+  - intros qs tag OUTPUT. cbn in OUTPUT.
+    change ((reachable_graph M).(GraphAPI.LabeledFiniteGraph.isVertex) qs).
+    rewrite reachable_graph_vertex_In.
+    destruct (reachable_accept_outputs_sound M qs tag OUTPUT) as [REACHABLE _].
+    exact REACHABLE.
+Qed.
+
+Theorem subset_delta_sound (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  (qs : subset_state M) (input : Input.t) (dst : M.(CanonicalENFA.state)) (MEMBER : dst ∈ members (CanonicalDFA.delta (subset_construct M WF) qs input))
+  : exists src, src ∈ members qs /\ dst \in
+        TaggedENFA.delta_star (CanonicalENFA.eps_step M) (CanonicalENFA.char_step M) src input.
+Proof.
+  revert qs dst MEMBER.
+  induction input as [ | c input IH]; intros qs dst MEMBER.
+  - change (dst ∈ members qs) in MEMBER.
+    exists dst. split; [exact MEMBER | ].
+    econstructor 1.
+  - change (dst ∈ members (CanonicalDFA.delta (subset_construct M WF) (transition M qs c) input)) in MEMBER.
+    destruct (IH (transition M qs c) dst MEMBER) as (after & AFTER & REST).
+    rewrite transition_In in AFTER.
+    destruct AFTER as (src & mid & SRC & STEP & CLOSURE).
+    exists src. split; [exact SRC | ].
+    econstructor 3.
+    + exact STEP.
+    + eapply TaggedENFA.delta_star_app with (q2 := after) (s1 := []) (s2 := input).
+      * eapply (proj2 (TaggedENFA.delta_star_nil_iff_eclosure (CanonicalENFA.eps_step M) (CanonicalENFA.char_step M) mid after)).
+        exact CLOSURE.
+      * exact REST.
+Qed.
+
+Theorem subset_delta_complete (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  (qs : subset_state M) (src dst : M.(CanonicalENFA.state)) (input : Input.t)
+  (CLOSED : epsilon_closed M qs)
+  (SRC : src ∈ members qs)
+  (DELTA : dst \in
+      TaggedENFA.delta_star (CanonicalENFA.eps_step M) (CanonicalENFA.char_step M) src input)
+  : dst ∈ members (CanonicalDFA.delta (subset_construct M WF) qs input).
+Proof.
+  revert qs CLOSED SRC.
+  induction DELTA as [src | src mid dst input STEP REST IH | src mid dst c input STEP REST IH]; intros qs CLOSED SRC.
+  - change (src ∈ members qs). exact SRC.
+  - eapply IH.
+    + exact CLOSED.
+    + eapply CLOSED.
+      * exact SRC.
+      * exact STEP.
+  - change (dst ∈ members (CanonicalDFA.delta (subset_construct M WF) (transition M qs c) input)).
+    eapply IH.
+    + eapply transition_epsilon_closed.
+    + rewrite transition_In.
+      exists src, mid. split; [exact SRC | ].
+      split; [exact STEP | ].
+      econstructor 1.
+Qed.
+
+Theorem subset_construct_delta_In_iff (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  (input : Input.t) (dst : M.(CanonicalENFA.state))
+  : dst ∈ members (CanonicalDFA.delta (subset_construct M WF) (subset_construct M WF).(CanonicalDFA.start) input) <-> dst \in
+      TaggedENFA.delta_star (CanonicalENFA.eps_step M) (CanonicalENFA.char_step M) M.(CanonicalENFA.start) input.
+Proof.
+  change (dst ∈ members (CanonicalDFA.delta (subset_construct M WF) (start_state M) input) <-> dst \in TaggedENFA.delta_star (CanonicalENFA.eps_step M) (CanonicalENFA.char_step M) M.(CanonicalENFA.start) input).
+  split.
+  - intros MEMBER.
+    destruct (subset_delta_sound M WF (start_state M) input dst MEMBER) as (src & SRC & DELTA).
+    rewrite (start_state_In_iff_eclosure M WF src) in SRC.
+    change (dst \in TaggedENFA.delta_star (CanonicalENFA.eps_step M) (CanonicalENFA.char_step M) M.(CanonicalENFA.start) ([] ++ input)).
+    eapply TaggedENFA.delta_star_app with (q2 := src) (s1 := []) (s2 := input).
+    + eapply (proj2 (TaggedENFA.delta_star_nil_iff_eclosure (CanonicalENFA.eps_step M) (CanonicalENFA.char_step M) M.(CanonicalENFA.start) src)).
+      exact SRC.
+    + exact DELTA.
+  - intros DELTA.
+    eapply subset_delta_complete with (src := M.(CanonicalENFA.start)).
+    + eapply start_state_epsilon_closed.
+    + eapply start_state_contains_start. exact WF.
+    + exact DELTA.
+Qed.
+
+Lemma subset_construct_delta_reachable (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  (input : Input.t)
+  : CanonicalDFA.delta (subset_construct M WF) (subset_construct M WF).(CanonicalDFA.start) input ∈ reachable_states M.
+Proof.
+  eapply (proj1 (reachable_graph_vertex_In M (CanonicalDFA.delta (subset_construct M WF) (subset_construct M WF).(CanonicalDFA.start) input))).
+  change ((reachable_graph M).(GraphAPI.LabeledFiniteGraph.isVertex) (GraphAPI.LabeledFiniteGraph.total_run_word (reachable_machine M) (start_state M) input)).
+  eapply GraphAPI.LabeledFiniteGraph.total_run_word_isVertex.
+  exact (CanonicalDFA.start_vertex (subset_construct M WF) (subset_construct_well_formed M WF)).
+Qed.
+
+Theorem subset_construct_accepts_iff (M : CanonicalENFA.t)
+  (WF : CanonicalENFA.well_formed M)
+  (input : Input.t) (tag : Token.t)
+  : CanonicalDFA.accepts (subset_construct M WF) input tag <-> CanonicalENFA.accepts M input tag.
+Proof.
+  split.
+  - intros ACCEPT.
+    change ((CanonicalDFA.delta (subset_construct M WF) (subset_construct M WF).(CanonicalDFA.start) input, tag) ∈ reachable_accept_outputs M) in ACCEPT.
+    destruct (reachable_accept_outputs_sound M (CanonicalDFA.delta (subset_construct M WF) (subset_construct M WF).(CanonicalDFA.start) input) tag ACCEPT) as [_ (dst & OUTPUT & MEMBER)].
+    unfold CanonicalENFA.accepts. exists dst. split.
+    + eapply (proj1 (CanonicalENFA.delta_star_iff_runs M M.(CanonicalENFA.start) dst input (CanonicalENFA.start_vertex M WF))).
+      eapply (proj1 (subset_construct_delta_In_iff M WF input dst)).
+      exact MEMBER.
+    + exact OUTPUT.
+  - intros ACCEPT.
+    unfold CanonicalENFA.accepts in ACCEPT.
+    destruct ACCEPT as (dst & RUNS & OUTPUT).
+    change ((CanonicalDFA.delta (subset_construct M WF) (subset_construct M WF).(CanonicalDFA.start) input, tag) ∈ reachable_accept_outputs M).
+    eapply reachable_accept_outputs_complete with (q := dst).
+    + eapply subset_construct_delta_reachable.
+    + exact OUTPUT.
+    + eapply (proj2 (subset_construct_delta_In_iff M WF input dst)).
+      eapply CanonicalENFA.runs_delta_star. exact RUNS.
+Qed.
+
+End CanonicalSubset.
+
+Module CanonicalPipeline.
+
+Definition enfa (rules : list Rule.t) : CanonicalENFA.t :=
+  CanonicalENFA.mkUnitedCanonicalENFA rules.
+
+Definition enfa_well_formed (rules : list Rule.t)
+  : CanonicalENFA.well_formed (enfa rules).
+Proof.
+  unfold enfa. eapply CanonicalENFA.mkUnitedCanonicalENFA_well_formed.
+Qed.
+
+Definition dfa (rules : list Rule.t) : CanonicalDFA.t :=
+  CanonicalSubset.subset_construct (enfa rules) (enfa_well_formed rules).
+
+Definition dfa_well_formed (rules : list Rule.t)
+  : CanonicalDFA.well_formed (dfa rules).
+Proof.
+  unfold dfa. eapply CanonicalSubset.subset_construct_well_formed.
+Qed.
+
+Definition legacy_dfa (rules : list Rule.t) : TaggedDFA.t :=
+  CanonicalDFA.to_legacy (dfa rules).
+
+Definition legacy_dfa_okay (rules : list Rule.t)
+  : TaggedDFA.okay (legacy_dfa rules).
+Proof.
+  unfold legacy_dfa.
+  eapply CanonicalDFA.to_legacy_okay.
+  eapply dfa_well_formed.
+Qed.
+
+Definition minimised_dfa (rules : list Rule.t) : TaggedDFA.t :=
+  TaggedDFA.minimise_numbered (legacy_dfa rules).
+
+Definition minimised_dfa_okay (rules : list Rule.t)
+  : TaggedDFA.okay (minimised_dfa rules).
+Proof.
+  unfold minimised_dfa.
+  eapply TaggedDFA.minimise_numbered_okay.
+  eapply legacy_dfa_okay.
+Qed.
+
+Definition minimised_graph_dfa (rules : list Rule.t) : CanonicalDFA.t :=
+  CanonicalDFA.of_legacy (minimised_dfa rules) (minimised_dfa_okay rules).
+
+Definition minimised_graph_dfa_well_formed (rules : list Rule.t)
+  : CanonicalDFA.well_formed (minimised_graph_dfa rules).
+Proof.
+  unfold minimised_graph_dfa.
+  eapply CanonicalDFA.of_legacy_well_formed.
+Qed.
+
+Definition scanner (rules : list Rule.t) : TaggedDFA.Partial.TaggedDFA :=
+  TaggedDFA.delete_dead_state (minimised_dfa rules).
+
+Theorem dfa_accepts_iff (rules : list Rule.t) (input : Input.t) (tag : Token.t)
+  : CanonicalDFA.accepts (dfa rules) input tag <-> CanonicalENFA.accepts (enfa rules) input tag.
+Proof.
+  unfold dfa.
+  eapply CanonicalSubset.subset_construct_accepts_iff.
+Qed.
+
+Theorem legacy_dfa_accepts_iff (rules : list Rule.t) (input : Input.t) (tag : Token.t)
+  : TaggedDFA.accepts (legacy_dfa rules) input tag <-> CanonicalDFA.accepts (dfa rules) input tag.
+Proof.
+  unfold legacy_dfa.
+  eapply CanonicalDFA.to_legacy_accepts_iff.
+Qed.
+
+Theorem minimised_dfa_accepts_iff (rules : list Rule.t) (input : Input.t) (tag : Token.t)
+  : TaggedDFA.accepts (minimised_dfa rules) input tag <-> TaggedDFA.accepts (legacy_dfa rules) input tag.
+Proof.
+  unfold minimised_dfa.
+  eapply TaggedDFA.Minimise.minimise_numbered_correct.
+  eapply legacy_dfa_okay.
+Qed.
+
+Theorem minimised_graph_dfa_accepts_iff (rules : list Rule.t) (input : Input.t) (tag : Token.t)
+  : CanonicalDFA.accepts (minimised_graph_dfa rules) input tag <-> TaggedDFA.accepts (minimised_dfa rules) input tag.
+Proof.
+  unfold minimised_graph_dfa.
+  eapply CanonicalDFA.of_legacy_accepts_iff.
+Qed.
+
+Theorem legacy_dfa_accepts_tagged_enfa_iff (rules : list Rule.t) (input : Input.t) (tag : Token.t)
+  : TaggedDFA.accepts (legacy_dfa rules) input tag <-> TaggedENFA.accepts (TaggedENFA.mkUnitedTaggedENFA rules) input tag.
+Proof.
+  split.
+  - intros ACCEPT.
+    pose proof (proj1 (legacy_dfa_accepts_iff rules input tag) ACCEPT) as ACCEPT_DFA.
+    pose proof (proj1 (dfa_accepts_iff rules input tag) ACCEPT_DFA) as ACCEPT_CANONICAL.
+    eapply (proj2 (CanonicalENFA.mkUnitedCanonicalENFA_accepts_iff rules input tag)).
+    exact ACCEPT_CANONICAL.
+  - intros ACCEPT.
+    pose proof (proj1 (CanonicalENFA.mkUnitedCanonicalENFA_accepts_iff rules input tag) ACCEPT) as ACCEPT_CANONICAL.
+    pose proof (proj2 (dfa_accepts_iff rules input tag) ACCEPT_CANONICAL) as ACCEPT_DFA.
+    eapply (proj2 (legacy_dfa_accepts_iff rules input tag)).
+    exact ACCEPT_DFA.
+Qed.
+
+Theorem minimised_dfa_accepts_tagged_enfa_iff (rules : list Rule.t) (input : Input.t) (tag : Token.t)
+  : TaggedDFA.accepts (minimised_dfa rules) input tag <-> TaggedENFA.accepts (TaggedENFA.mkUnitedTaggedENFA rules) input tag.
+Proof.
+  split.
+  - intros ACCEPT.
+    eapply (proj1 (legacy_dfa_accepts_tagged_enfa_iff rules input tag)).
+    eapply (proj1 (minimised_dfa_accepts_iff rules input tag)).
+    exact ACCEPT.
+  - intros ACCEPT.
+    eapply (proj2 (minimised_dfa_accepts_iff rules input tag)).
+    eapply (proj2 (legacy_dfa_accepts_tagged_enfa_iff rules input tag)).
+    exact ACCEPT.
+Qed.
+
+Lemma enfa_accept_outputs_order (rules : list Rule.t)
+  : map snd (enfa rules).(CanonicalENFA.accept_outputs).(kvlist) = map snd (TaggedENFA.mkUnitedTaggedENFA rules).( TaggedENFA.accept_states).(kvlist).
+Proof.
+  unfold enfa.
+  unfold CanonicalENFA.mkUnitedCanonicalENFA.
+  unfold TaggedENFA.mkUnitedTaggedENFA.
+  destruct (TaggedENFA.rules2fragments 1 rules) as [qmax frags].
+  reflexivity.
+Qed.
+
+Lemma legacy_dfa_accept_outputs_order (rules : list Rule.t)
+  : (legacy_dfa rules).(TaggedDFA.accept_states).(kvlist) = (dfa rules).(CanonicalDFA.accept_outputs).(kvlist).
+Proof.
+  reflexivity.
+Qed.
+
+End CanonicalPipeline.
+
 Module LGS.
 
 Definition t : Type :=
@@ -6240,6 +7886,22 @@ Proof.
   split.
   - eapply delete_dead_state_sound.
   - now eapply delete_dead_state_complete.
+Qed.
+
+Theorem canonical_pipeline_scanner_accepts_minimised_iff (rules : list Rule.t) (s : Input.t) (tag : Token.t)
+  : accepts (CanonicalPipeline.scanner rules) s tag <-> TaggedDFA.accepts (CanonicalPipeline.minimised_dfa rules) s tag.
+Proof.
+  unfold CanonicalPipeline.scanner.
+  eapply delete_dead_state_correct.
+  eapply CanonicalPipeline.minimised_dfa_okay.
+Qed.
+
+Theorem canonical_pipeline_scanner_accepts_iff (rules : list Rule.t) (s : Input.t) (tag : Token.t)
+  : accepts (CanonicalPipeline.scanner rules) s tag <-> TaggedENFA.accepts (TaggedENFA.mkUnitedTaggedENFA rules) s tag.
+Proof.
+  transitivity (TaggedDFA.accepts (CanonicalPipeline.minimised_dfa rules) s tag).
+  - eapply canonical_pipeline_scanner_accepts_minimised_iff.
+  - eapply CanonicalPipeline.minimised_dfa_accepts_tagged_enfa_iff.
 Qed.
 
 Fixpoint first_accepting_token_from {Q : Set} `{Q_hasEqDec : hasEqDec Q} (q : Q) (accept_states : list (Q * Token.t)) {struct accept_states} : option Token.t :=
@@ -6627,11 +8289,12 @@ Inductive scan_all_rules (rules : list Rule.t) : Input.t -> list Token.t -> Prop
     : scan_all_rules rules (consumed ++ rest) (tag :: tags).
 
 Definition build : BuildErrorM LGS.t :=
-  bind (isMonad := BuildErrorM_isMonad@{Type}) Rule.compileds (fun rules => pure (isMonad := BuildErrorM_isMonad@{Type}) (TaggedDFA.delete_dead_state (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules))))).
+  bind (isMonad := BuildErrorM_isMonad@{Type}) Rule.compileds (fun rules =>
+      pure (isMonad := BuildErrorM_isMonad@{Type}) (CanonicalPipeline.scanner rules)).
 
 Theorem build_sound (M : LGS.t)
   (BUILD : build = inr M)
-  : exists rules, Rule.compileds = inr rules /\ M = TaggedDFA.delete_dead_state (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules))).
+  : exists rules, Rule.compileds = inr rules /\ M = CanonicalPipeline.scanner rules.
 Proof.
   unfold build in BUILD. destruct Rule.compileds as [err | rules] eqn: COMPILED; inv BUILD.
   exists rules. split; eauto.
@@ -6639,7 +8302,7 @@ Qed.
 
 Theorem build_complete (rules : list Rule.t)
   (COMPILED : Rule.compileds = inr rules)
-  : build = inr (TaggedDFA.delete_dead_state (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules)))).
+  : build = inr (CanonicalPipeline.scanner rules).
 Proof.
   unfold build. rewrite COMPILED. reflexivity.
 Qed.
@@ -6651,12 +8314,7 @@ Lemma build_accepts_sound (M : LGS.t) (s : Input.t) (tag : Token.t)
 Proof.
   use (build_sound M) as (rules & COMPILED & EQ) with BUILD. subst M.
   exists rules. split; eauto.
-  use (TaggedDFA.delete_dead_accept_states_similarity (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules)))) as DELETE_SPEC.
-  unfold accepts, TaggedDFA.accepts in ACCEPT. rewrite delete_dead_state_delta in ACCEPT. cbn in ACCEPT.
-  rewrite list_corresponds_to_finite_ensemble_iff in DELETE_SPEC.
-  rewrite DELETE_SPEC in ACCEPT. simpl in ACCEPT. destruct ACCEPT as [ACCEPT_DFA _].
-  use (TaggedDFA.minimise_numbered_sound _ _ _ (TaggedDFA.subset_construct_okay _ (TaggedENFA.mkUnitedTaggedENFA_okay rules)) ACCEPT_DFA) as ACCEPT_SUBSET.
-  use (TaggedDFA.subset_construct_sound _ _ _ ACCEPT_SUBSET) as ACCEPT_ENFA.
+  pose proof (proj1 (canonical_pipeline_scanner_accepts_iff rules s tag) ACCEPT) as ACCEPT_ENFA.
   assert (COMPILE : fmap TaggedENFA.mkUnitedTaggedENFA Rule.compileds = inr (TaggedENFA.mkUnitedTaggedENFA rules)).
   { unfold fmap, mkFunctorFromMonad. simpl. rewrite COMPILED. reflexivity. }
   use (TaggedENFA.mkUnitedTaggedENFA_sound _ COMPILE) as (rules' & COMPILED' & SOUND).
@@ -6692,22 +8350,14 @@ Lemma build_accepts_complete (M : LGS.t) (rules : list Rule.t) (s : Input.t) (ta
   (ACCEPT : exists rule, rule ∈ rules /\ rule.(Rule.token) = tag /\ s \in eval_regex rule.(Rule.regex))
   : accepts M s tag.
 Proof.
-  rewrite build_complete with (rules := rules) in BUILD by assumption. inv BUILD.
+  rewrite (build_complete rules COMPILED) in BUILD. inv BUILD.
   assert (COMPILE : fmap TaggedENFA.mkUnitedTaggedENFA Rule.compileds = inr (TaggedENFA.mkUnitedTaggedENFA rules)).
   { unfold fmap, mkFunctorFromMonad. simpl. rewrite COMPILED. reflexivity. }
-  use (TaggedENFA.mkUnitedTaggedENFA_okay rules) as OKAY_ENFA.
   use (TaggedENFA.mkUnitedTaggedENFA_complete _ COMPILE) as (rules' & COMPILED' & COMPLETE).
   rewrite COMPILED in COMPILED'. injection COMPILED' as EQ_RULES. subst rules'.
   use (COMPLETE s tag) as ACCEPT_ENFA with ACCEPT.
-  use (TaggedDFA.subset_construct_complete (TaggedENFA.mkUnitedTaggedENFA rules) s tag) as ACCEPT_SUBSET with OKAY_ENFA ACCEPT_ENFA.
-  use (TaggedDFA.subset_construct_okay _) as OKAY_SUBSET with OKAY_ENFA.
-  use (TaggedDFA.minimise_numbered_complete _ _ _) as ACCEPT_MIN with OKAY_SUBSET ACCEPT_SUBSET.
-  use (TaggedDFA.minimise_numbered_okay _) as OKAY_MIN with OKAY_SUBSET.
-  use (TaggedDFA.delete_dead_accept_states_similarity (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules)))) as DELETE_SPEC.
-  unfold accepts, TaggedDFA.accepts in *. rewrite delete_dead_state_delta. cbn.
-  rewrite list_corresponds_to_finite_ensemble_iff in DELETE_SPEC.
-  rewrite DELETE_SPEC. simpl. split; [exact ACCEPT_MIN | ].
-  eapply TaggedDFA.accepting_state_live; eauto.
+  eapply (proj2 (canonical_pipeline_scanner_accepts_iff rules s tag)).
+  exact ACCEPT_ENFA.
 Qed.
 
 Lemma build_scan_all_spec_sound (M : LGS.t) (rules : list Rule.t) (s : Input.t) (tags : list Token.t)
@@ -6738,7 +8388,7 @@ Qed.
 Section MAIN_THEOREMS.
 
 Theorem build_correct (M : LGS.t)
-  : build = inr M <-> (exists rules, Rule.compileds = inr rules /\ M = TaggedDFA.delete_dead_state(TaggedDFA.minimise_numbered(TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules)))).
+  : build = inr M <-> exists rules, Rule.compileds = inr rules /\ M = CanonicalPipeline.scanner rules.
 Proof.
   split.
   - exact (build_sound M).
@@ -6919,7 +8569,7 @@ End Scanner.
 Module Builder.
 
 Definition pipeline (rules : list Rule.t) : LGS.t :=
-  TaggedDFA.delete_dead_state (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules))).
+  CanonicalPipeline.scanner rules.
 
 Abbreviation build := LGS.build.
 
@@ -6939,11 +8589,9 @@ Proof.
 Qed.
 
 Theorem pipeline_okay_before_delete (rules : list Rule.t)
-  : TaggedDFA.okay (TaggedDFA.minimise_numbered (TaggedDFA.subset_construct (TaggedENFA.mkUnitedTaggedENFA rules))).
+  : TaggedDFA.okay (CanonicalPipeline.minimised_dfa rules).
 Proof.
-  eapply TaggedDFA.minimise_numbered_okay.
-  eapply TaggedDFA.subset_construct_okay.
-  eapply TaggedENFA.mkUnitedTaggedENFA_okay.
+  eapply CanonicalPipeline.minimised_dfa_okay.
 Qed.
 
 Theorem pipeline_accepts_sound (rules : list Rule.t) (s : Input.t) (tag : Token.t)

@@ -190,16 +190,6 @@ Proof.
   eapply search_go_correct.
 Defined.
 
-Lemma dec_finds_result_if_exists (P : nat -> Prop)
-  (DEC : forall n, {P n} + {~ P n})
-  (EXISTENCE : exists x, P x)
-  : { x : nat | P x }.
-Proof.
-  pose (COUNTABLE := {| encode := id; decode := @Some nat; decode_encode (x : nat) := @eq_refl (option nat) (Some x) |}).
-  exists (@search_go nat COUNTABLE P DEC 0 (@initial_step nat COUNTABLE P EXISTENCE)).
-  eapply search_go_correct.
-Defined.
-
 Fixpoint first_nat (p : nat -> bool) (n : nat) : nat :=
   match n with
   | O => 0
@@ -210,7 +200,7 @@ Theorem first_nat_spec (p : nat -> bool) (n : nat)
   (WITNESS : p n = true)
   (m := first_nat p n)
   : p m = true /\ ⟪ MIN : forall i, p i = true -> i >= m ⟫.
-Proof with eauto.
+Proof.
   assert (claim1 : forall x, p x = true -> p (first_nat p x) = true).
   { induction x as [ | x IH]; eauto. simpl. destruct (p (first_nat p x)) as [ | ] eqn: ?; eauto. }
   unnw. split; eauto. intros i p_i_eq_true.
@@ -595,7 +585,7 @@ Let RUSSELL : BB :=
 
 Let PARADOX_OF_BERARDI
   : RUSSELL = ¬ RUSSELL.
-Proof with eauto.
+Proof.
   enough (it_is_sufficient_to_show : RUSSELL = russell R); eauto.
   replace (russell) with (fun r : UNIV => r ∈ R); eauto.
 Qed.

@@ -83,7 +83,7 @@ Lemma f_sup_X_eq_sup_image_f_X {D : Type} {D' : Type} {PROSET : isProset D} {PRO
   (SUPREMUM : is_supremum_of sup_X X)
   (DIRECTED' : isDirected (E.image f X))
   : f sup_X == supremum_cpo (E.image f X) DIRECTED'.
-Proof with eauto with *.
+Proof.
   assert (MONOTONIC : isMonotonic1 f) by now eapply ScottContinuousMap_isMonotonic.
   set (E.image f X) as Y in *. set (sup_Y := supremum_cpo Y DIRECTED').
   pose proof (SUPREMUM' := supremum_cpo_spec Y DIRECTED').
@@ -141,7 +141,7 @@ Lemma isMonotonic_if_preserves_supremum {D : Type} {D' : Type} {PROSET : isProse
   (COMPAT_WITH_eqProp : eqPropCompatible1 f)
   (PRESERVES_SUPREMUM : preserves_supremum f)
   : isMonotonic1 f.
-Proof with eauto with *.
+Proof.
   intros x1 x2 x1_le_x2. pose (E.fromList [x1; x2]) as X. set (E.image f X) as Y.
   assert (claim1 : is_supremum_of x2 X).
   { intros z. split.
@@ -165,7 +165,7 @@ Lemma preservesDirectedness_if_preservesSupremum {D : Type} {D' : Type} {PROSET 
   (COMPAT_WITH_eqProp : eqPropCompatible1 f)
   (PRESERVES_SUPREMUM : preserves_supremum f)
   : forall X, isDirected X -> isDirected (E.image f X).
-Proof with eauto with *.
+Proof.
   pose proof (isMonotonic_if_preserves_supremum f COMPAT_WITH_eqProp PRESERVES_SUPREMUM) as claim1.
   ii; s!. inversion H. des. split.
   - exists (f x0); done!.
@@ -177,7 +177,7 @@ Qed.
 Theorem the_main_reason_for_introducing_ScottTopology {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (f : D -> D')
   (COMPAT_WITH_eqProp : eqPropCompatible1 f)
   : isContinuous f <-> preserves_supremum f.
-Proof with eauto with *.
+Proof.
   split; [intros f_isContinuous | intros f_preservesSupremum].
   - intros X X_isDirected. set (Y := E.image f X).
     assert (Y_isDirected : isDirected Y).
@@ -234,7 +234,7 @@ Defined.
 Lemma supOfScottContinuousMaps_isMonotonic {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (F : ensemble `[D -> D'])
   (F_isDirected : isDirected F)
   : isMonotonic1 (supOfScottContinuousMaps F F_isDirected).
-Proof with eauto with *.
+Proof.
   intros x1 x2 x1_le_x2. eapply supOfScottContinuousMaps_isSupremum with (x := x1).
   ii; s!. destruct IN as [f [-> IN]]. transitivity (proj1_sig f x2).
   - eapply ScottContinuousMap_isMonotonic; eauto with *. exact (proj2_sig f).
@@ -246,7 +246,7 @@ Lemma supOfScottContinuousMaps_F_sup_X_is_supremum_of_unions_i_image_f_i_X_F {D 
   (X_isDirected : isDirected X)
   (sup_X_is_supremum_of_X : is_supremum_of sup_X X)
   : is_supremum_of (supOfScottContinuousMaps F F_isDirected sup_X) (E.unions (E.image (fun f_i => E.image (fun x => proj1_sig f_i x) X) F)).
-Proof with eauto with *.
+Proof.
   assert (claim1 : forall f_i, f_i \in F -> is_supremum_of (proj1_sig f_i sup_X) (E.image (fun x => proj1_sig f_i x) X)).
   { intros f_i f_i_in. eapply sup_Y_is_supremum_of_image_f_X_iff_f_sup_X_eq_sup_Y; eauto with *. exact (proj2_sig f_i). }
   pose proof (claim2 := supOfScottContinuousMaps_isSupremum F F_isDirected sup_X).
@@ -269,7 +269,7 @@ Theorem supOfScottContinuousMaps_preserves_supremum {D : Type} {D' : Type} {PROS
   (X_isDirected : isDirected X)
   (sup_X_is_supremum_of_X : is_supremum_of sup_X X)
   : is_supremum_of (supOfScottContinuousMaps F F_isDirected sup_X) (E.image (supOfScottContinuousMaps F F_isDirected) X).
-Proof with eauto with *.
+Proof.
   assert (unions_image_image_comm : E.unions (E.image (fun f_i => E.image (fun x_i => proj1_sig f_i x_i) X) F) == E.unions (E.image (fun x_i => E.image (fun f_i => proj1_sig f_i x_i) F) X)).
   { intros z. split; i; s!.
     - destruct H as [Y [H_in H_IN]]. s!. destruct H_IN as [f [-> H_IN]]. s!. destruct H_in as [x [-> H_in]]. exists (E.image (fun f => proj1_sig f x) F); done!.
@@ -308,7 +308,7 @@ Qed.
 Corollary supOfScottContinuousMaps_isContinuous {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (F : ensemble `[D -> D'])
   (F_isDirected : isDirected F)
   : isContinuous (supOfScottContinuousMaps F F_isDirected).
-Proof with eauto with *.
+Proof.
   eapply the_main_reason_for_introducing_ScottTopology.
   - ii. eapply leProp_antisymmetry; eapply supOfScottContinuousMaps_isMonotonic; eauto with *.
   - intros X X_isDirected.
@@ -322,7 +322,7 @@ Definition supremum_of_ScottContinuousMaps {D : Type} {D' : Type} {PROSET : isPr
 
 Lemma supremum_of_ScottContinuousMaps_is_supremum {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (F : ensemble `[D -> D']) (F_isDirected : isDirected F)
   : is_supremum_of (supremum_of_ScottContinuousMaps F F_isDirected) F.
-Proof with eauto with *.
+Proof.
   intros f. split.
   - intros ? f_i ?. rewrite <- H. intros x. simpl.
     eapply supOfScottContinuousMaps_isSupremum with (F := F) (F_isDirected := F_isDirected); done!.
@@ -337,7 +337,7 @@ Definition botOfScottContinuousMaps {D : Type} {D' : Type} {PROSET : isProset D}
 
 Lemma botOfScottContinuousMaps_isContinuous {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'}
   : isContinuous (botOfScottContinuousMaps (D := D) (D' := D')).
-Proof with eauto with *.
+Proof.
   intros O O_isOpen. unfold botOfScottContinuousMaps. inversion O_isOpen. split.
   - ii. s!. des. done!.
   - ii. s!. des. subst y. inv H. des. exists x0. done!.
@@ -369,7 +369,7 @@ Qed.
 Lemma image_fst_preservesDirectedness {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (X : ensemble (D * D'))
   (X_isDirected : isDirected X)
   : isDirected (E.image fst X).
-Proof with eauto with *.
+Proof.
   inversion X_isDirected. destruct NONEMPTY as [x0 IN]. destruct x0 as [x1_0 x2_0]. split.
   - exists (x1_0); done!.
   - intros x1_1 x2_1 ? ?. s!. destruct x1_IN as [[x1 x1_2] [-> H_IN1]], x2_IN as [[x2 x2_2] [-> H_IN2]]; simpl in *.
@@ -380,7 +380,7 @@ Qed.
 Lemma image_snd_preservesDirectedness {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (X : ensemble (D * D'))
   (X_isDirected : isDirected X)
   : isDirected (E.image snd X).
-Proof with eauto with *.
+Proof.
   inversion X_isDirected. destruct NONEMPTY as [x0 IN]. destruct x0 as [x1_0 x2_0]. split; unnw.
   - exists (x2_0); done!.
   - intros x1_2 x2_2 ? ?. s!. destruct x1_IN as [[x1_1 x1] [-> H_IN1]], x2_IN as [[x2_1 x2] [-> H_IN2]]; simpl in *.
@@ -391,7 +391,7 @@ Qed.
 Lemma supremum_of_pair_is_supremum {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (X : ensemble (D * D'))
   (X_isDirected : isDirected X)
   : is_supremum_of (supremum_cpo (E.image fst X) (image_fst_preservesDirectedness X X_isDirected), supremum_cpo (E.image snd X) (image_snd_preservesDirectedness X X_isDirected)) X.
-Proof with eauto with *.
+Proof.
   intros [z1 z2]. split; intros ?; s!.
   - destruct H as [SUPREMUM_LE_UPPER_BOUND1 SUPREMUM_LE_UPPER_BOUND2]; simpl in *. intros [x1 x2] ?; s!. split; simpl.
     + rewrite <- SUPREMUM_LE_UPPER_BOUND1. eapply supremum_cpo_spec; eauto with *. done!.
@@ -426,7 +426,7 @@ Lemma f_x1_sup_X2_eq_sup_f_x1_X2 {D : Type} {D' : Type} {D'' : Type} {PROSET : i
   (X2_isDirected : isDirected X2)
   (sup_X2_is_supremum_of_X2 : is_supremum_of sup_X2 X2)
   : is_supremum_of (f (x1, sup_X2)) (E.image (fun x2 => f (x1, x2)) X2).
-Proof with eauto with *.
+Proof.
   revert x1 X2 X2_isDirected sup_X2 sup_X2_is_supremum_of_X2.
   assert (f_isMonotonic : isMonotonic1 f).
   { eapply ScottContinuousMap_isMonotonic; eauto with *. }
@@ -482,7 +482,7 @@ Qed.
 Corollary f2_cont_if_f_cont {D : Type} {D' : Type} {D'' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {PROSET'' : isProset D''} {CPO : isCpo D} {CPO' : isCpo D'} {CPO'' : isCpo D''} (f : D * D' -> D'') (x1 : D)
   (f_isContinuous : isContinuous f)
   : isContinuous (fun x2 => f (x1, x2)).
-Proof with eauto with *.
+Proof.
   revert x1.
   assert (f_monotonic : isMonotonic1 f).
   { eapply ScottContinuousMap_isMonotonic; eauto with *. }
@@ -503,7 +503,7 @@ Lemma f_sup_X1_x2_eq_sup_f_X1_x2 {D : Type} {D' : Type} {D'' : Type} {PROSET : i
   (X1_isDirected : isDirected X1)
   (sup_X1_is_supremum_of_X1 : is_supremum_of sup_X1 X1)
   : is_supremum_of (f (sup_X1, x2)) (E.image (fun x1 => f (x1, x2)) X1).
-Proof with eauto with *.
+Proof.
   revert x2 X1 X1_isDirected sup_X1 sup_X1_is_supremum_of_X1.
   assert (f_isMonotonic : isMonotonic1 f).
   { eapply ScottContinuousMap_isMonotonic; eauto with *. }
@@ -557,7 +557,7 @@ Qed.
 Corollary f1_cont_if_f_cont {D : Type} {D' : Type} {D'' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {PROSET'' : isProset D''} {CPO : isCpo D} {CPO' : isCpo D'} {CPO'' : isCpo D''} (f : D * D' -> D'') (x2 : D')
   (f_isContinuous : isContinuous f)
   : isContinuous (fun x1 => f (x1, x2)).
-Proof with eauto with *.
+Proof.
   revert x2.
   assert (f_monotonic : isMonotonic1 f).
   { eapply ScottContinuousMap_isMonotonic; eauto with *. }
@@ -580,7 +580,7 @@ Lemma f_sup_X1_sup_X2_eq_sup_f_X1_X2 {D : Type} {D' : Type} {D'' : Type} {PROSET
   (sup_X1_is_supremum_of_X1 : is_supremum_of sup_X1 (E.image fst X))
   (sup_X2_is_supremum_of_X2 : is_supremum_of sup_X2 (E.image snd X))
   : is_supremum_of (f (sup_X1, sup_X2)) (E.image f X).
-Proof with eauto with *.
+Proof.
   revert X X_isDirected sup_X1 sup_X2 sup_X1_is_supremum_of_X1 sup_X2_is_supremum_of_X2.
   assert (f1_isMonotonic : forall x2, isMonotonic1 (fun x1 => f (x1, x2))).
   { intros x2. eapply ScottContinuousMap_isMonotonic; eauto with *. }
@@ -658,7 +658,7 @@ Corollary f_cont_if_f1_and_f2_cont {D : Type} {D' : Type} {D'' : Type} {PROSET :
   (f1_isContinuous : forall x2, isContinuous (fun x1 => f (x1, x2)))
   (f2_isContinuous : forall x1, isContinuous (fun x2 => f (x1, x2)))
   : isContinuous f.
-Proof with eauto with *.
+Proof.
   assert (f1_isMonotonic : forall x2, isMonotonic1 (fun x1 => f (x1, x2))).
   { intros x2. eapply ScottContinuousMap_isMonotonic; eauto with *. }
   assert (f2_isMonotonic : forall x1, isMonotonic1 (fun x2 => f (x1, x2))).
@@ -683,7 +683,7 @@ Qed.
 
 Theorem seperately_continuous_iff {D : Type} {D' : Type} {D'' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {PROSET'' : isProset D''} {CPO : isCpo D} {CPO' : isCpo D'} {CPO'' : isCpo D''} (f : D * D' -> D'')
   : ((forall x2, isContinuous (fun x1 => f (x1, x2))) /\ (forall x1, isContinuous (fun x2 => f (x1, x2)))) <-> isContinuous f.
-Proof with eauto.
+Proof.
   split.
   - intros [? ?]. eapply f_cont_if_f1_and_f2_cont; eauto.
   - intros ?; split; [intros x1; eapply f1_cont_if_f_cont | intros x2; eapply f2_cont_if_f_cont]; eauto.
@@ -698,7 +698,7 @@ Let scottApp1 : (`[D -> D'] * D) -> D' :=
 
 Lemma scottApp1_isMonotonic
   : isMonotonic1 scottApp1.
-Proof with eauto with *.
+Proof.
   intros [f1 x1] [f2 x2] [f1_le_f2 x1_le_x2]; simpl in *. transitivity (proj1_sig f1 x2).
   - eapply ScottContinuousMap_isMonotonic; eauto with *. exact (proj2_sig f1).
   - clear x1 x1_le_x2. revert x2. change (f1 =< f2); eauto with *.
@@ -716,7 +716,7 @@ Qed.
 
 Lemma scottApp1_isContinuous
   : isContinuous scottApp1.
-Proof with eauto with *.
+Proof.
   eapply f_cont_if_f1_and_f2_cont.
   - intros x. eapply the_main_reason_for_introducing_ScottTopology.
     + ii; eapply scottApp1_preserves_eqProp; eauto with *.
@@ -744,7 +744,7 @@ Let scottLam2 (f : `[(D * D') -> D'']) (x1 : D) : `[D' -> D''] :=
 
 Lemma scottLam2_isContinuous (f : `[(D * D') -> D''])
   : isContinuous (scottLam2 f).
-Proof with eauto with *.
+Proof.
   assert (f_isMonotonic : isMonotonic1 (proj1_sig f)).
   { eapply ScottContinuousMap_isMonotonic. exact (proj2_sig f). }
   pose proof (proj2 (seperately_monotonic_iff_monotonic (proj1_sig f)) f_isMonotonic) as [? ?].
@@ -775,7 +775,7 @@ Let scottLam3 (f : `[(D * D') -> D'']) : `[D -> `[D' -> D'']] :=
 
 Lemma scottLam3_isContinuous
   : isContinuous scottLam3.
-Proof with eauto with *.
+Proof.
   assert (scottLam3_isMonotonic : isMonotonic1 scottLam3).
   { ii. eapply x_LE. }
   assert (scottLam3_preserves_eqProp : eqPropCompatible1 scottLam3).
@@ -828,7 +828,7 @@ Context {PROSET : isProset D} {CPO : isCpo D}.
 Lemma iterS_monotonic (f : D -> D)
   (f_isMonotonic : isMonotonic1 f)
   : forall n1 : nat, forall n2 : nat, n1 <= n2 -> iterS n1 f bottom_cpo =< iterS n2 f bottom_cpo.
-Proof with eauto with *.
+Proof.
   assert (claim1 : forall n : nat, iterS n f bottom_cpo =< iterS (S n) f bottom_cpo).
   { induction n as [ | n IH]; [eapply bottom_cpo_spec | simpl]; eauto with *. }
   intros n1 n2 n1_le_n2. induction n1_le_n2 as [ | n2 n1_le_n2 IH].
@@ -839,7 +839,7 @@ Qed.
 Lemma IterS_f_bottom_isDirected_if_f_isMonotonic (f : D -> D)
   (f_isMonotonic : isMonotonic1 f)
   : isDirected (IterS f bottom_cpo).
-Proof with eauto with *.
+Proof.
   assert (claim1 : forall n1 : nat, forall n2 : nat, n1 <= max n1 n2) by lia.
   assert (claim2 : forall n1 : nat, forall n2 : nat, n2 <= max n1 n2) by lia.
   pose proof (claim3 := iterS_monotonic).
@@ -854,7 +854,7 @@ Definition lfp_cpo (f : `[D -> D]) : D :=
 
 Lemma every_ScottContinuousMap_has_a_fixed_point (f : `[D -> D])
   : lfp_cpo f \in fixedpointsOf (proj1_sig f).
-Proof with eauto with *.
+Proof.
   pose proof (lfp_f_is_supremum_of_F := supremum_cpo_spec (IterS (proj1_sig f) bottom_cpo) (IterS_f_bottom_isDirected_if_f_isMonotonic (proj1_sig f) (ScottContinuousMap_isMonotonic (proj1_sig f) (proj2_sig f)))). fold (lfp_cpo f) in lfp_f_is_supremum_of_F.
   pose proof (sup_Y_is_supremum_of_image_f_X_iff_f_sup_X_eq_sup_Y (proj1_sig f) (IterS (proj1_sig f) bottom_cpo)) as claim1.
   enough (to_show : proj1_sig f (lfp_cpo f) == lfp_cpo f) by now do 2 red.
@@ -874,7 +874,7 @@ Qed.
 
 Theorem lfp_returns_the_least_fixed_point (f : `[D -> D])
   : is_lfpOf (lfp_cpo f) (proj1_sig f).
-Proof with eauto with *.
+Proof.
   pose proof (every_ScottContinuousMap_has_a_fixed_point f) as claim1.
   split; trivial. intros y ?. s!. rename IN into y_eq_f_y.
   eapply supremum_cpo_spec. ii. inversion IN; subst. induction n as [ | n IH].
@@ -886,7 +886,7 @@ Qed.
 
 Lemma iterS_isMonotonic (n : nat)
   : isMonotonic1 (fun '(f, x) => iterS n (@proj1_sig (D -> D) isContinuous f) x).
-Proof with eauto with *.
+Proof.
   induction n as [ | n IH]; intros [f1 x1] [f2 x2] [f1_le_f2 x1_le_x2]; simpl in *; trivial.
   transitivity (proj1_sig f2 (iterS n (proj1_sig f1) x1)).
   - eapply f1_le_f2.
@@ -905,7 +905,7 @@ Qed.
 
 Lemma f_mapsto_iterS_n_f_bottom_isContinuous_for_any_n
   : forall n : nat, isContinuous (fun f : `[D -> D] => iterS n (proj1_sig f) bottom_cpo).
-Proof with eauto with *.
+Proof.
   induction n as [ | n IH].
   - eapply botOfScottContinuousMaps_isContinuous.
   - eapply the_main_reason_for_introducing_ScottTopology.
@@ -952,7 +952,7 @@ Qed.
 
 Lemma lfp_cpo_isContinuous
   : isContinuous lfp_cpo.
-Proof with eauto with *.
+Proof.
   intros O O_isOpen; unnw.
   assert (claim1 : forall n : nat, isOpen (E.preimage (fun f : `[D -> D] => iterS n (proj1_sig f) bottom_cpo) O)).
   { ii. eapply f_mapsto_iterS_n_f_bottom_isContinuous_for_any_n; eauto with *. }

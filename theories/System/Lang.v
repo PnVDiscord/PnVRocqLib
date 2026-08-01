@@ -72,7 +72,7 @@ Qed.
 Lemma cfg1_soundness s
   (H_in : s \in L_cfg1)
   : count L s = count R s.
-Proof with eauto.
+Proof.
   induction H_in as [ | s1 H_in1 IH1 | s2 H_in2 IH2 | s1 s2 H_in1 IH1 H_in2 IH2]; simpl; eauto.
   - rewrite <- rev_involutive with (l := _ ++ [_]). rewrite rev_unit.
     do 2 rewrite count_occ_rev. simpl. do 2 rewrite count_occ_rev; eauto.
@@ -109,7 +109,7 @@ Variant string_cut s : Prop :=
 Lemma if_count_L_s_lt_count_R_s s
   (count_L_s_lt_count_R_s : count L s < count R s)
   : string_cut s \/ isLast R s.
-Proof with eauto.
+Proof.
   revert count_L_s_lt_count_R_s; set (black := L); set (white := R).
   induction s as [ | [ | ] s IHs]; simpl; try lia; i.
   - assert (IH : count black s < count white s) by lia.
@@ -125,7 +125,7 @@ Qed.
 Lemma if_count_L_s_gt_count_R_s s
   (count_L_s_gt_count_R_s : count L s > count R s)
   : string_cut s \/ isLast L s.
-Proof with eauto.
+Proof.
   revert count_L_s_gt_count_R_s; set (black := R); set (white := L).
   induction s as [ | [ | ] s IHs]; simpl; try lia; i; cycle -1.
   - assert (IH : count black s < count white s) by lia.
@@ -141,7 +141,7 @@ Qed.
 Theorem cfg1_completeness s
   (count_L_eq_count_R : count L s = count R s)
   : s \in L_cfg1.
-Proof with eauto.
+Proof.
   revert count_L_eq_count_R. pose proof (relation_on_image_liftsWellFounded lt (@length alphabet) lt_wf s) as H_ACC.
   unfold binary_relation_on_image in H_ACC. induction H_ACC as [[ | [ | ] s] _ IHs]; simpl in *; i; eauto.
   - assert (count_L_s_lt_count_R_s : count L s < count R s) by lia.
@@ -312,7 +312,7 @@ Variant WellParen' (s : string) : Prop :=
 
 Lemma WellParen_iff_WellParen' s
   : WellParen s <-> WellParen' s.
-Proof with eauto.
+Proof.
   split; intros [? ?].
   - econs; eauto. intros ? POS ? POS' H.
     destruct prefix as [ | [ | ] prefix]; s!; cycle -1.
@@ -348,7 +348,7 @@ Qed.
 Lemma WellParen_paren s
   (WELLPAREN : WellParen s)
   : WellParen ([L] ++ s ++ [R]).
-Proof with eauto.
+Proof.
   econs.
   - ss!.
   - destruct WELLPAREN. intros xs Hxs. inv Hxs. destruct xs as [ | [ | ] s_prefix]; s!; try congruence || lia.

@@ -84,6 +84,17 @@ Definition callE_handler {I : Type} {R : Type} : forall callee : I -> itree E R,
 Definition stateE_handler {S : Type} : stateE S ~~> B.stateT S (itree E) :=
   @stateE_rect S (fun X : Type => fun _ : stateE S X => B.stateT S (itree E) X) get put.
 
+Fixpoint burnTau {R : Type@{U_discourse}} (fuel : nat) (t : itree E R) {struct fuel} : itree E R := 
+  match fuel with
+  | O => t
+  | S fuel' =>
+    match t.(observe) with
+    | RetF r => Ret r
+    | TauF t => burnTau fuel' t
+    | VisF X e k => Vis X e (fun x => burnTau fuel' (k x))
+    end
+  end.
+
 End ITREE_METHOD.
 
 Section CATEGORY.
@@ -150,3 +161,24 @@ Definition itree_rec_fix {E : handlerCat.(CAT.ob)} {I : Type} {R : Type} (body :
   itree_rec (E := E) (I := I) (R := R) (body itree_call).
 
 End RECURSION.
+
+Section EXAMPLE.
+
+Import DoNotations.
+
+Context {E : Type -> Type}.
+
+Example fibo : nat -> itree E nat :=
+  itree_rec_fix $ fun go : nat -> itree (callE nat nat +' E) nat => fun n : nat =>
+    if eqb n 0 then
+      pure 0
+    else if eqb n 1 then
+      pure 1
+    else do
+      'x <- go (n - 1)%nat;
+      'y <- go (n - 2)%nat;
+      pure (x + y)%nat.
+
+Eval compute in burnTau 1000 (fibo 9).
+
+End EXAMPLE.

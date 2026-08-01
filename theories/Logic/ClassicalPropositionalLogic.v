@@ -134,7 +134,7 @@ Qed.
 Theorem the_propositional_soundness_theorem (X : ensemble formula) (b : formula)
   (INFERS : X ⊢ b)
   : X ⊨ b.
-Proof with eauto.
+Proof.
   induction INFERS.
   - eapply ByAssumption_preserves with (C := C); eauto.
   - eapply ContradictionI_preserves with (A := A); eauto.
@@ -157,7 +157,7 @@ Qed.
 Lemma hasModel_ifConsistent (X : ensemble formula)
   (CONSISTENT : X ⊬ ContradictionF)
   : X \subseteq MaximallyConsistentSet X /\ is_structure (MaximallyConsistentSet X).
-Proof with first [eassumption | trivial]. (* Infinitely grateful for Paul Sohn(a.k.a. Taeseung Sohn)'s advice! *)
+Proof. (* Infinitely grateful for Paul Sohn(a.k.a. Taeseung Sohn)'s advice! *)
   ii. set (X_dagger := MaximallyConsistentSet X).
   pose proof (theorem_of_1_3_10 X) as [? ? ? ? ?].
   fold X_dagger in SUBSET, EQUICONSISTENT, CLOSED_infers, META_DN, IMPLICATION_FAITHFUL.
@@ -304,7 +304,7 @@ Qed.
 Theorem the_propositional_completeness_theorem (Gamma : ensemble formula) (C : formula)
   (ENTAILS : Gamma ⊨ C)
   : Gamma ⊢ C.
-Proof with eauto with *.
+Proof.
   eapply NNPP. intros it_is_false_that_Gamma_infers_C.
   set (X := E.insert (NegationF C) Gamma).
   assert (CONSISTENT : X ⊬ ContradictionF).
@@ -328,7 +328,7 @@ Qed.
 
 Corollary the_propositional_compactness_theorem (Gamma : ensemble formula) (C : formula)
   : Gamma ⊨ C <-> << FINITE_ENTAILS : exists xs, exists X, L.is_finsubset_of xs Gamma /\ L.is_listrep_of xs X /\ X ⊨ C >>.
-Proof with eauto.
+Proof.
   unnw. split.
   - intros ENTAILS.
     apply the_propositional_completeness_theorem in ENTAILS.

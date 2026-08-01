@@ -253,7 +253,7 @@ Qed.
 
 Lemma Law_of_Excluded_Middle (A : frm L)
   : E.empty ⊢ Dis_frm A (Neg_frm A).
-Proof with repeat ((now left) || right).
+Proof.
   eapply NegationE, ContradictionI.
   - eapply DisjunctionI2, NegationI, ContradictionI.
     + eapply DisjunctionI1, ByAssumption; repeat ((now left) || right).
@@ -297,7 +297,7 @@ Qed.
 #[global]
 Instance LBA_satisfiesBooleanAlgebraLaws
   : BooleanAlgebraLaws formula_isBA.
-Proof with done!.
+Proof.
   repeat (split; ii); simpl in *; des.
   { eapply ConjunctionI.
     - eapply Cut_property with (A := x1).
@@ -534,7 +534,7 @@ Qed.
 
 Lemma leB_iff (lhs : formula) (rhs : formula)
   : lhs =< rhs <-> E.singleton lhs ⊢ rhs.
-Proof with reflexivity || trivial.
+Proof.
   simpl. split.
   - intros [INFERS INFERS'].
     eapply Cut_property with (A := Con_frm lhs rhs); reflexivity || trivial.
@@ -638,7 +638,7 @@ Qed.
 
 Lemma lemma1_of_1_3_8 (X : ensemble formula)
   : isFilter (Th X).
-Proof with reflexivity || eauto.
+Proof.
   eapply isFilter_intro.
   - exists trueB. econstructor.
     eapply ImplicationI, ByAssumption; done!.
@@ -651,7 +651,7 @@ Qed.
 
 Lemma cl_isSubsetOf_Th (X : ensemble formula)
   : cl X \subseteq Th X.
-Proof with eauto.
+Proof.
   intros b [xs ?]; des. apply andsB_le_iff in andsB_LE.
   destruct andsB_LE as [X' [xs_repr_X' INFERS]].
   econstructor. eapply extend_infers; eauto.
@@ -695,7 +695,7 @@ Qed.
 Lemma filter_inconsistent_iff (F : ensemble formula)
   (F_isFilter : isFilter F)
   : inconsistent F <-> Bot_frm \in F.
-Proof with eauto with *.
+Proof.
   split.
   - intros INCONSISTENT. pose proof (fact5_of_1_2_8 F F_isFilter) as SUBSET.
     eapply SUBSET. rewrite inconsistent_cl_iff. now rewrite <- inconsistent_iff.
@@ -780,7 +780,7 @@ Fixpoint axiom_set (X : ensemble formula) (n : nat) {struct n} : ensemble formul
 
 Lemma lemma1_of_1_3_9 (X : ensemble formula) (n : nat)
   : improveFilter (Th X) n == Th (axiom_set X n).
-Proof with eauto with *.
+Proof.
   revert X; induction n as [ | n IH]; [reflexivity | intros X b].
   simpl. unfold Insertion. rewrite cl_eq_Th, IH. split; intros b_in.
   - rewrite <- cl_eq_Th. rewrite <- cl_eq_Th in b_in. revert b b_in.
@@ -798,7 +798,7 @@ Qed.
 
 Lemma axiom_set_equiconsistent (X : ensemble (frm L)) (n : nat)
   : inconsistent (axiom_set X n) <-> inconsistent (axiom_set X (S n)).
-Proof with eauto with *.
+Proof.
   split.
   - do 2 rewrite inconsistent_iff. intros INCONSISTENT. eapply extend_infers; eauto with *. done!.
   - do 2 rewrite inconsistent_iff. do 2 rewrite <- in_Th_iff. intros INCONSISTENT.
@@ -835,7 +835,7 @@ Qed.
 Lemma lemma3_of_1_3_9_aux1 (xs : list formula) (X : ensemble formula)
   (FINITE_SUBSET : L.is_finsubset_of xs (full_axiom_set X))
   : exists m, L.is_finsubset_of xs (improveFilter (Th X) m).
-Proof with eauto with *.
+Proof.
   revert X FINITE_SUBSET. induction xs as [ | x xs IH]; simpl; ii.
   - exists 0. tauto.
   - assert (claim1 : forall z : formula, In z xs -> z \in full_axiom_set X) by now firstorder.
@@ -855,7 +855,7 @@ Qed.
 
 Lemma lemma3_of_1_3_9 (X : ensemble formula)
   : Th (full_axiom_set X) \subseteq MaximallyConsistentSet X.
-Proof with eauto with *.
+Proof.
   intros z [INFERS]. destruct INFERS as (ps&INCL&(PF)).
   pose proof (lemma3_of_1_3_9_aux1 ps X INCL) as [m claim1].
   assert (claim2 : isFilter (improveFilter (Th X) m)).
@@ -1169,7 +1169,7 @@ Qed.
 Lemma Th_X_equiconsistent_MaximallyConsistentSet_AddHenkin (X : ensemble (frm L'))
   (HC_free : forall A : frm L', forall c : Henkin_constants, A \in X -> HC_occurs_in_frm c A = false)
   : equiconsistent (Th X) (MaximallyConsistentSet (AddHenkin X)).
-Proof with eauto with *.
+Proof.
   split.
   - intros INCONSISTENT. eapply inconsistent_compatWith_isSubsetOf; eauto with *. transitivity (Th (AddHenkin X)).
     + intros p p_in. rewrite <- cl_eq_Th in *. eapply fact4_of_1_2_8; eauto with *. eapply @subset_union_f with (L := L') (f := addHenkin X) (n := 0).
@@ -1188,7 +1188,7 @@ Qed.
 
 Theorem theorem_of_1_3_10 (Gamma : ensemble (frm L))
   : MaximallyConsistentSet_spec (E.image embed_frm Gamma) (MaximallyConsistentSet (AddHenkin (E.image embed_frm Gamma))).
-Proof with eauto with *.
+Proof.
   set (X := E.image embed_frm Gamma). pose proof (lemma1 := @lemma1_of_1_3_8 L').
   pose proof (theorem_of_1_2_14 (Th (AddHenkin X)) (lemma1 (AddHenkin X))) as [? ? ? ?].
   fold (MaximallyConsistentSet (AddHenkin X)) in SUBSET, IS_FILTER, COMPLETE, EQUICONSISTENT.
@@ -1307,7 +1307,7 @@ Definition interpret_equation (lhs : D) (rhs : D) : Prop :=
 #[global]
 Instance interpret_equation_Equivalence
   : Equivalence interpret_equation.
-Proof with eauto.
+Proof.
   unfold interpret_equation. split.
   - intros x. eapply proves_reflexivity; eauto.
   - intros x y EQ. eapply proves_symmetry; eauto.
@@ -1379,7 +1379,7 @@ Hypothesis CONSISTENT : X ⊬ Bot_frm.
 
 Theorem trmModel_isModel (p : frm L')
   : p \in Delta <-> interpret_frm trmModel ivar_interpret p.
-Proof with eauto with *.
+Proof.
   exploit (@theorem_of_1_2_14 (frm L') (@formula_isSetoid L') LindenbaumBooleanAlgebra (Th (AddHenkin (E.image embed_frm X)))).
   { eapply lemma1_of_1_3_8. }
   intros [SUBSET' IS_FILTER' COMPLETE' EQUICONSISTENT']. fold (MaximallyConsistentSet (AddHenkin (E.image embed_frm X))) in SUBSET', IS_FILTER', COMPLETE', EQUICONSISTENT'.

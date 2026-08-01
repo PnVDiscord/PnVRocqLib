@@ -25,7 +25,7 @@ Context {L : language}.
 Theorem HilbertCalculus_sound (Gamma : ensemble (frm L)) (C : frm L)
   (PROVE : Gamma ⊢ C)
   : Gamma ⊨ C.
-Proof with eauto with *.
+Proof.
   destruct PROVE as (ps & INCL & (PF)). revert Gamma INCL. induction PF; ii.
   - eapply SATISFY. done!.
   - eapply MP_preserves_truth with (p := p) (ps1 := ps1) (ps2 := ps2); eauto with *.
@@ -62,7 +62,7 @@ Abbreviation L' := (augmented_language L Henkin_constants).
 Theorem HilbertCalculus_countable_complete (X : ensemble (frm L)) (b : frm L)
   (CONSEQUENCE : X ⊨ b)
   : X ⊢ b.
-Proof with eauto with *.
+Proof.
   eapply NNPP. intros NO.
   set (Gamma := E.insert (Neg_frm b) X).
   assert (CONSISTENT : Gamma ⊬ Bot_frm).

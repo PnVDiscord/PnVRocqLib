@@ -386,7 +386,7 @@ Lemma supremum_of_map_suprema_ge_suprema (sup : D) (Xs : ensemble (ensemble D)) 
   (IN : X \in Xs)
   (SUPREMUM' : is_supremum_of sup_X X)
   : sup_X =< sup.
-Proof with eauto with *.
+Proof.
   eapply SUPREMUM; eauto with *. rewrite in_map_suprema_iff; eauto with *.
 Qed.
 
@@ -395,7 +395,7 @@ Qed.
 Theorem supremum_of_map_suprema_is_supremum_of_unions (Xs : ensemble (ensemble D)) (sup : D)
   (SUPS_EXIST : forall X, X \in Xs -> exists sup_X, is_supremum_of sup_X X)
   : is_supremum_of sup (map_suprema Xs) <-> is_supremum_of sup (E.unions Xs).
-Proof with eauto with *.
+Proof.
   split; intros H_supremum z; split; ii.
   - rewrite E.in_unions_iff in IN. destruct IN as [X_i [x_in_X_i X_i_in_Xs]].
     pose proof (SUPS_EXIST X_i X_i_in_Xs) as [sup_X_i sup_X_i_isSupremumOf_X_i].
@@ -418,7 +418,7 @@ Qed.
 
 Theorem infimum_of_upperbounds_is_supremum (sup_X : D) (X : ensemble D)
   : is_supremum_of sup_X X <-> is_infimum_of sup_X (upperboundsOf X).
-Proof with eauto with *.
+Proof.
   split.
   - intros sup_X_isSupremumOf_X z. split; ii.
     + rewrite H. eapply sup_X_isSupremumOf_X; eauto with *.
@@ -432,7 +432,7 @@ Qed.
 
 Theorem supremum_of_lowerbounds_is_infimum (inf_X : D) (X : ensemble D)
   : is_infimum_of inf_X X <-> is_supremum_of inf_X (lowerboundsOf X).
-Proof with eauto with *.
+Proof.
   split.
   - intros inf_X_isInfimumOf_X z. split; ii.
     + rewrite <- H. eapply inf_X_isInfimumOf_X; eauto with *.
@@ -470,7 +470,7 @@ Lemma infimum_congruence (inf_X : D) (inf_Y : D) (X : ensemble D) (Y : ensemble 
   (EQ : X == Y)
   (INFIMUM : is_infimum_of inf_X X)
   : is_infimum_of inf_Y Y.
-Proof with eauto with *.
+Proof.
   intros z. unnw. rewrite <- inf_EQ. split.
   - intros z_le_inf_X. rewrite <- EQ. eapply INFIMUM; eauto with *.
   - intros z_isLowerBoundOf_Y. eapply INFIMUM. rewrite -> EQ; eauto with *.
@@ -490,7 +490,7 @@ Theorem prefixedpoint_is_lfpOf (f : D -> D) (lfp : D)
   (MONOTONIC : isMonotonic1 f)
   (INFIMUM : is_infimum_of lfp (prefixedpointsOf f))
   : is_lfpOf lfp f.
-Proof with eauto with *.
+Proof.
   assert (claim1 : forall x, x \in fixedpointsOf f -> lfp =< x).
   { intros x H_IN. transitivity (f x).
     - eapply INFIMUM; eauto with *. eapply MONOTONIC; eauto with *.
@@ -509,7 +509,7 @@ Lemma postfixedpoint_is_gfpOf (f : D -> D) (gfp : D)
   (MONOTONIC : isMonotonic1 f)
   (SUPREMUM : is_supremum_of gfp (postfixedpointsOf f))
   : is_gfpOf gfp f.
-Proof with eauto with *.
+Proof.
   assert (claim1 : gfp =< f gfp).
   { eapply SUPREMUM; eauto with *. ii. transitivity (f x); trivial.
     eapply MONOTONIC, SUPREMUM; eauto with *.
@@ -528,7 +528,7 @@ Definition is_supremum_in (sup : D) (X : ensemble D) (phi : D -> Prop) : Prop :=
 
 Theorem is_supremum_in_iff (phi : D -> Prop) (sup_X : @sig D phi) (X : ensemble (@sig D phi))
   : is_supremum_in (proj1_sig sup_X) (E.image (@proj1_sig D phi) X) phi <-> is_supremum_of sup_X X.
-Proof with eauto with *. 
+Proof.
   split.
   { intros [? ?] z; split.
     - ii. eapply H0; eauto with *. rewrite E.in_image_iff; eauto with *.
@@ -1216,7 +1216,7 @@ Definition lex_le lhs rhs : Prop :=
 #[global]
 Instance lex_eq_Equivalence
   : Equivalence lex_eq.
-Proof with discriminate || eauto with *.
+Proof.
   unfold lex_eq. split.
   - intros xs1; induction xs1 as [ | x1 xs1 IH]; simpl; discriminate || eauto with *.
     pose proof (claim1 := compare_spec x1 x1).
@@ -1241,7 +1241,7 @@ Instance list_isSetoid_of_elementwise_comparison : isSetoid (list A) :=
 #[local]
 Instance lex_le_PreOrder
   : PreOrder lex_le.
-Proof with discriminate || eauto with *.
+Proof.
   assert (lemma1 : forall x1 : A, forall x2 : A, x1 =< x2 -> x2 =< x1 -> x1 == x2). { ii; discriminate || eauto with *. }
   assert (lemma2 : forall x1 : A, forall x2 : A, x1 == x2 -> x1 =< x2). { ii; discriminate || eauto with *. }
   assert (lemma3 : forall x1 : A, forall x2 : A, x1 == x2 -> x2 =< x1). { ii; discriminate || eauto with *. }
@@ -1271,7 +1271,7 @@ Lemma lex_le_flip_spec lhs rhs :
   | Eq => lex_compare rhs lhs = Eq
   | Gt => lex_compare rhs lhs = Lt
   end.
-Proof with discriminate || eauto with *.
+Proof.
   revert lhs rhs.
   assert (lemma1 : forall x1 : A, forall x2 : A, x1 =< x2 -> x2 =< x1 -> x1 == x2). { ii; discriminate || eauto with *. }
   assert (lemma2 : forall x1 : A, forall x2 : A, x1 == x2 -> x1 =< x2). { ii; discriminate || eauto with *. }
@@ -1319,7 +1319,7 @@ Qed.
 #[local]
 Instance lex_le_PartialOrder
   : PartialOrder lex_eq lex_le.
-Proof with discriminate || eauto with *.
+Proof.
   intros xs1 xs2; cbn. unfold flip, lex_eq, lex_le.
   pose proof (claim1 := lex_le_flip_spec xs1 xs2).
   destruct (lex_compare xs1 xs2) eqn: H_OBS.
@@ -1375,7 +1375,7 @@ Fixpoint nat_compare (x : nat) (y : nat) {struct x} : comparison :=
 Lemma nat_compare_lt (x : nat) (y : nat)
   (hyp_lt : nat_compare x y = Lt)
   : x <= y /\ x <> y.
-Proof with eauto with *.
+Proof.
   revert x y hyp_lt. induction x as [ | x IH], y as [ | y]; simpl; ii.
   - inversion hyp_lt.
   - split; lia.
@@ -1386,7 +1386,7 @@ Qed.
 Lemma nat_compare_eq (x : nat) (y : nat)
   (hyp_eq : nat_compare x y = Eq)
   : x = y.
-Proof with eauto with *.
+Proof.
   revert x y hyp_eq. induction x as [ | x IH], y as [ | y]; simpl; ii.
   - reflexivity.
   - inversion hyp_eq.
@@ -1397,7 +1397,7 @@ Qed.
 Lemma nat_compare_gt (x : nat) (y : nat)
   (hyp_gt : nat_compare x y = Gt)
   : y <= x /\ x <> y.
-Proof with eauto with *.
+Proof.
   cbn. revert x y hyp_gt. induction x as [ | x IH], y as [ | y]; simpl; ii.
   - inversion hyp_gt.
   - inversion hyp_gt.

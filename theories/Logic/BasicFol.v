@@ -183,7 +183,7 @@ Lemma trm_eq_dec (t1 : trm L) (t2 : trm L)
   : {t1 = t2} + {t1 <> t2}
 with trms_eq_dec n (ts1 : trms L n) (ts2 : trms L n)
   : {ts1 = ts2} + {ts1 <> ts2}.
-Proof with try first [now right; congruence | now left; congruence].
+Proof.
   - pose proof ivar_hasEqDec as ivar_hasEqDec.
     red in ivar_hasEqDec, function_symbols_hasEqDec, constant_symbols_hasEqDec.
     clear trm_eq_dec. trm_ind2 t1 t2; try first [now right; congruence | now left; congruence].
@@ -211,7 +211,7 @@ Hypothesis relation_symbols_hasEqDec : hasEqDec L.(relation_symbols).
 
 Lemma frm_eq_dec (p : frm L) (p' : frm L)
   : {p = p'} + {p <> p'}.
-Proof with try first [now right; congruence | now left; congruence].
+Proof.
   pose proof ivar_hasEqDec as ivar_hasEqDec. red in ivar_hasEqDec. frm_ind2 p p'; try first [now right; congruence | now left; congruence].
   - pose proof (relation_symbols_hasEqDec R R') as [R_eq_R' | R_ne_R']; try first [now right; congruence | now left; congruence].
     subst R'. pose proof (trms_eq_dec (L.(relation_arity_table) R) ts ts') as [EQ | NE]; try first [now right; congruence | now left; congruence].
@@ -2063,7 +2063,7 @@ Lemma fvs_trm_compat_similarity (t : trm L) (t' : trm L')
 with fvs_trms_compat_similarity n (ts : trms L n) (ts' : trms L' n)
   (ts_SIM : ts =~= ts')
   : fvs_trms ts = fvs_trms ts'.
-Proof with eauto with *.
+Proof.
   - induction t_SIM.
     + reflexivity.
     + change (fvs_trms ts = fvs_trms ts'). eapply fvs_trms_compat_similarity. exact ts_SIM.
@@ -2076,7 +2076,7 @@ Qed.
 Lemma fvs_frm_compat_similarity (p : frm L) (p' : frm L')
   (p_SIM : p =~= p')
   : fvs_frm p = fvs_frm p'.
-Proof with try done!.
+Proof.
   induction p_SIM; simpl; try done!.
   - eapply fvs_trms_compat_similarity; try done!.
   - f_equal; eapply fvs_trm_compat_similarity; try done!.
@@ -2129,7 +2129,7 @@ Lemma chi_frm_similarity (s : subst L) (s' : subst L') (p : frm L) (p' : frm L')
   (s_SIM : s =~= s')
   (p_SIM : p =~= p')
   : chi_frm s p = chi_frm s' p'.
-Proof with eauto.
+Proof.
   assert (ENOUGH : forall xs : list ivar, forall f : ivar -> list ivar, maxs (L.map (maxs ∘ f)%prg xs) = maxs (L.flat_map f xs)).
   { induction xs; simpl; i; eauto. unfold "∘"%prg. rewrite maxs_app. f_equal. eauto. }
   unfold chi_frm. f_equal. unfold last_ivar_trm. f_equal.

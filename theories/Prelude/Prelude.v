@@ -137,7 +137,7 @@ Inductive option_eqProp {A : Type} (eqProp : A -> A -> Prop) : forall lhs : opti
 Instance option_eqProp_Equivalence {A : Type} (eqProp : A -> A -> Prop)
   (eqProp_Equivalence : Equivalence eqProp)
   : Equivalence (option_eqProp eqProp).
-Proof with eauto.
+Proof.
   split.
   - intros [x | ]; econs. reflexivity; eauto.
   - intros ? ? [ | x y x_eq_y]; econs. symmetry; eauto.
@@ -1819,7 +1819,7 @@ Qed.
 
 Lemma forallb_spec {A : Type} (p : A -> bool) (xs : list A)
   : forall b, forallb p xs = b <-> (if b then forall x, In x xs -> p x = true else exists x, In x xs /\ p x = false).
-Proof with try now firstorder.
+Proof.
   intros [ | ]; [exact (forallb_forall p xs) | induction xs as [ | x xs IH]; simpl in *]; try now firstorder.
   rewrite andb_false_iff; firstorder; subst; try now firstorder.
 Qed.
@@ -1829,7 +1829,7 @@ Qed.
 Lemma In_nth_error_Some {A : Type} (xs : list A) (x : A)
   (IN : In x xs)
   : exists n, xs !! n = Some x /\ n < length xs.
-Proof with try (lia || done).
+Proof.
   revert x IN; induction xs as [ | x1 xs IH]; simpl; intros x0 IN; try (lia || done). destruct IN as [<- | IN].
   - exists 0%nat; split; try (lia || done).
   - pose proof (IH x0 IN) as (n & EQ & LE). exists (S n). split; try (lia || done).
@@ -2298,7 +2298,7 @@ Definition OpenSets_in_COD : ensemble (ensemble COD) :=
 #[global]
 Instance OpenSets_in_COD_satisfiesAxiomsForOpenSets
   : AxiomsForOpenSets COD OpenSets_in_COD.
-Proof with reflexivity || eauto.
+Proof.
   unfold OpenSets_in_COD. destruct TOPOLOGY.(AxiomsForTopology) as [H1 H2 H3 H4]. split.
   - red. eapply isOpen_compatWith_ext_eq with (O1 := E.full); reflexivity || eauto. intros x. split; intros IN; reflexivity || eauto. econs; reflexivity || eauto.
   - i. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage f O == U)).

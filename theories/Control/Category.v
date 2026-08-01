@@ -137,7 +137,7 @@ Instance Functor_isCovariantFunctor@{u1 v1 u2 v2} (F : Type@{v1} -> Type@{v2}) {
 Instance Functor_isCovariantFunctor_good {F : Type@{U_discourse} -> Type@{U_discourse}} {F_isFunctor : isFunctor@{U_discourse U_discourse} F} {F_isSetoid1 : isSetoid1 F}
   (FUNCTOR_LAWS : FunctorLaws F (FUNCTOR := F_isFunctor) (SETOID1 := F_isSetoid1))
   : isLawfulCovariantFunctor (Functor_isCovariantFunctor F) (SETOID := Setoid_on_Hask) (liftSETOID := fun X : Type@{U_discourse} => fun Y : Type@{U_discourse} => fun _ : isSetoid (X -> Y) => pi_isSetoid (fun _ : F X => liftSetoid1 (isSetoid1 := F_isSetoid1) Y mkSetoid_from_eq)).
-Proof with eauto with *.
+Proof.
   split; cbn; i.
   - eapply Prelude.fmap_compose.
   - eapply Prelude.fmap_id.
@@ -154,7 +154,7 @@ Instance CovariantFunctor_isFunctor@{u1 v1 u2 v2} (F : isCovariantFunctor@{u1 v1
 
 Theorem CovariantFunctor_isFunctor_good {F : isCovariantFunctor@{U_ob U_discourse U_ob U_discourse} Hask@{U_ob U_discourse} Hask@{U_ob U_discourse}}
   : FunctorLaws map_ob (FUNCTOR := CovariantFunctor_isFunctor F) (SETOID1 := fun X : Type => fun _ : isSetoid X => mkSetoid_from_eq) <-> isLawfulCovariantFunctor F (SETOID := Setoid_on_Hask) (liftSETOID := fun X : Type => fun Y : Type => fun _ : isSetoid (X -> Y) => Setoid_on_Hask (F.(map_ob) X) (F.(map_ob) Y)).
-Proof with reflexivity || eauto with *.
+Proof.
   split; intros LAW.
   - destruct F as [F fmap]; split; i.
     + exact (@Prelude.fmap_compose F _ _ LAW A B C f g).
@@ -201,7 +201,7 @@ Qed.
 Instance SliceCategory_good (CAT : isCategory@{U_ob U_discourse}) (SETOID : forall Dom : CAT.(ob), forall Cod : CAT.(ob), isSetoid (CAT.(hom) Dom Cod)) (C : CAT.(ob))
  (CATEGORY_LAW : isLawfulCategory CAT (SETOID := SETOID))
   : isLawfulCategory (SliceCategory (CAT := CAT) (SETOID := SETOID) (CATEGORY_LAW := CATEGORY_LAW) C) (SETOID := fun Dom => fun Cod => @subSetoid (CAT.(hom) (projT1 Dom) (projT1 Cod)) (SETOID (projT1 Dom) (projT1 Cod)) (fun arr : CAT.(hom) (projT1 Dom) (projT1 Cod) => projT2 Dom == CAT.(compose) (projT2 Cod) arr)).
-Proof with eauto with *.
+Proof.
   split; cbn.
   - intros [X f] [Y g] [Z h] [arr2' EQ2'] [arr2 EQ2] [arr1' EQ1'] [arr1 EQ1]; simpl in *; intros arr2_EQ arr1_EQ. eapply compose_compatWith_eqProp; eauto with *.
   - intros [X f] [Y g] [Z h] [W i]; simpl in *; intros [arr'' EQ''] [arr' EQ'] [arr EQ]; simpl in *. eapply compose_assoc.

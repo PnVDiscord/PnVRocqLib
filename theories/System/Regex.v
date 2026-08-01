@@ -84,7 +84,7 @@ Fixpoint eval_regex (e : regex A) {struct e} : lang :=
 
 Theorem eval_regex_good e s
   : s \in eval_regex e <-> s ∈ e.
-Proof with eauto with *.
+Proof.
   split.
   - revert s; induction e; simpl; intros s H_IN; rewrite!; subst; eauto with *.
     + destruct H_IN; eauto with *.
@@ -102,7 +102,7 @@ Fixpoint fromString (s : list A) : regex A :=
 
 Lemma fromString_spec (s : list A)
   : eval_regex (fromString s) == E.singleton s.
-Proof with eauto with *.
+Proof.
   induction s as [ | c s IH]; simpl; eauto with *. intros xs; (do 3 red in IH); rewrite!; split.
   - intros ?; des. subst xs. rewrite!. rewrite IH in H0. rewrite!. subst; eauto with *.
   - intros ->. exists [c]; rewrite!; split; eauto with *. exists s; split; eauto with *. rewrite IH; rewrite!; eauto with *.

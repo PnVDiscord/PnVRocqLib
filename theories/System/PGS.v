@@ -32,7 +32,7 @@ Parameter productions : fin_ensemble (NT * list (NT + TM)).
 
 End GRAMMAR_SPEC.
 
-Module PGS (Grammar : GRAMMAR_SPEC).
+Module MkPGS (Grammar : GRAMMAR_SPEC).
 
 #[local] Existing Instance Grammar.NT_isFinite.
 #[local] Existing Instance Grammar.TM_isFinite.
@@ -2433,6 +2433,334 @@ Proof.
   intros it0 [EQ | []]. subst it0. eapply initial_item_valid.
 Qed.
 
+Module CanonicalState.
+
+(** A canonical state is represented by the subsequence of [all_items]
+    selected by the source state.  Consequently its order is the fixed
+    [all_items] order, rather than the order in which items happened to be
+    discovered.  The proof component is in [Prop], so extraction keeps only
+    the normalized list. *)
+
+#[local] Existing Instance item_hasEqDec.
+
+Definition item_index (it : item) : nat :=
+  FS.index_of it all_items.
+
+Definition normalize_list (q : state) : state :=
+  filter (fun it => FS.mem it q) all_items.
+
+Definition canonical (q : state) : Prop :=
+  normalize_list q = q.
+
+Lemma normalize_list_In q it
+  : it ∈ normalize_list q <-> (it ∈ all_items /\ it ∈ q).
+Proof.
+  unfold normalize_list. rewrite filter_In. rewrite mem_spec. reflexivity.
+Qed.
+
+Lemma normalize_list_valid_In q it
+  : it ∈ normalize_list q <-> (valid_item it /\ it ∈ q).
+Proof.
+  rewrite normalize_list_In. split.
+  - intros (IN_ALL & IN_Q). split; [eapply valid_item_all_items; exact IN_ALL | exact IN_Q].
+  - intros (VALID & IN_Q). split; [eapply all_items_complete; exact VALID | exact IN_Q].
+Qed.
+
+Lemma normalize_list_NoDup q
+  : NoDup (normalize_list q).
+Proof.
+  unfold normalize_list. eapply NoDup_filter. exact all_items_no_dup.
+Qed.
+
+Lemma normalize_list_idempotent q
+  : normalize_list (normalize_list q) = normalize_list q.
+Proof.
+  unfold normalize_list.
+  eapply filter_ext_in. intros it IN_ALL.
+  eapply eq_true_iff_eq.
+  rewrite !mem_spec. rewrite filter_In. rewrite mem_spec. tauto.
+Qed.
+
+Lemma normalize_list_canonical q
+  : canonical (normalize_list q).
+Proof.
+  unfold canonical. eapply normalize_list_idempotent.
+Qed.
+
+Lemma canonical_NoDup q
+  (CANONICAL : canonical q)
+  : NoDup q.
+Proof.
+  unfold canonical in CANONICAL. rewrite <- CANONICAL.
+  eapply normalize_list_NoDup.
+Qed.
+
+Lemma canonical_valid q it
+  (CANONICAL : canonical q)
+  (IN : it ∈ q)
+  : valid_item it.
+Proof.
+  unfold canonical in CANONICAL. rewrite <- CANONICAL in IN.
+  rewrite normalize_list_valid_In in IN. tauto.
+Qed.
+
+Lemma canonical_index_inj q x y
+  (CANONICAL : canonical q)
+  (IN_X : x ∈ q)
+  (IN_Y : y ∈ q)
+  (INDEX : item_index x = item_index y)
+  : x = y.
+Proof.
+  unfold item_index in INDEX.
+  eapply FS.index_of_inj; [ | | exact INDEX].
+  - eapply all_items_complete. eapply canonical_valid; [exact CANONICAL | exact IN_X].
+  - eapply all_items_complete. eapply canonical_valid; [exact CANONICAL | exact IN_Y].
+Qed.
+
+Lemma canonical_list_ext q1 q2
+  (CANONICAL1 : canonical q1)
+  (CANONICAL2 : canonical q2)
+  (SAME : forall it, it ∈ q1 <-> it ∈ q2)
+  : q1 = q2.
+Proof.
+  unfold canonical in CANONICAL1, CANONICAL2.
+  rewrite <- CANONICAL1, <- CANONICAL2.
+  unfold normalize_list.
+  eapply filter_ext_in. intros it _.
+  eapply eq_true_iff_eq. rewrite !mem_spec. eapply SAME.
+Qed.
+
+#[projections(primitive)]
+Record t : Type :=
+  mk
+  { to_list : state
+  ; to_list_canonical : canonical to_list
+  }.
+
+Definition In (it : item) (q : t) : Prop :=
+  it ∈ q.(to_list).
+
+#[refine]
+Definition normalize (q : state) : t :=
+  {| to_list := normalize_list q |}.
+Proof.
+  eapply normalize_list_canonical.
+Defined.
+
+Definition of_list : state -> t :=
+  normalize.
+
+Definition empty : t :=
+  normalize [].
+
+Definition singleton (it : item) : t :=
+  normalize [it].
+
+Definition mem (it : item) (q : t) : bool :=
+  FS.mem it q.(to_list).
+
+Definition add (it : item) (q : t) : t :=
+  normalize (it :: q.(to_list)).
+
+Definition union (q1 : t) (q2 : t) : t :=
+  normalize (q1.(to_list) ++ q2.(to_list)).
+
+#[global]
+Instance t_hasEqDec : hasEqDec t.
+Proof.
+  intros [q1 CANONICAL1] [q2 CANONICAL2].
+  destruct ((list_hasEqDec item_hasEqDec) q1 q2) as [EQ | NE].
+  - subst q2. left.
+    assert (EQ_CANONICAL : CANONICAL1 = CANONICAL2).
+    { eapply (@eq_pirrel_fromEqDec state (list_hasEqDec item_hasEqDec)). }
+    subst CANONICAL2. reflexivity.
+  - right. intros EQ. inv EQ. contradiction.
+Defined.
+
+Lemma mem_spec it q
+  : mem it q = true <-> In it q.
+Proof.
+  unfold mem, In. rewrite FS.mem_spec. reflexivity.
+Qed.
+
+Lemma normalize_In q it
+  : In it (normalize q) <-> (valid_item it /\ it ∈ q).
+Proof.
+  unfold In, normalize. cbn. eapply normalize_list_valid_In.
+Qed.
+
+Lemma of_list_In q it
+  : In it (of_list q) <-> (valid_item it /\ it ∈ q).
+Proof.
+  eapply normalize_In.
+Qed.
+
+Lemma empty_In it
+  : ~ In it empty.
+Proof.
+  unfold empty.
+  rewrite normalize_In. simpl. tauto.
+Qed.
+
+Lemma singleton_In it it0
+  : In it (singleton it0) <-> (it = it0 /\ valid_item it0).
+Proof.
+  unfold singleton.
+  rewrite normalize_In. simpl. split.
+  - intros (VALID & [EQ | []]). subst it. split; reflexivity || exact VALID.
+  - intros (EQ & VALID). subst it. split; [exact VALID | now left].
+Qed.
+
+Lemma add_In it_new q it
+  : In it (add it_new q) <-> ((it = it_new /\ valid_item it_new) \/ In it q).
+Proof.
+  unfold add.
+  rewrite normalize_In. simpl. split.
+  - intros (VALID & [EQ | IN]).
+    + subst it. left. split; [reflexivity | exact VALID].
+    + right. exact IN.
+  - intros [(EQ & VALID) | IN].
+    + subst it. split; [exact VALID | now left].
+    + split.
+      * eapply canonical_valid; [exact q.(to_list_canonical) | exact IN].
+      * now right.
+Qed.
+
+Lemma union_In q1 q2 it
+  : In it (union q1 q2) <-> (In it q1 \/ In it q2).
+Proof.
+  unfold union.
+  rewrite normalize_In. rewrite L.in_app_iff. split.
+  - tauto.
+  - intros [IN | IN].
+    + split.
+      * eapply canonical_valid; [exact q1.(to_list_canonical) | exact IN].
+      * now left.
+    + split.
+      * eapply canonical_valid; [exact q2.(to_list_canonical) | exact IN].
+      * now right.
+Qed.
+
+Lemma to_list_NoDup q
+  : NoDup q.(to_list).
+Proof.
+  destruct q as [q CANONICAL]. cbn.
+  eapply canonical_NoDup. exact CANONICAL.
+Qed.
+
+Lemma to_list_valid q it
+  (IN : In it q)
+  : valid_item it.
+Proof.
+  destruct q as [q CANONICAL]. cbn in *.
+  eapply canonical_valid; [exact CANONICAL | exact IN].
+Qed.
+
+Lemma ext q1 q2
+  (SAME : forall it, In it q1 <-> In it q2)
+  : q1 = q2.
+Proof.
+  destruct q1 as [q1 CANONICAL1], q2 as [q2 CANONICAL2]. cbn in SAME |- *.
+  assert (EQ : q1 = q2).
+  { eapply canonical_list_ext; [exact CANONICAL1 | exact CANONICAL2 | exact SAME]. }
+  subst q2.
+  assert (EQ_CANONICAL : CANONICAL1 = CANONICAL2).
+  { eapply (@eq_pirrel_fromEqDec state (list_hasEqDec item_hasEqDec)). }
+  subst CANONICAL2. reflexivity.
+Qed.
+
+Definition of_state : state -> t :=
+  normalize.
+
+Definition to_state : t -> state :=
+  to_list.
+
+Lemma of_state_In q it
+  : In it (of_state q) <-> (valid_item it /\ it ∈ q).
+Proof.
+  eapply normalize_In.
+Qed.
+
+Lemma of_state_In_valid q it
+  (VALID_Q : forall it0, it0 ∈ q -> valid_item it0)
+  : In it (of_state q) <-> it ∈ q.
+Proof.
+  rewrite of_state_In. split; [tauto | intros IN; split; [eapply VALID_Q; exact IN | exact IN]].
+Qed.
+
+Lemma to_state_NoDup q
+  : NoDup (to_state q).
+Proof.
+  eapply to_list_NoDup.
+Qed.
+
+Lemma to_state_valid q it
+  (IN : it ∈ to_state q)
+  : valid_item it.
+Proof.
+  eapply to_list_valid. exact IN.
+Qed.
+
+Definition closure_state (q : state) : t :=
+  normalize (Item.closure q).
+
+Definition goto_state (q : state) (X : V') : t :=
+  normalize (Item.goto q X).
+
+Definition closure (q : t) : t :=
+  closure_state q.(to_list).
+
+Definition goto (q : t) (X : V') : t :=
+  goto_state q.(to_list) X.
+
+Lemma closure_state_In q it
+  (VALID_Q : forall it0, it0 ∈ q -> valid_item it0)
+  : In it (closure_state q) <-> it ∈ Item.closure q.
+Proof.
+  unfold closure_state. rewrite normalize_In. split; [tauto | ].
+  intros IN. split.
+  - eapply Item.closure_valid; [exact VALID_Q | exact IN].
+  - exact IN.
+Qed.
+
+Lemma goto_state_In q X it
+  (VALID_Q : forall it0, it0 ∈ q -> valid_item it0)
+  : In it (goto_state q X) <-> it ∈ Item.goto q X.
+Proof.
+  unfold goto_state. rewrite normalize_In. split; [tauto | ].
+  intros IN. split.
+  - eapply Item.goto_valid; [exact VALID_Q | exact IN].
+  - exact IN.
+Qed.
+
+Lemma closure_In q it
+  : In it (closure q) <-> it ∈ Item.closure q.(to_list).
+Proof.
+  unfold closure. eapply closure_state_In.
+  intros it0 IN. eapply to_list_valid. exact IN.
+Qed.
+
+Lemma goto_In q X it
+  : In it (goto q X) <-> it ∈ Item.goto q.(to_list) X.
+Proof.
+  unfold goto. eapply goto_state_In.
+  intros it0 IN. eapply to_list_valid. exact IN.
+Qed.
+
+Lemma closure_to_list_canonical q
+  : canonical (closure q).(to_list).
+Proof.
+  exact (closure q).(to_list_canonical).
+Qed.
+
+Lemma goto_to_list_canonical q X
+  : canonical (goto q X).(to_list).
+Proof.
+  exact (goto q X).(to_list_canonical).
+Qed.
+
+End CanonicalState.
+
 
 
 
@@ -2443,6 +2771,8 @@ Module LR0.
 
 Import GrammarSyntax.
 Import Item.
+
+Module CG := GraphAPI.LabeledFiniteGraph.
 
 #[local] Existing Instance V'_hasEqDec.
 #[local] Existing Instance item_hasEqDec.
@@ -2465,11 +2795,19 @@ Definition lr0_labeled_successors (q : state) : fin_ensemble ((state * state) * 
 Definition lr0_labeled_edges (qs : fin_ensemble state) : fin_ensemble ((state * state) * V') :=
   qs >>= lr0_labeled_successors.
 
-Definition lr0_graph_from (qs : fin_ensemble state) : @GraphAPI.LabeledFiniteGraph state (fin_ensemble V') :=
-  GraphAPI.buildLabeledFiniteGraphWithVertices qs (lr0_labeled_edges qs).
+Definition lr0_atomic_edge (edge : (state * state) * V') : CG.Edge.t state V' :=
+  let '((src, dst), label) := edge in
+  CG.Edge.mk src label dst.
+
+Definition lr0_atomic_edges (qs : fin_ensemble state) : fin_ensemble (CG.Edge.t state V') :=
+  map lr0_atomic_edge (lr0_labeled_edges qs).
+
+Definition lr0_graph_from (qs : fin_ensemble state) : CG.t state V' :=
+  CG.span state_hasEqDec V'_hasEqDec qs (lr0_atomic_edges qs).
 
 Definition state_successors (q : state) : fin_ensemble state :=
-  all_symbols >>= fun X => GraphAPI.successors_by_label_of_graph (lr0_graph_from [q]) X q.
+  all_symbols >>= fun X =>
+  CG.successors_by_label (lr0_graph_from [q]) X q.
 
 Definition states_step (qs : fin_ensemble state) : fin_ensemble state :=
   L.nodup state_hasEqDec (qs ++ (qs >>= state_successors)).
@@ -2569,6 +2907,1113 @@ Definition delta (q : state) (X : V') : option state :=
   else
     None.
 
+Module CanonicalRaw.
+
+Module CS := Item.CanonicalState.
+
+(** This is a parallel, canonical presentation of the raw LR(0) transition
+    system.  The legacy [LR0] development below continues to use lists. *)
+
+Definition state : Set :=
+  CS.t.
+
+Definition kernel : state :=
+  CS.of_state Item.kernel.
+
+Definition q0 : state :=
+  kernel.
+
+Definition closure (q : state) : state :=
+  CS.closure q.
+
+Definition goto (q : state) (X : V') : state :=
+  CS.goto q X.
+
+Definition nonempty (q : state) : bool :=
+  X.nonempty (CS.to_state q).
+
+Definition raw_step (q : state) (X : V') : option state :=
+  let q' := goto q X in
+  if nonempty q' then
+    Some q'
+  else
+    None.
+
+Definition delta : state -> V' -> option state :=
+  raw_step.
+
+Lemma kernel_In it
+  : CS.In it kernel <-> it ∈ Item.kernel.
+Proof.
+  unfold kernel.
+  eapply CS.of_state_In_valid.
+  intros it0 IN. eapply Item.kernel_valid. exact IN.
+Qed.
+
+Lemma q0_In it
+  : CS.In it q0 <-> it ∈ LR0.q0.
+Proof.
+  unfold q0, LR0.q0. eapply kernel_In.
+Qed.
+
+Lemma kernel_canonical
+  : CS.canonical (CS.to_state kernel).
+Proof.
+  exact kernel.(CS.to_list_canonical).
+Qed.
+
+Lemma q0_canonical
+  : CS.canonical (CS.to_state q0).
+Proof.
+  exact q0.(CS.to_list_canonical).
+Qed.
+
+Lemma kernel_NoDup
+  : NoDup (CS.to_state kernel).
+Proof.
+  eapply CS.to_state_NoDup.
+Qed.
+
+Lemma q0_NoDup
+  : NoDup (CS.to_state q0).
+Proof.
+  eapply CS.to_state_NoDup.
+Qed.
+
+Lemma closure_In q it
+  : CS.In it (closure q) <-> it ∈ Item.closure (CS.to_state q).
+Proof.
+  eapply CS.closure_In.
+Qed.
+
+Lemma goto_In q X it
+  : CS.In it (goto q X) <-> it ∈ Item.goto (CS.to_state q) X.
+Proof.
+  eapply CS.goto_In.
+Qed.
+
+Lemma closure_target_canonical q
+  : CS.canonical (CS.to_state (closure q)).
+Proof.
+  exact (closure q).(CS.to_list_canonical).
+Qed.
+
+Lemma goto_target_canonical q X
+  : CS.canonical (CS.to_state (goto q X)).
+Proof.
+  exact (goto q X).(CS.to_list_canonical).
+Qed.
+
+Lemma goto_target_NoDup q X
+  : NoDup (CS.to_state (goto q X)).
+Proof.
+  eapply CS.to_state_NoDup.
+Qed.
+
+Lemma goto_target_valid q X it
+  (IN : CS.In it (goto q X))
+  : valid_item it.
+Proof.
+  eapply CS.to_list_valid. exact IN.
+Qed.
+
+Lemma nonempty_spec q
+  : nonempty q = true <-> exists it, CS.In it q.
+Proof.
+  unfold nonempty.
+  split.
+  - intros NONEMPTY.
+    use LR0.nonempty_exists as (it & IN) with NONEMPTY.
+    exists it. exact IN.
+  - intros (it & IN).
+    eapply LR0.nonempty_of_in. exact IN.
+Qed.
+
+Lemma goto_nonempty_legacy q X
+  : nonempty (goto q X) = X.nonempty (Item.goto (CS.to_state q) X).
+Proof.
+  eapply eq_true_iff_eq. rewrite nonempty_spec.
+  split.
+  - intros (it & IN).
+    eapply LR0.nonempty_of_in with (x := it).
+    eapply (proj1 (goto_In q X it)). exact IN.
+  - intros NONEMPTY.
+    use LR0.nonempty_exists as (it & IN) with NONEMPTY.
+    exists it. eapply (proj2 (goto_In q X it)). exact IN.
+Qed.
+
+Lemma raw_step_sound q X q'
+  (STEP : raw_step q X = Some q')
+  : q' = goto q X /\ nonempty q' = true.
+Proof.
+  unfold raw_step in STEP.
+  destruct (nonempty (goto q X)) eqn: NONEMPTY; inv STEP.
+  split; [reflexivity | exact NONEMPTY].
+Qed.
+
+Lemma raw_step_complete q X q'
+  (TARGET : q' = goto q X)
+  (NONEMPTY : nonempty q' = true)
+  : raw_step q X = Some q'.
+Proof.
+  subst q'. unfold raw_step. rewrite NONEMPTY. reflexivity.
+Qed.
+
+Theorem raw_step_some_iff q X q'
+  : raw_step q X = Some q' <-> (q' = goto q X /\ nonempty q' = true).
+Proof.
+  split.
+  - eapply raw_step_sound.
+  - intros (TARGET & NONEMPTY).
+    eapply raw_step_complete; eauto.
+Qed.
+
+Lemma raw_step_target_canonical q X q'
+  (STEP : raw_step q X = Some q')
+  : CS.canonical (CS.to_state q').
+Proof.
+  use raw_step_sound as (TARGET & _) with STEP. subst q'.
+  eapply goto_target_canonical.
+Qed.
+
+Lemma raw_step_target_NoDup q X q'
+  (STEP : raw_step q X = Some q')
+  : NoDup (CS.to_state q').
+Proof.
+  use raw_step_sound as (TARGET & _) with STEP. subst q'.
+  eapply goto_target_NoDup.
+Qed.
+
+Lemma raw_step_target_valid q X q' it
+  (STEP : raw_step q X = Some q')
+  (IN : CS.In it q')
+  : valid_item it.
+Proof.
+  use raw_step_sound as (TARGET & _) with STEP. subst q'.
+  eapply goto_target_valid. exact IN.
+Qed.
+
+Lemma delta_sound q X q'
+  (STEP : delta q X = Some q')
+  : q' = goto q X /\ nonempty q' = true.
+Proof.
+  eapply raw_step_sound. exact STEP.
+Qed.
+
+Lemma delta_complete q X q'
+  (TARGET : q' = goto q X)
+  (NONEMPTY : nonempty q' = true)
+  : delta q X = Some q'.
+Proof.
+  eapply raw_step_complete; eauto.
+Qed.
+
+(** [legacy_step_ext q X q'] says that the canonical target [q'] is
+    extensionally equal to the list target returned by the legacy [LR0.delta].
+    Equality of the lists themselves is intentionally not required: the
+    canonical target has the fixed [all_items] order. *)
+Definition legacy_step_ext (q : state) (X : V') (q' : state) : Prop :=
+  exists q_old : Item.state, LR0.delta (CS.to_state q) X = Some q_old /\ (forall it, CS.In it q' <-> it ∈ q_old).
+
+Lemma raw_step_legacy_sound q X q'
+  (STEP : raw_step q X = Some q')
+  : legacy_step_ext q X q'.
+Proof.
+  use raw_step_sound as (TARGET & NONEMPTY) with STEP. subst q'.
+  exists (Item.goto (CS.to_state q) X). split.
+  - unfold LR0.delta.
+    rewrite <- goto_nonempty_legacy. rewrite NONEMPTY. reflexivity.
+  - intros it. eapply goto_In.
+Qed.
+
+Lemma raw_step_legacy_complete q X q'
+  (LEGACY : legacy_step_ext q X q')
+  : raw_step q X = Some q'.
+Proof.
+  destruct LEGACY as (q_old & LEGACY & SAME).
+  unfold LR0.delta in LEGACY.
+  destruct (X.nonempty (Item.goto (CS.to_state q) X)) eqn: NONEMPTY; inv LEGACY.
+  assert (TARGET : q' = goto q X).
+  { eapply CS.ext. intros it. rewrite goto_In. eapply SAME. }
+  eapply raw_step_complete; [exact TARGET | ].
+  rewrite TARGET. rewrite goto_nonempty_legacy. exact NONEMPTY.
+Qed.
+
+Theorem raw_step_legacy_iff q X q'
+  : raw_step q X = Some q' <-> legacy_step_ext q X q'.
+Proof.
+  split.
+  - eapply raw_step_legacy_sound.
+  - eapply raw_step_legacy_complete.
+Qed.
+
+Theorem delta_legacy_iff q X q'
+  : delta q X = Some q' <-> legacy_step_ext q X q'.
+Proof.
+  eapply raw_step_legacy_iff.
+Qed.
+
+Lemma to_state_of_state_canonical q
+  (CANONICAL : CS.canonical q)
+  : CS.to_state (CS.of_state q) = q.
+Proof.
+  exact CANONICAL.
+Qed.
+
+Definition legacy_step_ext_from (q : Item.state) (X : V') (q' : state) : Prop :=
+  exists q_old : Item.state, LR0.delta q X = Some q_old /\ (forall it, CS.In it q' <-> it ∈ q_old).
+
+Theorem delta_legacy_iff_canonical_source q X q'
+  (CANONICAL : CS.canonical q)
+  : delta (CS.of_state q) X = Some q' <-> legacy_step_ext_from q X q'.
+Proof.
+  unfold legacy_step_ext_from.
+  rewrite delta_legacy_iff.
+  unfold legacy_step_ext.
+  rewrite (to_state_of_state_canonical q CANONICAL).
+  reflexivity.
+Qed.
+
+End CanonicalRaw.
+
+(* Keep the legacy list-state instance preferred for the unchanged LR0
+   development that follows.  The module alias above also exposes the
+   canonical-state instance. *)
+#[global] Existing Instance state_hasEqDec.
+
+Module CanonicalReachable.
+
+Module CR := CanonicalRaw.
+Module CS := Item.CanonicalState.
+Module CG := GraphAPI.LabeledFiniteGraph.
+
+Definition state : Set :=
+  CR.state.
+
+Definition state_dec : hasEqDec state :=
+  CS.t_hasEqDec.
+
+Definition label_dec : hasEqDec V' :=
+  V'_hasEqDec.
+
+Definition edge_dec : hasEqDec (CG.Edge.t state V') :=
+  CG.Edge.hasEqDec state_dec label_dec.
+
+(** The finite universe is generated directly as the powerset of [all_items].
+    [FS.powerset] chooses keep/drop at each position, so these are fixed-order
+    subsequences rather than permutations.  [CS.of_state] records their
+    canonical invariant, and the outer [nodup] makes the enumeration robust. *)
+Definition canonical_lists : fin_ensemble Item.state :=
+  FS.powerset all_items.
+
+Definition all_states_raw : fin_ensemble state :=
+  L.map CS.of_state canonical_lists.
+
+Definition all_states : fin_ensemble state :=
+  L.nodup state_dec all_states_raw.
+
+Lemma canonical_lists_length
+  : length canonical_lists = pow2 (length all_items).
+Proof.
+  unfold canonical_lists. eapply FS.powerset_length.
+Qed.
+
+Lemma to_state_in_canonical_lists q
+  : CS.to_state q ∈ canonical_lists.
+Proof.
+  unfold canonical_lists. change (CS.to_list q ∈ FS.powerset all_items).
+  pose proof q.(CS.to_list_canonical) as CANONICAL.
+  unfold CS.canonical in CANONICAL.
+  rewrite <- CANONICAL.
+  unfold CS.normalize_list.
+  eapply FS.filter_in_powerset.
+Qed.
+
+Lemma of_to_state q
+  : CS.of_state (CS.to_state q) = q.
+Proof.
+  eapply CS.ext. intros it.
+  eapply CS.of_state_In_valid.
+  intros it0 IN. eapply CS.to_state_valid. exact IN.
+Qed.
+
+Lemma all_states_complete q
+  : q ∈ all_states.
+Proof.
+  unfold all_states, all_states_raw. rewrite L.nodup_In.
+  rewrite L.in_map_iff. exists (CS.to_state q). split.
+  - eapply of_to_state.
+  - eapply to_state_in_canonical_lists.
+Qed.
+
+Lemma all_states_NoDup
+  : NoDup all_states.
+Proof.
+  unfold all_states. eapply L.NoDup_nodup.
+Qed.
+
+Definition labeled_successors_raw (q : state) : fin_ensemble (CG.Edge.t state V') :=
+  all_symbols >>= fun X =>
+  match CR.delta q X with
+  | Some q' => [CG.Edge.mk q X q']
+  | None => []
+  end.
+
+Definition labeled_successors (q : state) : fin_ensemble (CG.Edge.t state V') :=
+  L.nodup edge_dec (labeled_successors_raw q).
+
+Definition successors_raw (q : state) : fin_ensemble state :=
+  all_symbols >>= fun X =>
+  match CR.delta q X with
+  | Some q' => [q']
+  | None => []
+  end.
+
+Definition successors (q : state) : fin_ensemble state :=
+  L.nodup state_dec (successors_raw q).
+
+Lemma labeled_successors_In p q X q'
+  : CG.Edge.mk p X q' ∈ labeled_successors q <-> (p = q /\ X ∈ all_symbols /\ CR.delta q X = Some q').
+Proof.
+  unfold labeled_successors. rewrite L.nodup_In.
+  unfold labeled_successors_raw. split.
+  - intros IN.
+    use in_fin_ensemble_bind_elim as (Y & IN_Y & IN_EDGE) with IN.
+    cbv beta in IN_EDGE.
+    destruct (CR.delta q Y) as [r | ] eqn: DELTA.
+    + simpl in IN_EDGE.
+      destruct IN_EDGE as [EQ_EDGE | []].
+      assert (EQ_SRC : p = q).
+      { exact (eq_sym (f_equal CG.Edge.src EQ_EDGE)). }
+      assert (EQ_LABEL : X = Y).
+      { exact (eq_sym (f_equal CG.Edge.label EQ_EDGE)). }
+      assert (EQ_DST : q' = r).
+      { exact (eq_sym (f_equal CG.Edge.dst EQ_EDGE)). }
+      subst p. subst Y. subst r. splits; eauto.
+    + simpl in IN_EDGE. contradiction.
+  - intros (EQ & IN_X & DELTA). subst p.
+    eapply in_fin_ensemble_bind_intro with (x := X); [exact IN_X | ].
+    cbv beta. rewrite DELTA. simpl. left. reflexivity.
+Qed.
+
+Lemma labeled_successors_NoDup q
+  : NoDup (labeled_successors q).
+Proof.
+  unfold labeled_successors. eapply L.NoDup_nodup.
+Qed.
+
+Lemma successors_In q q'
+  : q' ∈ successors q <-> (exists X, X ∈ all_symbols /\ CR.delta q X = Some q').
+Proof.
+  unfold successors. rewrite L.nodup_In.
+  unfold successors_raw. split.
+  - intros IN.
+    use in_fin_ensemble_bind_elim as (X & IN_X & IN_STATE) with IN.
+    cbv beta in IN_STATE.
+    destruct (CR.delta q X) as [r | ] eqn: DELTA.
+    + simpl in IN_STATE.
+      destruct IN_STATE as [EQ | []]. subst r.
+      exists X. split; assumption.
+    + simpl in IN_STATE. contradiction.
+  - intros (X & IN_X & DELTA).
+    eapply in_fin_ensemble_bind_intro with (x := X); [exact IN_X | ].
+    cbv beta. rewrite DELTA. simpl. left. reflexivity.
+Qed.
+
+Lemma successors_NoDup q
+  : NoDup (successors q).
+Proof.
+  unfold successors. eapply L.NoDup_nodup.
+Qed.
+
+Definition states_step (qs : fin_ensemble state) : fin_ensemble state :=
+  L.nodup state_dec (qs ++ (qs >>= successors)).
+
+Lemma states_step_contains qs q
+  (IN : q ∈ qs)
+  : q ∈ states_step qs.
+Proof.
+  unfold states_step. rewrite L.nodup_In, L.in_app_iff.
+  left. exact IN.
+Qed.
+
+Lemma states_step_successor qs q X q'
+  (IN : q ∈ qs)
+  (IN_X : X ∈ all_symbols)
+  (DELTA : CR.delta q X = Some q')
+  : q' ∈ states_step qs.
+Proof.
+  unfold states_step. rewrite L.nodup_In, L.in_app_iff. right.
+  eapply in_fin_ensemble_bind_intro with (x := q); [exact IN | ].
+  rewrite successors_In. exists X. split; assumption.
+Qed.
+
+Lemma states_step_monotone qs1 qs2 q
+  (INCL : forall p, p ∈ qs1 -> p ∈ qs2)
+  (IN : q ∈ states_step qs1)
+  : q ∈ states_step qs2.
+Proof.
+  unfold states_step in *. rewrite !L.nodup_In in *.
+  rewrite !L.in_app_iff in *.
+  destruct IN as [IN | IN].
+  - left. eapply INCL. exact IN.
+  - right.
+    use in_fin_ensemble_bind_elim as (p & IN_P & IN_SUCC) with IN.
+    eapply in_fin_ensemble_bind_intro with (x := p).
+    + eapply INCL. exact IN_P.
+    + exact IN_SUCC.
+Qed.
+
+Lemma states_step_NoDup qs
+  : NoDup (states_step qs).
+Proof.
+  unfold states_step. eapply L.NoDup_nodup.
+Qed.
+
+Lemma states_iter_contains n qs q
+  (IN : q ∈ qs)
+  : q ∈ iter n states_step qs.
+Proof.
+  revert qs q IN. induction n as [ | n IH]; intros qs q IN; simpl.
+  - exact IN.
+  - eapply IH. eapply states_step_contains. exact IN.
+Qed.
+
+Lemma states_iter_mono_fuel n m qs q
+  (LE : n <= m)
+  (IN : q ∈ iter n states_step qs)
+  : q ∈ iter m states_step qs.
+Proof.
+  revert n qs q LE IN. induction m as [ | m IH]; intros n qs q LE IN.
+  - assert (n = 0) as EQ.
+    { lia. }
+    subst n. exact IN.
+  - destruct n as [ | n].
+    + eapply states_iter_contains. exact IN.
+    + simpl in IN |- *.
+      eapply IH with (n := n) (qs := states_step qs) (q := q); [lia | exact IN].
+Qed.
+
+Lemma states_iter_successor n qs q X q'
+  (IN : q ∈ iter n states_step qs)
+  (IN_X : X ∈ all_symbols)
+  (DELTA : CR.delta q X = Some q')
+  : q' ∈ iter (S n) states_step qs.
+Proof.
+  rewrite iter_succ.
+  eapply states_step_successor; [exact IN | exact IN_X | exact DELTA].
+Qed.
+
+Lemma states_iter_NoDup n qs
+  (NO_DUP : NoDup qs)
+  : NoDup (iter n states_step qs).
+Proof.
+  revert qs NO_DUP. induction n as [ | n IH]; intros qs NO_DUP; simpl.
+  - exact NO_DUP.
+  - eapply IH. eapply states_step_NoDup.
+Qed.
+
+Definition state_fuel : nat :=
+  length all_states.
+
+Definition compute_states : fin_ensemble state :=
+  iter state_fuel states_step [CR.q0].
+
+Definition Q : fin_ensemble state :=
+  compute_states.
+
+Lemma q0_in_Q
+  : CR.q0 ∈ Q.
+Proof.
+  unfold Q, compute_states.
+  eapply states_iter_contains. simpl. left. reflexivity.
+Qed.
+
+Lemma Q_NoDup
+  : NoDup Q.
+Proof.
+  unfold Q, compute_states.
+  eapply states_iter_NoDup. constructor; [intros [] | constructor].
+Qed.
+
+Lemma states_iter_all_states n q
+  (IN : q ∈ iter n states_step [CR.q0])
+  : q ∈ all_states.
+Proof.
+  eapply all_states_complete.
+Qed.
+
+Theorem states_iter_length_bound n
+  : length (iter n states_step [CR.q0]) <= state_fuel.
+Proof.
+  unfold state_fuel. eapply L.NoDup_incl_length.
+  - eapply states_iter_NoDup. constructor; [intros [] | constructor].
+  - intros q IN. eapply states_iter_all_states. exact IN.
+Qed.
+
+Definition state_list_subsetb (xs : fin_ensemble state) (ys : fin_ensemble state) : bool :=
+  forallb (fun q => FS.mem (EQ_DEC := state_dec) q ys) xs.
+
+Lemma state_list_subsetb_sound xs ys
+  (SUBSET : state_list_subsetb xs ys = true)
+  : forall q, q ∈ xs -> q ∈ ys.
+Proof.
+  unfold state_list_subsetb in SUBSET.
+  rewrite forallb_forall in SUBSET.
+  intros q IN. use SUBSET as MEM with IN.
+  rewrite FS.mem_spec in MEM. exact MEM.
+Qed.
+
+Lemma state_list_subsetb_complete xs ys
+  (SUBSET : forall q, q ∈ xs -> q ∈ ys)
+  : state_list_subsetb xs ys = true.
+Proof.
+  unfold state_list_subsetb. rewrite forallb_forall.
+  intros q IN. rewrite FS.mem_spec. eapply SUBSET. exact IN.
+Qed.
+
+Lemma state_list_subsetb_false_new xs ys
+  (SUBSET : state_list_subsetb xs ys = false)
+  : exists q, q ∈ xs /\ ~ q ∈ ys.
+Proof.
+  unfold state_list_subsetb in SUBSET.
+  use forallb_false_exists as (q & IN & MEM) with SUBSET.
+  exists q. split; [exact IN | ].
+  rewrite FS.mem_spec in MEM. exact MEM.
+Qed.
+
+Lemma state_NoDup_incl_remove_length_lt (xs : fin_ensemble state) (ys : fin_ensemble state) (q : state)
+  (NO_DUP_XS : NoDup xs)
+  (NO_DUP_YS : NoDup ys)
+  (IN_XS : q ∈ xs)
+  (NOT_IN_YS : ~ q ∈ ys)
+  (INCL : forall r, r ∈ ys -> r ∈ xs)
+  : length ys < length xs.
+Proof.
+  enough (LE : length ys <= length (remove state_dec q xs)).
+  { use (@remove_length_lt state state_dec) as LT with IN_XS.
+    eapply Nat.le_lt_trans; [exact LE | exact LT].
+  }
+  eapply L.NoDup_incl_length.
+  - exact NO_DUP_YS.
+  - intros r IN_R. rewrite L.in_remove_iff. split.
+    + eapply INCL. exact IN_R.
+    + intros EQ. subst r. contradiction.
+Qed.
+
+Lemma states_step_length_if_not_subset known
+  (NO_DUP : NoDup known)
+  (NOT_SUBSET : state_list_subsetb (states_step known) known = false)
+  : length known < length (states_step known).
+Proof.
+  use state_list_subsetb_false_new as (q & IN_STEP & NOT_IN) with NOT_SUBSET.
+  eapply state_NoDup_incl_remove_length_lt with (q := q).
+  - eapply states_step_NoDup.
+  - exact NO_DUP.
+  - exact IN_STEP.
+  - exact NOT_IN.
+  - intros r IN_KNOWN. eapply states_step_contains. exact IN_KNOWN.
+Qed.
+
+Lemma states_step_fixed_if_subset known
+  (SUBSET : state_list_subsetb (states_step known) known = true)
+  : forall q, q ∈ states_step known -> q ∈ known.
+Proof.
+  eapply state_list_subsetb_sound. exact SUBSET.
+Qed.
+
+Lemma states_iter_no_dup_from_start n
+  : NoDup (iter n states_step [CR.q0]).
+Proof.
+  eapply states_iter_NoDup. constructor; [intros [] | constructor].
+Qed.
+
+Lemma states_not_fixed_length_lower n (NOT_FIXED_PREFIX : forall i, i < n -> state_list_subsetb (states_step (iter i states_step [CR.q0])) (iter i states_step [CR.q0]) = false)
+  : n <= length (iter n states_step [CR.q0]).
+Proof.
+  induction n as [ | n IH]; [simpl; lia | ].
+  rewrite iter_succ.
+  assert (NO_DUP : NoDup (iter n states_step [CR.q0])).
+  { eapply states_iter_no_dup_from_start. }
+  assert (NOT_FIXED_N : state_list_subsetb (states_step (iter n states_step [CR.q0])) (iter n states_step [CR.q0]) = false).
+  { eapply NOT_FIXED_PREFIX. lia. }
+  use states_step_length_if_not_subset as LT with NO_DUP NOT_FIXED_N.
+  assert (PREFIX : forall i, i < n -> state_list_subsetb (states_step (iter i states_step [CR.q0])) (iter i states_step [CR.q0]) = false).
+  { intros i LT_I. eapply NOT_FIXED_PREFIX. lia. }
+  use IH as LE with PREFIX. lia.
+Qed.
+
+Lemma states_first_fixed_before_bound
+  : exists i, i <= state_fuel /\ state_list_subsetb (states_step (iter i states_step [CR.q0])) (iter i states_step [CR.q0]) = true.
+Proof.
+  set (fuel := state_fuel).
+  destruct (existsb (fun i => state_list_subsetb (states_step (iter i states_step [CR.q0])) (iter i states_step [CR.q0])) (seq 0 (S fuel))) eqn: EX.
+  - rewrite existsb_exists in EX.
+    destruct EX as (i & IN_SEQ & FIXED).
+    rewrite in_seq in IN_SEQ. exists i. split; [lia | exact FIXED].
+  - assert (NOT_FIXED : forall i, i <= fuel -> state_list_subsetb (states_step (iter i states_step [CR.q0])) (iter i states_step [CR.q0]) = false).
+    { intros i LE_I.
+      assert (IN_SEQ : i ∈ seq 0 (S fuel)).
+      { rewrite in_seq. lia. }
+      destruct (state_list_subsetb (states_step (iter i states_step [CR.q0])) (iter i states_step [CR.q0])) eqn: FIXED; [ | reflexivity].
+      assert (EX_TRUE : existsb (fun i => state_list_subsetb (states_step (iter i states_step [CR.q0])) (iter i states_step [CR.q0])) (seq 0 (S fuel)) = true).
+      { rewrite existsb_exists. exists i. split; [exact IN_SEQ | exact FIXED]. }
+      congruence.
+    }
+    assert (PREFIX : forall i, i < S fuel -> state_list_subsetb (states_step (iter i states_step [CR.q0])) (iter i states_step [CR.q0]) = false).
+    { intros i LT_I. eapply NOT_FIXED. lia. }
+    use states_not_fixed_length_lower as LE_LOWER with PREFIX.
+    use! (states_iter_length_bound (S fuel)) as LE_BOUND with *.
+    unfold fuel in *. lia.
+Qed.
+
+Lemma states_iter_after_fixed_subset i j (FIXED : forall q, q ∈ states_step (iter i states_step [CR.q0]) -> q ∈ iter i states_step [CR.q0])
+  (LE : i <= j)
+  : forall q, q ∈ iter j states_step [CR.q0] -> q ∈ iter i states_step [CR.q0].
+Proof.
+  induction j as [ | j IH]; intros q IN.
+  - assert (i = 0) as EQ.
+    { lia. }
+    subst i. exact IN.
+  - destruct (Nat.eq_dec i (S j)) as [EQ | NE].
+    + subst i. exact IN.
+    + assert (LE_PREV : i <= j).
+      { lia. }
+      rewrite iter_succ in IN.
+      eapply FIXED. eapply states_step_monotone; [ | exact IN].
+      intros r IN_R. eapply IH; [exact LE_PREV | exact IN_R].
+Qed.
+
+Theorem Q_step_closed
+  : forall q, q ∈ states_step Q -> q ∈ Q.
+Proof.
+  destruct states_first_fixed_before_bound as (i & LE_I & FIXED_I).
+  assert (FIXED_SUBSET : forall q, q ∈ states_step (iter i states_step [CR.q0]) -> q ∈ iter i states_step [CR.q0]).
+  { eapply states_step_fixed_if_subset. exact FIXED_I. }
+  unfold Q, compute_states.
+  intros q IN.
+  set (fuel := state_fuel) in *.
+  assert (IN_NEXT : q ∈ iter (S fuel) states_step [CR.q0]).
+  { rewrite iter_succ. exact IN. }
+  assert (LE_NEXT : i <= S fuel).
+  { lia. }
+  use states_iter_after_fixed_subset as IN_I with FIXED_SUBSET LE_NEXT IN_NEXT.
+  eapply states_iter_mono_fuel with (n := i); [lia | exact IN_I].
+Qed.
+
+Definition generated_edges_raw : fin_ensemble (CG.Edge.t state V') :=
+  Q >>= labeled_successors.
+
+Definition generated_edges : fin_ensemble (CG.Edge.t state V') :=
+  L.nodup edge_dec generated_edges_raw.
+
+Lemma generated_edges_In src X dst
+  : CG.Edge.mk src X dst ∈ generated_edges <-> (src ∈ Q /\ X ∈ all_symbols /\ CR.delta src X = Some dst).
+Proof.
+  unfold generated_edges. rewrite L.nodup_In.
+  unfold generated_edges_raw. split.
+  - intros IN.
+    use in_fin_ensemble_bind_elim as (q & IN_Q & IN_EDGE) with IN.
+    rewrite labeled_successors_In in IN_EDGE.
+    destruct IN_EDGE as (EQ & IN_X & DELTA). subst src.
+    splits; assumption.
+  - intros (IN_Q & IN_X & DELTA).
+    eapply in_fin_ensemble_bind_intro with (x := src); [exact IN_Q | ].
+    rewrite labeled_successors_In.
+    splits; [reflexivity | exact IN_X | exact DELTA].
+Qed.
+
+Lemma generated_edges_NoDup
+  : NoDup generated_edges.
+Proof.
+  unfold generated_edges. eapply L.NoDup_nodup.
+Qed.
+
+Theorem generated_edges_delta src X dst
+  : CG.Edge.mk src X dst ∈ generated_edges <-> (src ∈ Q /\ CR.delta src X = Some dst).
+Proof.
+  rewrite generated_edges_In. split.
+  - tauto.
+  - intros (IN_Q & DELTA). splits.
+    + exact IN_Q.
+    + unfold all_symbols. eapply V'_all_complete.
+    + exact DELTA.
+Qed.
+
+Lemma generated_edges_closed
+  : CG.closed Q generated_edges.
+Proof.
+  intros edge EDGE. destruct edge as [src X dst]. cbn.
+  rewrite generated_edges_In in EDGE.
+  destruct EDGE as (IN_SRC & IN_X & DELTA). split.
+  - exact IN_SRC.
+  - eapply Q_step_closed.
+    eapply states_step_successor; [exact IN_SRC | exact IN_X | exact DELTA].
+Qed.
+
+Definition graph : CG.t state V' :=
+  CG.build_closed state_dec label_dec Q generated_edges generated_edges_closed.
+
+Theorem graph_vertex_In q
+  : graph.(CG.isVertex) q <-> q ∈ Q.
+Proof.
+  unfold graph. eapply CG.build_closed_isVertex.
+Qed.
+
+Theorem graph_labeled_edge_In src X dst
+  : graph.(CG.isLabeledEdge) src X dst <-> (src ∈ Q /\ CR.delta src X = Some dst).
+Proof.
+  unfold graph. rewrite CG.build_closed_isLabeledEdge.
+  eapply generated_edges_delta.
+Qed.
+
+Theorem graph_edge_In src dst
+  : graph.(CG.isEdge) src dst <-> (src ∈ Q /\ exists X, CR.delta src X = Some dst).
+Proof.
+  unfold CG.isEdge. setoid_rewrite graph_labeled_edge_In.
+  split.
+  - intros (X & IN_Q & DELTA). split; [exact IN_Q | ].
+    exists X. exact DELTA.
+  - intros (IN_Q & X & DELTA).
+    exists X. split; assumption.
+Qed.
+
+Theorem graph_successors_by_label_In src X dst
+  : dst ∈ CG.successors_by_label graph X src <-> (src ∈ Q /\ CR.delta src X = Some dst).
+Proof.
+  rewrite CG.successors_by_label_In.
+  eapply graph_labeled_edge_In.
+Qed.
+
+Theorem q0_vertex
+  : graph.(CG.isVertex) CR.q0.
+Proof.
+  rewrite graph_vertex_In. eapply q0_in_Q.
+Qed.
+
+Lemma graph_labeled_edge_endpoints src X dst
+  (EDGE : graph.(CG.isLabeledEdge) src X dst)
+  : graph.(CG.isVertex) src /\ graph.(CG.isVertex) dst.
+Proof.
+  split.
+  - eapply CG.src_isLabeledEdge. exact EDGE.
+  - eapply CG.dst_isLabeledEdge. exact EDGE.
+Qed.
+
+Definition step (src : state) (X : V') : option state :=
+  if FS.mem (EQ_DEC := state_dec) src Q then
+    CR.delta src X
+  else
+    None.
+
+Theorem step_delta_iff src X dst
+  : step src X = Some dst <-> (src ∈ Q /\ CR.delta src X = Some dst).
+Proof.
+  unfold step.
+  destruct (FS.mem (EQ_DEC := state_dec) src Q) eqn: MEM.
+  - rewrite FS.mem_spec in MEM. split.
+    + intros STEP. split; assumption.
+    + intros (_ & DELTA). exact DELTA.
+  - rewrite FS.mem_spec in MEM. split.
+    + discriminate.
+    + intros (IN & _). contradiction.
+Qed.
+
+Theorem step_labeled_edge_iff src X dst
+  : step src X = Some dst <-> graph.(CG.isLabeledEdge) src X dst.
+Proof.
+  rewrite step_delta_iff. symmetry. eapply graph_labeled_edge_In.
+Qed.
+
+Definition machine : CG.PartialDeterministic state V' :=
+  CG.mkPartialDeterministic graph step step_labeled_edge_iff.
+
+Theorem graph_deterministic
+  : CG.deterministic graph.
+Proof.
+  exact (CG.PartialDeterministic_deterministic machine).
+Qed.
+
+Lemma step_deterministic src X dst1 dst2
+  (STEP1 : step src X = Some dst1)
+  (STEP2 : step src X = Some dst2)
+  : dst1 = dst2.
+Proof.
+  congruence.
+Qed.
+
+Definition path (word : list V') (src : state) (dst : state) : Prop :=
+  CG.word_walk graph src word dst.
+
+Definition run (src : state) (word : list V') : option state :=
+  CG.run_word machine src word.
+
+Theorem run_spec src word dst
+  : run src word = Some dst <-> path word src dst.
+Proof.
+  exact (CG.run_word_spec machine src word dst).
+Qed.
+
+Lemma run_cons src X word
+  : run src (X :: word) = match step src X with
+    | Some mid => run mid word
+    | None => None
+    end.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma path_refl q
+  (VERTEX : graph.(CG.isVertex) q)
+  : path [] q q.
+Proof.
+  exists []. econstructor 1. exact VERTEX.
+Qed.
+
+Theorem path_nil_iff src dst
+  : path [] src dst <-> (src = dst /\ graph.(CG.isVertex) src).
+Proof.
+  split.
+  - intros [trace WALK]. inversion WALK; subst.
+    split; [reflexivity | assumption].
+  - intros (EQ & VERTEX). subst dst. eapply path_refl. exact VERTEX.
+Qed.
+
+Theorem path_cons_iff X word src dst
+  : path (X :: word) src dst <-> (exists mid, step src X = Some mid /\ path word mid dst).
+Proof.
+  split.
+  - intros [trace WALK].
+    inversion WALK as [ | src0 label mid word0 trace0 dst0 EDGE REST]; subst.
+    exists mid. split.
+    + eapply (proj2 (step_labeled_edge_iff src X mid)). exact EDGE.
+    + exists trace0. exact REST.
+  - intros (mid & STEP & [trace WALK]).
+    exists (mid :: trace). econstructor 2.
+    + eapply (proj1 (step_labeled_edge_iff src X mid)). exact STEP.
+    + exact WALK.
+Qed.
+
+Lemma path_source_vertex word src dst
+  (PATH : path word src dst)
+  : graph.(CG.isVertex) src.
+Proof.
+  destruct PATH as [trace WALK].
+  eapply CG.walk_source. exact WALK.
+Qed.
+
+Lemma path_target_vertex word src dst
+  (PATH : path word src dst)
+  : graph.(CG.isVertex) dst.
+Proof.
+  destruct PATH as [trace WALK].
+  eapply CG.walk_target. exact WALK.
+Qed.
+
+Lemma path_source_in_Q word src dst
+  (PATH : path word src dst)
+  : src ∈ Q.
+Proof.
+  rewrite <- graph_vertex_In. eapply path_source_vertex. exact PATH.
+Qed.
+
+Lemma path_target_in_Q word src dst
+  (PATH : path word src dst)
+  : dst ∈ Q.
+Proof.
+  rewrite <- graph_vertex_In. eapply path_target_vertex. exact PATH.
+Qed.
+
+Lemma path_atomic src X dst
+  (STEP : step src X = Some dst)
+  : path [X] src dst.
+Proof.
+  rewrite path_cons_iff. exists dst. split; [exact STEP | ].
+  eapply path_refl.
+  eapply CG.dst_isLabeledEdge.
+  eapply (proj1 (step_labeled_edge_iff src X dst)). exact STEP.
+Qed.
+
+Lemma path_app word1 word2 src mid dst
+  (PATH1 : path word1 src mid)
+  (PATH2 : path word2 mid dst)
+  : path (word1 ++ word2) src dst.
+Proof.
+  destruct PATH1 as [trace1 WALK1].
+  destruct PATH2 as [trace2 WALK2].
+  exists (trace1 ++ trace2).
+  eapply CG.walk_app; [exact WALK1 | exact WALK2].
+Qed.
+
+Lemma path_snoc word src mid X dst
+  (PATH : path word src mid)
+  (STEP : step mid X = Some dst)
+  : path (word ++ [X]) src dst.
+Proof.
+  eapply path_app; [exact PATH | ].
+  eapply path_atomic. exact STEP.
+Qed.
+
+Theorem path_factor word1 word2 src dst
+  (PATH : path (word1 ++ word2) src dst)
+  : exists mid, path word1 src mid /\ path word2 mid dst.
+Proof.
+  revert src dst PATH.
+  induction word1 as [ | X word1 IH]; intros src dst PATH.
+  - simpl in PATH. exists src. split.
+    + eapply path_refl. eapply path_source_vertex. exact PATH.
+    + exact PATH.
+  - simpl in PATH. rewrite path_cons_iff in PATH.
+    destruct PATH as (next & STEP & REST).
+    use IH as (mid & PREFIX & SUFFIX) with REST.
+    exists mid. split.
+    + rewrite path_cons_iff. exists next. split; assumption.
+    + exact SUFFIX.
+Qed.
+
+Theorem path_app_iff word1 word2 src dst
+  : path (word1 ++ word2) src dst <-> (exists mid, path word1 src mid /\ path word2 mid dst).
+Proof.
+  split.
+  - eapply path_factor.
+  - intros (mid & PATH1 & PATH2).
+    eapply path_app; [exact PATH1 | exact PATH2].
+Qed.
+
+Theorem path_deterministic word src dst1 dst2
+  (PATH1 : path word src dst1)
+  (PATH2 : path word src dst2)
+  : dst1 = dst2.
+Proof.
+  pose proof (proj2 (run_spec src word dst1) PATH1) as RUN1.
+  pose proof (proj2 (run_spec src word dst2) PATH2) as RUN2.
+  congruence.
+Qed.
+
+Lemma states_step_subset_Q qs
+  (SUBSET_Q : forall q, q ∈ qs -> q ∈ Q)
+  : forall q, q ∈ states_step qs -> q ∈ Q.
+Proof.
+  intros q IN.
+  eapply Q_step_closed.
+  eapply states_step_monotone; [exact SUBSET_Q | exact IN].
+Qed.
+
+Lemma states_step_reachable qs
+  (SUBSET_Q : forall q, q ∈ qs -> q ∈ Q)
+  (REACHABLE : forall q, q ∈ qs -> exists word, path word CR.q0 q)
+  : forall q, q ∈ states_step qs -> exists word, path word CR.q0 q.
+Proof.
+  intros q IN.
+  unfold states_step in IN.
+  rewrite L.nodup_In, L.in_app_iff in IN.
+  destruct IN as [IN | IN].
+  - eapply REACHABLE. exact IN.
+  - use in_fin_ensemble_bind_elim as (src & IN_SRC & IN_SUCC) with IN.
+    rewrite successors_In in IN_SUCC.
+    destruct IN_SUCC as (X & _ & DELTA).
+    use REACHABLE as (word & PATH) with IN_SRC.
+    exists (word ++ [X]).
+    eapply path_snoc; [exact PATH | ].
+    rewrite step_delta_iff. split.
+    + eapply SUBSET_Q. exact IN_SRC.
+    + exact DELTA.
+Qed.
+
+Lemma states_iter_reachable n qs
+  (SUBSET_Q : forall q, q ∈ qs -> q ∈ Q)
+  (REACHABLE : forall q, q ∈ qs -> exists word, path word CR.q0 q)
+  : forall q, q ∈ iter n states_step qs -> exists word, path word CR.q0 q.
+Proof.
+  revert qs SUBSET_Q REACHABLE.
+  induction n as [ | n IH]; intros qs SUBSET_Q REACHABLE q IN; simpl in IN.
+  - eapply REACHABLE. exact IN.
+  - eapply IH with (qs := states_step qs).
+    + eapply states_step_subset_Q. exact SUBSET_Q.
+    + eapply states_step_reachable; [exact SUBSET_Q | exact REACHABLE].
+    + exact IN.
+Qed.
+
+Theorem Q_reachable q
+  (IN : q ∈ Q)
+  : exists word, path word CR.q0 q.
+Proof.
+  unfold Q, compute_states in IN.
+  eapply states_iter_reachable with (qs := [CR.q0]).
+  - intros p [EQ | []]. subst p. eapply q0_in_Q.
+  - intros p [EQ | []]. subst p. exists [].
+    eapply path_refl. exact q0_vertex.
+  - exact IN.
+Qed.
+
+Theorem Q_iff_reachable q
+  : q ∈ Q <-> exists word, path word CR.q0 q.
+Proof.
+  split.
+  - eapply Q_reachable.
+  - intros (word & PATH). eapply path_target_in_Q. exact PATH.
+Qed.
+
+(** The relation used by later legacy simulations is membership equivalence,
+    never syntactic equality of the underlying item lists. *)
+Definition legacy_state_equiv (q : state) (q_old : Item.state) : Prop :=
+  forall it, CS.In it q <-> it ∈ q_old.
+
+Lemma legacy_state_equiv_to_state q
+  : legacy_state_equiv q (CS.to_state q).
+Proof.
+  intros it. reflexivity.
+Qed.
+
+Lemma of_state_legacy_equiv q
+  (VALID_Q : forall it, it ∈ q -> valid_item it)
+  : legacy_state_equiv (CS.of_state q) q.
+Proof.
+  intros it. eapply CS.of_state_In_valid. exact VALID_Q.
+Qed.
+
+Lemma legacy_goto_ext q1 q2 X it
+  (SAME : forall it0, it0 ∈ q1 <-> it0 ∈ q2)
+  : it ∈ Item.goto q1 X <-> it ∈ Item.goto q2 X.
+Proof.
+  split; intros IN.
+  - eapply Item.goto_monotone.
+    + intros it0 IN0. eapply (proj1 (SAME it0)). exact IN0.
+    + exact IN.
+  - eapply Item.goto_monotone.
+    + intros it0 IN0. eapply (proj2 (SAME it0)). exact IN0.
+    + exact IN.
+Qed.
+
+Lemma canonical_delta_of_legacy_delta q X q_old
+  (VALID_Q : forall it, it ∈ q -> valid_item it)
+  (DELTA : LR0.delta q X = Some q_old)
+  : CR.delta (CS.of_state q) X = Some (CS.of_state q_old).
+Proof.
+  unfold LR0.delta in DELTA.
+  destruct (X.nonempty (Item.goto q X)) eqn: NONEMPTY; inv DELTA.
+  assert (VALID_GOTO : forall it, it ∈ Item.goto q X -> valid_item it).
+  { intros it IN. eapply Item.goto_valid; [exact VALID_Q | exact IN]. }
+  assert (TARGET : CS.of_state (Item.goto q X) = CR.goto (CS.of_state q) X).
+  { eapply CS.ext. intros it.
+    rewrite CR.goto_In.
+    rewrite (CS.of_state_In_valid (Item.goto q X) it VALID_GOTO).
+    eapply legacy_goto_ext. intros it0.
+    symmetry. eapply CS.of_state_In_valid. exact VALID_Q.
+  }
+  eapply CR.delta_complete; [exact TARGET | ].
+  eapply (proj2 (CR.nonempty_spec (CS.of_state (Item.goto q X)))).
+  use LR0.nonempty_exists as (it & IN) with NONEMPTY.
+  exists it.
+  eapply (proj2 (CS.of_state_In_valid (Item.goto q X) it VALID_GOTO)).
+  exact IN.
+Qed.
+
+End CanonicalReachable.
+
+(* As above, keep inference in the legacy development on list states. *)
+#[global] Existing Instance state_hasEqDec.
+
 Lemma delta_some_nonempty q X q'
   (DELTA : delta q X = Some q')
   : q' = goto q X /\ nonempty q' = true.
@@ -2589,14 +4034,16 @@ Proof.
   exists parent. exists gamma. split; [exact IN_PARENT | exact RIGHT].
 Qed.
 
-Definition lr0_graph : @GraphAPI.LabeledFiniteGraph state (fin_ensemble V') :=
+Definition lr0_graph : CG.t state V' :=
   lr0_graph_from Q.
 
 Lemma lr0_graph_vertex qs q
   (IN : q ∈ qs)
-  : q ∈ (lr0_graph_from qs).(GraphAPI.GRAPH).(GraphAPI.enum_vertices).
+  : (lr0_graph_from qs).(CG.isVertex) q.
 Proof.
-  unfold lr0_graph_from. eapply GraphAPI.buildLabeledFiniteGraphWithVertices_vertex. exact IN.
+  unfold lr0_graph_from.
+  rewrite CG.span_isVertex.
+  left. exact IN.
 Qed.
 
 Lemma lr0_labeled_successors_sound p q q' X
@@ -2662,15 +4109,36 @@ Proof.
   - intros (IN_Q & IN_X & DELTA). eapply lr0_labeled_edges_complete; eauto.
 Qed.
 
-Theorem lr0_graph_has_label_correct qs q q' X
-  : GraphAPI.has_label (lr0_graph_from qs) (q, q') X <-> (q ∈ qs /\ X ∈ all_symbols /\ delta q X = Some q').
+Lemma lr0_atomic_edges_In qs q X q'
+  : CG.Edge.mk q X q' ∈ lr0_atomic_edges qs <-> ((q, q'), X) ∈ lr0_labeled_edges qs.
 Proof.
-  unfold lr0_graph_from. rewrite GraphAPI.buildLabeledFiniteGraphWithVertices_has_label.
+  unfold lr0_atomic_edges.
+  rewrite L.in_map_iff.
+  split.
+  - intros (edge & EQ & IN).
+    destruct edge as [[src dst] label].
+    unfold lr0_atomic_edge in EQ.
+    injection EQ as EQ_SRC EQ_LABEL EQ_DST.
+    subst src. subst label. subst dst.
+    exact IN.
+  - intros IN.
+    exists ((q, q'), X).
+    split.
+    + reflexivity.
+    + exact IN.
+Qed.
+
+Theorem lr0_graph_has_label_correct qs q q' X
+  : (lr0_graph_from qs).(CG.isLabeledEdge) q X q' <-> (q ∈ qs /\ X ∈ all_symbols /\ delta q X = Some q').
+Proof.
+  unfold lr0_graph_from.
+  rewrite CG.span_isLabeledEdge.
+  rewrite lr0_atomic_edges_In.
   eapply lr0_labeled_edges_correct.
 Qed.
 
 Definition lr0_graph_step (p : state) (X : V') (q : state) : Prop :=
-  GraphAPI.has_label (lr0_graph_from [p]) (p, q) X.
+  (lr0_graph_from [p]).(CG.isLabeledEdge) p X q.
 
 Lemma lr0_graph_step_delta p X q
   : lr0_graph_step p X q <-> delta p X = Some q.
@@ -2682,16 +4150,16 @@ Proof.
 Qed.
 
 Theorem state_successors_graph_correct q q'
-  : q' ∈ state_successors q <-> (exists X, GraphAPI.has_label (lr0_graph_from [q]) (q, q') X).
+  : q' ∈ state_successors q <-> (exists X, (lr0_graph_from [q]).(CG.isLabeledEdge) q X q').
 Proof.
   unfold state_successors.
   split.
   - intros IN.
     use in_fin_ensemble_bind_elim as (X & _ & STEP) with IN. exists X.
-    now rewrite GraphAPI.successors_by_label_of_graph_has_label in STEP.
+    now rewrite CG.successors_by_label_In in STEP.
   - intros (X & LABEL). rewrite lr0_graph_has_label_correct in LABEL.
     destruct LABEL as (_ & IN_X & DELTA). eapply in_fin_ensemble_bind_intro with (x := X); [exact IN_X | ].
-    rewrite GraphAPI.successors_by_label_of_graph_has_label.
+    rewrite CG.successors_by_label_In.
     rewrite lr0_graph_has_label_correct. splits; [left; reflexivity | exact IN_X | exact DELTA].
 Qed.
 
@@ -2792,7 +4260,9 @@ Lemma states_iter_mono_fuel n m qs q
   : q ∈ iter m states_step qs.
 Proof.
   revert n qs q LE IN. induction m as [ | m IH]; intros n qs q LE IN.
-  - assert (n = 0) as EQ by lia. subst n. exact IN.
+  - assert (n = 0) as EQ.
+    { lia. }
+    subst n. exact IN.
   - destruct n as [ | n].
     + eapply states_iter_contains. exact IN.
     + simpl in IN |- *. eapply IH with (n := n) (qs := states_step qs) (q := q); [lia | exact IN].
@@ -3621,6 +5091,54 @@ Proof.
     use (proj1 (lr0_graph_step_delta p X q')) as DELTA' with STEP'.
     rewrite DELTA in DELTA'. inversion DELTA'; subst; clear DELTA'.
     eapply IH. exact REST'.
+Qed.
+
+Lemma legacy_path_to_canonical_from alpha p q
+  (PATH : path alpha p q)
+  (SOURCE : Item.CanonicalState.of_state p ∈ CanonicalReachable.Q)
+  : CanonicalReachable.path alpha (Item.CanonicalState.of_state p) (Item.CanonicalState.of_state q).
+Proof.
+  revert SOURCE.
+  induction PATH as [p IN_P | X alpha p q r IN_P STEP REST IH]; intros SOURCE.
+  - eapply CanonicalReachable.path_refl.
+    rewrite CanonicalReachable.graph_vertex_In. exact SOURCE.
+  - use (proj1 (lr0_graph_step_delta p X q)) as DELTA with STEP.
+    assert (CANONICAL_DELTA : CanonicalRaw.delta (Item.CanonicalState.of_state p) X = Some (Item.CanonicalState.of_state q)).
+    { eapply CanonicalReachable.canonical_delta_of_legacy_delta.
+      - eapply Q_items_valid. exact IN_P.
+      - exact DELTA.
+    }
+    assert (CANONICAL_STEP : CanonicalReachable.step (Item.CanonicalState.of_state p) X = Some (Item.CanonicalState.of_state q)).
+    { rewrite CanonicalReachable.step_delta_iff.
+      split; [exact SOURCE | exact CANONICAL_DELTA].
+    }
+    rewrite CanonicalReachable.path_cons_iff.
+    exists (Item.CanonicalState.of_state q). split.
+    + exact CANONICAL_STEP.
+    + eapply IH.
+      eapply CanonicalReachable.path_target_in_Q with (word := [X]) (src := Item.CanonicalState.of_state p).
+      eapply CanonicalReachable.path_atomic. exact CANONICAL_STEP.
+Qed.
+
+Theorem legacy_q0_path_to_canonical alpha q
+  (PATH : path alpha q0 q)
+  : CanonicalReachable.path alpha CanonicalRaw.q0 (Item.CanonicalState.of_state q).
+Proof.
+  change (CanonicalReachable.path alpha (Item.CanonicalState.of_state q0) (Item.CanonicalState.of_state q)).
+  eapply legacy_path_to_canonical_from.
+  - exact PATH.
+  - change (CanonicalRaw.q0 ∈ CanonicalReachable.Q).
+    eapply CanonicalReachable.q0_in_Q.
+Qed.
+
+Theorem legacy_q0_path_extensional_simulation alpha q
+  (PATH : path alpha q0 q)
+  : exists q_can, CanonicalReachable.path alpha CanonicalRaw.q0 q_can /\ CanonicalReachable.legacy_state_equiv q_can q.
+Proof.
+  exists (Item.CanonicalState.of_state q). split.
+  - eapply legacy_q0_path_to_canonical. exact PATH.
+  - eapply CanonicalReachable.of_state_legacy_equiv.
+    eapply path_target_items_valid. exact PATH.
 Qed.
 
 Theorem lr0_path_factorization alpha omega r q
@@ -4853,8 +6371,7 @@ Qed.
 
 Theorem lr0_start_rm_steps_accept_by_split_refined w qS
   (path_start : path [inl (lift_N Grammar.start)] q0 qS)
-  (STEPS : rm_steps ([inl (lift_N Grammar.start)] ++ map inr [eof])
-    (accept_sentence w))
+  (STEPS : rm_steps ([inl (lift_N Grammar.start)] ++ map inr [eof]) (accept_sentence w))
   : L_LRA w /\ grammar_accepts w.
 Proof.
   use (lr0_rm_steps_split_refined w [inl (lift_N Grammar.start)] [eof] qS path_start) as REFINED with STEPS.
@@ -4876,8 +6393,7 @@ Proof.
   exact ACCEPT.
 Qed.
 
-Theorem lr0_rm_step_refined_tail_bridge w word rest q_source
-  (path_source : path word q0 q_source) target_word q_target
+Theorem lr0_rm_step_refined_tail_bridge w word rest q_source (path_source : path word q0 q_source) target_word q_target
   (path_target : path target_word q0 q_target)
   (STEP : rm_step (word ++ map inr rest) (target_word ++ map inr rest))
   (TAIL : forall prefix, forall suffix, target_word = prefix ++ map inr suffix -> forall dst, forall path_prefix : path prefix q0 dst, lr0_refined_rm_steps w prefix (suffix ++ rest) dst path_prefix)
@@ -4895,8 +6411,7 @@ Proof.
   - eapply lr0_refined_rm_steps_progress. exact REFINED.
 Qed.
 
-Theorem lr0_start_rm_step_refined_tail_correct w qS
-  (path_start : path [inl (lift_N Grammar.start)] q0 qS) target_word q_target
+Theorem lr0_start_rm_step_refined_tail_correct w qS (path_start : path [inl (lift_N Grammar.start)] q0 qS) target_word q_target
   (path_target : path target_word q0 q_target)
   (STEP : rm_step ([inl (lift_N Grammar.start)] ++ map inr [eof]) (target_word ++ map inr [eof]))
   (TAIL : forall prefix, forall suffix, target_word = prefix ++ map inr suffix -> forall dst, forall path_prefix : path prefix q0 dst, lr0_refined_rm_steps w prefix (suffix ++ [eof]) dst path_prefix)
@@ -5190,6 +6705,1053 @@ Qed.
 
 
 End LR0.
+
+Module CanonicalNumbering.
+
+Import GrammarSyntax.
+Import Item.
+
+Module R := LR0.CanonicalReachable.
+Module CR := LR0.CanonicalRaw.
+Module CS := Item.CanonicalState.
+Module CG := GraphAPI.LabeledFiniteGraph.
+
+Definition state : Set :=
+  R.state.
+
+#[local] Existing Instance R.state_dec.
+
+Lemma q0_initial_item
+  : CS.In initial_item CR.q0.
+Proof.
+  rewrite CR.q0_In.
+  unfold LR0.q0, Item.kernel.
+  eapply Item.closure_contains.
+  simpl. left. reflexivity.
+Qed.
+
+Lemma q0_initial_item_valid
+  : valid_item initial_item.
+Proof.
+  eapply Item.initial_item_valid.
+Qed.
+
+Lemma q0_nonempty
+  : CR.nonempty CR.q0 = true.
+Proof.
+  eapply (proj2 (CR.nonempty_spec CR.q0)).
+  exists initial_item. exact q0_initial_item.
+Qed.
+
+Lemma path_target_nonempty_from word src dst
+  (SOURCE_NONEMPTY : CR.nonempty src = true)
+  (PATH : R.path word src dst)
+  : CR.nonempty dst = true.
+Proof.
+  revert src dst SOURCE_NONEMPTY PATH.
+  induction word as [ | X word IH]; intros src dst SOURCE_NONEMPTY PATH.
+  - rewrite R.path_nil_iff in PATH.
+    destruct PATH as (EQ & _). subst dst.
+    exact SOURCE_NONEMPTY.
+  - rewrite R.path_cons_iff in PATH.
+    destruct PATH as (mid & STEP & REST).
+    rewrite R.step_delta_iff in STEP.
+    destruct STEP as (_ & DELTA).
+    apply CR.delta_sound in DELTA.
+    destruct DELTA as (_ & MID_NONEMPTY).
+    eapply IH; [exact MID_NONEMPTY | exact REST].
+Qed.
+
+Lemma Q_state_nonempty q
+  (IN_Q : q ∈ R.Q)
+  : CR.nonempty q = true.
+Proof.
+  destruct (R.Q_reachable q IN_Q) as (word & PATH).
+  eapply path_target_nonempty_from.
+  - exact q0_nonempty.
+  - exact PATH.
+Qed.
+
+Lemma Q_nonempty q
+  (IN_Q : q ∈ R.Q)
+  : CR.nonempty q = true.
+Proof.
+  eapply Q_state_nonempty. exact IN_Q.
+Qed.
+
+Lemma Q_items_valid q
+  (IN_Q : q ∈ R.Q)
+  : forall it, CS.In it q -> valid_item it.
+Proof.
+  intros it IN.
+  eapply CS.to_state_valid. exact IN.
+Qed.
+
+Lemma canonical_delta_start_prime_none q
+  : CR.delta q (inl start_prime) = None.
+Proof.
+  destruct (CR.delta q (inl start_prime)) as [q' | ] eqn: STEP.
+  - apply CR.delta_legacy_iff in STEP.
+    destruct STEP as (q_old & DELTA & _).
+    assert (VALID_Q : forall it, it ∈ CS.to_state q -> valid_item it).
+    { intros it IN. eapply CS.to_state_valid. exact IN. }
+    pose proof (LR0.delta_start_prime_none (CS.to_state q) VALID_Q) as NONE.
+    rewrite NONE in DELTA. discriminate.
+  - reflexivity.
+Qed.
+
+Lemma R_step_start_prime_none q
+  : R.step q (inl start_prime) = None.
+Proof.
+  unfold R.step.
+  destruct (FS.mem (EQ_DEC := R.state_dec) q R.Q).
+  - eapply canonical_delta_start_prime_none.
+  - reflexivity.
+Qed.
+
+Definition num_states : nat :=
+  length R.Q.
+
+Definition state_index_nat (q : state) : nat :=
+  FS.index_of (EQ_DEC := R.state_dec) q R.Q.
+
+Definition index_of (q : state) : option nat :=
+  if FS.mem (EQ_DEC := R.state_dec) q R.Q then
+    Some (state_index_nat q)
+  else
+    None.
+
+Definition state_of (n : nat) : option state :=
+  if Nat.ltb n num_states then
+    Some (FS.lookup LR0.CanonicalRaw.q0 n R.Q)
+  else
+    None.
+
+Lemma state_index_nat_lookup_no_dup_aux (xs : list state) (default : state) n
+  (NO_DUP : NoDup xs)
+  (LT : n < length xs)
+  : FS.index_of (EQ_DEC := R.state_dec) (FS.lookup default n xs) xs = n.
+Proof.
+  revert n NO_DUP LT.
+  induction xs as [ | x xs IH]; intros n NO_DUP LT; simpl in LT; [lia | ].
+  inversion NO_DUP as [ | x0 xs0 NOTIN NO_DUP_TAIL]; subst.
+  destruct n as [ | n]; simpl.
+  - match goal with | |- context[if ?DEC then _ else _] => destruct DEC as [EQ | NE] end.
+    + reflexivity.
+    + contradiction NE. reflexivity.
+  - assert (LT_TAIL : n < length xs).
+    { lia. }
+    match goal with | |- context[if ?DEC then _ else _] => destruct DEC as [EQ | NE] end.
+    + symmetry in EQ. subst x.
+      use (FS.lookup_in default) as IN_LOOK with LT_TAIL.
+      contradiction.
+    + f_equal. eapply IH; [exact NO_DUP_TAIL | exact LT_TAIL].
+Qed.
+
+Lemma state_index_nat_lookup n
+  (LT : n < num_states)
+  : state_index_nat (FS.lookup LR0.CanonicalRaw.q0 n R.Q) = n.
+Proof.
+  unfold state_index_nat, num_states in *.
+  eapply state_index_nat_lookup_no_dup_aux; [exact R.Q_NoDup | exact LT].
+Qed.
+
+Lemma state_index_nat_lt q
+  (IN : q ∈ R.Q)
+  : state_index_nat q < num_states.
+Proof.
+  unfold state_index_nat, num_states.
+  eapply (@FS.index_of_lt state R.state_dec). exact IN.
+Qed.
+
+Theorem state_of_state_index_nat q
+  (IN : q ∈ R.Q)
+  : state_of (state_index_nat q) = Some q.
+Proof.
+  unfold state_of.
+  pose proof (state_index_nat_lt q IN) as LT.
+  destruct (Nat.ltb (state_index_nat q) num_states) eqn: LTB.
+  - unfold state_index_nat. f_equal.
+    eapply (@FS.lookup_index_of state R.state_dec). exact IN.
+  - rewrite Nat.ltb_ge in LTB. lia.
+Qed.
+
+Theorem index_of_complete q
+  (IN : q ∈ R.Q)
+  : index_of q = Some (state_index_nat q).
+Proof.
+  unfold index_of.
+  destruct (FS.mem (EQ_DEC := R.state_dec) q R.Q) eqn: MEM.
+  - reflexivity.
+  - rewrite FS.mem_spec in MEM. contradiction.
+Qed.
+
+Theorem index_of_sound q n
+  (INDEX : index_of q = Some n)
+  : q ∈ R.Q /\ n = state_index_nat q /\ state_of n = Some q.
+Proof.
+  unfold index_of in INDEX.
+  destruct (FS.mem (EQ_DEC := R.state_dec) q R.Q) eqn: MEM; [ | discriminate].
+  rewrite FS.mem_spec in MEM. inv INDEX.
+  splits.
+  - exact MEM.
+  - reflexivity.
+  - eapply state_of_state_index_nat. exact MEM.
+Qed.
+
+Theorem state_of_sound n q
+  (STATE : state_of n = Some q)
+  : q ∈ R.Q /\ index_of q = Some n.
+Proof.
+  unfold state_of in STATE.
+  destruct (Nat.ltb n num_states) eqn: LTB; [ | discriminate].
+  rewrite Nat.ltb_lt in LTB. inv STATE.
+  assert (IN : FS.lookup LR0.CanonicalRaw.q0 n R.Q ∈ R.Q).
+  { unfold num_states in LTB.
+    eapply FS.lookup_in. exact LTB. }
+  split.
+  - exact IN.
+  - unfold index_of.
+    destruct (FS.mem (EQ_DEC := R.state_dec) (FS.lookup LR0.CanonicalRaw.q0 n R.Q) R.Q) eqn: MEM.
+    + f_equal. eapply state_index_nat_lookup. exact LTB.
+    + rewrite FS.mem_spec in MEM. contradiction.
+Qed.
+
+Lemma state_of_nonempty n q
+  (STATE : state_of n = Some q)
+  : CR.nonempty q = true.
+Proof.
+  pose proof (state_of_sound n q STATE) as SOUND.
+  destruct SOUND as (IN_Q & _).
+  eapply Q_state_nonempty. exact IN_Q.
+Qed.
+
+Lemma state_of_items_valid n q
+  (STATE : state_of n = Some q)
+  : forall it, CS.In it q -> valid_item it.
+Proof.
+  pose proof (state_of_sound n q STATE) as SOUND.
+  destruct SOUND as (IN_Q & _).
+  eapply Q_items_valid. exact IN_Q.
+Qed.
+
+Lemma state_of_valid_item n q
+  (STATE : state_of n = Some q)
+  : exists it, CS.In it q /\ valid_item it.
+Proof.
+  pose proof (state_of_nonempty n q STATE) as NONEMPTY.
+  apply CR.nonempty_spec in NONEMPTY.
+  destruct NONEMPTY as (it & IN).
+  exists it. split.
+  - exact IN.
+  - eapply state_of_items_valid; [exact STATE | exact IN].
+Qed.
+
+Lemma state_of_some_lt n q
+  (STATE : state_of n = Some q)
+  : n < num_states.
+Proof.
+  unfold state_of in STATE.
+  destruct (Nat.ltb n num_states) eqn: LTB; [ | discriminate].
+  now rewrite Nat.ltb_lt in LTB.
+Qed.
+
+Lemma state_of_complete n
+  (LT : n < num_states)
+  : exists q, state_of n = Some q.
+Proof.
+  exists (FS.lookup LR0.CanonicalRaw.q0 n R.Q).
+  unfold state_of.
+  destruct (Nat.ltb n num_states) eqn: LTB.
+  - reflexivity.
+  - rewrite Nat.ltb_ge in LTB. lia.
+Qed.
+
+Theorem state_of_some_iff_lt n
+  : (exists q, state_of n = Some q) <-> n < num_states.
+Proof.
+  split.
+  - intros (q & STATE). eapply state_of_some_lt. exact STATE.
+  - eapply state_of_complete.
+Qed.
+
+Theorem state_of_index_of q n
+  (INDEX : index_of q = Some n)
+  : state_of n = Some q.
+Proof.
+  use index_of_sound as (_ & _ & STATE) with INDEX.
+  exact STATE.
+Qed.
+
+Theorem index_of_state_of n q
+  (STATE : state_of n = Some q)
+  : index_of q = Some n.
+Proof.
+  use state_of_sound as (_ & INDEX) with STATE. exact INDEX.
+Qed.
+
+Lemma state_index_nat_of_state_of n q
+  (STATE : state_of n = Some q)
+  : state_index_nat q = n.
+Proof.
+  use index_of_state_of as INDEX with STATE.
+  use index_of_sound as (_ & EQ & _) with INDEX.
+  symmetry. exact EQ.
+Qed.
+
+Lemma state_index_nat_injective q1 q2
+  (IN1 : q1 ∈ R.Q)
+  (IN2 : q2 ∈ R.Q)
+  (INDEX : state_index_nat q1 = state_index_nat q2)
+  : q1 = q2.
+Proof.
+  pose proof (state_of_state_index_nat q1 IN1) as STATE1.
+  pose proof (state_of_state_index_nat q2 IN2) as STATE2.
+  rewrite INDEX in STATE1. rewrite STATE2 in STATE1.
+  inv STATE1. reflexivity.
+Qed.
+
+Lemma state_of_unique n q1 q2
+  (STATE1 : state_of n = Some q1)
+  (STATE2 : state_of n = Some q2)
+  : q1 = q2.
+Proof.
+  rewrite STATE1 in STATE2. inv STATE2. reflexivity.
+Qed.
+
+Definition dN (n : nat) (X : V') : option nat :=
+  state_of n >>= fun q =>
+  R.step q X >>= fun q' =>
+  index_of q'.
+
+Lemma dN_start_prime_none n
+  : dN n (inl start_prime) = None.
+Proof.
+  unfold dN.
+  destruct (state_of n) as [q | ] eqn: STATE.
+  - simpl. rewrite R_step_start_prime_none. reflexivity.
+  - reflexivity.
+Qed.
+
+Lemma R_step_target_in_Q q X q'
+  (STEP : R.step q X = Some q')
+  : q' ∈ R.Q.
+Proof.
+  rewrite <- R.graph_vertex_In.
+  eapply CG.dst_isLabeledEdge.
+  eapply (proj1 (R.step_labeled_edge_iff q X q')). exact STEP.
+Qed.
+
+Theorem dN_state_index q X q'
+  (IN : q ∈ R.Q)
+  (STEP : R.step q X = Some q')
+  : dN (state_index_nat q) X = Some (state_index_nat q').
+Proof.
+  unfold dN.
+  rewrite state_of_state_index_nat with (q := q); [ | exact IN].
+  simpl. rewrite STEP. simpl.
+  eapply index_of_complete.
+  eapply R_step_target_in_Q. exact STEP.
+Qed.
+
+Lemma dN_sound n X m
+  (STEP : dN n X = Some m)
+  : exists q q', state_of n = Some q /\ R.step q X = Some q' /\ state_of m = Some q'.
+Proof.
+  unfold dN in STEP.
+  destruct (state_of n) as [q | ] eqn: STATE; [ | discriminate].
+  simpl in STEP.
+  destruct (R.step q X) as [q' | ] eqn: RSTEP; [ | discriminate].
+  simpl in STEP.
+  destruct (index_of q') as [m' | ] eqn: INDEX; [ | discriminate].
+  inv STEP. exists q, q'. splits.
+  - reflexivity.
+  - exact RSTEP.
+  - eapply state_of_index_of. exact INDEX.
+Qed.
+
+Lemma dN_some_source_state n X m
+  (STEP : dN n X = Some m)
+  : exists q, state_of n = Some q.
+Proof.
+  destruct (dN_sound n X m STEP) as (q & q' & STATE & RSTEP & STATE').
+  exists q. exact STATE.
+Qed.
+
+Lemma dN_source_lt n X m
+  (STEP : dN n X = Some m)
+  : n < num_states.
+Proof.
+  destruct (dN_some_source_state n X m STEP) as (q & STATE).
+  eapply state_of_some_lt. exact STATE.
+Qed.
+
+Lemma dN_some_target_state n X m
+  (STEP : dN n X = Some m)
+  : exists q, state_of m = Some q.
+Proof.
+  destruct (dN_sound n X m STEP) as (q & q' & STATE & RSTEP & STATE').
+  exists q'. exact STATE'.
+Qed.
+
+Lemma dN_target_lt n X m
+  (STEP : dN n X = Some m)
+  : m < num_states.
+Proof.
+  destruct (dN_some_target_state n X m STEP) as (q & STATE).
+  eapply state_of_some_lt. exact STATE.
+Qed.
+
+Lemma dN_some_target_in_Q n X m
+  (STEP : dN n X = Some m)
+  : exists q, state_of m = Some q /\ q ∈ R.Q.
+Proof.
+  destruct (dN_some_target_state n X m STEP) as (q & STATE).
+  exists q. split.
+  - exact STATE.
+  - pose proof (state_of_sound m q STATE) as SOUND.
+    tauto.
+Qed.
+
+Lemma dN_some_step n X m q
+  (STATE : state_of n = Some q)
+  (STEP : dN n X = Some m)
+  : exists q', R.step q X = Some q' /\ state_of m = Some q' /\ index_of q' = Some m.
+Proof.
+  destruct (dN_sound n X m STEP) as (q0 & q' & STATE0 & RSTEP & STATE').
+  pose proof (state_of_unique n q0 q STATE0 STATE) as EQ.
+  subst q0.
+  exists q'. splits.
+  - exact RSTEP.
+  - exact STATE'.
+  - eapply index_of_state_of. exact STATE'.
+Qed.
+
+Lemma dN_some_delta n X m q
+  (STATE : state_of n = Some q)
+  (STEP : dN n X = Some m)
+  : exists q', R.step q X = Some q' /\ state_of m = Some q' /\ index_of q' = Some m.
+Proof.
+  eapply dN_some_step; [exact STATE | exact STEP].
+Qed.
+
+Lemma dN_complete n X m q q'
+  (STATE : state_of n = Some q)
+  (RSTEP : R.step q X = Some q')
+  (STATE' : state_of m = Some q')
+  : dN n X = Some m.
+Proof.
+  unfold dN. rewrite STATE. simpl. rewrite RSTEP. simpl.
+  eapply index_of_state_of. exact STATE'.
+Qed.
+
+Lemma dN_some_step_state n X m q
+  (STATE : state_of n = Some q)
+  (STEP : dN n X = Some m)
+  : exists q', R.step q X = Some q' /\ state_of m = Some q'.
+Proof.
+  use dN_sound as (q0 & q' & STATE0 & RSTEP & STATE') with STEP.
+  use state_of_unique as EQ with STATE0 STATE. subst q0.
+  exists q'. split; assumption.
+Qed.
+
+Definition nq0 : nat :=
+  state_index_nat LR0.CanonicalRaw.q0.
+
+Lemma nq0_state
+  : state_of nq0 = Some LR0.CanonicalRaw.q0.
+Proof.
+  unfold nq0. eapply state_of_state_index_nat.
+  exact R.q0_in_Q.
+Qed.
+
+Lemma nq0_initial_item
+  : exists q, state_of nq0 = Some q /\ CS.In initial_item q.
+Proof.
+  exists CR.q0. split.
+  - exact nq0_state.
+  - exact q0_initial_item.
+Qed.
+
+Lemma nq0_nonempty
+  : exists q, state_of nq0 = Some q /\ CR.nonempty q = true.
+Proof.
+  exists CR.q0. split.
+  - exact nq0_state.
+  - exact q0_nonempty.
+Qed.
+
+Definition reduceN (n : nat) : fin_ensemble prod' :=
+  match state_of n with
+  | Some q => LR0.reduce (CS.to_state q)
+  | None => []
+  end.
+
+Lemma reduceN_state n q
+  (STATE : state_of n = Some q)
+  : reduceN n = LR0.reduce (CS.to_state q).
+Proof.
+  unfold reduceN. rewrite STATE. reflexivity.
+Qed.
+
+Lemma reduceN_sound_prod n pr
+  (IN : pr ∈ reduceN n)
+  : pr ∈ P'.
+Proof.
+  unfold reduceN in IN.
+  destruct (state_of n) as [q | ] eqn: STATE.
+  - pose proof (LR0.reduce_sound (CS.to_state q) pr IN) as SOUND.
+    destruct SOUND as (it & IN_ITEM & DONE & EQ & PROD).
+    exact PROD.
+  - contradiction.
+Qed.
+
+Definition numbered_graph : CG.t nat V' :=
+  CG.map_vertices nat_hasEqDec state_index_nat R.graph.
+
+Definition reindex_hom : CG.Homomorphism R.graph numbered_graph :=
+  CG.Homomorphism.of_map_vertices nat_hasEqDec state_index_nat R.graph.
+
+Theorem numbered_graph_vertex_lt n
+  : numbered_graph.(CG.isVertex) n <-> n < num_states.
+Proof.
+  unfold numbered_graph.
+  rewrite CG.map_vertices_isVertex. split.
+  - intros (q & VERTEX & INDEX).
+    rewrite R.graph_vertex_In in VERTEX. subst n.
+    eapply state_index_nat_lt. exact VERTEX.
+  - intros LT.
+    set (q := FS.lookup LR0.CanonicalRaw.q0 n R.Q).
+    assert (IN_Q : q ∈ R.Q).
+    { unfold q, num_states in *.
+      eapply FS.lookup_in. exact LT. }
+    exists q. split.
+    + rewrite R.graph_vertex_In. exact IN_Q.
+    + unfold q. eapply state_index_nat_lookup. exact LT.
+Qed.
+
+Theorem numbered_graph_vertex_seq n
+  : numbered_graph.(CG.isVertex) n <-> n ∈ seq 0 num_states.
+Proof.
+  rewrite numbered_graph_vertex_lt. rewrite in_seq. lia.
+Qed.
+
+Theorem numbered_graph_labeled_edge_dN n X m
+  : numbered_graph.(CG.isLabeledEdge) n X m <-> dN n X = Some m.
+Proof.
+  unfold numbered_graph.
+  rewrite CG.map_vertices_isLabeledEdge. split.
+  - intros (q & q' & EDGE & INDEX & INDEX').
+    pose proof (proj2 (R.step_labeled_edge_iff q X q') EDGE) as STEP.
+    rewrite <- INDEX, <- INDEX'.
+    eapply dN_state_index.
+    + eapply R.path_source_in_Q with (word := [X]) (dst := q').
+      eapply R.path_atomic. exact STEP.
+    + exact STEP.
+  - intros STEP.
+    use dN_sound as (q & q' & STATE & RSTEP & STATE') with STEP.
+    exists q, q'. splits.
+    + eapply (proj1 (R.step_labeled_edge_iff q X q')).
+      exact RSTEP.
+    + eapply state_index_nat_of_state_of. exact STATE.
+    + eapply state_index_nat_of_state_of. exact STATE'.
+Qed.
+
+Definition numbered_machine : CG.PartialDeterministic nat V' :=
+  CG.mkPartialDeterministic numbered_graph dN (fun n X m => iff_sym (numbered_graph_labeled_edge_dN n X m)).
+
+Theorem numbered_graph_deterministic
+  : CG.deterministic numbered_graph.
+Proof.
+  exact (CG.PartialDeterministic_deterministic numbered_machine).
+Qed.
+
+Definition path (word : list V') (src : nat) (dst : nat) : Prop :=
+  CG.word_walk numbered_graph src word dst.
+
+Definition npath : list V' -> nat -> nat -> Prop :=
+  path.
+
+Definition run (src : nat) (word : list V') : option nat :=
+  CG.run_word numbered_machine src word.
+
+Theorem run_spec n word m
+  : run n word = Some m <-> path word n m.
+Proof.
+  exact (CG.run_word_spec numbered_machine n word m).
+Qed.
+
+Definition npathb (word : list V') (src : nat) (dst : nat) : bool :=
+  match run src word with
+  | Some dst' => Nat.eqb dst' dst
+  | None => false
+  end.
+
+Theorem npathb_correct word src dst
+  : npathb word src dst = true <-> npath word src dst.
+Proof.
+  unfold npathb.
+  destruct (run src word) as [dst' | ] eqn: RUN.
+  - rewrite Nat.eqb_eq.
+    split.
+    + intros EQ. subst dst'.
+      eapply (proj1 (run_spec src word dst)). exact RUN.
+    + intros PATH.
+      pose proof (proj2 (run_spec src word dst) PATH) as RUN_PATH.
+      rewrite RUN in RUN_PATH.
+      inversion RUN_PATH. reflexivity.
+  - split.
+    + discriminate.
+    + intros PATH.
+      pose proof (proj2 (run_spec src word dst) PATH) as RUN_PATH.
+      rewrite RUN in RUN_PATH. discriminate.
+Qed.
+
+Theorem path_nil_iff n m
+  : path [] n m <-> (n = m /\ n < num_states).
+Proof.
+  split.
+  - intros [trace WALK]. inversion WALK; subst.
+    split; [reflexivity | ].
+    rewrite <- numbered_graph_vertex_lt. assumption.
+  - intros (EQ & LT). subst m.
+    exists []. econstructor 1.
+    rewrite numbered_graph_vertex_lt. exact LT.
+Qed.
+
+Theorem path_cons_iff X word n m
+  : path (X :: word) n m <-> (exists k, dN n X = Some k /\ path word k m).
+Proof.
+  split.
+  - intros [trace WALK].
+    inversion WALK as [ | src0 label mid word0 trace0 dst0 EDGE REST]; subst.
+    exists mid. split.
+    + eapply (proj1 (numbered_graph_labeled_edge_dN n X mid)).
+      exact EDGE.
+    + exists trace0. exact REST.
+  - intros (k & STEP & [trace WALK]).
+    exists (k :: trace). econstructor 2.
+    + eapply (proj2 (numbered_graph_labeled_edge_dN n X k)).
+      exact STEP.
+    + exact WALK.
+Qed.
+
+Lemma path_source_lt word n m
+  (PATH : path word n m)
+  : n < num_states.
+Proof.
+  unfold path in PATH.
+  destruct PATH as (trace & WALK).
+  rewrite <- numbered_graph_vertex_lt.
+  eapply CG.walk_source. exact WALK.
+Qed.
+
+Lemma path_target_lt word n m
+  (PATH : path word n m)
+  : m < num_states.
+Proof.
+  unfold path in PATH.
+  destruct PATH as (trace & WALK).
+  rewrite <- numbered_graph_vertex_lt.
+  eapply CG.walk_target. exact WALK.
+Qed.
+
+Lemma path_source_state word n m
+  (PATH : path word n m)
+  : exists q, state_of n = Some q.
+Proof.
+  eapply state_of_complete.
+  eapply path_source_lt. exact PATH.
+Qed.
+
+Lemma path_target_state word n m
+  (PATH : path word n m)
+  : exists q, state_of m = Some q.
+Proof.
+  eapply state_of_complete.
+  eapply path_target_lt. exact PATH.
+Qed.
+
+Lemma path_app word1 word2 src mid dst
+  (PATH1 : path word1 src mid)
+  (PATH2 : path word2 mid dst)
+  : path (word1 ++ word2) src dst.
+Proof.
+  destruct PATH1 as (trace1 & WALK1).
+  destruct PATH2 as (trace2 & WALK2).
+  exists (trace1 ++ trace2).
+  eapply CG.walk_app; [exact WALK1 | exact WALK2].
+Qed.
+
+Lemma path_app_inv word1 word2 src dst
+  (PATH : path (word1 ++ word2) src dst)
+  : exists mid, path word1 src mid /\ path word2 mid dst.
+Proof.
+  revert src dst PATH.
+  induction word1 as [ | X word1 IH]; intros src dst PATH.
+  - exists src. split.
+    + rewrite path_nil_iff. split.
+      * reflexivity.
+      * eapply path_source_lt. exact PATH.
+    + exact PATH.
+  - simpl in PATH.
+    rewrite path_cons_iff in PATH.
+    destruct PATH as (next & STEP & REST).
+    destruct (IH next dst REST) as (mid & PREFIX & SUFFIX).
+    exists mid. split.
+    + rewrite path_cons_iff.
+      exists next. split; [exact STEP | exact PREFIX].
+    + exact SUFFIX.
+Qed.
+
+Lemma path_deterministic word src dst1 dst2
+  (PATH1 : path word src dst1)
+  (PATH2 : path word src dst2)
+  : dst1 = dst2.
+Proof.
+  apply (proj2 (run_spec src word dst1)) in PATH1.
+  apply (proj2 (run_spec src word dst2)) in PATH2.
+  rewrite PATH1 in PATH2. inversion PATH2. reflexivity.
+Qed.
+
+Lemma path_common_prefix_suffix word1 word2 src mid dst
+  (PATH_PREFIX : path word1 src mid)
+  (PATH_FULL : path (word1 ++ word2) src dst)
+  : path word2 mid dst.
+Proof.
+  destruct (path_app_inv word1 word2 src dst PATH_FULL) as (mid0 & PREFIX0 & SUFFIX).
+  pose proof (path_deterministic word1 src mid0 mid PREFIX0 PATH_PREFIX) as EQ.
+  subst mid0. exact SUFFIX.
+Qed.
+
+Lemma npath_singleton n X m
+  (STEP : dN n X = Some m)
+  : npath [X] n m.
+Proof.
+  unfold npath.
+  rewrite path_cons_iff.
+  exists m. split.
+  - exact STEP.
+  - rewrite path_nil_iff. split.
+    + reflexivity.
+    + eapply dN_target_lt. exact STEP.
+Qed.
+
+Lemma dN_of_npath_singleton n X m
+  (PATH : npath [X] n m)
+  : dN n X = Some m.
+Proof.
+  unfold npath in PATH.
+  rewrite path_cons_iff in PATH.
+  destruct PATH as (mid & STEP & REST).
+  rewrite path_nil_iff in REST.
+  destruct REST as (EQ & _).
+  subst mid. exact STEP.
+Qed.
+
+Lemma npath_app word1 word2 src mid dst
+  (PATH1 : npath word1 src mid)
+  (PATH2 : npath word2 mid dst)
+  : npath (word1 ++ word2) src dst.
+Proof.
+  unfold npath in *.
+  eapply path_app; [exact PATH1 | exact PATH2].
+Qed.
+
+Lemma npath_app_inv word1 word2 src dst
+  (PATH : npath (word1 ++ word2) src dst)
+  : exists mid, npath word1 src mid /\ npath word2 mid dst.
+Proof.
+  unfold npath in *.
+  eapply path_app_inv. exact PATH.
+Qed.
+
+Lemma npath_factorization word1 word2 src dst
+  (PATH : npath (word1 ++ word2) src dst)
+  : exists mid, npath word1 src mid /\ npath word2 mid dst.
+Proof.
+  eapply npath_app_inv. exact PATH.
+Qed.
+
+Lemma npath_source_state word n m
+  (PATH : npath word n m)
+  : exists q, state_of n = Some q.
+Proof.
+  unfold npath in PATH.
+  eapply path_source_state. exact PATH.
+Qed.
+
+Lemma npath_target_state word n m
+  (PATH : npath word n m)
+  : exists q, state_of m = Some q.
+Proof.
+  unfold npath in PATH.
+  eapply path_target_state. exact PATH.
+Qed.
+
+Lemma npath_deterministic word src dst1 dst2
+  (PATH1 : npath word src dst1)
+  (PATH2 : npath word src dst2)
+  : dst1 = dst2.
+Proof.
+  unfold npath in *.
+  eapply path_deterministic; [exact PATH1 | exact PATH2].
+Qed.
+
+Lemma npath_common_prefix_suffix word1 word2 src mid dst
+  (PATH_PREFIX : npath word1 src mid)
+  (PATH_FULL : npath (word1 ++ word2) src dst)
+  : npath word2 mid dst.
+Proof.
+  unfold npath in *.
+  eapply path_common_prefix_suffix; [exact PATH_PREFIX | exact PATH_FULL].
+Qed.
+
+Theorem path_forward word src dst
+  (PATH : R.path word src dst)
+  : path word (state_index_nat src) (state_index_nat dst).
+Proof.
+  unfold path, R.path in *.
+  exact (CG.Homomorphism.word_walk_preserving reindex_hom src word dst PATH).
+Qed.
+
+Theorem path_reflect word n m src dst
+  (STATE : state_of n = Some src)
+  (STATE' : state_of m = Some dst)
+  (PATH : path word n m)
+  : R.path word src dst.
+Proof.
+  revert n m src dst STATE STATE' PATH.
+  induction word as [ | X word IH]; intros n m src dst STATE STATE' PATH.
+  - rewrite path_nil_iff in PATH.
+    destruct PATH as (EQ & _). subst m.
+    use state_of_unique as EQ_STATE with STATE STATE'. subst dst.
+    eapply R.path_refl.
+    rewrite R.graph_vertex_In.
+    use state_of_sound as (IN_Q & _) with STATE.
+    exact IN_Q.
+  - rewrite path_cons_iff in PATH.
+    destruct PATH as (k & STEP & REST).
+    use dN_some_step_state as (mid & RSTEP & STATE_MID) with STATE STEP.
+    rewrite R.path_cons_iff.
+    exists mid. split.
+    + exact RSTEP.
+    + eapply IH; [exact STATE_MID | exact STATE' | exact REST].
+Qed.
+
+Theorem path_iff word n m src dst
+  (STATE : state_of n = Some src)
+  (STATE' : state_of m = Some dst)
+  : path word n m <-> R.path word src dst.
+Proof.
+  split.
+  - eapply path_reflect; [exact STATE | exact STATE'].
+  - intros PATH.
+    pose proof (path_forward word src dst PATH) as FORWARD.
+    pose proof (state_index_nat_of_state_of n src STATE) as INDEX.
+    pose proof (state_index_nat_of_state_of m dst STATE') as INDEX'.
+    rewrite INDEX, INDEX' in FORWARD. exact FORWARD.
+Qed.
+
+Theorem npath_of_path word src dst n m
+  (INDEX_SRC : index_of src = Some n)
+  (INDEX_DST : index_of dst = Some m)
+  (PATH : R.path word src dst)
+  : npath word n m.
+Proof.
+  unfold npath.
+  pose proof (state_of_index_of src n INDEX_SRC) as STATE_SRC.
+  pose proof (state_of_index_of dst m INDEX_DST) as STATE_DST.
+  eapply (proj2 (path_iff word n m src dst STATE_SRC STATE_DST)).
+  exact PATH.
+Qed.
+
+Theorem path_of_npath word n m src dst
+  (STATE_SRC : state_of n = Some src)
+  (STATE_DST : state_of m = Some dst)
+  (PATH : npath word n m)
+  : R.path word src dst.
+Proof.
+  unfold npath in PATH.
+  eapply (proj1 (path_iff word n m src dst STATE_SRC STATE_DST)).
+  exact PATH.
+Qed.
+
+Theorem npath_path_iff word src dst n m
+  (INDEX_SRC : index_of src = Some n)
+  (INDEX_DST : index_of dst = Some m)
+  : npath word n m <-> R.path word src dst.
+Proof.
+  pose proof (state_of_index_of src n INDEX_SRC) as STATE_SRC.
+  pose proof (state_of_index_of dst m INDEX_DST) as STATE_DST.
+  unfold npath.
+  eapply path_iff; [exact STATE_SRC | exact STATE_DST].
+Qed.
+
+Theorem run_iff word n m src dst
+  (STATE : state_of n = Some src)
+  (STATE' : state_of m = Some dst)
+  : run n word = Some m <-> R.run src word = Some dst.
+Proof.
+  rewrite run_spec, R.run_spec.
+  eapply path_iff; [exact STATE | exact STATE'].
+Qed.
+
+Lemma state_of_reachable_npath n q
+  (STATE : state_of n = Some q)
+  : exists word, npath word nq0 n.
+Proof.
+  pose proof (state_of_sound n q STATE) as SOUND.
+  destruct SOUND as (IN_Q & INDEX).
+  destruct (R.Q_reachable q IN_Q) as (word & PATH).
+  exists word.
+  eapply npath_of_path.
+  - unfold nq0. eapply index_of_complete. exact R.q0_in_Q.
+  - exact INDEX.
+  - exact PATH.
+Qed.
+
+Definition accept_word : list V' :=
+  LR0.accept_word.
+
+Definition q_f : option state :=
+  R.run CR.q0 accept_word.
+
+Definition nq_f : option nat :=
+  run nq0 accept_word.
+
+Theorem q_f_sound qf
+  (FINAL : q_f = Some qf)
+  : R.path accept_word CR.q0 qf.
+Proof.
+  unfold q_f in FINAL.
+  eapply (proj1 (R.run_spec CR.q0 accept_word qf)).
+  exact FINAL.
+Qed.
+
+Theorem q_f_complete qf
+  (PATH : R.path accept_word CR.q0 qf)
+  : q_f = Some qf.
+Proof.
+  unfold q_f.
+  eapply (proj2 (R.run_spec CR.q0 accept_word qf)).
+  exact PATH.
+Qed.
+
+Theorem q_f_accept_path qf
+  (FINAL : q_f = Some qf)
+  : R.path accept_word CR.q0 qf.
+Proof.
+  eapply q_f_sound. exact FINAL.
+Qed.
+
+Theorem accept_path_q_f qf
+  (PATH : R.path accept_word CR.q0 qf)
+  : q_f = Some qf.
+Proof.
+  eapply q_f_complete. exact PATH.
+Qed.
+
+Theorem q_f_accept_path_iff qf
+  : q_f = Some qf <-> R.path accept_word CR.q0 qf.
+Proof.
+  split.
+  - eapply q_f_accept_path.
+  - eapply accept_path_q_f.
+Qed.
+
+Theorem q_f_target_in_Q qf
+  (FINAL : q_f = Some qf)
+  : qf ∈ R.Q.
+Proof.
+  eapply R.path_target_in_Q with (word := accept_word) (src := CR.q0).
+  eapply q_f_sound. exact FINAL.
+Qed.
+
+Theorem q_f_exists
+  : exists qf, q_f = Some qf.
+Proof.
+  destruct LR0.q_f_exists as (qf_old & FINAL_OLD).
+  exists (CS.of_state qf_old).
+  eapply q_f_complete.
+  unfold accept_word.
+  eapply LR0.legacy_q0_path_to_canonical.
+  eapply LR0.q_f_accept_path. exact FINAL_OLD.
+Qed.
+
+Theorem q_f_exists_path
+  : exists qf, q_f = Some qf /\ R.path accept_word CR.q0 qf.
+Proof.
+  destruct q_f_exists as (qf & FINAL).
+  exists qf. split.
+  - exact FINAL.
+  - eapply q_f_sound. exact FINAL.
+Qed.
+
+Theorem nq_f_complete qf nf
+  (FINAL : q_f = Some qf)
+  (INDEX : index_of qf = Some nf)
+  : nq_f = Some nf.
+Proof.
+  pose proof (state_of_index_of qf nf INDEX) as STATE_F.
+  unfold nq_f.
+  eapply (proj2 (run_iff accept_word nq0 nf CR.q0 qf nq0_state STATE_F)).
+  unfold q_f in FINAL. exact FINAL.
+Qed.
+
+Theorem nq_f_sound nf
+  (FINAL : nq_f = Some nf)
+  : exists qf, q_f = Some qf /\ index_of qf = Some nf /\ state_of nf = Some qf.
+Proof.
+  unfold nq_f in FINAL.
+  pose proof (proj1 (run_spec nq0 accept_word nf) FINAL) as PATH.
+  destruct (path_target_state accept_word nq0 nf PATH) as (qf & STATE_F).
+  exists qf. splits.
+  - unfold q_f.
+    eapply (proj1 (run_iff accept_word nq0 nf CR.q0 qf nq0_state STATE_F)).
+    exact FINAL.
+  - eapply index_of_state_of. exact STATE_F.
+  - exact STATE_F.
+Qed.
+
+Theorem nq_f_accept_path_iff nf
+  : nq_f = Some nf <-> npath accept_word nq0 nf.
+Proof.
+  unfold nq_f, npath.
+  eapply run_spec.
+Qed.
+
+Theorem nq_f_accept_run_iff nf
+  : nq_f = Some nf <-> run nq0 accept_word = Some nf.
+Proof.
+  unfold nq_f. reflexivity.
+Qed.
+
+Theorem nq_f_exists
+  : exists nf, nq_f = Some nf.
+Proof.
+  destruct q_f_exists as (qf & FINAL).
+  pose proof (q_f_target_in_Q qf FINAL) as IN_Q.
+  set (nf := state_index_nat qf).
+  exists nf.
+  eapply nq_f_complete.
+  - exact FINAL.
+  - unfold nf. eapply index_of_complete. exact IN_Q.
+Qed.
+
+Theorem nq_f_exists_path
+  : exists nf, nq_f = Some nf /\ npath accept_word nq0 nf.
+Proof.
+  destruct nq_f_exists as (nf & FINAL).
+  exists nf. split.
+  - exact FINAL.
+  - eapply (proj1 (nq_f_accept_path_iff nf)). exact FINAL.
+Qed.
+
+End CanonicalNumbering.
+
+(* The following legacy numbering still numbers list states. *)
+#[global] Existing Instance Item.state_hasEqDec.
 
 Module Numbering.
 
@@ -6028,8 +8590,7 @@ Definition nullable_prod_in (known : fin_ensemble N') (p : prod') : fin_ensemble
     [].
 
 Definition nullable_step (known : fin_ensemble N') : fin_ensemble N' :=
-  L.nodup (N'_hasEqDec)
-    (known ++ (P' >>= fun p => nullable_prod_in known p)).
+  L.nodup (N'_hasEqDec) (known ++ (P' >>= fun p => nullable_prod_in known p)).
 
 Definition nullable_fuel : nat :=
   length N'_FinEnum.all.
@@ -6567,6 +9128,1558 @@ Qed.
 
 
 End Nullable.
+
+Module CanonicalRead.
+
+Import GrammarSyntax.
+Import Nullable.
+
+Module CN := CanonicalNumbering.
+Module CG := GraphAPI.LabeledFiniteGraph.
+
+#[local] Existing Instance N'_hasEqDec.
+#[local] Existing Instance T'_hasEqDec.
+
+#[local]
+Instance read_terminal_hasEqDec : hasEqDec T' :=
+  T'_FinEnum.t_hasEqDec.
+
+Definition read_node : Set :=
+  (nat * N')%type.
+
+#[local]
+Instance read_node_hasEqDec : hasEqDec read_node :=
+  pair_hasEqdec nat_hasEqDec N'_hasEqDec.
+
+Definition read_domain_entry (n : nat) (A : N') : fin_ensemble read_node :=
+  match CN.dN n (inl A) with
+  | Some _ => [(n, A)]
+  | None => []
+  end.
+
+Definition read_domain_raw : fin_ensemble read_node :=
+  seq 0 CN.num_states >>= fun n =>
+  N'_FinEnum.all >>= fun A =>
+  read_domain_entry n A.
+
+Definition D : fin_ensemble read_node :=
+  L.nodup read_node_hasEqDec read_domain_raw.
+
+Lemma read_domain_sound n A
+  (IN : (n, A) ∈ D)
+  : exists r, CN.dN n (inl A) = Some r.
+Proof.
+  unfold D, read_domain_raw in IN.
+  rewrite L.nodup_In in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (n0 & IN_N & IN_A_BIND).
+  apply in_fin_ensemble_bind_elim in IN_A_BIND.
+  destruct IN_A_BIND as (A0 & IN_A & IN_ENTRY).
+  unfold read_domain_entry in IN_ENTRY.
+  destruct (CN.dN n0 (inl A0)) as [r | ] eqn: STEP.
+  - simpl in IN_ENTRY.
+    destruct IN_ENTRY as [EQ | []].
+    rewrite inject_pair_eq in EQ.
+    destruct EQ as (EQ_N & EQ_A).
+    subst n0. subst A0.
+    exists r. exact STEP.
+  - contradiction.
+Qed.
+
+Lemma read_domain_complete n A r
+  (LT : n < CN.num_states)
+  (STEP : CN.dN n (inl A) = Some r)
+  : (n, A) ∈ D.
+Proof.
+  unfold D, read_domain_raw.
+  rewrite L.nodup_In.
+  eapply in_fin_ensemble_bind_intro with (x := n).
+  - rewrite in_seq. lia.
+  - eapply in_fin_ensemble_bind_intro with (x := A).
+    + eapply N'_all_complete.
+    + unfold read_domain_entry. rewrite STEP.
+      simpl. left. reflexivity.
+Qed.
+
+Lemma read_domain_of_step n A r
+  (STEP : CN.dN n (inl A) = Some r)
+  : (n, A) ∈ D.
+Proof.
+  eapply read_domain_complete.
+  - eapply CN.dN_source_lt. exact STEP.
+  - exact STEP.
+Qed.
+
+Lemma read_domain_from_npath_singleton p B r
+  (PATH : CN.npath [inl B] p r)
+  : (p, B) ∈ D.
+Proof.
+  pose proof (CN.dN_of_npath_singleton p (inl B) r PATH) as STEP.
+  eapply read_domain_of_step. exact STEP.
+Qed.
+
+Lemma read_domain_from_npath_prefix_symbol alpha p B r
+  (PATH_PREFIX : CN.npath alpha CN.nq0 p)
+  (PATH_SYMBOL : CN.npath (alpha ++ [inl B]) CN.nq0 r)
+  : (p, B) ∈ D.
+Proof.
+  pose proof (CN.npath_common_prefix_suffix alpha [inl B] CN.nq0 p r PATH_PREFIX PATH_SYMBOL) as PATH_B.
+  eapply read_domain_from_npath_singleton. exact PATH_B.
+Qed.
+
+Lemma read_domain_no_start_prime n
+  : ~ (n, start_prime) ∈ D.
+Proof.
+  intros IN.
+  destruct (read_domain_sound n start_prime IN) as (r & STEP).
+  rewrite CN.dN_start_prime_none in STEP.
+  discriminate.
+Qed.
+
+Lemma read_domain_no_dup
+  : NoDup D.
+Proof.
+  unfold D. eapply L.NoDup_nodup.
+Qed.
+
+Definition DR (node : read_node) : fin_ensemble T' :=
+  let '(p, A) := node in
+  match CN.dN p (inl A) with
+  | Some r =>
+    T'_FinEnum.all >>= fun t =>
+    match CN.dN r (inr t) with
+    | Some _ => [t]
+    | None => []
+    end
+  | None => []
+  end.
+
+Lemma DR_sound p A t
+  (IN : t ∈ DR (p, A))
+  : exists r s, CN.dN p (inl A) = Some r /\ CN.dN r (inr t) = Some s.
+Proof.
+  unfold DR in IN.
+  destruct (CN.dN p (inl A)) as [r | ] eqn: STEP_N.
+  - apply in_fin_ensemble_bind_elim in IN.
+    destruct IN as (t0 & IN_T & IN_ENTRY).
+    destruct (CN.dN r (inr t0)) as [s | ] eqn: STEP_T.
+    + simpl in IN_ENTRY.
+      destruct IN_ENTRY as [EQ | []].
+      subst t0.
+      exists r, s. split.
+      * reflexivity.
+      * exact STEP_T.
+    + contradiction.
+  - contradiction.
+Qed.
+
+Lemma DR_complete p A r t s
+  (STEP_N : CN.dN p (inl A) = Some r)
+  (STEP_T : CN.dN r (inr t) = Some s)
+  : t ∈ DR (p, A).
+Proof.
+  unfold DR. rewrite STEP_N.
+  eapply in_fin_ensemble_bind_intro with (x := t).
+  - eapply T'_all_complete.
+  - rewrite STEP_T. simpl. left. reflexivity.
+Qed.
+
+Theorem DR_In p A t
+  : t ∈ DR (p, A) <-> exists r s, CN.dN p (inl A) = Some r /\ CN.dN r (inr t) = Some s.
+Proof.
+  split.
+  - eapply DR_sound.
+  - intros (r & s & STEP_N & STEP_T).
+    eapply DR_complete; [exact STEP_N | exact STEP_T].
+Qed.
+
+#[local]
+Instance dependency_edge_hasEqDec : hasEqDec (CG.Edge.t read_node N') :=
+  CG.Edge.hasEqDec read_node_hasEqDec N'_hasEqDec.
+
+Definition dependency_edges_from (node : read_node) : fin_ensemble (CG.Edge.t read_node N') :=
+  let '(p, A) := node in
+  match CN.dN p (inl A) with
+  | Some r =>
+    N'_FinEnum.all >>= fun C =>
+    if nullableb C then
+      if FS.mem (EQ_DEC := read_node_hasEqDec) (r, C) D then
+        [CG.Edge.mk (p, A) C (r, C)]
+      else
+        []
+    else []
+  | None => []
+  end.
+
+Lemma dependency_edges_from_sound node edge
+  (IN : edge ∈ dependency_edges_from node)
+  : exists p A r C, node = (p, A) /\ edge = CG.Edge.mk (p, A) C (r, C) /\ CN.dN p (inl A) = Some r /\ nullableb C = true /\ (r, C) ∈ D.
+Proof.
+  destruct node as [p A].
+  unfold dependency_edges_from in IN.
+  destruct (CN.dN p (inl A)) as [r | ] eqn: STEP.
+  - apply in_fin_ensemble_bind_elim in IN.
+    destruct IN as (C & IN_C & IN_EDGE).
+    cbv beta in IN_EDGE.
+    destruct (nullableb C) eqn: NULLABLE.
+    + destruct (FS.mem (EQ_DEC := read_node_hasEqDec) (r, C) D) eqn: MEM.
+      * simpl in IN_EDGE.
+        destruct IN_EDGE as [EQ | []].
+        exists p, A, r, C.
+        repeat split.
+        -- symmetry. exact EQ.
+        -- exact STEP.
+        -- exact NULLABLE.
+        -- rewrite FS.mem_spec in MEM. exact MEM.
+      * contradiction.
+    + contradiction.
+  - contradiction.
+Qed.
+
+Lemma dependency_edges_from_complete p A r C
+  (STEP : CN.dN p (inl A) = Some r)
+  (NULLABLE : nullableb C = true)
+  (IN_D : (r, C) ∈ D)
+  : CG.Edge.mk (p, A) C (r, C) ∈ dependency_edges_from (p, A).
+Proof.
+  unfold dependency_edges_from. rewrite STEP.
+  eapply in_fin_ensemble_bind_intro with (x := C).
+  - eapply N'_all_complete.
+  - cbv beta. rewrite NULLABLE.
+    assert (MEM : FS.mem (EQ_DEC := read_node_hasEqDec) (r, C) D = true).
+    { rewrite FS.mem_spec. exact IN_D. }
+    rewrite MEM. simpl. left. reflexivity.
+Qed.
+
+Definition dependency_edges_raw : fin_ensemble (CG.Edge.t read_node N') :=
+  D >>= dependency_edges_from.
+
+Definition dependency_edges : fin_ensemble (CG.Edge.t read_node N') :=
+  L.nodup dependency_edge_hasEqDec dependency_edges_raw.
+
+Lemma dependency_edges_sound edge
+  (IN : edge ∈ dependency_edges)
+  : exists p A r C, edge = CG.Edge.mk (p, A) C (r, C) /\ (p, A) ∈ D /\ CN.dN p (inl A) = Some r /\ nullableb C = true /\ (r, C) ∈ D.
+Proof.
+  unfold dependency_edges in IN.
+  rewrite L.nodup_In in IN.
+  unfold dependency_edges_raw in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (node & IN_D & IN_EDGE).
+  destruct (dependency_edges_from_sound node edge IN_EDGE) as (p & A & r & C & EQ_NODE & EQ_EDGE & STEP & NULLABLE & IN_DEP).
+  subst node.
+  exists p, A, r, C.
+  repeat split; assumption.
+Qed.
+
+Lemma dependency_edges_complete p A r C
+  (IN_SRC : (p, A) ∈ D)
+  (STEP : CN.dN p (inl A) = Some r)
+  (NULLABLE : nullableb C = true)
+  (IN_DST : (r, C) ∈ D)
+  : CG.Edge.mk (p, A) C (r, C) ∈ dependency_edges.
+Proof.
+  unfold dependency_edges.
+  rewrite L.nodup_In.
+  unfold dependency_edges_raw.
+  eapply in_fin_ensemble_bind_intro with (x := (p, A)).
+  - exact IN_SRC.
+  - eapply dependency_edges_from_complete; [exact STEP | exact NULLABLE | exact IN_DST].
+Qed.
+
+Theorem dependency_edges_In p A label r C
+  : CG.Edge.mk (p, A) label (r, C) ∈ dependency_edges <-> label = C /\ (p, A) ∈ D /\ CN.dN p (inl A) = Some r /\ nullableb C = true /\ (r, C) ∈ D.
+Proof.
+  split.
+  - intros IN.
+    destruct (dependency_edges_sound (CG.Edge.mk (p, A) label (r, C)) IN) as (p0 & A0 & r0 & C0 & EQ_EDGE & IN_SRC & STEP & NULLABLE & IN_DST).
+    pose proof (f_equal CG.Edge.src EQ_EDGE) as EQ_SRC.
+    pose proof (f_equal CG.Edge.label EQ_EDGE) as EQ_LABEL.
+    pose proof (f_equal CG.Edge.dst EQ_EDGE) as EQ_DST.
+    simpl in EQ_SRC, EQ_LABEL, EQ_DST.
+    injection EQ_SRC as EQ_P EQ_A.
+    injection EQ_DST as EQ_R EQ_C.
+    subst p0. subst A0. subst r0. subst C0.
+    subst C.
+    repeat split; assumption.
+  - intros (EQ_LABEL & IN_SRC & STEP & NULLABLE & IN_DST).
+    subst label.
+    eapply dependency_edges_complete; [exact IN_SRC | exact STEP | exact NULLABLE | exact IN_DST].
+Qed.
+
+Lemma dependency_edges_closed
+  : CG.closed D dependency_edges.
+Proof.
+  intros edge IN.
+  destruct (dependency_edges_sound edge IN) as (p & A & r & C & EQ_EDGE & IN_SRC & STEP & NULLABLE & IN_DST).
+  subst edge. simpl. split; assumption.
+Qed.
+
+Definition dependency_graph : CG.t read_node N' :=
+  CG.build_closed read_node_hasEqDec N'_hasEqDec D dependency_edges dependency_edges_closed.
+
+Theorem dependency_graph_vertex_In node
+  : dependency_graph.(CG.isVertex) node <-> node ∈ D.
+Proof.
+  unfold dependency_graph.
+  eapply CG.build_closed_isVertex.
+Qed.
+
+Theorem dependency_graph_labeled_edge_In p A label r C
+  : dependency_graph.(CG.isLabeledEdge) (p, A) label (r, C) <-> label = C /\ (p, A) ∈ D /\ CN.dN p (inl A) = Some r /\ nullableb C = true /\ (r, C) ∈ D.
+Proof.
+  unfold dependency_graph.
+  rewrite CG.build_closed_isLabeledEdge.
+  eapply dependency_edges_In.
+Qed.
+
+Theorem dependency_graph_atomic_edge_In p A r C
+  : dependency_graph.(CG.isLabeledEdge) (p, A) C (r, C) <-> (p, A) ∈ D /\ CN.dN p (inl A) = Some r /\ nullableb C = true /\ (r, C) ∈ D.
+Proof.
+  rewrite dependency_graph_labeled_edge_In.
+  tauto.
+Qed.
+
+Theorem dependency_graph_successors_by_label_In p A r C
+  : (r, C) ∈ CG.successors_by_label dependency_graph C (p, A) <-> (p, A) ∈ D /\ CN.dN p (inl A) = Some r /\ nullableb C = true /\ (r, C) ∈ D.
+Proof.
+  rewrite CG.successors_by_label_In.
+  eapply dependency_graph_atomic_edge_In.
+Qed.
+
+Theorem dependency_graph_successors_In p A r C
+  : (r, C) ∈ CG.successors dependency_graph (p, A) <-> (p, A) ∈ D /\ CN.dN p (inl A) = Some r /\ nullableb C = true /\ (r, C) ∈ D.
+Proof.
+  rewrite CG.successors_In.
+  unfold CG.isEdge.
+  split.
+  - intros (label & EDGE).
+    pose proof (proj1 (dependency_graph_labeled_edge_In p A label r C) EDGE) as SPEC.
+    tauto.
+  - intros (IN_SRC & STEP & NULLABLE & IN_DST).
+    exists C.
+    eapply (proj2 (dependency_graph_atomic_edge_In p A r C)).
+    repeat split; assumption.
+Qed.
+
+Lemma dependency_graph_vertices_no_dup
+  : NoDup dependency_graph.(CG.vertices).
+Proof.
+  exact dependency_graph.(CG.vertices_NoDup).
+Qed.
+
+Lemma dependency_graph_edges_no_dup
+  : NoDup dependency_graph.(CG.edges).
+Proof.
+  exact dependency_graph.(CG.edges_NoDup).
+Qed.
+
+Definition Read_bang (node : read_node) : fin_ensemble T' :=
+  @CG.dataflow read_node N' T' read_terminal_hasEqDec dependency_graph DR node.
+
+Definition Read_closure (node : read_node) (t : T') : Prop :=
+  CG.dataflow_closure dependency_graph DR t node.
+
+Definition Read_walk (node : read_node) (t : T') : Prop :=
+  CG.dataflow_walk dependency_graph DR t node.
+
+Theorem Read_bang_sound node t
+  (IN : t ∈ Read_bang node)
+  : Read_closure node t.
+Proof.
+  unfold Read_bang, Read_closure.
+  eapply CG.dataflow_sound. exact IN.
+Qed.
+
+Theorem Read_bang_complete node t
+  (CLOSURE : Read_closure node t)
+  : t ∈ Read_bang node.
+Proof.
+  unfold Read_bang, Read_closure in *.
+  eapply CG.dataflow_complete. exact CLOSURE.
+Qed.
+
+Theorem Read_bang_correct node t
+  : t ∈ Read_bang node <-> Read_closure node t.
+Proof.
+  unfold Read_bang, Read_closure.
+  eapply CG.dataflow_In.
+Qed.
+
+Theorem Read_closure_walk_iff node t
+  (IN_D : node ∈ D)
+  : Read_closure node t <-> Read_walk node t.
+Proof.
+  unfold Read_closure, Read_walk.
+  eapply CG.dataflow_closure_iff_walk.
+  rewrite dependency_graph_vertex_In.
+  exact IN_D.
+Qed.
+
+Theorem Read_bang_walk_iff node t
+  (IN_D : node ∈ D)
+  : t ∈ Read_bang node <-> Read_walk node t.
+Proof.
+  rewrite Read_bang_correct.
+  eapply Read_closure_walk_iff. exact IN_D.
+Qed.
+
+Lemma Read_closure_seed node t
+  (SEED : t ∈ DR node)
+  : Read_closure node t.
+Proof.
+  unfold Read_closure, CG.dataflow_closure.
+  eapply DigraphFixedpoint.digraph_closure_seed.
+  exact SEED.
+Qed.
+
+Lemma Read_closure_step node dep t
+  (EDGE : dep ∈ CG.successors dependency_graph node)
+  (READ : Read_closure dep t)
+  : Read_closure node t.
+Proof.
+  unfold Read_closure, CG.dataflow_closure in *.
+  eapply DigraphFixedpoint.digraph_closure_step with (y := dep).
+  - exact EDGE.
+  - exact READ.
+Qed.
+
+Definition Read (node : read_node) (t : T') : Prop :=
+  let '(p, A) := node in
+  exists r gamma s, CN.dN p (inl A) = Some r /\ NullStr gamma /\ CN.npath (gamma ++ [inr t]) r s.
+
+Lemma Read_from_nullable_path p A t r gamma s
+  (STEP_A : CN.dN p (inl A) = Some r)
+  (NULLABLE : NullStr gamma)
+  (PATH : CN.npath (gamma ++ [inr t]) r s)
+  : Read (p, A) t.
+Proof.
+  unfold Read.
+  exists r, gamma, s.
+  repeat split; assumption.
+Qed.
+
+Lemma Read_direct p A t r s
+  (STEP_A : CN.dN p (inl A) = Some r)
+  (STEP_T : CN.dN r (inr t) = Some s)
+  : Read (p, A) t.
+Proof.
+  eapply Read_from_nullable_path with (r := r) (gamma := []) (s := s).
+  - exact STEP_A.
+  - constructor.
+  - eapply CN.npath_singleton. exact STEP_T.
+Qed.
+
+Theorem Read_closure_to_semantic node t
+  (CLOSURE : Read_closure node t)
+  : Read node t.
+Proof.
+  unfold Read_closure, CG.dataflow_closure in CLOSURE.
+  induction CLOSURE as [node SEED | node dep EDGE CLOSURE IH].
+  - destruct node as [p A].
+    destruct (DR_sound p A t SEED) as (r & s & STEP_N & STEP_T).
+    eapply Read_direct; [exact STEP_N | exact STEP_T].
+  - destruct node as [p A].
+    destruct dep as [r C].
+    rewrite dependency_graph_successors_In in EDGE.
+    destruct EDGE as (IN_SRC & STEP_N & NULLABLE & IN_DEP).
+    unfold Read in IH.
+    destruct IH as (r_next & gamma & s & STEP_C & NULLSTR & PATH).
+    unfold Read.
+    exists r, (inl C :: gamma), s.
+    repeat split.
+    + exact STEP_N.
+    + constructor.
+      * eapply nullableb_sound. exact NULLABLE.
+      * exact NULLSTR.
+    + simpl.
+      unfold CN.npath in PATH |- *.
+      rewrite CN.path_cons_iff.
+      exists r_next. split; [exact STEP_C | exact PATH].
+Qed.
+
+Theorem Read_semantic_to_closure node t
+  (SEMANTIC : Read node t)
+  : Read_closure node t.
+Proof.
+  destruct node as [p A].
+  unfold Read in SEMANTIC.
+  destruct SEMANTIC as (r & gamma & s & STEP_N & NULLSTR & PATH).
+  revert p A r STEP_N PATH.
+  induction NULLSTR as [ | C gamma NULL_C NULLSTR IH]; intros p A r STEP_N PATH.
+  - simpl in PATH.
+    pose proof (CN.dN_of_npath_singleton r (inr t) s PATH) as STEP_T.
+    eapply Read_closure_seed.
+    eapply DR_complete; [exact STEP_N | exact STEP_T].
+  - simpl in PATH.
+    unfold CN.npath in PATH.
+    rewrite CN.path_cons_iff in PATH.
+    destruct PATH as (r_next & STEP_C & REST).
+    eapply Read_closure_step with (dep := (r, C)).
+    + rewrite dependency_graph_successors_In.
+      repeat split.
+      * eapply read_domain_of_step. exact STEP_N.
+      * exact STEP_N.
+      * eapply nullableb_complete. exact NULL_C.
+      * eapply read_domain_of_step. exact STEP_C.
+    + eapply IH.
+      * exact STEP_C.
+      * exact REST.
+Qed.
+
+Theorem Read_semantic_fixed_point node t
+  : Read_closure node t <-> Read node t.
+Proof.
+  split.
+  - eapply Read_closure_to_semantic.
+  - eapply Read_semantic_to_closure.
+Qed.
+
+Theorem Read_impl_to_abs node t
+  (IN : t ∈ Read_bang node)
+  : Read node t.
+Proof.
+  eapply Read_closure_to_semantic.
+  eapply Read_bang_sound. exact IN.
+Qed.
+
+Theorem Read_abs_to_impl node t
+  (SEMANTIC : Read node t)
+  : t ∈ Read_bang node.
+Proof.
+  eapply Read_bang_complete.
+  eapply Read_semantic_to_closure. exact SEMANTIC.
+Qed.
+
+Theorem Read_refines node t
+  : t ∈ Read_bang node <-> Read node t.
+Proof.
+  rewrite Read_bang_correct.
+  eapply Read_semantic_fixed_point.
+Qed.
+
+End CanonicalRead.
+
+Module CanonicalFollow.
+
+Import GrammarSyntax.
+
+Module CN := CanonicalNumbering.
+Module CR := CanonicalRead.
+Module CS := Item.CanonicalState.
+Module CG := GraphAPI.LabeledFiniteGraph.
+
+#[local] Existing Instance N'_hasEqDec.
+#[local] Existing Instance T'_hasEqDec.
+#[local] Existing Instance Item.item_hasEqDec.
+
+#[local]
+Instance follow_terminal_hasEqDec : hasEqDec T' :=
+  T'_FinEnum.t_hasEqDec.
+
+#[local]
+Instance follow_node_hasEqDec : hasEqDec CR.read_node :=
+  pair_hasEqdec nat_hasEqDec N'_hasEqDec.
+
+Definition npathb (alpha : list V') (n : nat) (m : nat) : bool :=
+  CN.npathb alpha n m.
+
+Theorem npathb_correct alpha n m
+  : npathb alpha n m = true <-> CN.npath alpha n m.
+Proof.
+  unfold npathb.
+  eapply CN.npathb_correct.
+Qed.
+
+Lemma npath_app_inv alpha beta src dst
+  (PATH : CN.npath (alpha ++ beta) src dst)
+  : exists mid, CN.npath alpha src mid /\ CN.npath beta mid dst.
+Proof.
+  eapply CN.npath_app_inv. exact PATH.
+Qed.
+
+Lemma npath_factorization alpha beta src dst
+  (PATH : CN.npath (alpha ++ beta) src dst)
+  : exists mid, CN.npath alpha src mid /\ CN.npath beta mid dst.
+Proof.
+  eapply CN.npath_factorization. exact PATH.
+Qed.
+
+Definition incl_candidate_from_item (p : nat) (A : N') (it : Item.item) (candidate : CR.read_node) : fin_ensemble CR.read_node :=
+  let '(p', B) := candidate in
+  match it.(Item.i_right) with
+  | inl A0 :: gamma =>
+    if eqb A0 A && Nullable.nullable_strb gamma && eqb B it.(Item.i_lhs) && npathb it.(Item.i_left) p' p then
+      [candidate]
+    else
+      []
+  | _ => []
+  end.
+
+Definition incl_item_deps (p : nat) (A : N') (it : Item.item) : fin_ensemble CR.read_node :=
+  CR.D >>= fun candidate =>
+  incl_candidate_from_item p A it candidate.
+
+Definition incl_deps (node : CR.read_node) : fin_ensemble CR.read_node :=
+  let '(p, A) := node in
+  match CN.state_of p with
+  | Some q =>
+    CS.to_state q >>= fun it =>
+    incl_item_deps p A it
+  | None => []
+  end.
+
+Variant incl_candidate_from_item_sound_spec (p : nat) (A : N') (it : Item.item) (source candidate : CR.read_node) : Prop :=
+  | incl_candidate_from_item_sound_spec_intro p' B gamma
+    (CANDIDATE_EQ : candidate = source)
+    (SOURCE_EQ : source = (p', B))
+    (LHS : it.(Item.i_lhs) = B)
+    (RIGHT : it.(Item.i_right) = inl A :: gamma)
+    (NULLABLE : Nullable.NullStr gamma)
+    (PATH : CN.npath it.(Item.i_left) p' p)
+    : incl_candidate_from_item_sound_spec p A it source candidate.
+
+Lemma incl_candidate_from_item_sound p A it source candidate (IN : candidate ∈ incl_candidate_from_item p A it source)
+  : incl_candidate_from_item_sound_spec p A it source candidate.
+Proof.
+  destruct source as [p' B].
+  unfold incl_candidate_from_item in IN.
+  destruct it as [lhs beta right]. simpl in *.
+  destruct right as [ | X gamma]; [contradiction | ].
+  destruct X as [A0 | t]; [ | contradiction].
+  destruct (eqb A0 A && Nullable.nullable_strb gamma && eqb B lhs && npathb beta p' p) eqn: GUARD; [ | contradiction].
+  repeat rewrite andb_true_iff in GUARD.
+  destruct GUARD as (((EQ_A & NULLABLEB) & EQ_B) & PATHB).
+  destruct IN as [EQ | []]. subst candidate.
+  rewrite eqb_eq in EQ_A. rewrite eqb_eq in EQ_B.
+  subst A0. subst B.
+  econstructor.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  - eapply (proj1 (Nullable.nullable_strb_correct gamma)).
+    exact NULLABLEB.
+  - eapply (proj1 (npathb_correct beta p' p)).
+    exact PATHB.
+Qed.
+
+Lemma incl_candidate_from_item_complete p A it p' B gamma
+  (LHS : it.(Item.i_lhs) = B)
+  (RIGHT : it.(Item.i_right) = inl A :: gamma)
+  (NULLABLE : Nullable.NullStr gamma)
+  (PATH : CN.npath it.(Item.i_left) p' p)
+  : (p', B) ∈ incl_candidate_from_item p A it (p', B).
+Proof.
+  unfold incl_candidate_from_item. rewrite RIGHT.
+  pose proof (proj2 (Nullable.nullable_strb_correct gamma) NULLABLE) as NULLABLEB.
+  pose proof (proj2 (npathb_correct it.(Item.i_left) p' p) PATH) as PATHB.
+  rewrite NULLABLEB. rewrite LHS. rewrite PATHB.
+  destruct (eqb A A) eqn: EQ_A.
+  - simpl.
+    destruct (eqb B B) eqn: EQ_B.
+    + simpl. left. reflexivity.
+    + rewrite eqb_neq in EQ_B. contradiction.
+  - rewrite eqb_neq in EQ_A. contradiction.
+Qed.
+
+Variant incl_item_deps_sound_spec (p : nat) (A : N') (it : Item.item) (candidate : CR.read_node) : Prop :=
+  | incl_item_deps_sound_spec_intro p' B gamma
+    (IN_D : candidate ∈ CR.D)
+    (CANDIDATE_EQ : candidate = (p', B))
+    (LHS : it.(Item.i_lhs) = B)
+    (RIGHT : it.(Item.i_right) = inl A :: gamma)
+    (NULLABLE : Nullable.NullStr gamma)
+    (PATH : CN.npath it.(Item.i_left) p' p)
+    : incl_item_deps_sound_spec p A it candidate.
+
+Lemma incl_item_deps_sound p A it candidate
+  (IN : candidate ∈ incl_item_deps p A it)
+  : incl_item_deps_sound_spec p A it candidate.
+Proof.
+  unfold incl_item_deps in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (candidate0 & IN_D & IN_CANDIDATE).
+  pose proof (incl_candidate_from_item_sound p A it candidate0 candidate IN_CANDIDATE) as SOUND.
+  destruct SOUND as [p' B gamma CANDIDATE_EQ SOURCE_EQ LHS RIGHT NULLABLE PATH].
+  subst candidate. subst candidate0.
+  econstructor.
+  - exact IN_D.
+  - reflexivity.
+  - exact LHS.
+  - exact RIGHT.
+  - exact NULLABLE.
+  - exact PATH.
+Qed.
+
+Lemma incl_item_deps_complete p A it p' B gamma
+  (IN_D : (p', B) ∈ CR.D)
+  (LHS : it.(Item.i_lhs) = B)
+  (RIGHT : it.(Item.i_right) = inl A :: gamma)
+  (NULLABLE : Nullable.NullStr gamma)
+  (PATH : CN.npath it.(Item.i_left) p' p)
+  : (p', B) ∈ incl_item_deps p A it.
+Proof.
+  unfold incl_item_deps.
+  eapply in_fin_ensemble_bind_intro with (x := (p', B)).
+  - exact IN_D.
+  - eapply incl_candidate_from_item_complete.
+    + exact LHS.
+    + exact RIGHT.
+    + exact NULLABLE.
+    + exact PATH.
+Qed.
+
+Variant incl_deps_sound_spec (p : nat) (A : N') (candidate : CR.read_node) : Prop :=
+  | incl_deps_sound_spec_intro q it p' B gamma
+    (STATE : CN.state_of p = Some q)
+    (IN_ITEM : it ∈ CS.to_state q)
+    (IN_D : candidate ∈ CR.D)
+    (CANDIDATE_EQ : candidate = (p', B))
+    (LHS : it.(Item.i_lhs) = B)
+    (RIGHT : it.(Item.i_right) = inl A :: gamma)
+    (NULLABLE : Nullable.NullStr gamma)
+    (PATH : CN.npath it.(Item.i_left) p' p)
+    : incl_deps_sound_spec p A candidate.
+
+Lemma incl_deps_sound p A candidate
+  (IN : candidate ∈ incl_deps (p, A))
+  : incl_deps_sound_spec p A candidate.
+Proof.
+  unfold incl_deps in IN.
+  destruct (CN.state_of p) as [q | ] eqn: STATE; [ | contradiction].
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (it & IN_ITEM & IN_DEP).
+  pose proof (incl_item_deps_sound p A it candidate IN_DEP) as SOUND.
+  destruct SOUND as [p' B gamma IN_D CANDIDATE_EQ LHS RIGHT NULLABLE PATH].
+  econstructor.
+  - exact STATE.
+  - exact IN_ITEM.
+  - exact IN_D.
+  - exact CANDIDATE_EQ.
+  - exact LHS.
+  - exact RIGHT.
+  - exact NULLABLE.
+  - exact PATH.
+Qed.
+
+Lemma incl_deps_complete p A q it p' B gamma
+  (STATE : CN.state_of p = Some q)
+  (IN_ITEM : it ∈ CS.to_state q)
+  (IN_D : (p', B) ∈ CR.D)
+  (LHS : it.(Item.i_lhs) = B)
+  (RIGHT : it.(Item.i_right) = inl A :: gamma)
+  (NULLABLE : Nullable.NullStr gamma)
+  (PATH : CN.npath it.(Item.i_left) p' p)
+  : (p', B) ∈ incl_deps (p, A).
+Proof.
+  unfold incl_deps. rewrite STATE.
+  eapply in_fin_ensemble_bind_intro with (x := it).
+  - exact IN_ITEM.
+  - eapply incl_item_deps_complete.
+    + exact IN_D.
+    + exact LHS.
+    + exact RIGHT.
+    + exact NULLABLE.
+    + exact PATH.
+Qed.
+
+Variant Includes
+  : CR.read_node -> Item.item -> CR.read_node -> Prop :=
+  | Includes_intro p A q it p' B gamma
+    (IN_SOURCE : (p, A) ∈ CR.D)
+    (STATE : CN.state_of p = Some q)
+    (IN_ITEM : it ∈ CS.to_state q)
+    (IN_DEPENDENCY : (p', B) ∈ CR.D)
+    (LHS : it.(Item.i_lhs) = B)
+    (RIGHT : it.(Item.i_right) = inl A :: gamma)
+    (NULLABLE : Nullable.NullStr gamma)
+    (PATH : CN.npath it.(Item.i_left) p' p)
+    : Includes (p, A) it (p', B).
+
+Theorem incl_deps_In p A dependency
+  (IN_SOURCE : (p, A) ∈ CR.D)
+  : dependency ∈ incl_deps (p, A) <-> exists it, Includes (p, A) it dependency.
+Proof.
+  split.
+  - intros IN.
+    pose proof (incl_deps_sound p A dependency IN) as SOUND.
+    destruct SOUND as [q it p' B gamma STATE IN_ITEM IN_D DEPENDENCY_EQ LHS RIGHT NULLABLE PATH].
+    subst dependency.
+    exists it. econstructor.
+    + exact IN_SOURCE.
+    + exact STATE.
+    + exact IN_ITEM.
+    + exact IN_D.
+    + exact LHS.
+    + exact RIGHT.
+    + exact NULLABLE.
+    + exact PATH.
+  - intros (it & INCLUDES).
+    inversion INCLUDES as [p0 A0 q0 it0 p' B gamma IN_SOURCE0 STATE IN_ITEM IN_D LHS RIGHT NULLABLE PATH]; subst.
+    eapply incl_deps_complete.
+    + exact STATE.
+    + exact IN_ITEM.
+    + exact IN_D.
+    + reflexivity.
+    + exact RIGHT.
+    + exact NULLABLE.
+    + exact PATH.
+Qed.
+
+#[local]
+Instance inclusion_edge_hasEqDec : hasEqDec (CG.Edge.t CR.read_node Item.item) :=
+  CG.Edge.hasEqDec follow_node_hasEqDec Item.item_hasEqDec.
+
+Definition inclusion_edges_from (source : CR.read_node) : fin_ensemble (CG.Edge.t CR.read_node Item.item) :=
+  let '(p, A) := source in
+  match CN.state_of p with
+  | Some q =>
+    CS.to_state q >>= fun it =>
+    incl_item_deps p A it >>= fun dependency =>
+    [CG.Edge.mk (p, A) it dependency]
+  | None => []
+  end.
+
+Lemma inclusion_edges_from_sound source edge
+  (IN : edge ∈ inclusion_edges_from source)
+  : exists p A q it p' B gamma, source = (p, A) /\ edge = CG.Edge.mk (p, A) it (p', B) /\ CN.state_of p = Some q /\ it ∈ CS.to_state q /\ (p', B) ∈ CR.D /\ it.(Item.i_lhs) = B /\ it.(Item.i_right) = inl A :: gamma /\ Nullable.NullStr gamma /\ CN.npath it.(Item.i_left) p' p.
+Proof.
+  destruct source as [p A].
+  unfold inclusion_edges_from in IN.
+  destruct (CN.state_of p) as [q | ] eqn: STATE; [ | contradiction].
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (it & IN_ITEM & IN_EDGE_BIND).
+  apply in_fin_ensemble_bind_elim in IN_EDGE_BIND.
+  destruct IN_EDGE_BIND as (dependency & IN_DEP & IN_EDGE).
+  destruct IN_EDGE as [EDGE_EQ | []]. subst edge.
+  pose proof (incl_item_deps_sound p A it dependency IN_DEP) as SOUND.
+  destruct SOUND as [p' B gamma IN_D DEPENDENCY_EQ LHS RIGHT NULLABLE PATH].
+  subst dependency.
+  exists p, A, q, it, p', B, gamma.
+  repeat split; assumption || reflexivity.
+Qed.
+
+Lemma inclusion_edges_from_complete p A q it p' B gamma
+  (STATE : CN.state_of p = Some q)
+  (IN_ITEM : it ∈ CS.to_state q)
+  (IN_D : (p', B) ∈ CR.D)
+  (LHS : it.(Item.i_lhs) = B)
+  (RIGHT : it.(Item.i_right) = inl A :: gamma)
+  (NULLABLE : Nullable.NullStr gamma)
+  (PATH : CN.npath it.(Item.i_left) p' p)
+  : CG.Edge.mk (p, A) it (p', B) ∈ inclusion_edges_from (p, A).
+Proof.
+  unfold inclusion_edges_from. rewrite STATE.
+  eapply in_fin_ensemble_bind_intro with (x := it).
+  - exact IN_ITEM.
+  - eapply in_fin_ensemble_bind_intro with (x := (p', B)).
+    + eapply incl_item_deps_complete.
+      * exact IN_D.
+      * exact LHS.
+      * exact RIGHT.
+      * exact NULLABLE.
+      * exact PATH.
+    + simpl. left. reflexivity.
+Qed.
+
+Definition inclusion_edges_raw : fin_ensemble (CG.Edge.t CR.read_node Item.item) :=
+  CR.D >>= inclusion_edges_from.
+
+Definition inclusion_edges : fin_ensemble (CG.Edge.t CR.read_node Item.item) :=
+  L.nodup inclusion_edge_hasEqDec inclusion_edges_raw.
+
+Lemma inclusion_edges_sound edge
+  (IN : edge ∈ inclusion_edges)
+  : exists source it dependency, edge = CG.Edge.mk source it dependency /\ Includes source it dependency.
+Proof.
+  unfold inclusion_edges in IN.
+  rewrite L.nodup_In in IN.
+  unfold inclusion_edges_raw in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (source & IN_SOURCE & IN_EDGE).
+  destruct (inclusion_edges_from_sound source edge IN_EDGE) as (p & A & q & it & p' & B & gamma & SOURCE_EQ & EDGE_EQ & STATE & IN_ITEM & IN_D & LHS & RIGHT & NULLABLE & PATH).
+  subst source.
+  exists (p, A), it, (p', B).
+  split.
+  - exact EDGE_EQ.
+  - econstructor.
+    + exact IN_SOURCE.
+    + exact STATE.
+    + exact IN_ITEM.
+    + exact IN_D.
+    + exact LHS.
+    + exact RIGHT.
+    + exact NULLABLE.
+    + exact PATH.
+Qed.
+
+Lemma inclusion_edges_complete source it dependency
+  (INCLUDES : Includes source it dependency)
+  : CG.Edge.mk source it dependency ∈ inclusion_edges.
+Proof.
+  inversion INCLUDES as [p A q it0 p' B gamma IN_SOURCE STATE IN_ITEM IN_D LHS RIGHT NULLABLE PATH]; subst.
+  unfold inclusion_edges.
+  rewrite L.nodup_In.
+  unfold inclusion_edges_raw.
+  eapply in_fin_ensemble_bind_intro with (x := (p, A)).
+  - exact IN_SOURCE.
+  - eapply inclusion_edges_from_complete.
+    + exact STATE.
+    + exact IN_ITEM.
+    + exact IN_D.
+    + reflexivity.
+    + exact RIGHT.
+    + exact NULLABLE.
+    + exact PATH.
+Qed.
+
+Theorem inclusion_edges_In source label dependency
+  : CG.Edge.mk source label dependency ∈ inclusion_edges <-> Includes source label dependency.
+Proof.
+  split.
+  - intros IN.
+    destruct (inclusion_edges_sound (CG.Edge.mk source label dependency) IN) as (source0 & label0 & dependency0 & EDGE_EQ & INCLUDES).
+    pose proof (f_equal CG.Edge.src EDGE_EQ) as SOURCE_EQ.
+    pose proof (f_equal CG.Edge.label EDGE_EQ) as LABEL_EQ.
+    pose proof (f_equal CG.Edge.dst EDGE_EQ) as DEPENDENCY_EQ.
+    simpl in SOURCE_EQ, LABEL_EQ, DEPENDENCY_EQ.
+    subst source0. subst label0. subst dependency0.
+    exact INCLUDES.
+  - eapply inclusion_edges_complete.
+Qed.
+
+Lemma inclusion_edges_closed
+  : CG.closed CR.D inclusion_edges.
+Proof.
+  intros edge IN.
+  destruct (inclusion_edges_sound edge IN) as (source & it & dependency & EDGE_EQ & INCLUDES).
+  subst edge.
+  inversion INCLUDES as [p A q it0 p' B gamma IN_SOURCE STATE IN_ITEM IN_D LHS RIGHT NULLABLE PATH]; subst.
+  simpl. split; assumption.
+Qed.
+
+Definition inclusion_graph : CG.t CR.read_node Item.item :=
+  CG.build_closed follow_node_hasEqDec Item.item_hasEqDec CR.D inclusion_edges inclusion_edges_closed.
+
+Theorem inclusion_graph_vertex_In node
+  : inclusion_graph.(CG.isVertex) node <-> node ∈ CR.D.
+Proof.
+  unfold inclusion_graph.
+  eapply CG.build_closed_isVertex.
+Qed.
+
+Theorem inclusion_graph_labeled_edge_In source label dependency
+  : inclusion_graph.(CG.isLabeledEdge) source label dependency <-> Includes source label dependency.
+Proof.
+  unfold inclusion_graph.
+  rewrite CG.build_closed_isLabeledEdge.
+  eapply inclusion_edges_In.
+Qed.
+
+Theorem inclusion_graph_successors_by_label_In source label dependency
+  : dependency ∈ CG.successors_by_label inclusion_graph label source <-> Includes source label dependency.
+Proof.
+  rewrite CG.successors_by_label_In.
+  eapply inclusion_graph_labeled_edge_In.
+Qed.
+
+Theorem inclusion_graph_successors_In source dependency
+  : dependency ∈ CG.successors inclusion_graph source <-> exists label, Includes source label dependency.
+Proof.
+  rewrite CG.successors_In.
+  unfold CG.isEdge.
+  split.
+  - intros (label & EDGE).
+    exists label.
+    eapply (proj1 (inclusion_graph_labeled_edge_In source label dependency)).
+    exact EDGE.
+  - intros (label & INCLUDES).
+    exists label.
+    eapply (proj2 (inclusion_graph_labeled_edge_In source label dependency)).
+    exact INCLUDES.
+Qed.
+
+Lemma inclusion_graph_vertices_no_dup
+  : NoDup inclusion_graph.(CG.vertices).
+Proof.
+  exact inclusion_graph.(CG.vertices_NoDup).
+Qed.
+
+Lemma inclusion_graph_edges_no_dup
+  : NoDup inclusion_graph.(CG.edges).
+Proof.
+  exact inclusion_graph.(CG.edges_NoDup).
+Qed.
+
+Definition Follow_bang (node : CR.read_node) : fin_ensemble T' :=
+  @CG.dataflow CR.read_node Item.item T' follow_terminal_hasEqDec inclusion_graph CR.Read_bang node.
+
+Definition Follow_closure (node : CR.read_node) (t : T') : Prop :=
+  CG.dataflow_closure inclusion_graph CR.Read_bang t node.
+
+Definition Follow_walk (node : CR.read_node) (t : T') : Prop :=
+  CG.dataflow_walk inclusion_graph CR.Read_bang t node.
+
+Theorem Follow_bang_sound node t
+  (IN : t ∈ Follow_bang node)
+  : Follow_closure node t.
+Proof.
+  unfold Follow_bang, Follow_closure.
+  eapply CG.dataflow_sound. exact IN.
+Qed.
+
+Theorem Follow_bang_complete node t
+  (CLOSURE : Follow_closure node t)
+  : t ∈ Follow_bang node.
+Proof.
+  unfold Follow_bang, Follow_closure in *.
+  eapply CG.dataflow_complete. exact CLOSURE.
+Qed.
+
+Theorem Follow_bang_correct node t
+  : t ∈ Follow_bang node <-> Follow_closure node t.
+Proof.
+  unfold Follow_bang, Follow_closure.
+  eapply CG.dataflow_In.
+Qed.
+
+Theorem Follow_closure_walk_iff node t
+  (IN_D : node ∈ CR.D)
+  : Follow_closure node t <-> Follow_walk node t.
+Proof.
+  unfold Follow_closure, Follow_walk.
+  eapply CG.dataflow_closure_iff_walk.
+  rewrite inclusion_graph_vertex_In.
+  exact IN_D.
+Qed.
+
+Theorem Follow_bang_walk_iff node t
+  (IN_D : node ∈ CR.D)
+  : t ∈ Follow_bang node <-> Follow_walk node t.
+Proof.
+  rewrite Follow_bang_correct.
+  eapply Follow_closure_walk_iff. exact IN_D.
+Qed.
+
+Lemma Follow_closure_seed node t
+  (SEED : t ∈ CR.Read_bang node)
+  : Follow_closure node t.
+Proof.
+  unfold Follow_closure, CG.dataflow_closure.
+  eapply DigraphFixedpoint.digraph_closure_seed.
+  exact SEED.
+Qed.
+
+Lemma Follow_read_to_closure node t
+  (READ : CR.Read node t)
+  : Follow_closure node t.
+Proof.
+  eapply Follow_closure_seed.
+  eapply CR.Read_abs_to_impl. exact READ.
+Qed.
+
+Lemma Follow_closure_step source dependency t (EDGE : dependency ∈ CG.successors inclusion_graph source)
+  (FOLLOW : Follow_closure dependency t)
+  : Follow_closure source t.
+Proof.
+  unfold Follow_closure, CG.dataflow_closure in *.
+  eapply DigraphFixedpoint.digraph_closure_step with (y := dependency).
+  - exact EDGE.
+  - exact FOLLOW.
+Qed.
+
+Lemma Follow_closure_includes_step source label dependency t
+  (INCLUDES : Includes source label dependency)
+  (FOLLOW : Follow_closure dependency t)
+  : Follow_closure source t.
+Proof.
+  eapply Follow_closure_step with (dependency := dependency).
+  - rewrite inclusion_graph_successors_In.
+    exists label. exact INCLUDES.
+  - exact FOLLOW.
+Qed.
+
+Theorem Follow_closure_induction (P : CR.read_node -> T' -> Prop) (SEED : forall node t, t ∈ CR.Read_bang node -> P node t) (STEP : forall source dependency t, dependency ∈ CG.successors inclusion_graph source -> P dependency t -> P source t) node t
+  (CLOSURE : Follow_closure node t)
+  : P node t.
+Proof.
+  unfold Follow_closure, CG.dataflow_closure in CLOSURE.
+  induction CLOSURE as [node0 IN_SEED | source dependency EDGE CLOSURE IH].
+  - eapply SEED. exact IN_SEED.
+  - eapply STEP.
+    + exact EDGE.
+    + exact IH.
+Qed.
+
+Theorem Follow_closure_induction_includes (P : CR.read_node -> T' -> Prop) (SEED : forall node t, CR.Read node t -> P node t) (STEP : forall source label dependency t, Includes source label dependency -> P dependency t -> P source t) node t
+  (CLOSURE : Follow_closure node t)
+  : P node t.
+Proof.
+  eapply Follow_closure_induction with (P := P).
+  - intros node0 t0 IN_READ.
+    eapply SEED.
+    eapply CR.Read_impl_to_abs. exact IN_READ.
+  - intros source dependency t0 EDGE IH.
+    rewrite inclusion_graph_successors_In in EDGE.
+    destruct EDGE as (label & INCLUDES).
+    eapply STEP.
+    + exact INCLUDES.
+    + exact IH.
+  - exact CLOSURE.
+Qed.
+
+Definition Follow_sem (node : CR.read_node) (t : T') : Prop :=
+  let '(p, A) := node in
+  exists alpha z, rm_steps [inl start_prime] (alpha ++ inl A :: inr t :: map inr z) /\ CN.npath alpha CN.nq0 p.
+
+Definition Follow (node : CR.read_node) (t : T') : Prop :=
+  Follow_closure node t.
+
+Lemma Follow_sem_includes_step source label dependency t
+  (INCLUDES : Includes source label dependency)
+  (FOLLOW : Follow_sem dependency t)
+  : Follow_sem source t.
+Proof.
+  inversion INCLUDES as [p A q it p' B gamma IN_SOURCE STATE IN_ITEM IN_D LHS RIGHT NULLABLE PATH]; subst.
+  unfold Follow_sem in FOLLOW.
+  destruct FOLLOW as (alpha & z & STEPS_FOLLOW & PATH_ALPHA).
+  pose proof (CS.to_state_valid q label IN_ITEM) as VALID.
+  unfold Item.valid_item, Item.item_prod in VALID.
+  rewrite RIGHT in VALID.
+  pose proof (CN.npath_app alpha label.(Item.i_left) CN.nq0 p' p PATH_ALPHA PATH) as PATH_TARGET.
+  unfold Follow_sem.
+  exists (alpha ++ label.(Item.i_left)), z.
+  split.
+  - eapply rt_trans.
+    + exact STEPS_FOLLOW.
+    + eapply rt_trans.
+      * constructor 1.
+        change (alpha ++ inl label.(Item.i_lhs) :: inr t :: map inr z) with (alpha ++ inl label.(Item.i_lhs) :: map inr (t :: z)).
+        replace (alpha ++ label.(Item.i_left) ++ inl A :: gamma ++ map inr (t :: z)) with (alpha ++ (label.(Item.i_left) ++ inl A :: gamma) ++ map inr (t :: z)).
+        2: { repeat rewrite <- app_assoc.
+          reflexivity.
+        }
+        econstructor. exact VALID.
+      * replace (alpha ++ (label.(Item.i_left) ++ inl A :: gamma) ++ map inr (t :: z)) with ((alpha ++ label.(Item.i_left) ++ [inl A]) ++ gamma ++ map inr (t :: z)).
+        2: { repeat rewrite <- app_assoc.
+          reflexivity.
+        }
+        replace ((alpha ++ label.(Item.i_left)) ++ inl A :: inr t :: map inr z) with ((alpha ++ label.(Item.i_left) ++ [inl A]) ++ map inr (t :: z)).
+        2: { repeat rewrite <- app_assoc.
+          reflexivity.
+        }
+        eapply Nullable.NullStr_rm_steps_empty_context.
+        exact NULLABLE.
+  - exact PATH_TARGET.
+Qed.
+
+Theorem Follow_closure_to_semantic_if_seed (SEED_SEMANTIC : forall node t, CR.Read node t -> Follow_sem node t) node t
+  (CLOSURE : Follow_closure node t)
+  : Follow_sem node t.
+Proof.
+  eapply Follow_closure_induction_includes with (P := Follow_sem).
+  - exact SEED_SEMANTIC.
+  - intros source label dependency t0 INCLUDES IH.
+    eapply Follow_sem_includes_step.
+    + exact INCLUDES.
+    + exact IH.
+  - exact CLOSURE.
+Qed.
+
+Theorem Follow_bang_to_semantic_if_seed (SEED_SEMANTIC : forall node t, CR.Read node t -> Follow_sem node t) node t
+  (IN : t ∈ Follow_bang node)
+  : Follow_sem node t.
+Proof.
+  eapply Follow_closure_to_semantic_if_seed.
+  - exact SEED_SEMANTIC.
+  - eapply Follow_bang_sound. exact IN.
+Qed.
+
+End CanonicalFollow.
+
+Module CanonicalLookahead.
+
+Import GrammarSyntax.
+
+Module CN := CanonicalNumbering.
+Module CR := CanonicalRead.
+Module CF := CanonicalFollow.
+Module CS := Item.CanonicalState.
+
+#[local] Existing Instance N'_hasEqDec.
+#[local] Existing Instance T'_hasEqDec.
+#[local] Existing Instance Item.item_hasEqDec.
+
+#[local]
+Instance lookahead_terminal_hasEqDec : hasEqDec T' :=
+  T'_FinEnum.t_hasEqDec.
+
+Definition LB_candidate (q : nat) (it : Item.item) (candidate : CR.read_node) : fin_ensemble CR.read_node :=
+  let '(p, A) := candidate in
+  if eqb A it.(Item.i_lhs) && CN.npathb it.(Item.i_left) p q then
+    [candidate]
+  else
+    [].
+
+Definition LB (q : nat) (it : Item.item) : fin_ensemble CR.read_node :=
+  CR.D >>= fun candidate =>
+  LB_candidate q it candidate.
+
+Definition LA_impl_raw (q : nat) (it : Item.item) : fin_ensemble T' :=
+  LB q it >>= fun node =>
+  CF.Follow_bang node.
+
+Definition LA_impl (q : nat) (it : Item.item) : fin_ensemble T' :=
+  L.nodup lookahead_terminal_hasEqDec (LA_impl_raw q it).
+
+Definition LA_closure (q : nat) (it : Item.item) (t : T') : Prop :=
+  exists p A, (p, A) ∈ CR.D /\ it.(Item.i_lhs) = A /\ CN.npath it.(Item.i_left) p q /\ CF.Follow_closure (p, A) t.
+
+Definition LA_sem (q : nat) (it : Item.item) (t : T') : Prop :=
+  exists p A, (p, A) ∈ CR.D /\ it.(Item.i_lhs) = A /\ CN.npath it.(Item.i_left) p q /\ CF.Follow_sem (p, A) t.
+
+Definition LA (q : nat) (it : Item.item) (t : T') : Prop :=
+  LA_closure q it t.
+
+Lemma LB_candidate_sound q it source candidate
+  (IN : candidate ∈ LB_candidate q it source)
+  : candidate = source /\ exists p A, source = (p, A) /\ it.(Item.i_lhs) = A /\ CN.npath it.(Item.i_left) p q.
+Proof.
+  destruct source as [p A].
+  unfold LB_candidate in IN.
+  destruct (eqb A it.(Item.i_lhs) && CN.npathb it.(Item.i_left) p q) eqn: GUARD; [ | contradiction].
+  rewrite andb_true_iff in GUARD.
+  destruct GUARD as (EQ_A & PATHB).
+  destruct IN as [EQ | []]. subst candidate.
+  rewrite eqb_eq in EQ_A. subst A.
+  split.
+  - reflexivity.
+  - exists p, it.(Item.i_lhs).
+    split.
+    + reflexivity.
+    + split.
+      * reflexivity.
+      * eapply (proj1 (CN.npathb_correct it.(Item.i_left) p q)).
+        exact PATHB.
+Qed.
+
+Lemma LB_candidate_complete q it p A
+  (LHS : it.(Item.i_lhs) = A)
+  (PATH : CN.npath it.(Item.i_left) p q)
+  : (p, A) ∈ LB_candidate q it (p, A).
+Proof.
+  unfold LB_candidate.
+  assert (GUARD : eqb A it.(Item.i_lhs) && CN.npathb it.(Item.i_left) p q = true).
+  { rewrite andb_true_iff. split.
+    - rewrite eqb_eq. symmetry. exact LHS.
+    - eapply (proj2 (CN.npathb_correct it.(Item.i_left) p q)).
+      exact PATH.
+  }
+  rewrite GUARD. simpl. left. reflexivity.
+Qed.
+
+Lemma LB_sound q it candidate
+  (IN : candidate ∈ LB q it)
+  : candidate ∈ CR.D /\ exists p A, candidate = (p, A) /\ it.(Item.i_lhs) = A /\ CN.npath it.(Item.i_left) p q.
+Proof.
+  unfold LB in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (source & IN_D & IN_CANDIDATE).
+  destruct (LB_candidate_sound q it source candidate IN_CANDIDATE) as (CANDIDATE_EQ & p & A & SOURCE_EQ & LHS & PATH).
+  subst candidate.
+  split.
+  - exact IN_D.
+  - exists p, A.
+    repeat split; assumption.
+Qed.
+
+Lemma LB_complete q it p A
+  (IN_D : (p, A) ∈ CR.D)
+  (LHS : it.(Item.i_lhs) = A)
+  (PATH : CN.npath it.(Item.i_left) p q)
+  : (p, A) ∈ LB q it.
+Proof.
+  unfold LB.
+  eapply in_fin_ensemble_bind_intro with (x := (p, A)).
+  - exact IN_D.
+  - eapply LB_candidate_complete.
+    + exact LHS.
+    + exact PATH.
+Qed.
+
+Theorem LB_In q it p A
+  : (p, A) ∈ LB q it <-> (p, A) ∈ CR.D /\ it.(Item.i_lhs) = A /\ CN.npath it.(Item.i_left) p q.
+Proof.
+  split.
+  - intros IN.
+    destruct (LB_sound q it (p, A) IN) as (IN_D & p0 & A0 & EQ & LHS & PATH).
+    injection EQ as EQ_P EQ_A.
+    subst p0. subst A0.
+    repeat split; assumption.
+  - intros (IN_D & LHS & PATH).
+    eapply LB_complete.
+    + exact IN_D.
+    + exact LHS.
+    + exact PATH.
+Qed.
+
+Lemma LB_bind_no_dup q it candidates
+  (NO_DUP : NoDup candidates)
+  : NoDup (candidates >>= fun candidate =>
+        LB_candidate q it candidate).
+Proof.
+  induction candidates as [ | source candidates IH].
+  - change (NoDup (@nil CR.read_node)).
+    constructor.
+  - inversion NO_DUP as [ | source0 candidates0 NOT_IN NO_DUP_TAIL]; subst.
+    change (NoDup (LB_candidate q it source ++ (candidates >>= fun candidate => LB_candidate q it candidate))).
+    destruct source as [p A].
+    unfold LB_candidate at 1.
+    destruct (eqb A it.(Item.i_lhs) && CN.npathb it.(Item.i_left) p q) eqn: GUARD.
+    + simpl. constructor.
+      * intros IN_TAIL.
+        apply in_fin_ensemble_bind_elim in IN_TAIL.
+        destruct IN_TAIL as (source & IN_SOURCE & IN_CANDIDATE).
+        destruct (LB_candidate_sound q it source (p, A) IN_CANDIDATE) as (EQ & _).
+        subst source.
+        contradiction.
+      * eapply IH. exact NO_DUP_TAIL.
+    + simpl. eapply IH. exact NO_DUP_TAIL.
+Qed.
+
+Lemma LB_NoDup q it
+  : NoDup (LB q it).
+Proof.
+  unfold LB.
+  eapply LB_bind_no_dup.
+  exact CR.read_domain_no_dup.
+Qed.
+
+Lemma LA_impl_raw_sound q it t
+  (IN : t ∈ LA_impl_raw q it)
+  : exists p A, (p, A) ∈ CR.D /\ it.(Item.i_lhs) = A /\ CN.npath it.(Item.i_left) p q /\ t ∈ CF.Follow_bang (p, A).
+Proof.
+  unfold LA_impl_raw in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (node & IN_LB & IN_FOLLOW).
+  destruct (LB_sound q it node IN_LB) as (IN_D & p & A & NODE_EQ & LHS & PATH).
+  subst node.
+  exists p, A.
+  repeat split; assumption.
+Qed.
+
+Lemma LA_impl_raw_complete q it p A t
+  (IN_D : (p, A) ∈ CR.D)
+  (LHS : it.(Item.i_lhs) = A)
+  (PATH : CN.npath it.(Item.i_left) p q)
+  (IN_FOLLOW : t ∈ CF.Follow_bang (p, A))
+  : t ∈ LA_impl_raw q it.
+Proof.
+  unfold LA_impl_raw.
+  eapply in_fin_ensemble_bind_intro with (x := (p, A)).
+  - eapply LB_complete.
+    + exact IN_D.
+    + exact LHS.
+    + exact PATH.
+  - exact IN_FOLLOW.
+Qed.
+
+Theorem LA_impl_raw_In q it t
+  : t ∈ LA_impl_raw q it <-> exists p A, (p, A) ∈ CR.D /\ it.(Item.i_lhs) = A /\ CN.npath it.(Item.i_left) p q /\ t ∈ CF.Follow_bang (p, A).
+Proof.
+  split.
+  - eapply LA_impl_raw_sound.
+  - intros (p & A & IN_D & LHS & PATH & IN_FOLLOW).
+    eapply LA_impl_raw_complete.
+    + exact IN_D.
+    + exact LHS.
+    + exact PATH.
+    + exact IN_FOLLOW.
+Qed.
+
+Lemma LA_impl_sound q it t
+  (IN : t ∈ LA_impl q it)
+  : exists p A, (p, A) ∈ CR.D /\ it.(Item.i_lhs) = A /\ CN.npath it.(Item.i_left) p q /\ t ∈ CF.Follow_bang (p, A).
+Proof.
+  unfold LA_impl in IN.
+  rewrite L.nodup_In in IN.
+  eapply LA_impl_raw_sound. exact IN.
+Qed.
+
+Lemma LA_impl_complete q it p A t
+  (IN_D : (p, A) ∈ CR.D)
+  (LHS : it.(Item.i_lhs) = A)
+  (PATH : CN.npath it.(Item.i_left) p q)
+  (IN_FOLLOW : t ∈ CF.Follow_bang (p, A))
+  : t ∈ LA_impl q it.
+Proof.
+  unfold LA_impl.
+  rewrite L.nodup_In.
+  eapply LA_impl_raw_complete.
+  - exact IN_D.
+  - exact LHS.
+  - exact PATH.
+  - exact IN_FOLLOW.
+Qed.
+
+Theorem LA_impl_In q it t
+  : t ∈ LA_impl q it <-> exists p A, (p, A) ∈ CR.D /\ it.(Item.i_lhs) = A /\ CN.npath it.(Item.i_left) p q /\ t ∈ CF.Follow_bang (p, A).
+Proof.
+  split.
+  - eapply LA_impl_sound.
+  - intros (p & A & IN_D & LHS & PATH & IN_FOLLOW).
+    eapply LA_impl_complete.
+    + exact IN_D.
+    + exact LHS.
+    + exact PATH.
+    + exact IN_FOLLOW.
+Qed.
+
+Lemma LA_impl_NoDup q it
+  : NoDup (LA_impl q it).
+Proof.
+  unfold LA_impl.
+  eapply L.NoDup_nodup.
+Qed.
+
+Lemma LA_impl_no_start_prime_lhs q it t
+  (IN : t ∈ LA_impl q it)
+  : it.(Item.i_lhs) <> start_prime.
+Proof.
+  intros EQ_LHS.
+  destruct (LA_impl_sound q it t IN) as (p & A & IN_D & LHS & PATH & IN_FOLLOW).
+  rewrite <- LHS in IN_D.
+  rewrite EQ_LHS in IN_D.
+  eapply CR.read_domain_no_start_prime.
+  exact IN_D.
+Qed.
+
+Theorem LA_impl_to_closure q it t
+  (IN : t ∈ LA_impl q it)
+  : LA_closure q it t.
+Proof.
+  destruct (LA_impl_sound q it t IN) as (p & A & IN_D & LHS & PATH & IN_FOLLOW).
+  unfold LA_closure.
+  exists p, A.
+  repeat split.
+  - exact IN_D.
+  - exact LHS.
+  - exact PATH.
+  - eapply (proj1 (CF.Follow_bang_correct (p, A) t)).
+    exact IN_FOLLOW.
+Qed.
+
+Theorem LA_closure_to_impl q it t
+  (CLOSURE : LA_closure q it t)
+  : t ∈ LA_impl q it.
+Proof.
+  unfold LA_closure in CLOSURE.
+  destruct CLOSURE as (p & A & IN_D & LHS & PATH & IN_FOLLOW).
+  eapply LA_impl_complete.
+  - exact IN_D.
+  - exact LHS.
+  - exact PATH.
+  - eapply (proj2 (CF.Follow_bang_correct (p, A) t)).
+    exact IN_FOLLOW.
+Qed.
+
+Theorem LA_refines q it t
+  : t ∈ LA_impl q it <-> LA_closure q it t.
+Proof.
+  split.
+  - eapply LA_impl_to_closure.
+  - eapply LA_closure_to_impl.
+Qed.
+
+Theorem LA_impl_to_abs q it t
+  (IN : t ∈ LA_impl q it)
+  : LA q it t.
+Proof.
+  unfold LA.
+  eapply LA_impl_to_closure. exact IN.
+Qed.
+
+Theorem LA_abs_to_impl q it t
+  (IN : LA q it t)
+  : t ∈ LA_impl q it.
+Proof.
+  unfold LA in IN.
+  eapply LA_closure_to_impl. exact IN.
+Qed.
+
+Theorem LA_closure_to_sem_by_follow_sem q it t (FOLLOW_SOUND : forall node t0, CF.Follow_closure node t0 -> CF.Follow_sem node t0)
+  (CLOSURE : LA_closure q it t)
+  : LA_sem q it t.
+Proof.
+  unfold LA_closure in CLOSURE.
+  destruct CLOSURE as (p & A & IN_D & LHS & PATH & FOLLOW).
+  unfold LA_sem.
+  exists p, A.
+  repeat split.
+  - exact IN_D.
+  - exact LHS.
+  - exact PATH.
+  - eapply FOLLOW_SOUND. exact FOLLOW.
+Qed.
+
+Theorem LA_sem_to_closure_by_follow_sem q it t (FOLLOW_COMPLETE : forall node t0, CF.Follow_sem node t0 -> CF.Follow_closure node t0)
+  (SEMANTIC : LA_sem q it t)
+  : LA_closure q it t.
+Proof.
+  unfold LA_sem in SEMANTIC.
+  destruct SEMANTIC as (p & A & IN_D & LHS & PATH & FOLLOW).
+  unfold LA_closure.
+  exists p, A.
+  repeat split.
+  - exact IN_D.
+  - exact LHS.
+  - exact PATH.
+  - eapply FOLLOW_COMPLETE. exact FOLLOW.
+Qed.
+
+Theorem LA_impl_to_sem_if_follow q it t (FOLLOW_SOUND : forall node t0, CF.Follow_closure node t0 -> CF.Follow_sem node t0)
+  (IN : t ∈ LA_impl q it)
+  : LA_sem q it t.
+Proof.
+  eapply LA_closure_to_sem_by_follow_sem.
+  - exact FOLLOW_SOUND.
+  - eapply LA_impl_to_closure. exact IN.
+Qed.
+
+Theorem LA_sem_to_impl_if_follow q it t (FOLLOW_COMPLETE : forall node t0, CF.Follow_sem node t0 -> CF.Follow_closure node t0)
+  (SEMANTIC : LA_sem q it t)
+  : t ∈ LA_impl q it.
+Proof.
+  eapply LA_closure_to_impl.
+  eapply LA_sem_to_closure_by_follow_sem.
+  - exact FOLLOW_COMPLETE.
+  - exact SEMANTIC.
+Qed.
+
+Theorem LA_sem_refines_if_follow q it t (FOLLOW_SOUND : forall node t0, CF.Follow_closure node t0 -> CF.Follow_sem node t0) (FOLLOW_COMPLETE : forall node t0, CF.Follow_sem node t0 -> CF.Follow_closure node t0)
+  : t ∈ LA_impl q it <-> LA_sem q it t.
+Proof.
+  split.
+  - eapply LA_impl_to_sem_if_follow.
+    exact FOLLOW_SOUND.
+  - eapply LA_sem_to_impl_if_follow.
+    exact FOLLOW_COMPLETE.
+Qed.
+
+Theorem LA_impl_to_sem_if_read_seed q it t (READ_SEMANTIC : forall node t0, CR.Read node t0 -> CF.Follow_sem node t0)
+  (IN : t ∈ LA_impl q it)
+  : LA_sem q it t.
+Proof.
+  eapply LA_impl_to_sem_if_follow.
+  - intros node t0 FOLLOW.
+    eapply CF.Follow_closure_to_semantic_if_seed.
+    + exact READ_SEMANTIC.
+    + exact FOLLOW.
+  - exact IN.
+Qed.
+
+End CanonicalLookahead.
 
 Module Read.
 
@@ -9164,8 +13277,7 @@ Proof.
   unfold marked_follow in MARKED_FOLLOW.
   destruct MARKED_FOLLOW as (alpha & z & MARKED & PATH_ALPHA).
   use npath_app as PATH_FULL with PATH_ALPHA PATH_ITEM.
-  econstructor; [exact IN_D | exact LHS | exact PATH_ITEM |
-    exact MARKED | exact PATH_ALPHA | exact PATH_FULL].
+  econstructor; [exact IN_D | exact LHS | exact PATH_ITEM | exact MARKED | exact PATH_ALPHA | exact PATH_FULL].
 Qed.
 
 Theorem LA_marked_witness_to_marked q it t
@@ -9381,8 +13493,7 @@ Proof.
 Qed.
 
 Theorem LA_impl_to_sem_by_lr0_viable
-  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs, NullStr gamma -> path alpha q0 q -> path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs -> exists z, rm_steps [inl start_prime] (alpha ++ inl A :: gamma ++ inr t :: map inr z))
-  q it t
+  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs, NullStr gamma -> path alpha q0 q -> path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs -> exists z, rm_steps [inl start_prime] (alpha ++ inl A :: gamma ++ inr t :: map inr z)) q it t
   (IN : t ∈ LA_impl q it)
   : LA_sem q it t.
 Proof.
@@ -9716,14 +13827,7 @@ Variant reduce_LA_marked_derivation_after_start_spec (q : nat) (t : T') (pr : pr
     : reduce_LA_marked_derivation_after_start_spec q t pr.
 
 Theorem reduce_LA_sound_sem_by_lr0_viable
-  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs,
-    NullStr gamma ->
-    path alpha q0 q ->
-    path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs ->
-    exists z,
-      rm_steps [inl start_prime]
-        (alpha ++ inl A :: gamma ++ inr t :: map inr z))
-  q t pr
+  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs, NullStr gamma -> path alpha q0 q -> path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs -> exists z, rm_steps [inl start_prime] (alpha ++ inl A :: gamma ++ inr t :: map inr z)) q t pr
   (IN : pr ∈ reduce_LA q t)
   : reduce_LA_sem_sound_spec q t pr.
 Proof.
@@ -9740,14 +13844,7 @@ Proof.
 Qed.
 
 Theorem reduce_LA_sound_marked_by_lr0_viable
-  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs,
-    NullStr gamma ->
-    path alpha q0 q ->
-    path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs ->
-    exists z,
-      rm_steps [inl start_prime]
-        (alpha ++ inl A :: gamma ++ inr t :: map inr z))
-  q t pr
+  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs, NullStr gamma -> path alpha q0 q -> path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs -> exists z, rm_steps [inl start_prime] (alpha ++ inl A :: gamma ++ inr t :: map inr z)) q t pr
   (IN : pr ∈ reduce_LA q t)
   : reduce_LA_marked_sound_spec q t pr.
 Proof.
@@ -9764,14 +13861,7 @@ Proof.
 Qed.
 
 Theorem reduce_LA_marked_witness_by_lr0_viable
-  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs,
-    NullStr gamma ->
-    path alpha q0 q ->
-    path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs ->
-    exists z,
-      rm_steps [inl start_prime]
-        (alpha ++ inl A :: gamma ++ inr t :: map inr z))
-  q t pr
+  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs, NullStr gamma -> path alpha q0 q -> path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs -> exists z, rm_steps [inl start_prime] (alpha ++ inl A :: gamma ++ inr t :: map inr z)) q t pr
   (IN : pr ∈ reduce_LA q t)
   : reduce_LA_marked_witness_spec q t pr.
 Proof.
@@ -9795,14 +13885,7 @@ Proof.
 Qed.
 
 Theorem reduce_LA_marked_derivation_by_lr0_viable
-  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs,
-    NullStr gamma ->
-    path alpha q0 q ->
-    path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs ->
-    exists z,
-      rm_steps [inl start_prime]
-        (alpha ++ inl A :: gamma ++ inr t :: map inr z))
-  q t pr
+  (VIABLE : forall A, forall t, forall alpha, forall gamma, forall q, forall qs, NullStr gamma -> path alpha q0 q -> path (alpha ++ [inl A] ++ gamma ++ [inr t]) q0 qs -> exists z, rm_steps [inl start_prime] (alpha ++ inl A :: gamma ++ inr t :: map inr z)) q t pr
   (IN : pr ∈ reduce_LA q t)
   : reduce_LA_marked_derivation_spec q t pr.
 Proof.
@@ -10841,6 +14924,928 @@ Qed.
 
 
 End Table.
+
+Module CanonicalTable.
+
+Import GrammarSyntax.
+
+Module CN := CanonicalNumbering.
+Module CL := CanonicalLookahead.
+Module CS := Item.CanonicalState.
+
+#[local] Existing Instance T'_hasEqDec.
+
+Definition action : Set :=
+  Table.action.
+
+Definition table : Set :=
+  Table.table.
+
+Definition reduce_LA_item (q : nat) (t : T') (it : Item.item) : fin_ensemble prod' :=
+  match LR0.completed_prod_of_item it with
+  | Some pr =>
+    if mem (EQ_DEC := prod'_hasEqDec) pr P' && mem (EQ_DEC := T'_hasEqDec) t (CL.LA_impl q it) then
+      [pr]
+    else
+      []
+  | None => []
+  end.
+
+Definition reduce_LA (q : nat) (t : T') : fin_ensemble prod' :=
+  match CN.state_of q with
+  | Some st =>
+    CS.to_state st >>= fun it =>
+    reduce_LA_item q t it
+  | None => []
+  end.
+
+Definition shift_action (q : nat) (t : T') : fin_ensemble action :=
+  match CN.dN q (inr t) with
+  | Some q' => [Table.Shift q']
+  | None => []
+  end.
+
+Definition reduce_actions (q : nat) (t : T') : fin_ensemble action :=
+  reduce_LA q t >>= fun pr => [Table.Reduce pr].
+
+Definition accept_action (q : nat) (t : T') : fin_ensemble action :=
+  match CN.nq_f with
+  | Some qf =>
+    if eqb q qf && eqb t eof then
+      [Table.Accept]
+    else
+      []
+  | None => []
+  end.
+
+Definition actions (q : nat) (t : T') : fin_ensemble action :=
+  shift_action q t ++ reduce_actions q t ++ accept_action q t.
+
+Definition action_of (q : nat) (t : T') : option action :=
+  match actions q t with
+  | [act] => Some act
+  | _ => None
+  end.
+
+Definition action_conflictb (acts : fin_ensemble action) : bool :=
+  match acts with
+  | _ :: _ :: _ => true
+  | _ => false
+  end.
+
+Definition action_conflict_error (q : nat) (t : T') : BuildError.t :=
+  match shift_action q t with
+  | _ :: _ => BuildError.ShiftReduceConflict q
+  | [] => BuildError.ReduceReduceConflict q
+  end.
+
+Definition check_action (q : nat) (t : T') : BuildErrorM unit :=
+  if action_conflictb (actions q t) then
+    inl (action_conflict_error q t)
+  else
+    inr tt.
+
+Definition table_entries : fin_ensemble (nat * T') := do
+  'q <- seq 0 CN.num_states;
+  't <- T'_FinEnum.all;
+  ret (q, t).
+
+Fixpoint check_table_entries (entries : fin_ensemble (nat * T')) {struct entries} : BuildErrorM unit :=
+  match entries with
+  | [] => inr tt
+  | (q, t) :: entries' =>
+    match check_action q t with
+    | inl err => inl err
+    | inr _ => check_table_entries entries'
+    end
+  end.
+
+Definition build_table : BuildErrorM table :=
+  match check_table_entries table_entries with
+  | inl err => inl err
+  | inr _ => inr action_of
+  end.
+
+Definition conflict_free : Prop :=
+  forall q t st, CN.state_of q = Some st -> action_conflictb (actions q t) = false.
+
+Lemma reduce_LA_item_sound q t it pr
+  (IN : pr ∈ reduce_LA_item q t it)
+  : it.(Item.i_right) = [] /\ pr =
+      {| p_lhs := it.(Item.i_lhs); p_rhs := it.(Item.i_left) |} /\ pr ∈ P' /\ t ∈ CL.LA_impl q it.
+Proof.
+  unfold reduce_LA_item in IN.
+  destruct it as [A beta right].
+  simpl in IN.
+  destruct right as [ | X gamma].
+  - simpl in IN.
+    destruct (mem (EQ_DEC := prod'_hasEqDec) {| p_lhs := A; p_rhs := beta |} P' && mem (EQ_DEC := T'_hasEqDec) t (CL.LA_impl q {| Item.i_lhs := A; Item.i_left := beta; Item.i_right := [] |})) eqn: GUARD.
+    + rewrite andb_true_iff in GUARD.
+      destruct GUARD as (PROD & LOOKAHEAD).
+      destruct IN as [EQ | []]. subst pr.
+      repeat split.
+      * rewrite mem_spec in PROD. exact PROD.
+      * rewrite mem_spec in LOOKAHEAD. exact LOOKAHEAD.
+    + contradiction.
+  - contradiction.
+Qed.
+
+Lemma reduce_LA_item_complete q t it
+  (DONE : it.(Item.i_right) = [])
+  (PROD :
+    {| p_lhs := it.(Item.i_lhs); p_rhs := it.(Item.i_left) |} ∈ P')
+  (LOOKAHEAD : t ∈ CL.LA_impl q it)
+  : {| p_lhs := it.(Item.i_lhs); p_rhs := it.(Item.i_left) |} ∈ reduce_LA_item q t it.
+Proof.
+  unfold reduce_LA_item.
+  destruct it as [A beta right].
+  simpl in DONE. subst right. simpl.
+  assert (GUARD : mem (EQ_DEC := prod'_hasEqDec) {| p_lhs := A; p_rhs := beta |} P' && mem (EQ_DEC := T'_hasEqDec) t (CL.LA_impl q {| Item.i_lhs := A; Item.i_left := beta; Item.i_right := [] |}) = true).
+  { rewrite andb_true_iff. split.
+    - rewrite mem_spec. exact PROD.
+    - rewrite mem_spec. exact LOOKAHEAD.
+  }
+  rewrite GUARD. simpl. left. reflexivity.
+Qed.
+
+Theorem reduce_LA_sound q t pr
+  (IN : pr ∈ reduce_LA q t)
+  : exists st it, CN.state_of q = Some st /\ CS.In it st /\ it.(Item.i_right) = [] /\ pr =
+      {| p_lhs := it.(Item.i_lhs); p_rhs := it.(Item.i_left) |} /\ pr ∈ P' /\ t ∈ CL.LA_impl q it.
+Proof.
+  unfold reduce_LA in IN.
+  destruct (CN.state_of q) as [st | ] eqn: STATE.
+  - apply in_fin_ensemble_bind_elim in IN.
+    destruct IN as (it & IN_IT & IN_ITEM).
+    destruct (reduce_LA_item_sound q t it pr IN_ITEM) as (DONE & EQ_PR & PROD & LOOKAHEAD).
+    exists st, it.
+    repeat split.
+    + exact IN_IT.
+    + exact DONE.
+    + exact EQ_PR.
+    + exact PROD.
+    + exact LOOKAHEAD.
+  - contradiction.
+Qed.
+
+Theorem reduce_LA_complete q t st it
+  (STATE : CN.state_of q = Some st)
+  (IN_IT : CS.In it st)
+  (DONE : it.(Item.i_right) = [])
+  (PROD :
+    {| p_lhs := it.(Item.i_lhs); p_rhs := it.(Item.i_left) |} ∈ P')
+  (LOOKAHEAD : t ∈ CL.LA_impl q it)
+  : {| p_lhs := it.(Item.i_lhs); p_rhs := it.(Item.i_left) |} ∈ reduce_LA q t.
+Proof.
+  unfold reduce_LA. rewrite STATE.
+  eapply in_fin_ensemble_bind_intro with (x := it).
+  - exact IN_IT.
+  - eapply reduce_LA_item_complete.
+    + exact DONE.
+    + exact PROD.
+    + exact LOOKAHEAD.
+Qed.
+
+Theorem reduce_LA_In q t pr
+  : pr ∈ reduce_LA q t <-> exists st it, CN.state_of q = Some st /\ CS.In it st /\ it.(Item.i_right) = [] /\ pr =
+        {| p_lhs := it.(Item.i_lhs); p_rhs := it.(Item.i_left) |} /\ pr ∈ P' /\ t ∈ CL.LA_impl q it.
+Proof.
+  split.
+  - eapply reduce_LA_sound.
+  - intros (st & it & STATE & IN_IT & DONE & EQ_PR & PROD & LOOKAHEAD).
+    subst pr.
+    eapply reduce_LA_complete.
+    + exact STATE.
+    + exact IN_IT.
+    + exact DONE.
+    + exact PROD.
+    + exact LOOKAHEAD.
+Qed.
+
+Theorem reduce_LA_subset_reduceN q t pr
+  (IN : pr ∈ reduce_LA q t)
+  : pr ∈ CN.reduceN q.
+Proof.
+  destruct (reduce_LA_sound q t pr IN) as (st & it & STATE & IN_IT & DONE & EQ_PR & PROD & LOOKAHEAD).
+  unfold CN.reduceN. rewrite STATE. rewrite EQ_PR.
+  eapply LR0.reduce_complete.
+  - exact IN_IT.
+  - exact DONE.
+  - eapply CS.to_state_valid. exact IN_IT.
+Qed.
+
+Lemma reduce_LA_no_start_prime_lhs q t pr
+  (IN : pr ∈ reduce_LA q t)
+  : pr.(p_lhs) <> start_prime.
+Proof.
+  intros EQ_LHS.
+  destruct (reduce_LA_sound q t pr IN) as (st & it & STATE & IN_IT & DONE & EQ_PR & PROD & LOOKAHEAD).
+  pose proof (CL.LA_impl_no_start_prime_lhs q it t LOOKAHEAD) as NO_START.
+  rewrite EQ_PR in EQ_LHS. simpl in EQ_LHS.
+  contradiction.
+Qed.
+
+Lemma shift_action_sound q t act
+  (IN : act ∈ shift_action q t)
+  : exists q', CN.dN q (inr t) = Some q' /\ act = Table.Shift q'.
+Proof.
+  unfold shift_action in IN.
+  destruct (CN.dN q (inr t)) as [q' | ] eqn: STEP.
+  - destruct IN as [EQ | []]. subst act.
+    exists q'. split.
+    + reflexivity.
+    + reflexivity.
+  - contradiction.
+Qed.
+
+Lemma shift_action_complete q t q'
+  (STEP : CN.dN q (inr t) = Some q')
+  : Table.Shift q' ∈ shift_action q t.
+Proof.
+  unfold shift_action. rewrite STEP.
+  simpl. left. reflexivity.
+Qed.
+
+Lemma reduce_actions_sound q t act
+  (IN : act ∈ reduce_actions q t)
+  : exists pr, pr ∈ reduce_LA q t /\ act = Table.Reduce pr.
+Proof.
+  unfold reduce_actions in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (pr & IN_REDUCE & IN_ACTION).
+  destruct IN_ACTION as [EQ | []]. subst act.
+  exists pr. split.
+  - exact IN_REDUCE.
+  - reflexivity.
+Qed.
+
+Lemma reduce_actions_complete q t pr
+  (IN : pr ∈ reduce_LA q t)
+  : Table.Reduce pr ∈ reduce_actions q t.
+Proof.
+  unfold reduce_actions.
+  eapply in_fin_ensemble_bind_intro with (x := pr).
+  - exact IN.
+  - simpl. left. reflexivity.
+Qed.
+
+Lemma accept_action_sound q t act
+  (IN : act ∈ accept_action q t)
+  : act = Table.Accept /\ exists qf, CN.nq_f = Some qf /\ q = qf /\ t = eof.
+Proof.
+  unfold accept_action in IN.
+  destruct CN.nq_f as [qf | ] eqn: FINAL.
+  - destruct (eqb q qf && eqb t eof) eqn: GUARD.
+    + rewrite andb_true_iff in GUARD.
+      destruct GUARD as (EQ_Q & EQ_T).
+      rewrite eqb_eq in EQ_Q.
+      rewrite eqb_eq in EQ_T.
+      destruct IN as [EQ | []]. subst act.
+      split.
+      * reflexivity.
+      * exists qf. repeat split.
+        -- exact EQ_Q.
+        -- exact EQ_T.
+    + contradiction.
+  - contradiction.
+Qed.
+
+Lemma accept_action_complete qf
+  (FINAL : CN.nq_f = Some qf)
+  : Table.Accept ∈ accept_action qf eof.
+Proof.
+  unfold accept_action. rewrite FINAL.
+  assert (EQ_Q : eqb qf qf = true).
+  { rewrite eqb_eq. reflexivity.
+  }
+  assert (EQ_T : eqb eof eof = true).
+  { rewrite eqb_eq. reflexivity.
+  }
+  rewrite EQ_Q, EQ_T. simpl. left. reflexivity.
+Qed.
+
+Theorem actions_sound q t act
+  (IN : act ∈ actions q t)
+  : (exists q', CN.dN q (inr t) = Some q' /\ act = Table.Shift q') \/ (exists pr, pr ∈ reduce_LA q t /\ act = Table.Reduce pr) \/ (act = Table.Accept /\ exists qf, CN.nq_f = Some qf /\ q = qf /\ t = eof).
+Proof.
+  unfold actions in IN.
+  rewrite L.in_app_iff in IN.
+  destruct IN as [IN_SHIFT | IN_REST].
+  - left. eapply shift_action_sound. exact IN_SHIFT.
+  - rewrite L.in_app_iff in IN_REST.
+    destruct IN_REST as [IN_REDUCE | IN_ACCEPT].
+    + right. left.
+      eapply reduce_actions_sound. exact IN_REDUCE.
+    + right. right.
+      eapply accept_action_sound. exact IN_ACCEPT.
+Qed.
+
+Lemma shift_action_in_actions q t q'
+  (STEP : CN.dN q (inr t) = Some q')
+  : Table.Shift q' ∈ actions q t.
+Proof.
+  unfold actions. rewrite L.in_app_iff. left.
+  eapply shift_action_complete. exact STEP.
+Qed.
+
+Lemma reduce_action_in_actions q t pr
+  (IN : pr ∈ reduce_LA q t)
+  : Table.Reduce pr ∈ actions q t.
+Proof.
+  unfold actions. rewrite L.in_app_iff.
+  right. rewrite L.in_app_iff. left.
+  eapply reduce_actions_complete. exact IN.
+Qed.
+
+Lemma accept_action_in_actions qf
+  (FINAL : CN.nq_f = Some qf)
+  : Table.Accept ∈ actions qf eof.
+Proof.
+  unfold actions. rewrite L.in_app_iff.
+  right. rewrite L.in_app_iff. right.
+  eapply accept_action_complete. exact FINAL.
+Qed.
+
+Theorem action_of_some_iff q t act
+  : action_of q t = Some act <-> actions q t = [act].
+Proof.
+  unfold action_of.
+  destruct (actions q t) as [ | act0 rest].
+  - split; intros CONTRADICTION; discriminate.
+  - destruct rest as [ | act1 rest].
+    + split.
+      * intros EQ. inversion EQ. reflexivity.
+      * intros EQ. inversion EQ. reflexivity.
+    + split; intros CONTRADICTION; discriminate.
+Qed.
+
+Lemma state_of_lt n st
+  (STATE : CN.state_of n = Some st)
+  : n < CN.num_states.
+Proof.
+  eapply CN.state_of_some_lt. exact STATE.
+Qed.
+
+Lemma table_entries_complete q t st
+  (STATE : CN.state_of q = Some st)
+  : (q, t) ∈ table_entries.
+Proof.
+  unfold table_entries.
+  eapply in_fin_ensemble_bind_intro with (x := q).
+  - rewrite in_seq. split.
+    + lia.
+    + eapply state_of_lt. exact STATE.
+  - eapply in_fin_ensemble_bind_intro with (x := t).
+    + eapply T'_all_complete.
+    + simpl. left. reflexivity.
+Qed.
+
+Lemma table_entries_sound_state q t
+  (IN : (q, t) ∈ table_entries)
+  : exists st, CN.state_of q = Some st.
+Proof.
+  unfold table_entries in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (q0 & IN_Q & IN_TAIL).
+  apply in_fin_ensemble_bind_elim in IN_TAIL.
+  destruct IN_TAIL as (t0 & IN_T & IN_PAIR).
+  simpl in IN_PAIR.
+  destruct IN_PAIR as [EQ | []].
+  inversion EQ. subst q0 t0.
+  rewrite in_seq in IN_Q.
+  destruct IN_Q as (LOWER & UPPER).
+  eapply CN.state_of_complete. exact UPPER.
+Qed.
+
+Lemma action_conflictb_false_cases acts
+  (NO_CONFLICT : action_conflictb acts = false)
+  : acts = [] \/ exists act, acts = [act].
+Proof.
+  destruct acts as [ | act rest].
+  - left. reflexivity.
+  - destruct rest as [ | act' tail].
+    + right. exists act. reflexivity.
+    + simpl in NO_CONFLICT. discriminate.
+Qed.
+
+Lemma check_action_success_no_conflict q t
+  (CHECK : check_action q t = inr tt)
+  : action_conflictb (actions q t) = false.
+Proof.
+  unfold check_action in CHECK.
+  destruct (action_conflictb (actions q t)) eqn: CONFLICT.
+  - discriminate.
+  - reflexivity.
+Qed.
+
+Lemma check_action_failure_conflict q t err
+  (CHECK : check_action q t = inl err)
+  : action_conflictb (actions q t) = true /\ err = action_conflict_error q t.
+Proof.
+  unfold check_action in CHECK.
+  destruct (action_conflictb (actions q t)) eqn: CONFLICT.
+  - inversion CHECK. subst err.
+    split.
+    + reflexivity.
+    + reflexivity.
+  - discriminate.
+Qed.
+
+Lemma check_table_entries_success_no_conflict entries q t
+  (CHECK : check_table_entries entries = inr tt)
+  (IN : (q, t) ∈ entries)
+  : action_conflictb (actions q t) = false.
+Proof.
+  revert q t CHECK IN.
+  induction entries as [ | entry entries IH]; intros q t CHECK IN.
+  - contradiction.
+  - destruct entry as [q0 t0].
+    simpl in CHECK, IN.
+    destruct IN as [EQ | IN].
+    + inversion EQ. subst q0 t0.
+      destruct (check_action q t) as [err | []] eqn: CHECK_ACTION.
+      * discriminate.
+      * eapply check_action_success_no_conflict.
+        exact CHECK_ACTION.
+    + destruct (check_action q0 t0) as [err | []] eqn: CHECK_ACTION.
+      * discriminate.
+      * eapply IH.
+        -- exact CHECK.
+        -- exact IN.
+Qed.
+
+Lemma check_table_entries_failure_conflict entries err
+  (CHECK : check_table_entries entries = inl err)
+  : exists q t, (q, t) ∈ entries /\ action_conflictb (actions q t) = true.
+Proof.
+  induction entries as [ | entry entries IH].
+  - simpl in CHECK. discriminate.
+  - destruct entry as [q t].
+    simpl in CHECK.
+    destruct (check_action q t) as [err0 | []] eqn: CHECK_ACTION.
+    + inversion CHECK. subst err0.
+      destruct (check_action_failure_conflict q t err CHECK_ACTION) as (CONFLICT & ERROR).
+      exists q, t. split.
+      * left. reflexivity.
+      * exact CONFLICT.
+    + destruct (IH CHECK) as (q' & t' & IN & CONFLICT).
+      exists q', t'. split.
+      * right. exact IN.
+      * exact CONFLICT.
+Qed.
+
+Lemma check_table_entries_conflict_failure entries q t
+  (IN : (q, t) ∈ entries)
+  (CONFLICT : action_conflictb (actions q t) = true)
+  : exists err, check_table_entries entries = inl err.
+Proof.
+  induction entries as [ | entry entries IH].
+  - contradiction.
+  - destruct entry as [q0 t0].
+    simpl in IN |- *.
+    destruct IN as [EQ | IN].
+    + inversion EQ. subst q0 t0.
+      unfold check_action. rewrite CONFLICT.
+      exists (action_conflict_error q t).
+      reflexivity.
+    + destruct (check_action q0 t0) as [err | []] eqn: CHECK_ACTION.
+      * exists err. reflexivity.
+      * destruct (IH IN) as (err & CHECK).
+        rewrite CHECK. exists err. reflexivity.
+Qed.
+
+Theorem build_table_success_conflict_free tbl
+  (BUILD : build_table = inr tbl)
+  : conflict_free.
+Proof.
+  unfold conflict_free.
+  intros q t st STATE.
+  unfold build_table in BUILD.
+  destruct (check_table_entries table_entries) as [err | []] eqn: CHECK.
+  - discriminate.
+  - eapply check_table_entries_success_no_conflict.
+    + exact CHECK.
+    + eapply table_entries_complete. exact STATE.
+Qed.
+
+Theorem build_table_failure_conflict err
+  (BUILD : build_table = inl err)
+  : exists q t, (q, t) ∈ table_entries /\ action_conflictb (actions q t) = true.
+Proof.
+  unfold build_table in BUILD.
+  destruct (check_table_entries table_entries) as [err0 | []] eqn: CHECK.
+  - eapply check_table_entries_failure_conflict.
+    exact CHECK.
+  - discriminate.
+Qed.
+
+Theorem build_table_conflict_failure q t st
+  (STATE : CN.state_of q = Some st)
+  (CONFLICT : action_conflictb (actions q t) = true)
+  : exists err, build_table = inl err.
+Proof.
+  pose proof (table_entries_complete q t st STATE) as IN.
+  destruct (check_table_entries_conflict_failure table_entries q t IN CONFLICT) as (err & CHECK).
+  unfold build_table. rewrite CHECK.
+  exists err. reflexivity.
+Qed.
+
+Lemma check_table_entries_no_conflict_complete entries (NO_CONFLICT : forall q t, (q, t) ∈ entries -> action_conflictb (actions q t) = false)
+  : check_table_entries entries = inr tt.
+Proof.
+  induction entries as [ | entry entries IH].
+  - reflexivity.
+  - destruct entry as [q t]. simpl.
+    unfold check_action.
+    rewrite NO_CONFLICT with (q := q) (t := t).
+    + eapply IH.
+      intros q0 t0 IN.
+      eapply NO_CONFLICT. right. exact IN.
+    + left. reflexivity.
+Qed.
+
+Theorem build_table_complete
+  (FREE : conflict_free)
+  : build_table = inr action_of.
+Proof.
+  unfold build_table.
+  rewrite check_table_entries_no_conflict_complete.
+  - reflexivity.
+  - intros q t IN.
+    destruct (table_entries_sound_state q t IN) as (st & STATE).
+    eapply FREE. exact STATE.
+Qed.
+
+Theorem build_table_success_single_action tbl q t st
+  (BUILD : build_table = inr tbl)
+  (STATE : CN.state_of q = Some st)
+  : (actions q t = [] /\ tbl q t = None) \/ (exists act, actions q t = [act] /\ tbl q t = Some act).
+Proof.
+  unfold build_table in BUILD.
+  destruct (check_table_entries table_entries) as [err | []] eqn: CHECK.
+  - discriminate.
+  - inversion BUILD. subst tbl.
+    pose proof (table_entries_complete q t st STATE) as IN.
+    pose proof (check_table_entries_success_no_conflict table_entries q t CHECK IN) as NO_CONFLICT.
+    destruct (action_conflictb_false_cases (actions q t) NO_CONFLICT) as [NO_ACTION | ONE_ACTION].
+    + left. split.
+      * exact NO_ACTION.
+      * unfold action_of. rewrite NO_ACTION. reflexivity.
+    + destruct ONE_ACTION as (act & EQ_ACTIONS).
+      right. exists act. split.
+      * exact EQ_ACTIONS.
+      * unfold action_of. rewrite EQ_ACTIONS. reflexivity.
+Qed.
+
+Lemma build_table_success_select_action tbl q t st act
+  (BUILD : build_table = inr tbl)
+  (STATE : CN.state_of q = Some st)
+  (IN : act ∈ actions q t)
+  : actions q t = [act] /\ tbl q t = Some act.
+Proof.
+  destruct (build_table_success_single_action tbl q t st BUILD STATE) as [NO_ACTION | ONE_ACTION].
+  - destruct NO_ACTION as (ACTIONS & TABLE).
+    rewrite ACTIONS in IN. contradiction.
+  - destruct ONE_ACTION as (act0 & ACTIONS & TABLE).
+    rewrite ACTIONS in IN.
+    simpl in IN.
+    destruct IN as [EQ | []]. subst act0.
+    split.
+    + exact ACTIONS.
+    + exact TABLE.
+Qed.
+
+Definition parser_rank : Set :=
+  Table.parser_rank.
+
+Definition parser_termination_certificate : Set :=
+  Table.parser_termination_certificate.
+
+Definition parser_termination_certificate_rank (cert : parser_termination_certificate) : parser_rank :=
+  Table.parser_termination_certificate_rank cert.
+
+Definition certified_table : Set :=
+  Table.certified_table.
+
+Definition certified_table_action (ctbl : certified_table) : table :=
+  Table.certified_table_action ctbl.
+
+Definition certified_table_termination_certificate (ctbl : certified_table) : parser_termination_certificate :=
+  Table.certified_table_termination_certificate ctbl.
+
+Definition certified_table_rank (ctbl : certified_table) : parser_rank :=
+  parser_termination_certificate_rank (certified_table_termination_certificate ctbl).
+
+Definition parser_measure : Set :=
+  Table.parser_measure.
+
+Definition parser_lookahead (rest : list T') : T' :=
+  Table.parser_lookahead rest.
+
+Definition parser_step_lt (rank : parser_rank) : parser_measure -> parser_measure -> Prop :=
+  Table.parser_step_lt rank.
+
+Definition reduce_edge (lookahead : T') (q q' : nat) : Prop :=
+  exists pr p, pr ∈ reduce_LA q lookahead /\ CN.npath pr.(p_rhs) p q /\ CN.dN p (inl pr.(p_lhs)) = Some q'.
+
+Definition parser_termination_cert (rank : parser_rank) : Prop :=
+  forall lookahead q q', reduce_edge lookahead q q' -> rank lookahead q' < rank lookahead q.
+
+Definition reduce_edge_entry : Set :=
+  Table.reduce_edge_entry.
+
+Definition reduce_edge_entry_lookahead (edge : reduce_edge_entry) : T' :=
+  Table.reduce_edge_entry_lookahead edge.
+
+Definition reduce_edge_entry_source (edge : reduce_edge_entry) : nat :=
+  Table.reduce_edge_entry_source edge.
+
+Definition reduce_edge_entry_target (edge : reduce_edge_entry) : nat :=
+  Table.reduce_edge_entry_target edge.
+
+Definition reduce_edge_targets_from_prod (lookahead : T') (q : nat) (pr : prod') : fin_ensemble nat :=
+  seq 0 CN.num_states >>= fun p =>
+  if CN.npathb pr.(p_rhs) p q then
+    match CN.dN p (inl pr.(p_lhs)) with
+    | Some q' => [q']
+    | None => []
+    end
+  else
+    [].
+
+Definition reduce_edge_targets (lookahead : T') (q : nat) : fin_ensemble nat := do
+  'pr <- reduce_LA q lookahead;
+  reduce_edge_targets_from_prod lookahead q pr.
+
+Definition reduce_edge_entries_at (lookahead : T') (q : nat) : fin_ensemble reduce_edge_entry :=
+  reduce_edge_targets lookahead q >>= fun q' =>
+  [Table.mk_reduce_edge_entry lookahead q q'].
+
+Definition reduce_edge_entries : fin_ensemble reduce_edge_entry := do
+  'lookahead <- T'_FinEnum.all;
+  'q <- seq 0 CN.num_states;
+  reduce_edge_entries_at lookahead q.
+
+Definition rank_decreases_edgeb (rank : parser_rank) (edge : reduce_edge_entry) : bool :=
+  Nat.ltb (rank (reduce_edge_entry_lookahead edge) (reduce_edge_entry_target edge)) (rank (reduce_edge_entry_lookahead edge) (reduce_edge_entry_source edge)).
+
+Definition parser_termination_certb (rank : parser_rank) : bool :=
+  forallb (rank_decreases_edgeb rank) reduce_edge_entries.
+
+Definition parser_termination_certificate_valid (cert : parser_termination_certificate) : Prop :=
+  parser_termination_cert (parser_termination_certificate_rank cert).
+
+Definition parser_termination_certificate_validb (cert : parser_termination_certificate) : bool :=
+  parser_termination_certb (parser_termination_certificate_rank cert).
+
+Definition check_parser_termination_certificate (cert : parser_termination_certificate) : BuildErrorM unit :=
+  if parser_termination_certificate_validb cert then
+    inr tt
+  else
+    inl BuildError.InvalidTerminationCertificate.
+
+Definition build_certified_table (cert : parser_termination_certificate) : BuildErrorM certified_table := do
+  'tbl <- build_table;
+  '_ <- check_parser_termination_certificate cert;
+  ret (Table.mk_certified_table tbl cert).
+
+Lemma reduce_edge_targets_from_prod_sound lookahead q pr q' (IN : q' ∈ reduce_edge_targets_from_prod lookahead q pr)
+  : exists p, CN.npath pr.(p_rhs) p q /\ CN.dN p (inl pr.(p_lhs)) = Some q'.
+Proof.
+  unfold reduce_edge_targets_from_prod in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (p & IN_P & IN_TARGET).
+  destruct (CN.npathb pr.(p_rhs) p q) eqn: PATHB.
+  - destruct (CN.dN p (inl pr.(p_lhs))) as [q'' | ] eqn: STEP.
+    + destruct IN_TARGET as [EQ | []]. subst q''.
+      exists p. split.
+      * eapply (proj1 (CN.npathb_correct pr.(p_rhs) p q)).
+        exact PATHB.
+      * exact STEP.
+    + contradiction.
+  - contradiction.
+Qed.
+
+Lemma reduce_edge_targets_from_prod_complete lookahead q pr p q'
+  (PATH : CN.npath pr.(p_rhs) p q)
+  (STEP : CN.dN p (inl pr.(p_lhs)) = Some q')
+  : q' ∈ reduce_edge_targets_from_prod lookahead q pr.
+Proof.
+  unfold reduce_edge_targets_from_prod.
+  eapply in_fin_ensemble_bind_intro with (x := p).
+  - rewrite in_seq. split.
+    + lia.
+    + destruct (CN.npath_source_state pr.(p_rhs) p q PATH) as (st & STATE).
+      eapply CN.state_of_some_lt. exact STATE.
+  - assert (PATHB : CN.npathb pr.(p_rhs) p q = true).
+    { eapply (proj2 (CN.npathb_correct pr.(p_rhs) p q)).
+      exact PATH.
+    }
+    rewrite PATHB. rewrite STEP.
+    simpl. left. reflexivity.
+Qed.
+
+Lemma reduce_edge_targets_sound lookahead q q'
+  (IN : q' ∈ reduce_edge_targets lookahead q)
+  : exists pr p, pr ∈ reduce_LA q lookahead /\ CN.npath pr.(p_rhs) p q /\ CN.dN p (inl pr.(p_lhs)) = Some q'.
+Proof.
+  unfold reduce_edge_targets in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (pr & IN_REDUCE & IN_TARGET).
+  destruct (reduce_edge_targets_from_prod_sound lookahead q pr q' IN_TARGET) as (p & PATH & STEP).
+  exists pr, p.
+  repeat split.
+  - exact IN_REDUCE.
+  - exact PATH.
+  - exact STEP.
+Qed.
+
+Lemma reduce_edge_targets_complete lookahead q pr p q'
+  (IN_REDUCE : pr ∈ reduce_LA q lookahead)
+  (PATH : CN.npath pr.(p_rhs) p q)
+  (STEP : CN.dN p (inl pr.(p_lhs)) = Some q')
+  : q' ∈ reduce_edge_targets lookahead q.
+Proof.
+  unfold reduce_edge_targets.
+  eapply in_fin_ensemble_bind_intro with (x := pr).
+  - exact IN_REDUCE.
+  - eapply reduce_edge_targets_from_prod_complete.
+    + exact PATH.
+    + exact STEP.
+Qed.
+
+Theorem reduce_edge_entries_sound edge
+  (IN : edge ∈ reduce_edge_entries)
+  : reduce_edge (reduce_edge_entry_lookahead edge) (reduce_edge_entry_source edge) (reduce_edge_entry_target edge).
+Proof.
+  unfold reduce_edge_entries in IN.
+  apply in_fin_ensemble_bind_elim in IN.
+  destruct IN as (lookahead & IN_LOOKAHEAD & IN_LOOKAHEAD_TAIL).
+  apply in_fin_ensemble_bind_elim in IN_LOOKAHEAD_TAIL.
+  destruct IN_LOOKAHEAD_TAIL as (q & IN_Q & IN_Q_TAIL).
+  unfold reduce_edge_entries_at in IN_Q_TAIL.
+  apply in_fin_ensemble_bind_elim in IN_Q_TAIL.
+  destruct IN_Q_TAIL as (q' & IN_TARGET & IN_ENTRY).
+  destruct IN_ENTRY as [EQ | []]. subst edge.
+  destruct (reduce_edge_targets_sound lookahead q q' IN_TARGET) as (pr & p & IN_REDUCE & PATH & STEP).
+  exists pr, p.
+  repeat split.
+  - exact IN_REDUCE.
+  - exact PATH.
+  - exact STEP.
+Qed.
+
+Theorem reduce_edge_entries_complete lookahead q q'
+  (EDGE : reduce_edge lookahead q q')
+  : Table.mk_reduce_edge_entry lookahead q q' ∈ reduce_edge_entries.
+Proof.
+  destruct EDGE as (pr & p & IN_REDUCE & PATH & STEP).
+  unfold reduce_edge_entries.
+  eapply in_fin_ensemble_bind_intro with (x := lookahead).
+  - eapply T'_all_complete.
+  - eapply in_fin_ensemble_bind_intro with (x := q).
+    + rewrite in_seq. split.
+      * lia.
+      * destruct (reduce_LA_sound q lookahead pr IN_REDUCE) as (st & it & STATE & IN_IT & DONE & EQ_PR & PROD & IN_LA).
+        eapply CN.state_of_some_lt. exact STATE.
+    + unfold reduce_edge_entries_at.
+      eapply in_fin_ensemble_bind_intro with (x := q').
+      * eapply reduce_edge_targets_complete.
+        -- exact IN_REDUCE.
+        -- exact PATH.
+        -- exact STEP.
+      * simpl. left. reflexivity.
+Qed.
+
+Theorem reduce_edge_entries_correct edge
+  : edge ∈ reduce_edge_entries <-> reduce_edge (reduce_edge_entry_lookahead edge) (reduce_edge_entry_source edge) (reduce_edge_entry_target edge).
+Proof.
+  split.
+  - eapply reduce_edge_entries_sound.
+  - intros EDGE.
+    destruct edge as [lookahead q q'].
+    simpl in EDGE |- *.
+    eapply reduce_edge_entries_complete.
+    exact EDGE.
+Qed.
+
+Lemma rank_decreases_edgeb_sound rank edge (CHECK : rank_decreases_edgeb rank edge = true)
+  : rank (reduce_edge_entry_lookahead edge) (reduce_edge_entry_target edge) < rank (reduce_edge_entry_lookahead edge) (reduce_edge_entry_source edge).
+Proof.
+  unfold rank_decreases_edgeb in CHECK.
+  rewrite Nat.ltb_lt in CHECK. exact CHECK.
+Qed.
+
+Theorem parser_termination_certb_sound rank
+  (CHECK : parser_termination_certb rank = true)
+  : parser_termination_cert rank.
+Proof.
+  unfold parser_termination_cert.
+  intros lookahead q q' EDGE.
+  unfold parser_termination_certb in CHECK.
+  rewrite forallb_forall in CHECK.
+  pose proof (reduce_edge_entries_complete lookahead q q' EDGE) as IN_EDGE.
+  pose proof (CHECK (Table.mk_reduce_edge_entry lookahead q q') IN_EDGE) as CHECK_EDGE.
+  unfold rank_decreases_edgeb in CHECK_EDGE.
+  unfold reduce_edge_entry_lookahead in CHECK_EDGE.
+  unfold reduce_edge_entry_source in CHECK_EDGE.
+  unfold reduce_edge_entry_target in CHECK_EDGE.
+  simpl in CHECK_EDGE.
+  rewrite Nat.ltb_lt in CHECK_EDGE.
+  exact CHECK_EDGE.
+Qed.
+
+Lemma parser_termination_certificate_validb_sound cert (CHECK : parser_termination_certificate_validb cert = true)
+  : parser_termination_certificate_valid cert.
+Proof.
+  unfold parser_termination_certificate_valid.
+  unfold parser_termination_certificate_validb in CHECK.
+  eapply parser_termination_certb_sound.
+  exact CHECK.
+Qed.
+
+Lemma check_parser_termination_certificate_success_valid cert (CHECK : check_parser_termination_certificate cert = inr tt)
+  : parser_termination_certificate_valid cert.
+Proof.
+  unfold check_parser_termination_certificate in CHECK.
+  destruct (parser_termination_certificate_validb cert) eqn: CHECKB.
+  - eapply parser_termination_certificate_validb_sound.
+    exact CHECKB.
+  - discriminate.
+Qed.
+
+Theorem build_certified_table_success cert ctbl (BUILD : build_certified_table cert = inr ctbl)
+  : build_table = inr (certified_table_action ctbl) /\ certified_table_termination_certificate ctbl = cert /\ parser_termination_certificate_valid cert.
+Proof.
+  unfold build_certified_table in BUILD.
+  destruct build_table as [err | tbl] eqn: BUILD_TABLE.
+  - discriminate.
+  - destruct (check_parser_termination_certificate cert) as [err | []] eqn: CHECK.
+    + discriminate.
+    + inversion BUILD. subst ctbl.
+      simpl.
+      repeat split.
+      eapply check_parser_termination_certificate_success_valid.
+      exact CHECK.
+Qed.
+
+Theorem build_certified_table_success_conflict_free cert ctbl (BUILD : build_certified_table cert = inr ctbl)
+  : conflict_free.
+Proof.
+  destruct (build_certified_table_success cert ctbl BUILD) as (BUILD_TABLE & CERT & VALID).
+  eapply build_table_success_conflict_free.
+  exact BUILD_TABLE.
+Qed.
+
+Theorem build_certified_table_success_termination cert ctbl (BUILD : build_certified_table cert = inr ctbl)
+  : parser_termination_cert (certified_table_rank ctbl).
+Proof.
+  destruct (build_certified_table_success cert ctbl BUILD) as (BUILD_TABLE & CERT & VALID).
+  unfold certified_table_rank.
+  rewrite CERT.
+  exact VALID.
+Qed.
+
+Lemma parser_step_lt_reduce rank q q' rest (RANK : rank (parser_lookahead rest) q' < rank (parser_lookahead rest) q)
+  : parser_step_lt rank (Table.mk_parser_measure q' rest) (Table.mk_parser_measure q rest).
+Proof.
+  unfold parser_step_lt, parser_lookahead in *.
+  eapply Table.parser_step_lt_reduce.
+  exact RANK.
+Qed.
+
+Lemma parser_step_lt_reduce_edge rank q q' rest
+  (CERT : parser_termination_cert rank)
+  (EDGE : reduce_edge (parser_lookahead rest) q q')
+  : parser_step_lt rank (Table.mk_parser_measure q' rest) (Table.mk_parser_measure q rest).
+Proof.
+  eapply parser_step_lt_reduce.
+  eapply CERT. exact EDGE.
+Qed.
+
+Theorem parser_step_lt_wf rank
+  : well_founded (parser_step_lt rank).
+Proof.
+  unfold parser_step_lt.
+  eapply Table.parser_step_lt_wf.
+Qed.
+
+Theorem parser_terminates rank q rest
+  : Acc (parser_step_lt rank) (Table.mk_parser_measure q rest).
+Proof.
+  eapply parser_step_lt_wf.
+Qed.
+
+Theorem build_certified_table_success_reduce_edge_step_lt cert ctbl q q' rest (BUILD : build_certified_table cert = inr ctbl) (EDGE : reduce_edge (parser_lookahead rest) q q')
+  : parser_step_lt (certified_table_rank ctbl) (Table.mk_parser_measure q' rest) (Table.mk_parser_measure q rest).
+Proof.
+  eapply parser_step_lt_reduce_edge.
+  - eapply build_certified_table_success_termination.
+    exact BUILD.
+  - exact EDGE.
+Qed.
+
+End CanonicalTable.
 
 Module Parser.
 
@@ -12564,7 +17569,560 @@ Qed.
 
 End Parser.
 
-Module Builder.
+Module CanonicalParser.
+
+Import GrammarSyntax.
+
+Module CN := CanonicalNumbering.
+Module CT := CanonicalTable.
+
+#[local] Existing Instance T'_hasEqDec.
+
+Definition parse_tree : Set :=
+  Parser.parse_tree.
+
+Definition run_stack : Set :=
+  Parser.run_stack.
+
+Definition parser_input : list T -> list T' :=
+  Parser.parser_input.
+
+Definition parser_input_yield : list T' -> list T :=
+  Parser.parser_input_yield.
+
+Definition run_stack_symbols : run_stack -> list V' :=
+  Parser.run_stack_symbols.
+
+Definition run_stack_yield : run_stack -> list T :=
+  Parser.run_stack_yield.
+
+Definition run_stack_valid : run_stack -> Prop :=
+  Parser.run_stack_valid.
+
+Definition run_shift_tree : T' -> option parse_tree :=
+  Parser.run_shift_tree.
+
+Definition run_split_suffix {A : Type} : nat -> list A -> option (list A * list A) :=
+  @Parser.run_split_suffix A.
+
+Definition run_sequence_trees : run_stack -> option (list parse_tree) :=
+  Parser.run_sequence_trees.
+
+Definition run_reduce_stack : prod' -> run_stack -> option run_stack :=
+  Parser.run_reduce_stack.
+
+Definition run_accept_stack : run_stack -> option parse_tree :=
+  Parser.run_accept_stack.
+
+#[projections(primitive)]
+Record nconfig : Type :=
+  mk_nconfig
+  { nc_word : list V'
+  ; nc_src : nat
+  ; nc_dst : nat
+  ; nc_rest : list T'
+  ; nc_path : CN.npath nc_word nc_src nc_dst
+  } as cfg.
+
+#[projections(primitive)]
+Record run_state : Type :=
+  mk_run_state
+  { run_state_config : nconfig
+  ; run_state_stack : run_stack
+  } as rs.
+
+Definition nconfig_parser_measure (c : nconfig) : CT.parser_measure :=
+  Table.mk_parser_measure c.(nc_dst) c.(nc_rest).
+
+Definition run_state_measure (rs : run_state) : CT.parser_measure :=
+  nconfig_parser_measure rs.(run_state_config).
+
+Definition initial_parser_measure (w : list T) : CT.parser_measure :=
+  Table.mk_parser_measure CN.nq0 (parser_input w).
+
+Definition certified_initial_acc (ctbl : CT.certified_table) (w : list T)
+  : Acc (CT.parser_step_lt (CT.certified_table_rank ctbl)) (initial_parser_measure w).
+Proof.
+  eapply CT.parser_terminates.
+Defined.
+
+Lemma npath_snoc word src dst X dst'
+  (PATH : CN.npath word src dst)
+  (STEP : CN.dN dst X = Some dst')
+  : CN.npath (word ++ [X]) src dst'.
+Proof.
+  eapply CN.npath_app.
+  - exact PATH.
+  - eapply CN.npath_singleton. exact STEP.
+Qed.
+
+Definition dN_target_dec (n : nat) (X : V')
+  : {m : nat & CN.dN n X = Some m} + (forall m, CN.dN n X <> Some m).
+Proof.
+  destruct (CN.dN n X) as [m | ] eqn: STEP.
+  - left. exists m. reflexivity.
+  - right. intros m STEP'. discriminate.
+Defined.
+
+#[local] Arguments dN_target_dec n X : simpl never.
+
+Definition run_shift_target (word : list V') (src dst : nat) (t : T')
+  (path_src : CN.npath word src dst)
+  : option {dst' : nat & CN.dN dst (inr t) = Some dst' /\ CN.npath (word ++ [inr t]) src dst'}.
+Proof.
+  destruct (dN_target_dec dst (inr t)) as [(dst' & STEP) | NO_STEP].
+  - refine (Some (@existT _ _ dst' _)).
+    split.
+    + exact STEP.
+    + eapply npath_snoc; [exact path_src | exact STEP].
+  - exact None.
+Defined.
+
+Lemma run_shift_target_sound word src dst t path_src target (RUN : run_shift_target word src dst t path_src = Some target)
+  : CN.dN dst (inr t) = Some (projT1 target) /\ CN.npath (word ++ [inr t]) src (projT1 target).
+Proof.
+  destruct target as [dst' [STEP PATH]].
+  simpl. split.
+  - exact STEP.
+  - exact PATH.
+Qed.
+
+Lemma run_shift_target_complete word src dst t path_src dst'
+  (STEP : CN.dN dst (inr t) = Some dst')
+  : exists target, run_shift_target word src dst t path_src = Some target.
+Proof.
+  unfold run_shift_target.
+  destruct (dN_target_dec dst (inr t)) as [(target & STEP_TARGET) | NO_STEP].
+  - eexists. reflexivity.
+  - exfalso. eapply NO_STEP. exact STEP.
+Qed.
+
+Definition npath_dec (word : list V') (src dst : nat)
+  : {CN.npath word src dst} + {~ CN.npath word src dst}.
+Proof.
+  destruct (CN.npathb word src dst) eqn: PATHB.
+  - left.
+    eapply (proj1 (CN.npathb_correct word src dst)).
+    exact PATHB.
+  - right. intros PATH.
+    pose proof (proj2 (CN.npathb_correct word src dst) PATH) as PATHB_TRUE.
+    rewrite PATHB in PATHB_TRUE.
+    discriminate.
+Defined.
+
+#[local] Arguments npath_dec word src dst : simpl never.
+
+Definition run_reduce_target (alpha : list V') (src dst : nat) (pr : prod')
+  : option {p : nat & {dst' : nat | CN.npath alpha src p /\ CN.npath pr.(p_rhs) p dst /\ CN.dN p (inl pr.(p_lhs)) = Some dst'}}.
+Proof.
+  destruct (CN.run src alpha) as [p | ].
+  - destruct (npath_dec alpha src p) as [PATH_ALPHA | NO_PATH_ALPHA].
+    + destruct (CN.run p pr.(p_rhs)) as [dst0 | ].
+      * destruct (Nat.eq_dec dst0 dst) as [EQ_DST | NE_DST].
+        -- subst dst0.
+           destruct (npath_dec pr.(p_rhs) p dst) as [PATH_RHS | NO_PATH_RHS].
+           ++ destruct (dN_target_dec p (inl pr.(p_lhs))) as [(dst' & STEP) | NO_STEP].
+              ** refine (Some (@existT _ _ p (@exist _ _ dst' _))).
+                 repeat split.
+                 --- exact PATH_ALPHA.
+                 --- exact PATH_RHS.
+                 --- exact STEP.
+              ** exact None.
+           ++ exact None.
+        -- exact None.
+      * exact None.
+    + exact None.
+  - exact None.
+Defined.
+
+#[local] Arguments
+  run_reduce_target alpha src dst pr : simpl never.
+
+Lemma run_reduce_target_sound alpha src dst pr target (RUN : run_reduce_target alpha src dst pr = Some target)
+  : CN.npath alpha src (projT1 target) /\ CN.npath pr.(p_rhs) (projT1 target) dst /\ CN.dN (projT1 target) (inl pr.(p_lhs)) = Some (proj1_sig (projT2 target)).
+Proof.
+  destruct target as [p [dst' [PATH_ALPHA [PATH_RHS STEP]]]].
+  simpl in *.
+  split.
+  - exact PATH_ALPHA.
+  - split.
+    + exact PATH_RHS.
+    + exact STEP.
+Qed.
+
+Lemma run_reduce_target_complete alpha src dst pr p dst'
+  (PATH_ALPHA : CN.npath alpha src p)
+  (PATH_RHS : CN.npath pr.(p_rhs) p dst)
+  (STEP : CN.dN p (inl pr.(p_lhs)) = Some dst')
+  : exists target, run_reduce_target alpha src dst pr = Some target.
+Proof.
+  pose proof (proj2 (CN.run_spec src alpha p) PATH_ALPHA) as RUN_ALPHA.
+  pose proof (proj2 (CN.run_spec p pr.(p_rhs) dst) PATH_RHS) as RUN_RHS.
+  unfold run_reduce_target.
+  rewrite RUN_ALPHA.
+  destruct (npath_dec alpha src p) as [PATH_ALPHA0 | NO_PATH_ALPHA].
+  - rewrite RUN_RHS.
+    destruct (Nat.eq_dec dst dst) as [EQ_DST | NE_DST].
+    + destruct (npath_dec pr.(p_rhs) p dst) as [PATH_RHS0 | NO_PATH_RHS].
+      * destruct (dN_target_dec p (inl pr.(p_lhs))) as [(dst0 & STEP0) | NO_STEP].
+        -- eexists. reflexivity.
+        -- exfalso. eapply NO_STEP. exact STEP.
+      * contradiction.
+    + contradiction NE_DST. reflexivity.
+  - contradiction.
+Qed.
+
+Lemma nq0_lt_num_states
+  : CN.nq0 < CN.num_states.
+Proof.
+  eapply CN.state_of_some_lt.
+  exact CN.nq0_state.
+Qed.
+
+Lemma nq0_empty_path
+  : CN.npath [] CN.nq0 CN.nq0.
+Proof.
+  unfold CN.npath.
+  rewrite CN.path_nil_iff.
+  split.
+  - reflexivity.
+  - exact nq0_lt_num_states.
+Qed.
+
+Definition initial_nconfig (w : list T) : nconfig :=
+  {| nc_word := []; nc_src := CN.nq0; nc_dst := CN.nq0; nc_rest := parser_input w; nc_path := nq0_empty_path |}.
+
+Definition initial_run_state (w : list T) : run_state :=
+  {| run_state_config := initial_nconfig w; run_state_stack := [] |}.
+
+Definition run_accept_word : list V' :=
+  Parser.run_accept_word.
+
+Definition run_accept_config (c : nconfig) : bool :=
+  match CN.nq_f with
+  | Some nf =>
+    match c.(nc_rest) with
+    | [] =>
+      if eqb c.(nc_dst) nf then
+        if (list_hasEqDec V'_hasEqDec) c.(nc_word) run_accept_word then
+          true
+        else
+          false
+      else false
+    | _ => false
+    end
+  | None => false
+  end.
+
+Lemma run_accept_config_sound c
+  (ACCEPT : run_accept_config c = true)
+  : exists nf, CN.nq_f = Some nf /\ c.(nc_word) = run_accept_word /\ c.(nc_dst) = nf /\ c.(nc_rest) = [].
+Proof.
+  destruct c as [word src dst rest path].
+  unfold run_accept_config in ACCEPT.
+  simpl in ACCEPT.
+  destruct CN.nq_f as [nf | ] eqn: FINAL; [ | discriminate].
+  destruct rest as [ | t rest']; [ | discriminate].
+  destruct (eqb dst nf) eqn: DST; [ | discriminate].
+  destruct ((list_hasEqDec V'_hasEqDec) word run_accept_word) as [WORD | NE_WORD]; [ | discriminate].
+  rewrite eqb_eq in DST.
+  exists nf. split.
+  - reflexivity.
+  - simpl. split.
+    + exact WORD.
+    + split.
+      * exact DST.
+      * reflexivity.
+Qed.
+
+Definition run_reduce_allowed (pr : prod') (dst : nat) (lookahead : T')
+  : option (pr ∈ CT.reduce_LA dst lookahead).
+Proof.
+  destruct (L.in_dec prod'_hasEqDec pr (CT.reduce_LA dst lookahead)) as [IN_REDUCE | NOT_IN_REDUCE].
+  - exact (Some IN_REDUCE).
+  - exact None.
+Defined.
+
+Lemma run_reduce_stack_sound pr stack stack' word alpha omega dst lookahead (STACK_SYMBOLS : run_stack_symbols stack = word)
+  (STACK_VALID : run_stack_valid stack)
+  (SPLIT_WORD : run_split_suffix (length pr.(p_rhs)) word = Some (alpha, omega))
+  (EQ_RHS : omega = pr.(p_rhs))
+  (IN_REDUCE : pr ∈ CT.reduce_LA dst lookahead) (REDUCE_STACK : run_reduce_stack pr stack = Some stack')
+  : run_stack_symbols stack' = alpha ++ [inl pr.(p_lhs)] /\ run_stack_valid stack' /\ run_stack_yield stack' = run_stack_yield stack.
+Proof.
+  destruct pr as [lhs rhs].
+  simpl in *.
+  unfold run_reduce_stack in REDUCE_STACK.
+  unfold Parser.run_reduce_stack in REDUCE_STACK.
+  simpl in REDUCE_STACK.
+  destruct (Parser.run_split_suffix (length rhs) stack) as [[prefix suffix] | ] eqn: SPLIT_STACK; [ | discriminate].
+  destruct lhs as [A | ].
+  - destruct (Parser.run_sequence_trees suffix) as [children | ] eqn: SEQ; [ | discriminate].
+    injection REDUCE_STACK as REDUCE_STACK_EQ.
+    subst stack'.
+    pose proof (Parser.run_split_suffix_map Parser.run_stack_entry_symbol (length rhs) stack prefix suffix SPLIT_STACK) as SPLIT_SYMBOLS.
+    unfold run_stack_symbols in STACK_SYMBOLS.
+    unfold Parser.run_stack_symbols in STACK_SYMBOLS.
+    rewrite STACK_SYMBOLS in SPLIT_SYMBOLS.
+    pose proof (Parser.run_split_suffix_deterministic (length rhs) word alpha omega (map Parser.run_stack_entry_symbol prefix) (map Parser.run_stack_entry_symbol suffix) SPLIT_WORD SPLIT_SYMBOLS) as SPLIT_EQ.
+    destruct SPLIT_EQ as (ALPHA & OMEGA).
+    subst alpha. subst omega.
+    pose proof (Parser.run_split_suffix_sound (length rhs) stack prefix suffix SPLIT_STACK) as STACK_EQ.
+    pose proof (Parser.run_sequence_trees_sound suffix children SEQ) as SEQ_SOUND.
+    destruct SEQ_SOUND as (SUFFIX_STACK & SUFFIX_SYMBOLS & SUFFIX_YIELD & SUFFIX_VALID).
+    unfold run_stack_valid in STACK_VALID.
+    rewrite STACK_EQ in STACK_VALID.
+    rewrite Parser.run_stack_valid_app in STACK_VALID.
+    destruct STACK_VALID as (PREFIX_VALID & SUFFIX_VALID_STACK).
+    unfold Parser.run_stack_symbols in SUFFIX_SYMBOLS.
+    rewrite SUFFIX_SYMBOLS in OMEGA.
+    subst rhs.
+    destruct (CT.reduce_LA_sound dst lookahead {| p_lhs := Some A; p_rhs := map lift_symbol (Parser.parse_forest_symbols children) |} IN_REDUCE) as (st & it & STATE & IN_IT & DONE & EQ_PR & PROD & IN_LA).
+    pose proof (Parser.P'_user_prod A (Parser.parse_forest_symbols children) PROD) as USER_PROD.
+    repeat split.
+    + unfold run_stack_symbols.
+      rewrite Parser.run_stack_symbols_app.
+      simpl. reflexivity.
+    + unfold run_stack_valid.
+      rewrite Parser.run_stack_valid_app.
+      split.
+      * exact PREFIX_VALID.
+      * simpl. split.
+        -- constructor.
+           ++ exact USER_PROD.
+           ++ eapply SUFFIX_VALID.
+              exact SUFFIX_VALID_STACK.
+        -- exact I.
+    + unfold run_stack_yield.
+      rewrite Parser.run_stack_yield_app.
+      unfold Parser.run_stack_yield at 2.
+      simpl. rewrite app_nil_r.
+      unfold Parser.parse_forest_yield in SUFFIX_YIELD.
+      rewrite <- SUFFIX_YIELD.
+      rewrite <- Parser.run_stack_yield_app.
+      rewrite <- STACK_EQ. reflexivity.
+  - destruct (Parser.run_sequence_trees suffix); discriminate.
+Qed.
+
+Fixpoint run_parser_acc (ctbl : CT.certified_table) (CERT : CT.parser_termination_cert (CT.certified_table_rank ctbl)) (rs : run_state) (ACC : Acc (CT.parser_step_lt (CT.certified_table_rank ctbl)) (run_state_measure rs)) {struct ACC} : option parse_tree.
+Proof.
+  destruct rs as [c stack].
+  destruct c as [word src dst rest path_src].
+  simpl in ACC.
+  destruct ACC as [ACC_INV].
+  destruct ((CT.certified_table_action ctbl) dst (CT.parser_lookahead rest)) as [act | ].
+  - destruct act as [dst_action | pr | ].
+    + destruct rest as [ | t rest']; [exact None | ].
+      destruct (run_shift_target word src dst t path_src) as [(dst' & STEP & path_tgt) | ]; [ | exact None].
+      set (c' := {| nc_word := word ++ [inr t]; nc_src := src; nc_dst := dst'; nc_rest := rest'; nc_path := path_tgt |}).
+      set (stack' := stack ++ [run_shift_tree t]).
+      exact (run_parser_acc ctbl CERT {| run_state_config := c'; run_state_stack := stack' |} (ACC_INV (nconfig_parser_measure c') (Table.parser_step_lt_shift (CT.certified_table_rank ctbl) dst dst' t rest'))).
+    + destruct (run_split_suffix (length pr.(p_rhs)) word) as [[alpha omega] | ]; [ | exact None].
+      destruct ((list_hasEqDec V'_hasEqDec) omega pr.(p_rhs)) as [EQ_RHS | NE_RHS]; [ | exact None].
+      destruct (run_reduce_allowed pr dst (CT.parser_lookahead rest)) as [IN_REDUCE | ]; [ | exact None].
+      destruct (run_reduce_stack pr stack) as [stack' | ]; [ | exact None].
+      destruct (run_reduce_target alpha src dst pr) as [(p & dst' & PATH_ALPHA & PATH_RHS & STEP) | ]; [ | exact None].
+      pose proof (npath_snoc alpha src p (inl pr.(p_lhs)) dst' PATH_ALPHA STEP) as path_tgt.
+      set (c' := {| nc_word := alpha ++ [inl pr.(p_lhs)]; nc_src := src; nc_dst := dst'; nc_rest := rest; nc_path := path_tgt |}).
+      assert (EDGE : CT.reduce_edge (CT.parser_lookahead rest) dst dst').
+      { exists pr, p. repeat split.
+        - exact IN_REDUCE.
+        - exact PATH_RHS.
+        - exact STEP.
+      }
+      exact (run_parser_acc ctbl CERT {| run_state_config := c'; run_state_stack := stack' |} (ACC_INV (nconfig_parser_measure c') (CT.parser_step_lt_reduce_edge (CT.certified_table_rank ctbl) dst dst' rest CERT EDGE))).
+    + destruct (run_accept_config {| nc_word := word; nc_src := src; nc_dst := dst; nc_rest := rest; nc_path := path_src |}).
+      * exact (run_accept_stack stack).
+      * exact None.
+  - exact None.
+Defined.
+
+Definition run_parser_impl (ctbl : CT.certified_table) (CERT : CT.parser_termination_cert (CT.certified_table_rank ctbl)) (w : list T) : option parse_tree :=
+  run_parser_acc ctbl CERT (initial_run_state w) (certified_initial_acc ctbl w).
+
+Fixpoint run_parser_acc_irrel ctbl CERT rs ACC1 {struct ACC1}
+  : forall ACC2, run_parser_acc ctbl CERT rs ACC1 = run_parser_acc ctbl CERT rs ACC2.
+Proof.
+  intros ACC2.
+  destruct rs as [c stack].
+  destruct c as [word src dst rest path_src].
+  simpl in ACC1, ACC2.
+  destruct ACC1 as [ACC_INV1].
+  destruct ACC2 as [ACC_INV2].
+  cbn [run_parser_acc].
+  destruct ((CT.certified_table_action ctbl) dst (CT.parser_lookahead rest)) as [act | ]; [ | reflexivity].
+  destruct act as [dst_action | pr | ]; [ | | reflexivity].
+  - destruct rest as [ | t rest']; [reflexivity | ].
+    destruct (run_shift_target word src dst t path_src) as [(dst' & STEP & path_tgt) | ]; [ | reflexivity].
+    set (c' := {| nc_word := word ++ [inr t]; nc_src := src; nc_dst := dst'; nc_rest := rest'; nc_path := path_tgt |}).
+    set (stack' := stack ++ [run_shift_tree t]).
+    eapply run_parser_acc_irrel.
+  - destruct (run_split_suffix (length pr.(p_rhs)) word) as [[alpha omega] | ]; [ | reflexivity].
+    destruct ((list_hasEqDec V'_hasEqDec) omega pr.(p_rhs)) as [EQ_RHS | NE_RHS]; [ | reflexivity].
+    destruct (run_reduce_allowed pr dst (CT.parser_lookahead rest)) as [IN_REDUCE | ]; [ | reflexivity].
+    destruct (run_reduce_stack pr stack) as [stack' | ]; [ | reflexivity].
+    destruct (run_reduce_target alpha src dst pr) as [(p & dst' & PATH_ALPHA & PATH_RHS & STEP) | ]; [ | reflexivity].
+    pose proof (npath_snoc alpha src p (inl pr.(p_lhs)) dst' PATH_ALPHA STEP) as path_tgt.
+    set (c' := {| nc_word := alpha ++ [inl pr.(p_lhs)]; nc_src := src; nc_dst := dst'; nc_rest := rest; nc_path := path_tgt |}).
+    eapply run_parser_acc_irrel.
+Defined.
+
+Lemma run_parser_acc_tree_sound ctbl CERT w rs ACC tree (STACK_SYMBOLS : run_stack_symbols rs.(run_state_stack) = rs.(run_state_config).(nc_word)) (STACK_VALID : run_stack_valid rs.(run_state_stack)) (YIELD : run_stack_yield rs.(run_state_stack) ++ parser_input_yield rs.(run_state_config).(nc_rest) = w) (RUN : run_parser_acc ctbl CERT rs ACC = Some tree)
+  : Parser.valid_tree tree /\ Parser.parse_tree_root tree = Some Grammar.start /\ Parser.parse_tree_yield tree = w.
+Proof.
+  revert rs ACC tree STACK_SYMBOLS STACK_VALID YIELD RUN.
+  refine (fix IH (rs : run_state) (ACC : Acc (CT.parser_step_lt (CT.certified_table_rank ctbl)) (run_state_measure rs)) (tree : parse_tree) (STACK_SYMBOLS : run_stack_symbols rs.(run_state_stack) = rs.(run_state_config).(nc_word)) (STACK_VALID : run_stack_valid rs.(run_state_stack)) (YIELD : run_stack_yield rs.(run_state_stack) ++ parser_input_yield rs.(run_state_config).(nc_rest) = w) (RUN : run_parser_acc ctbl CERT rs ACC = Some tree) {struct ACC} : Parser.valid_tree tree /\ Parser.parse_tree_root tree = Some Grammar.start /\ Parser.parse_tree_yield tree = w := _).
+  destruct rs as [c stack].
+  destruct c as [word src dst rest path_src].
+  simpl in ACC, STACK_SYMBOLS, STACK_VALID, YIELD.
+  destruct ACC as [ACC_INV].
+  cbn [run_parser_acc] in RUN.
+  destruct ((CT.certified_table_action ctbl) dst (CT.parser_lookahead rest)) as [act | ]; cbn in RUN; [ | discriminate].
+  destruct act as [dst_action | pr | ]; cbn in RUN.
+  - destruct rest as [ | t rest']; [discriminate | ].
+    destruct (run_shift_target word src dst t path_src) as [(dst' & STEP & path_tgt) | ]; cbn in RUN; [ | discriminate].
+    set (c' := {| nc_word := word ++ [inr t]; nc_src := src; nc_dst := dst'; nc_rest := rest'; nc_path := path_tgt |}) in RUN |- *.
+    set (stack' := stack ++ [run_shift_tree t]) in RUN |- *.
+    pose proof (Parser.run_shift_stack_sound stack t rest' word w STACK_SYMBOLS STACK_VALID YIELD) as SHIFT_SOUND.
+    destruct SHIFT_SOUND as (STACK_SYMBOLS' & STACK_VALID' & YIELD').
+    assert (STACK_SYMBOLS_C' : run_stack_symbols stack' = c'.(nc_word)).
+    { unfold stack', c'. simpl.
+      exact STACK_SYMBOLS'.
+    }
+    assert (YIELD_C' : run_stack_yield stack' ++ parser_input_yield c'.(nc_rest) = w).
+    { unfold c'. simpl. exact YIELD'.
+    }
+    exact (IH {| run_state_config := c'; run_state_stack := stack' |} (ACC_INV (nconfig_parser_measure c') (Table.parser_step_lt_shift (CT.certified_table_rank ctbl) dst dst' t rest')) tree STACK_SYMBOLS_C' STACK_VALID' YIELD_C' RUN).
+  - destruct (run_split_suffix (length pr.(p_rhs)) word) as [[alpha omega] | ] eqn: SPLIT_WORD; cbn in RUN; [ | discriminate].
+    destruct ((list_hasEqDec V'_hasEqDec) omega pr.(p_rhs)) as [EQ_RHS | NE_RHS]; cbn in RUN; [ | discriminate].
+    destruct (run_reduce_allowed pr dst (CT.parser_lookahead rest)) as [IN_REDUCE | ]; [ | discriminate].
+    destruct (run_reduce_stack pr stack) as [stack' | ] eqn: REDUCE_STACK; [ | discriminate].
+    destruct (run_reduce_target alpha src dst pr) as [(p & dst' & PATH_ALPHA & PATH_RHS & STEP) | ]; [ | discriminate].
+    pose proof (run_reduce_stack_sound pr stack stack' word alpha omega dst (CT.parser_lookahead rest) STACK_SYMBOLS STACK_VALID SPLIT_WORD EQ_RHS IN_REDUCE REDUCE_STACK) as REDUCE_SOUND.
+    destruct REDUCE_SOUND as (STACK_SYMBOLS' & STACK_VALID' & STACK_YIELD').
+    eapply IH with (rs := {| run_state_config := {| nc_word := alpha ++ [inl pr.(p_lhs)]; nc_src := src; nc_dst := dst'; nc_rest := rest; nc_path := npath_snoc alpha src p (inl pr.(p_lhs)) dst' PATH_ALPHA STEP |}; run_state_stack := stack' |}) (tree := tree).
+    + simpl. exact STACK_SYMBOLS'.
+    + simpl. exact STACK_VALID'.
+    + simpl. rewrite STACK_YIELD'. exact YIELD.
+    + exact RUN.
+  - destruct (run_accept_config {| nc_word := word; nc_src := src; nc_dst := dst; nc_rest := rest; nc_path := path_src |}) eqn: ACCEPT_CONFIG; cbn in RUN; [ | discriminate].
+    destruct (run_accept_config_sound {| nc_word := word; nc_src := src; nc_dst := dst; nc_rest := rest; nc_path := path_src |} ACCEPT_CONFIG) as (nf & FINAL & WORD & DST & REST).
+    assert (STACK_SYMBOLS_ACCEPT : Parser.run_stack_symbols stack = Parser.run_accept_word).
+    { unfold run_stack_symbols in STACK_SYMBOLS.
+      rewrite STACK_SYMBOLS.
+      exact WORD.
+    }
+    pose proof (Parser.run_accept_stack_sound stack tree STACK_VALID STACK_SYMBOLS_ACCEPT RUN) as ACCEPT_SOUND.
+    destruct ACCEPT_SOUND as (TREE_VALID & ROOT & STACK_YIELD).
+    simpl in REST.
+    rewrite REST in YIELD.
+    simpl in YIELD.
+    unfold run_stack_yield in YIELD.
+    rewrite STACK_YIELD in YIELD.
+    rewrite app_nil_r in YIELD.
+    repeat split.
+    + exact TREE_VALID.
+    + exact ROOT.
+    + exact YIELD.
+Qed.
+
+Lemma run_parser_impl_tree_sound ctbl CERT w tree (RUN : run_parser_impl ctbl CERT w = Some tree)
+  : Parser.valid_tree tree /\ Parser.parse_tree_root tree = Some Grammar.start /\ Parser.parse_tree_yield tree = w.
+Proof.
+  unfold run_parser_impl in RUN.
+  eapply run_parser_acc_tree_sound with (rs := initial_run_state w) (ACC := certified_initial_acc ctbl w).
+  - reflexivity.
+  - exact I.
+  - simpl.
+    unfold parser_input_yield, parser_input.
+    rewrite Parser.parser_input_yield_parser_input.
+    reflexivity.
+  - exact RUN.
+Qed.
+
+Lemma run_parser_impl_sound ctbl CERT w tree (RUN : run_parser_impl ctbl CERT w = Some tree)
+  : Parser.run_parser w.
+Proof.
+  destruct (run_parser_impl_tree_sound ctbl CERT w tree RUN) as (VALID & ROOT & YIELD).
+  rewrite <- YIELD.
+  eapply Parser.valid_tree_run_parser.
+  - exact VALID.
+  - exact ROOT.
+Qed.
+
+End CanonicalParser.
+
+Module CanonicalBuilder.
+
+Import GrammarSyntax.
+
+Module CN := CanonicalNumbering.
+Module CT := CanonicalTable.
+Module CP := CanonicalParser.
+
+#[projections(primitive)]
+Record parser : Type :=
+  mk_parser
+  { parser_certificate : CT.parser_termination_certificate
+  ; parser_table : CT.certified_table
+  ; parser_table_built : CT.build_certified_table parser_certificate = inr parser_table
+  ; parser_table_conflict_free : CT.conflict_free
+  ; parser_table_cert : CT.parser_termination_cert (CT.certified_table_rank parser_table)
+  } as p.
+
+Definition run_parser (p : parser) (w : list T) : option CP.parse_tree :=
+  CP.run_parser_impl p.(parser_table) p.(parser_table_cert) w.
+
+Definition build (cert : CT.parser_termination_certificate)
+  : BuildErrorM parser.
+Proof.
+  refine (match CT.build_certified_table cert as result return CT.build_certified_table cert = result -> BuildErrorM parser with | inl err => fun _ => inl err | inr ctbl => fun BUILD => inr {| parser_certificate := cert; parser_table := ctbl; parser_table_built := BUILD; parser_table_conflict_free := _; parser_table_cert := _ |} end eq_refl).
+  - eapply CT.build_certified_table_success_conflict_free.
+    exact BUILD.
+  - eapply CT.build_certified_table_success_termination.
+    exact BUILD.
+Defined.
+
+Theorem parser_build_correct p
+  : CT.build_certified_table p.(parser_certificate) = inr p.(parser_table) /\ CT.conflict_free /\ CT.parser_termination_cert (CT.certified_table_rank p.(parser_table)).
+Proof.
+  repeat split.
+  - exact p.(parser_table_built).
+  - exact p.(parser_table_conflict_free).
+  - exact p.(parser_table_cert).
+Qed.
+
+Theorem parser_single_action p q t st
+  (STATE : CN.state_of q = Some st)
+  : (CT.actions q t = [] /\ CT.certified_table_action p.(parser_table) q t = None) \/ (exists act, CT.actions q t = [act] /\ CT.certified_table_action p.(parser_table) q t = Some act).
+Proof.
+  destruct (CT.build_certified_table_success p.(parser_certificate) p.(parser_table) p.(parser_table_built)) as (BUILD_TABLE & CERT & VALID).
+  eapply CT.build_table_success_single_action.
+  - exact BUILD_TABLE.
+  - exact STATE.
+Qed.
+
+Theorem parser_run_tree_sound p w tree
+  (RUN : run_parser p w = Some tree)
+  : Parser.valid_tree tree /\ Parser.parse_tree_root tree = Some Grammar.start /\ Parser.parse_tree_yield tree = w.
+Proof.
+  unfold run_parser in RUN.
+  eapply CP.run_parser_impl_tree_sound.
+  exact RUN.
+Qed.
+
+Theorem parser_run_sound p w tree
+  (RUN : run_parser p w = Some tree)
+  : Parser.run_parser w.
+Proof.
+  unfold run_parser in RUN.
+  eapply CP.run_parser_impl_sound.
+  exact RUN.
+Qed.
+
+End CanonicalBuilder.
+
+Module LegacyBuilder.
 
 Import GrammarSyntax.
 
@@ -12720,7 +18278,9 @@ Qed.
 
 
 
-End Builder.
+End LegacyBuilder.
+
+Module Builder := CanonicalBuilder.
 
 #[projections(primitive)]
 Record productive_certified_witness : Prop :=
@@ -12749,7 +18309,7 @@ Section MAIN_THEOREMS.
 
 Theorem build_correct cert p
   (BUILD : Builder.build cert = inr p)
-  : Table.build_certified_table p.(Builder.parser_certificate) = inr p.(Builder.parser_table) /\ Table.conflict_free /\ Table.parser_termination_cert (Table.certified_table_rank p.(Builder.parser_table)).
+  : CanonicalTable.build_certified_table p.(Builder.parser_certificate) = inr p.(Builder.parser_table) /\ CanonicalTable.conflict_free /\ CanonicalTable.parser_termination_cert (CanonicalTable.certified_table_rank p.(Builder.parser_table)).
 Proof.
   exact (Builder.parser_build_correct p).
 Qed.
@@ -12759,7 +18319,8 @@ Theorem run_parser_sound cert p w tree
   (RUN : Builder.run_parser p w = Some tree)
   : Parser.run_parser w.
 Proof.
-  unfold Builder.run_parser in RUN. eapply Parser.run_parser_impl_sound. exact RUN.
+  eapply Builder.parser_run_sound.
+  exact RUN.
 Qed.
 
 Theorem run_parser_tree_sound cert p w tree
@@ -12767,129 +18328,131 @@ Theorem run_parser_tree_sound cert p w tree
   (RUN : Builder.run_parser p w = Some tree)
   : Parser.valid_tree tree /\ Parser.parse_tree_root tree = Some Grammar.start /\ Parser.parse_tree_yield tree = w.
 Proof.
-  unfold Builder.run_parser in RUN. eapply Parser.run_parser_impl_tree_sound. exact RUN.
+  eapply Builder.parser_run_tree_sound.
+  exact RUN.
 Qed.
 
 Theorem conflict_free_correct cert p
   (BUILD : Builder.build cert = inr p)
-  : Table.conflict_free /\ (forall q, forall t, forall st, Numbering.state_of q = Some st -> (Table.actions q t = [] \/ (exists act, Table.actions q t = [act]))).
+  : CanonicalTable.conflict_free /\ (forall q t st, CanonicalNumbering.state_of q = Some st -> CanonicalTable.actions q t = [] \/ (exists act, CanonicalTable.actions q t = [act])).
 Proof.
   split.
   - exact p.(Builder.parser_table_conflict_free).
-  - intros q t st STATE. eapply Table.conflict_free_single_action.
-    + exact p.(Builder.parser_table_conflict_free).
-    + exact STATE.
+  - intros q t st STATE.
+    eapply CanonicalTable.action_conflictb_false_cases.
+    eapply p.(Builder.parser_table_conflict_free).
+    exact STATE.
 Qed.
 
 Theorem run_parser_complete cert p w
-  (BUILD : Builder.build cert = inr p)
+  (BUILD : LegacyBuilder.build cert = inr p)
   (ACCEPT : Parser.L_LA w)
-  : exists tree, Builder.run_parser p w = Some tree.
+  : exists tree, LegacyBuilder.run_parser p w = Some tree.
 Proof.
-  eapply Builder.parser_run_complete. exact ACCEPT.
+  eapply LegacyBuilder.parser_run_complete. exact ACCEPT.
 Qed.
 
 Theorem run_parser_complete_by_nq0_reduce_guard cert p w
-  (BUILD : Builder.build cert = inr p)
+  (BUILD : LegacyBuilder.build cert = inr p)
   (REDUCE_GUARD : forall alpha, forall omega, forall p0, forall dst, forall rest, forall A, forall dst', forall path_src : Numbering.npath (alpha ++ omega) Numbering.nq0 dst, forall path_alpha : Numbering.npath alpha Numbering.nq0 p0, forall path_omega : Numbering.npath omega p0 dst, forall path_tgt : Numbering.npath (alpha ++ [inl A]) Numbering.nq0 dst', {| GrammarSyntax.p_lhs := A; GrammarSyntax.p_rhs := omega |} ∈ Numbering.reduceN dst -> Numbering.dN p0 (inl A) = Some dst' -> {| GrammarSyntax.p_lhs := A; GrammarSyntax.p_rhs := omega |} ∈ Table.reduce_LA dst (Table.parser_lookahead rest))
   (ACCEPT : Parser.run_parser w)
-  : exists tree, Builder.run_parser p w = Some tree.
+  : exists tree, LegacyBuilder.run_parser p w = Some tree.
 Proof.
-  eapply Builder.parser_run_complete_by_nq0_reduce_guard; [exact REDUCE_GUARD | exact ACCEPT].
+  eapply LegacyBuilder.parser_run_complete_by_nq0_reduce_guard; [exact REDUCE_GUARD | exact ACCEPT].
 Qed.
 
 Theorem run_parser_complete_by_nq0_la_sem_and_follow_sem cert p w
-  (BUILD : Builder.build cert = inr p)
+  (BUILD : LegacyBuilder.build cert = inr p)
   (FOLLOW_COMPLETE : forall node : Read.read_node, forall t : GrammarSyntax.T', Follow.Follow_sem node t -> Follow.Follow node t)
   (REDUCE_SEM : forall alpha, forall omega, forall p0, forall dst, forall rest, forall A, forall dst', forall path_src : Numbering.npath (alpha ++ omega) Numbering.nq0 dst, forall path_alpha : Numbering.npath alpha Numbering.nq0 p0, forall path_omega : Numbering.npath omega p0 dst, forall path_tgt : Numbering.npath (alpha ++ [inl A]) Numbering.nq0 dst', {| GrammarSyntax.p_lhs := A; GrammarSyntax.p_rhs := omega |} ∈ Numbering.reduceN dst -> Numbering.dN p0 (inl A) = Some dst' -> Lookahead.LA_sem dst {| Item.i_lhs := A; Item.i_left := omega; Item.i_right := [] |} (Table.parser_lookahead rest))
   (ACCEPT : Parser.run_parser w)
-  : exists tree, Builder.run_parser p w = Some tree.
+  : exists tree, LegacyBuilder.run_parser p w = Some tree.
 Proof.
-  eapply Builder.parser_run_complete_by_nq0_la_sem_and_follow_sem; [exact FOLLOW_COMPLETE | exact REDUCE_SEM | exact ACCEPT].
+  eapply LegacyBuilder.parser_run_complete_by_nq0_la_sem_and_follow_sem; [exact FOLLOW_COMPLETE | exact REDUCE_SEM | exact ACCEPT].
 Qed.
 
 Theorem run_parser_complete_by_nq0_la_sem cert p w
-  (BUILD : Builder.build cert = inr p)
+  (BUILD : LegacyBuilder.build cert = inr p)
   (REDUCE_SEM : forall alpha, forall omega, forall p0, forall dst, forall rest, forall A, forall dst', forall path_src : Numbering.npath (alpha ++ omega) Numbering.nq0 dst, forall path_alpha : Numbering.npath alpha Numbering.nq0 p0, forall path_omega : Numbering.npath omega p0 dst, forall path_tgt : Numbering.npath (alpha ++ [inl A]) Numbering.nq0 dst', {| GrammarSyntax.p_lhs := A; GrammarSyntax.p_rhs := omega |} ∈ Numbering.reduceN dst -> Numbering.dN p0 (inl A) = Some dst' -> Lookahead.LA_sem dst {| Item.i_lhs := A; Item.i_left := omega; Item.i_right := [] |} (Table.parser_lookahead rest))
   (ACCEPT : Parser.run_parser w)
-  : exists tree, Builder.run_parser p w = Some tree.
+  : exists tree, LegacyBuilder.run_parser p w = Some tree.
 Proof.
-  eapply Builder.parser_run_complete_by_nq0_la_sem; [exact REDUCE_SEM | exact ACCEPT].
+  eapply LegacyBuilder.parser_run_complete_by_nq0_la_sem; [exact REDUCE_SEM | exact ACCEPT].
 Qed.
 
 Theorem run_parser_complete_by_grammar cert p w
-  (BUILD : Builder.build cert = inr p)
+  (BUILD : LegacyBuilder.build cert = inr p)
   (ACCEPT : Parser.run_parser w)
-  : exists tree, Builder.run_parser p w = Some tree.
+  : exists tree, LegacyBuilder.run_parser p w = Some tree.
 Proof.
-  eapply Builder.parser_run_complete_by_grammar. exact ACCEPT.
+  eapply LegacyBuilder.parser_run_complete_by_grammar. exact ACCEPT.
 Qed.
 
 Theorem run_parser_correct cert p w
-  (BUILD : Builder.build cert = inr p)
-  : is_similar_to (Similarity := Parser.parse_result_accept_similarity) (Builder.run_parser p w) (Parser.L_LA w).
+  (BUILD : LegacyBuilder.build cert = inr p)
+  : is_similar_to (Similarity := Parser.parse_result_accept_similarity) (LegacyBuilder.run_parser p w) (Parser.L_LA w).
 Proof.
-  eapply Builder.parser_run_correct.
+  eapply LegacyBuilder.parser_run_correct.
 Qed.
 
 Theorem run_parser_correct_by_nq0_la_sem_and_follow_sem cert p w
-  (BUILD : Builder.build cert = inr p)
+  (BUILD : LegacyBuilder.build cert = inr p)
   (FOLLOW_COMPLETE : forall node : Read.read_node, forall t : GrammarSyntax.T', Follow.Follow_sem node t -> Follow.Follow node t)
   (REDUCE_SEM : forall alpha, forall omega, forall p0, forall dst, forall rest, forall A, forall dst', forall path_src : Numbering.npath (alpha ++ omega) Numbering.nq0 dst, forall path_alpha : Numbering.npath alpha Numbering.nq0 p0, forall path_omega : Numbering.npath omega p0 dst, forall path_tgt : Numbering.npath (alpha ++ [inl A]) Numbering.nq0 dst', {| GrammarSyntax.p_lhs := A; GrammarSyntax.p_rhs := omega |} ∈ Numbering.reduceN dst -> Numbering.dN p0 (inl A) = Some dst' -> Lookahead.LA_sem dst {| Item.i_lhs := A; Item.i_left := omega; Item.i_right := [] |} (Table.parser_lookahead rest))
-  : is_similar_to (Similarity := Parser.parse_result_accept_similarity) (Builder.run_parser p w) (Parser.run_parser w).
+  : is_similar_to (Similarity := Parser.parse_result_accept_similarity) (LegacyBuilder.run_parser p w) (Parser.run_parser w).
 Proof.
-  eapply Builder.parser_run_correct_by_nq0_la_sem_and_follow_sem; [exact FOLLOW_COMPLETE | exact REDUCE_SEM].
+  eapply LegacyBuilder.parser_run_correct_by_nq0_la_sem_and_follow_sem; [exact FOLLOW_COMPLETE | exact REDUCE_SEM].
 Qed.
 
 Theorem run_parser_correct_by_nq0_la_sem cert p w
-  (BUILD : Builder.build cert = inr p)
+  (BUILD : LegacyBuilder.build cert = inr p)
   (REDUCE_SEM : forall alpha, forall omega, forall p0, forall dst, forall rest, forall A, forall dst', forall path_src : Numbering.npath (alpha ++ omega) Numbering.nq0 dst, forall path_alpha : Numbering.npath alpha Numbering.nq0 p0, forall path_omega : Numbering.npath omega p0 dst, forall path_tgt : Numbering.npath (alpha ++ [inl A]) Numbering.nq0 dst', {| GrammarSyntax.p_lhs := A; GrammarSyntax.p_rhs := omega |} ∈ Numbering.reduceN dst -> Numbering.dN p0 (inl A) = Some dst' -> Lookahead.LA_sem dst {| Item.i_lhs := A; Item.i_left := omega; Item.i_right := [] |} (Table.parser_lookahead rest))
-  : is_similar_to (Similarity := Parser.parse_result_accept_similarity) (Builder.run_parser p w) (Parser.run_parser w).
+  : is_similar_to (Similarity := Parser.parse_result_accept_similarity) (LegacyBuilder.run_parser p w) (Parser.run_parser w).
 Proof.
-  eapply Builder.parser_run_correct_by_nq0_la_sem. exact REDUCE_SEM.
+  eapply LegacyBuilder.parser_run_correct_by_nq0_la_sem. exact REDUCE_SEM.
 Qed.
 
 Theorem run_parser_correct_grammar cert p w
-  (BUILD : Builder.build cert = inr p)
-  : is_similar_to (Similarity := Parser.parse_result_accept_similarity) (Builder.run_parser p w) (Parser.run_parser w).
+  (BUILD : LegacyBuilder.build cert = inr p)
+  : is_similar_to (Similarity := Parser.parse_result_accept_similarity) (LegacyBuilder.run_parser p w) (Parser.run_parser w).
 Proof.
-  eapply Builder.parser_run_correct_grammar.
+  eapply LegacyBuilder.parser_run_correct_grammar.
 Qed.
 
 Theorem build_accepts_correct_L_LA cert p w
-  (BUILD : Builder.build cert = inr p)
-  : (exists tree, Builder.run_parser p w = Some tree) <-> Parser.L_LA w.
+  (BUILD : LegacyBuilder.build cert = inr p)
+  : (exists tree, LegacyBuilder.run_parser p w = Some tree) <-> Parser.L_LA w.
 Proof.
-  eapply Builder.parser_accepts_correct.
+  eapply LegacyBuilder.parser_accepts_correct.
 Qed.
 
 Theorem build_accepts_correct_by_nq0_la_sem_and_follow_sem cert p w
-  (BUILD : Builder.build cert = inr p)
+  (BUILD : LegacyBuilder.build cert = inr p)
   (FOLLOW_COMPLETE : forall node : Read.read_node, forall t : GrammarSyntax.T', Follow.Follow_sem node t -> Follow.Follow node t)
   (REDUCE_SEM : forall alpha, forall omega, forall p0, forall dst, forall rest, forall A, forall dst', forall path_src : Numbering.npath (alpha ++ omega) Numbering.nq0 dst, forall path_alpha : Numbering.npath alpha Numbering.nq0 p0, forall path_omega : Numbering.npath omega p0 dst, forall path_tgt : Numbering.npath (alpha ++ [inl A]) Numbering.nq0 dst', {| GrammarSyntax.p_lhs := A; GrammarSyntax.p_rhs := omega |} ∈ Numbering.reduceN dst -> Numbering.dN p0 (inl A) = Some dst' -> Lookahead.LA_sem dst {| Item.i_lhs := A; Item.i_left := omega; Item.i_right := [] |} (Table.parser_lookahead rest))
-  : (exists tree, Builder.run_parser p w = Some tree) <-> Parser.run_parser w.
+  : (exists tree, LegacyBuilder.run_parser p w = Some tree) <-> Parser.run_parser w.
 Proof.
-  eapply Builder.parser_accepts_correct_by_nq0_la_sem_and_follow_sem; [exact FOLLOW_COMPLETE | exact REDUCE_SEM].
+  eapply LegacyBuilder.parser_accepts_correct_by_nq0_la_sem_and_follow_sem; [exact FOLLOW_COMPLETE | exact REDUCE_SEM].
 Qed.
 
 Theorem build_accepts_correct_by_nq0_la_sem cert p w
-  (BUILD : Builder.build cert = inr p)
+  (BUILD : LegacyBuilder.build cert = inr p)
   (REDUCE_SEM : forall alpha, forall omega, forall p0, forall dst, forall rest, forall A, forall dst', forall path_src : Numbering.npath (alpha ++ omega) Numbering.nq0 dst, forall path_alpha : Numbering.npath alpha Numbering.nq0 p0, forall path_omega : Numbering.npath omega p0 dst, forall path_tgt : Numbering.npath (alpha ++ [inl A]) Numbering.nq0 dst', {| GrammarSyntax.p_lhs := A; GrammarSyntax.p_rhs := omega |} ∈ Numbering.reduceN dst -> Numbering.dN p0 (inl A) = Some dst' -> Lookahead.LA_sem dst {| Item.i_lhs := A; Item.i_left := omega; Item.i_right := [] |} (Table.parser_lookahead rest))
-  : (exists tree, Builder.run_parser p w = Some tree) <-> Parser.run_parser w.
+  : (exists tree, LegacyBuilder.run_parser p w = Some tree) <-> Parser.run_parser w.
 Proof.
-  eapply Builder.parser_accepts_correct_by_nq0_la_sem. exact REDUCE_SEM.
+  eapply LegacyBuilder.parser_accepts_correct_by_nq0_la_sem. exact REDUCE_SEM.
 Qed.
 
 Theorem build_accepts_correct_grammar cert p w
-  (BUILD : Builder.build cert = inr p)
-  : (exists tree, Builder.run_parser p w = Some tree) <-> Parser.run_parser w.
+  (BUILD : LegacyBuilder.build cert = inr p)
+  : (exists tree, LegacyBuilder.run_parser p w = Some tree) <-> Parser.run_parser w.
 Proof.
-  eapply Builder.parser_accepts_correct_grammar.
+  eapply LegacyBuilder.parser_accepts_correct_grammar.
 Qed.
 
 Theorem build_accepts_correct cert p w
-  (BUILD : Builder.build cert = inr p)
-  : (exists tree, Builder.run_parser p w = Some tree) <-> Parser.run_parser w.
+  (BUILD : LegacyBuilder.build cert = inr p)
+  : (exists tree, LegacyBuilder.run_parser p w = Some tree) <-> Parser.run_parser w.
 Proof.
   eapply build_accepts_correct_grammar. exact BUILD.
 Qed.
@@ -12897,14 +18460,14 @@ Qed.
 End MAIN_THEOREMS.
 
 
-End PGS.
+End MkPGS.
 
 Module ProductivePruningBridge (G : GRAMMAR_SPEC).
 
 #[local] Existing Instance G.NT_isFinite.
 #[local] Existing Instance G.TM_isFinite.
 
-Module Orig := PGS(G).
+Module Orig := MkPGS(G).
 
 Definition gen_ntb (A : G.NT) : bool :=
   Orig.GrammarSyntax.genb (Some A).
@@ -13245,7 +18808,7 @@ Definition productions : fin_ensemble (NT * list (NT + TM)) :=
 
 End PrunedGrammar.
 
-Module Pruned := PGS(PrunedGrammar).
+Module Pruned := MkPGS(PrunedGrammar).
 
 Lemma orig_Gen_pruned_Gen A A'
   (OLD : erase_nt A' = A)

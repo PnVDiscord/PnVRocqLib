@@ -252,7 +252,7 @@ Fixpoint incrFin {m : nat} (n : nat) (i : Fin.t m) {struct n} : Fin.t (n + m) :=
 
 Lemma incrFin_spec {m : nat} (n : nat) (i : Fin.t m)
   : evalFin (incrFin n i) = n + evalFin i.
-Proof with eauto.
+Proof.
   induction n as [ | n IH]; simpl; eauto.
   rewrite evalFin_unfold. f_equal; eauto.
 Qed.
