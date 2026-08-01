@@ -3,6 +3,7 @@ Require Import PnV.Control.Category.
 
 Declare Scope monad_scope.
 Declare Custom Entry do_notation.
+Reserved Notation "'do' m" (m custom do_notation at level 10, at level 100, format "'do' '//' '[hv' m ']'  '//'").
 
 Module DoNotations.
 
@@ -15,7 +16,6 @@ Definition monad@{u v | } {M : Type@{u} -> Type@{v}} {MONAD : isMonad@{u v} M} {
 
 Open Scope monad_scope.
 
-Reserved Notation "'do' m" (m custom do_notation at level 10, at level 100, format "'do' '//' '[hv' m ']'  '//'").
 Notation "'do' m" := m : monad_scope.
 
 Notation "'let' x ':=' t ';' m" := (let x := t in m) (in custom do_notation at level 1, x pattern, t constr, m custom do_notation at level 10, format "'let'  x  ':='  t ';' '//' m").
