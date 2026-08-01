@@ -14932,6 +14932,7 @@ Import GrammarSyntax.
 Module CN := CanonicalNumbering.
 Module CL := CanonicalLookahead.
 Module CS := Item.CanonicalState.
+Module CG := GraphAPI.LabeledFiniteGraph.
 
 #[local] Existing Instance T'_hasEqDec.
 
@@ -15577,6 +15578,35 @@ Definition reduce_edge_targets (lookahead : T') (q : nat) : fin_ensemble nat := 
   'pr <- reduce_LA q lookahead;
   reduce_edge_targets_from_prod lookahead q pr.
 
+(* A reduction does not consume input, so parser termination needs a
+   decreasing state measure for each fixed lookahead.  The forward
+   reachability cardinality is such a measure whenever the reduce-only
+   graph is acyclic: after q -> q', every state reachable from q' is
+   reachable from q, while q itself is not reachable from q'. *)
+Definition reduce_graph_edges (lookahead : T')
+  : fin_ensemble (CG.Edge.t nat unit) := do
+  'q <- seq 0 CN.num_states;
+  'q' <- reduce_edge_targets lookahead q;
+  ret (CG.Edge.mk q tt q').
+
+Definition reduce_graph (lookahead : T') : CG.t nat unit :=
+  CG.span nat_hasEqDec unit_hasEqDec
+    (seq 0 CN.num_states)
+    (reduce_graph_edges lookahead).
+
+Definition inferred_parser_rank : parser_rank :=
+  fun lookahead q =>
+    length (CG.reachable_vertices (reduce_graph lookahead) [q]).
+
+Definition inferred_parser_termination_certificate
+  : parser_termination_certificate :=
+  {| Table.parser_termination_certificate_rank := inferred_parser_rank |}.
+
+Definition reduce_graph_acyclic : Prop :=
+  forall lookahead q q',
+    reduce_edge lookahead q q' ->
+    ~ q ∈ CG.reachable_vertices (reduce_graph lookahead) [q'].
+
 Definition reduce_edge_entries_at (lookahead : T') (q : nat) : fin_ensemble reduce_edge_entry :=
   reduce_edge_targets lookahead q >>= fun q' =>
   [Table.mk_reduce_edge_entry lookahead q q'].
@@ -15608,6 +15638,9 @@ Definition build_certified_table (cert : parser_termination_certificate) : Build
   'tbl <- build_table;
   '_ <- check_parser_termination_certificate cert;
   ret (Table.mk_certified_table tbl cert).
+
+Definition build_inferred_certified_table : BuildErrorM certified_table :=
+  build_certified_table inferred_parser_termination_certificate.
 
 Lemma reduce_edge_targets_from_prod_sound lookahead q pr q' (IN : q' ∈ reduce_edge_targets_from_prod lookahead q pr)
   : exists p, CN.npath pr.(p_rhs) p q /\ CN.dN p (inl pr.(p_lhs)) = Some q'.
@@ -15672,6 +15705,83 @@ Proof.
   - eapply reduce_edge_targets_from_prod_complete.
     + exact PATH.
     + exact STEP.
+Qed.
+
+Lemma reduce_graph_edges_In lookahead q q'
+  : CG.Edge.mk q tt q' ∈ reduce_graph_edges lookahead <->
+    reduce_edge lookahead q q'.
+Proof.
+  split.
+  - intros IN.
+    unfold reduce_graph_edges in IN.
+    apply in_fin_ensemble_bind_elim in IN.
+    destruct IN as (q0 & _ & IN_TAIL).
+    apply in_fin_ensemble_bind_elim in IN_TAIL.
+    destruct IN_TAIL as (q0' & IN_TARGET & IN_EDGE).
+    simpl in IN_EDGE. destruct IN_EDGE as [EQ | []].
+    inversion EQ. subst q0 q0'.
+    eapply reduce_edge_targets_sound. exact IN_TARGET.
+  - intros EDGE.
+    destruct EDGE as (pr & p & IN_REDUCE & PATH & STEP).
+    unfold reduce_graph_edges.
+    eapply in_fin_ensemble_bind_intro with (x := q).
+    + rewrite in_seq. split; [lia | ].
+      destruct (reduce_LA_sound q lookahead pr IN_REDUCE)
+        as (st & it & STATE & IN_IT & DONE & EQ_PR & PROD & IN_LA).
+      eapply CN.state_of_some_lt. exact STATE.
+    + eapply in_fin_ensemble_bind_intro with (x := q').
+      * eapply reduce_edge_targets_complete; eauto.
+      * simpl. left. reflexivity.
+Qed.
+
+Lemma reduce_graph_isLabeledEdge lookahead q q'
+  : (reduce_graph lookahead).(CG.isLabeledEdge) q tt q' <->
+    reduce_edge lookahead q q'.
+Proof.
+  unfold reduce_graph. rewrite CG.span_isLabeledEdge.
+  eapply reduce_graph_edges_In.
+Qed.
+
+Theorem inferred_parser_rank_termination
+  (ACYCLIC : reduce_graph_acyclic)
+  : parser_termination_cert inferred_parser_rank.
+Proof.
+  intros lookahead q q' EDGE.
+  pose proof (proj2 (reduce_graph_isLabeledEdge lookahead q q') EDGE)
+    as GRAPH_EDGE.
+  set (graph := reduce_graph lookahead) in *.
+  set (reachable_q := CG.reachable_vertices graph [q]).
+  set (reachable_q' := CG.reachable_vertices graph [q']).
+  assert (IN_Q : q ∈ reachable_q).
+  {
+    unfold reachable_q.
+    eapply CG.reachable_vertices_seed.
+    - simpl. left. reflexivity.
+    - eapply CG.src_isLabeledEdge. exact GRAPH_EDGE.
+  }
+  assert (IN_Q' : q' ∈ reachable_q).
+  {
+    eapply CG.reachable_vertices_edge_closed with (src := q).
+    - exact IN_Q.
+    - exists tt. exact GRAPH_EDGE.
+  }
+  assert (INCL : forall y, y ∈ reachable_q' -> y ∈ reachable_q).
+  {
+    intros y IN_Y.
+    unfold reachable_q' in IN_Y.
+    apply CG.reachable_vertices_sound in IN_Y.
+    destruct IN_Y as (seed & IN_SEED & SEED_VERTEX & word & trace & WALK).
+    simpl in IN_SEED. destruct IN_SEED as [EQ | []]. subst seed.
+    eapply CG.reachable_vertices_walk_closed; [exact IN_Q' | exact WALK].
+  }
+  unfold inferred_parser_rank. fold graph. fold reachable_q. fold reachable_q'.
+  eapply (CG.NoDup_incl_new_length_lt nat_hasEqDec
+    reachable_q reachable_q' q).
+  - eapply CG.reachable_vertices_NoDup.
+  - eapply CG.reachable_vertices_NoDup.
+  - exact IN_Q.
+  - eapply ACYCLIC. exact EDGE.
+  - exact INCL.
 Qed.
 
 Theorem reduce_edge_entries_sound edge
@@ -15772,6 +15882,61 @@ Proof.
   - eapply parser_termination_certificate_validb_sound.
     exact CHECKB.
   - discriminate.
+Qed.
+
+Lemma rank_decreases_edgeb_complete rank edge
+  (DECREASE : rank (reduce_edge_entry_lookahead edge) (reduce_edge_entry_target edge) < rank (reduce_edge_entry_lookahead edge) (reduce_edge_entry_source edge))
+  : rank_decreases_edgeb rank edge = true.
+Proof.
+  unfold rank_decreases_edgeb. rewrite Nat.ltb_lt. exact DECREASE.
+Qed.
+
+Theorem parser_termination_certb_complete rank
+  (CERT : parser_termination_cert rank)
+  : parser_termination_certb rank = true.
+Proof.
+  unfold parser_termination_certb. rewrite forallb_forall.
+  intros edge IN. eapply rank_decreases_edgeb_complete.
+  eapply CERT. eapply reduce_edge_entries_sound. exact IN.
+Qed.
+
+Lemma parser_termination_certificate_validb_complete cert
+  (VALID : parser_termination_certificate_valid cert)
+  : parser_termination_certificate_validb cert = true.
+Proof.
+  unfold parser_termination_certificate_valid, parser_termination_certificate_validb in *.
+  eapply parser_termination_certb_complete. exact VALID.
+Qed.
+
+Lemma check_parser_termination_certificate_success_complete cert
+  (VALID : parser_termination_certificate_valid cert)
+  : check_parser_termination_certificate cert = inr tt.
+Proof.
+  unfold check_parser_termination_certificate.
+  rewrite parser_termination_certificate_validb_complete; [reflexivity | exact VALID].
+Qed.
+
+Theorem build_certified_table_complete cert
+  (FREE : conflict_free)
+  (VALID : parser_termination_certificate_valid cert)
+  : exists ctbl, build_certified_table cert = inr ctbl /\ certified_table_action ctbl = action_of /\ certified_table_termination_certificate ctbl = cert.
+Proof.
+  unfold build_certified_table.
+  rewrite build_table_complete; [ | exact FREE].
+  rewrite check_parser_termination_certificate_success_complete; [ | exact VALID].
+  eexists. repeat split; reflexivity.
+Qed.
+
+Theorem build_inferred_certified_table_complete
+  (FREE : conflict_free)
+  (ACYCLIC : reduce_graph_acyclic)
+  : exists ctbl, build_inferred_certified_table = inr ctbl.
+Proof.
+  unfold build_inferred_certified_table.
+  destruct (build_certified_table_complete inferred_parser_termination_certificate FREE) as (ctbl & BUILD & _ & _).
+  - unfold parser_termination_certificate_valid, inferred_parser_termination_certificate, parser_termination_certificate_rank.
+    simpl. eapply inferred_parser_rank_termination. exact ACYCLIC.
+  - exists ctbl. exact BUILD.
 Qed.
 
 Theorem build_certified_table_success cert ctbl (BUILD : build_certified_table cert = inr ctbl)
@@ -18082,6 +18247,9 @@ Proof.
   - eapply CT.build_certified_table_success_termination.
     exact BUILD.
 Defined.
+
+Definition build_auto : BuildErrorM parser :=
+  build CT.inferred_parser_termination_certificate.
 
 Theorem parser_build_correct p
   : CT.build_certified_table p.(parser_certificate) = inr p.(parser_table) /\ CT.conflict_free /\ CT.parser_termination_cert (CT.certified_table_rank p.(parser_table)).
