@@ -15742,6 +15742,37 @@ Proof.
   eapply reduce_graph_edges_In.
 Qed.
 
+Lemma parser_rank_nonincreasing_on_reduce_walk rank lookahead src word trace dst
+  (CERT : parser_termination_cert rank)
+  (WALK : CG.walk (reduce_graph lookahead) src word trace dst)
+  : rank lookahead dst <= rank lookahead src.
+Proof.
+  induction WALK as [v VERTEX | src label mid word trace dst GRAPH_EDGE REST IH].
+  - lia.
+  - destruct label.
+    pose proof (proj1 (reduce_graph_isLabeledEdge lookahead src mid) GRAPH_EDGE)
+      as EDGE.
+    pose proof (CERT lookahead src mid EDGE) as DECREASE.
+    lia.
+Qed.
+
+Theorem parser_termination_cert_reduce_graph_acyclic rank
+  (CERT : parser_termination_cert rank)
+  : reduce_graph_acyclic.
+Proof.
+  intros lookahead q q' EDGE REACHES_BACK.
+  pose proof (CERT lookahead q q' EDGE) as FIRST_DECREASE.
+  apply CG.reachable_vertices_sound in REACHES_BACK.
+  destruct REACHES_BACK as
+    (seed & IN_SEED & SEED_VERTEX & word & trace & WALK).
+  simpl in IN_SEED. destruct IN_SEED as [EQ | []]. subst seed.
+  pose proof
+    (parser_rank_nonincreasing_on_reduce_walk
+      rank lookahead q' word trace q CERT WALK)
+    as BACK_NONINCREASE.
+  lia.
+Qed.
+
 Theorem inferred_parser_rank_termination
   (ACYCLIC : reduce_graph_acyclic)
   : parser_termination_cert inferred_parser_rank.
@@ -15782,6 +15813,17 @@ Proof.
   - exact IN_Q.
   - eapply ACYCLIC. exact EDGE.
   - exact INCL.
+Qed.
+
+Theorem reduce_graph_acyclic_iff_parser_termination_cert
+  : reduce_graph_acyclic <->
+    exists rank : parser_rank, parser_termination_cert rank.
+Proof.
+  split.
+  - intros ACYCLIC. exists inferred_parser_rank.
+    eapply inferred_parser_rank_termination. exact ACYCLIC.
+  - intros (rank & CERT).
+    eapply parser_termination_cert_reduce_graph_acyclic. exact CERT.
 Qed.
 
 Theorem reduce_edge_entries_sound edge
@@ -15914,6 +15956,66 @@ Lemma check_parser_termination_certificate_success_complete cert
 Proof.
   unfold check_parser_termination_certificate.
   rewrite parser_termination_certificate_validb_complete; [reflexivity | exact VALID].
+Qed.
+
+Theorem check_inferred_parser_termination_certificate_success_iff
+  : check_parser_termination_certificate
+      inferred_parser_termination_certificate = inr tt <->
+    reduce_graph_acyclic.
+Proof.
+  split.
+  - intros CHECK.
+    pose proof
+      (check_parser_termination_certificate_success_valid
+        inferred_parser_termination_certificate CHECK)
+      as VALID.
+    unfold parser_termination_certificate_valid,
+      inferred_parser_termination_certificate in VALID.
+    simpl in VALID.
+    eapply parser_termination_cert_reduce_graph_acyclic. exact VALID.
+  - intros ACYCLIC.
+    eapply check_parser_termination_certificate_success_complete.
+    unfold parser_termination_certificate_valid,
+      inferred_parser_termination_certificate.
+    simpl.
+    eapply inferred_parser_rank_termination. exact ACYCLIC.
+Qed.
+
+Theorem inferred_parser_termination_certificate_cycle_failure
+  (CYCLIC : ~ reduce_graph_acyclic)
+  : check_parser_termination_certificate
+      inferred_parser_termination_certificate =
+    inl BuildError.InvalidTerminationCertificate.
+Proof.
+  unfold check_parser_termination_certificate.
+  destruct (parser_termination_certificate_validb
+    inferred_parser_termination_certificate) eqn: VALIDB.
+  - exfalso. eapply CYCLIC.
+    pose proof
+      (parser_termination_certificate_validb_sound
+        inferred_parser_termination_certificate VALIDB)
+      as VALID.
+    unfold parser_termination_certificate_valid,
+      inferred_parser_termination_certificate in VALID.
+    simpl in VALID.
+    eapply parser_termination_cert_reduce_graph_acyclic. exact VALID.
+  - reflexivity.
+Qed.
+
+Theorem check_inferred_parser_termination_certificate_failure_iff
+  : check_parser_termination_certificate
+      inferred_parser_termination_certificate =
+      inl BuildError.InvalidTerminationCertificate <->
+    ~ reduce_graph_acyclic.
+Proof.
+  split.
+  - intros FAILURE ACYCLIC.
+    pose proof
+      (proj2 check_inferred_parser_termination_certificate_success_iff
+        ACYCLIC)
+      as SUCCESS.
+    congruence.
+  - eapply inferred_parser_termination_certificate_cycle_failure.
 Qed.
 
 Theorem build_certified_table_complete cert
@@ -18215,6 +18317,806 @@ Proof.
   - exact ROOT.
 Qed.
 
+(* The executable canonical parser is complete for the guarded transition
+   system induced by [CanonicalTable.reduce_LA].  Keep this transition
+   system local to the canonical parser so that its state and path witnesses
+   are definitionally the ones consumed by [run_parser_acc]. *)
+Inductive step_LA : nconfig -> nconfig -> Prop :=
+  | step_LA_shift
+      (alpha : list V') (src dst : nat) (rest : list T') (t : T')
+      (dst' : nat)
+      (path_src : CN.npath alpha src dst)
+      (path_tgt : CN.npath (alpha ++ [inr t]) src dst')
+      (STEP : CN.dN dst (inr t) = Some dst')
+      : step_LA
+          {| nc_word := alpha; nc_src := src; nc_dst := dst;
+             nc_rest := t :: rest; nc_path := path_src |}
+          {| nc_word := alpha ++ [inr t]; nc_src := src; nc_dst := dst';
+             nc_rest := rest; nc_path := path_tgt |}
+  | step_LA_reduce
+      (alpha omega : list V') (src p dst : nat) (rest : list T')
+      (A : N') (dst' : nat)
+      (path_src : CN.npath (alpha ++ omega) src dst)
+      (path_alpha : CN.npath alpha src p)
+      (path_omega : CN.npath omega p dst)
+      (path_tgt : CN.npath (alpha ++ [inl A]) src dst')
+      (REDUCE : {| p_lhs := A; p_rhs := omega |} ∈
+        CT.reduce_LA dst (CT.parser_lookahead rest))
+      (STEP : CN.dN p (inl A) = Some dst')
+      : step_LA
+          {| nc_word := alpha ++ omega; nc_src := src; nc_dst := dst;
+             nc_rest := rest; nc_path := path_src |}
+          {| nc_word := alpha ++ [inl A]; nc_src := src; nc_dst := dst';
+             nc_rest := rest; nc_path := path_tgt |}.
+
+Definition steps_LA : nconfig -> nconfig -> Prop :=
+  clos_refl_trans _ step_LA.
+
+Variant L_LA_spec (w : list T) : Prop :=
+  | L_LA_spec_intro nf c0 cf
+      (FINAL_N : CN.nq_f = Some nf)
+      (C0_WORD : c0.(nc_word) = [])
+      (C0_SRC : c0.(nc_src) = CN.nq0)
+      (C0_DST : c0.(nc_dst) = CN.nq0)
+      (C0_REST : c0.(nc_rest) = parser_input w)
+      (CF_WORD : cf.(nc_word) = run_accept_word)
+      (CF_SRC : cf.(nc_src) = CN.nq0)
+      (CF_DST : cf.(nc_dst) = nf)
+      (CF_REST : cf.(nc_rest) = [])
+      (STEPS : steps_LA c0 cf)
+      : L_LA_spec w.
+
+Definition L_LA (w : list T) : Prop :=
+  L_LA_spec w.
+
+Definition nconfig_shape_eq (c1 c2 : nconfig) : Prop :=
+  c1.(nc_word) = c2.(nc_word) /\
+  c1.(nc_src) = c2.(nc_src) /\
+  c1.(nc_dst) = c2.(nc_dst) /\
+  c1.(nc_rest) = c2.(nc_rest).
+
+Lemma nconfig_shape_eq_refl c
+  : nconfig_shape_eq c c.
+Proof.
+  unfold nconfig_shape_eq. repeat split; reflexivity.
+Qed.
+
+Lemma nconfig_shape_eq_trans c1 c2 c3
+  (SHAPE12 : nconfig_shape_eq c1 c2)
+  (SHAPE23 : nconfig_shape_eq c2 c3)
+  : nconfig_shape_eq c1 c3.
+Proof.
+  unfold nconfig_shape_eq in *.
+  destruct SHAPE12 as (WORD12 & SRC12 & DST12 & REST12).
+  destruct SHAPE23 as (WORD23 & SRC23 & DST23 & REST23).
+  repeat split; congruence.
+Qed.
+
+Variant run_state_accepts_spec (rs : run_state) (tree : parse_tree) : Prop :=
+  | run_state_accepts_spec_intro nf
+      (FINAL : CN.nq_f = Some nf)
+      (WORD : rs.(run_state_config).(nc_word) = run_accept_word)
+      (DST : rs.(run_state_config).(nc_dst) = nf)
+      (REST : rs.(run_state_config).(nc_rest) = [])
+      (STACK : run_accept_stack rs.(run_state_stack) = Some tree)
+      : run_state_accepts_spec rs tree.
+
+Definition run_state_accepts (rs : run_state) (tree : parse_tree) : Prop :=
+  run_state_accepts_spec rs tree.
+
+Lemma step_LA_preserves_src c c'
+  (STEP : step_LA c c')
+  : c'.(nc_src) = c.(nc_src).
+Proof.
+  destruct STEP; reflexivity.
+Qed.
+
+Lemma steps_LA_preserves_src c c'
+  (STEPS : steps_LA c c')
+  : c'.(nc_src) = c.(nc_src).
+Proof.
+  induction STEPS as [c c' STEP | c | c c_mid c' STEPS1 IH1 STEPS2 IH2].
+  - eapply step_LA_preserves_src. exact STEP.
+  - reflexivity.
+  - rewrite IH2. exact IH1.
+Qed.
+
+Lemma step_LA_shape_transport c_run c_abs c_abs'
+  (SHAPE : nconfig_shape_eq c_run c_abs)
+  (STEP : step_LA c_abs c_abs')
+  : exists c_run', nconfig_shape_eq c_run' c_abs' /\
+      step_LA c_run c_run'.
+Proof.
+  destruct c_run as [word_run src_run dst_run rest_run path_run].
+  destruct STEP as
+    [alpha src dst rest t dst' path_src path_tgt STEP_DN
+    |alpha omega src p dst rest A dst' path_src path_alpha path_omega
+      path_tgt REDUCE STEP_DN];
+    unfold nconfig_shape_eq in SHAPE; simpl in SHAPE;
+    destruct SHAPE as (WORD & SRC & DST & REST); subst.
+  - exists
+      {| nc_word := alpha ++ [inr t]; nc_src := src; nc_dst := dst';
+         nc_rest := rest;
+         nc_path := npath_snoc alpha src dst (inr t) dst' path_run STEP_DN |}.
+    split.
+    + unfold nconfig_shape_eq. simpl. repeat split; reflexivity.
+    + econstructor. exact STEP_DN.
+  - exists
+      {| nc_word := alpha ++ [inl A]; nc_src := src; nc_dst := dst';
+         nc_rest := rest;
+         nc_path := npath_snoc alpha src p (inl A) dst' path_alpha STEP_DN |}.
+    split.
+    + unfold nconfig_shape_eq. simpl. repeat split; reflexivity.
+    + econstructor; [exact path_alpha | exact path_omega | exact REDUCE | exact STEP_DN].
+Qed.
+
+Lemma steps_LA_1n_shape_transport c_run c_abs c_abs'
+  (SHAPE : nconfig_shape_eq c_run c_abs)
+  (STEPS : clos_refl_trans_1n _ step_LA c_abs c_abs')
+  : exists c_run', nconfig_shape_eq c_run' c_abs' /\
+      clos_refl_trans_1n _ step_LA c_run c_run'.
+Proof.
+  revert c_run SHAPE.
+  induction STEPS as [c | c c_mid c' STEP STEPS_TAIL IH];
+    intros c_run SHAPE.
+  - exists c_run. split; [exact SHAPE | constructor].
+  - use step_LA_shape_transport as
+      (c_mid_run & SHAPE_MID & STEP_RUN) with SHAPE STEP.
+    use IH as (c_run' & SHAPE_FINAL & STEPS_RUN) with SHAPE_MID.
+    exists c_run'. split; [exact SHAPE_FINAL | ].
+    econstructor; [exact STEP_RUN | exact STEPS_RUN].
+Qed.
+
+Lemma run_parser_acc_L_LA_sound ctbl CERT rs ACC tree
+  (RUN : run_parser_acc ctbl CERT rs ACC = Some tree)
+  : exists rs', steps_LA rs.(run_state_config) rs'.(run_state_config) /\
+      run_state_accepts rs' tree.
+Proof.
+  revert rs ACC tree RUN.
+  refine (fix IH
+    (rs : run_state)
+    (ACC : Acc (CT.parser_step_lt (CT.certified_table_rank ctbl))
+      (run_state_measure rs))
+    (tree : parse_tree)
+    (RUN : run_parser_acc ctbl CERT rs ACC = Some tree) {struct ACC}
+    : exists rs', steps_LA rs.(run_state_config) rs'.(run_state_config) /\
+        run_state_accepts rs' tree := _).
+  destruct rs as [c stack].
+  destruct c as [word src dst rest path_src]. simpl in ACC.
+  destruct ACC as [ACC_INV].
+  cbn [run_parser_acc] in RUN.
+  destruct ((CT.certified_table_action ctbl) dst
+    (CT.parser_lookahead rest)) as [act | ]; cbn in RUN;
+    [ | discriminate].
+  destruct act as [dst_action | pr | ]; cbn in RUN.
+  - destruct rest as [ | t rest']; [discriminate | ].
+    destruct (run_shift_target word src dst t path_src) as
+      [(dst' & STEP & path_tgt) | ]; cbn in RUN; [ | discriminate].
+    set (c' :=
+      {| nc_word := word ++ [inr t]; nc_src := src; nc_dst := dst';
+         nc_rest := rest'; nc_path := path_tgt |}) in RUN |- *.
+    set (stack' := stack ++ [run_shift_tree t]) in RUN |- *.
+    use! (IH
+      {| run_state_config := c'; run_state_stack := stack' |}
+      (ACC_INV (nconfig_parser_measure c')
+        (Table.parser_step_lt_shift (CT.certified_table_rank ctbl)
+          dst dst' t rest')) tree RUN) as
+      (rs' & STEPS & ACCEPT) with *.
+    exists rs'. split; [ | exact ACCEPT].
+    eapply rt_trans; [ | exact STEPS].
+    constructor 1. unfold c'. econstructor. exact STEP.
+  - destruct (run_split_suffix (length pr.(p_rhs)) word) as
+      [[alpha omega] | ] eqn: SPLIT_WORD; cbn in RUN; [ | discriminate].
+    destruct ((list_hasEqDec V'_hasEqDec) omega pr.(p_rhs)) as
+      [EQ_RHS | NE_RHS]; cbn in RUN; [ | discriminate].
+    destruct (run_reduce_allowed pr dst (CT.parser_lookahead rest)) as
+      [IN_REDUCE | ]; [ | discriminate].
+    destruct (run_reduce_stack pr stack) as [stack' | ]; [ | discriminate].
+    destruct (run_reduce_target alpha src dst pr) as
+      [(p & dst' & PATH_ALPHA & PATH_OMEGA & STEP) | ];
+      [ | discriminate].
+    use Parser.run_split_suffix_sound as WORD with SPLIT_WORD.
+    rewrite EQ_RHS in WORD. subst word.
+    set (path_tgt := npath_snoc alpha src p (inl pr.(p_lhs)) dst'
+      PATH_ALPHA STEP).
+    set (c' :=
+      {| nc_word := alpha ++ [inl pr.(p_lhs)]; nc_src := src;
+         nc_dst := dst'; nc_rest := rest; nc_path := path_tgt |})
+      in RUN |- *.
+    pose (EDGE :=
+      (@ex_intro _ _ pr
+        (@ex_intro _ _ p (conj IN_REDUCE (conj PATH_OMEGA STEP)))
+        : CT.reduce_edge (CT.parser_lookahead rest) dst dst')).
+    use! (IH
+      {| run_state_config := c'; run_state_stack := stack' |}
+      (ACC_INV (nconfig_parser_measure c')
+        (CT.parser_step_lt_reduce_edge (CT.certified_table_rank ctbl)
+          dst dst' rest CERT EDGE)) tree RUN) as
+      (rs' & STEPS & ACCEPT) with *.
+    exists rs'. split; [ | exact ACCEPT].
+    eapply rt_trans; [ | exact STEPS].
+    constructor 1. unfold c'.
+    econstructor; [exact PATH_ALPHA | exact PATH_OMEGA | exact IN_REDUCE | exact STEP].
+  - destruct (run_accept_config
+      {| nc_word := word; nc_src := src; nc_dst := dst;
+         nc_rest := rest; nc_path := path_src |})
+      eqn: ACCEPT_CONFIG; cbn in RUN; [ | discriminate].
+    use run_accept_config_sound as
+      (nf & FINAL & WORD & DST & REST) with ACCEPT_CONFIG.
+    exists
+      {| run_state_config :=
+          {| nc_word := word; nc_src := src; nc_dst := dst;
+             nc_rest := rest; nc_path := path_src |};
+         run_state_stack := stack |}.
+    split.
+    + constructor 2.
+    + econstructor; [exact FINAL | simpl; exact WORD | simpl; exact DST
+      | simpl; exact REST | simpl; exact RUN].
+Qed.
+
+Lemma run_parser_impl_L_LA ctbl CERT w tree
+  (RUN : run_parser_impl ctbl CERT w = Some tree)
+  : L_LA w.
+Proof.
+  unfold run_parser_impl in RUN.
+  use run_parser_acc_L_LA_sound as (rs' & STEPS & ACCEPT) with RUN.
+  destruct rs' as [cf stack].
+  unfold run_state_accepts in ACCEPT. simpl in STEPS.
+  destruct ACCEPT as [nf FINAL WORD DST REST STACK].
+  use steps_LA_preserves_src as SRC with STEPS.
+  unfold L_LA.
+  eapply L_LA_spec_intro with
+    (nf := nf) (c0 := initial_nconfig w) (cf := cf).
+  - exact FINAL.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  - reflexivity.
+  - exact WORD.
+  - simpl in SRC. exact SRC.
+  - exact DST.
+  - exact REST.
+  - exact STEPS.
+Qed.
+
+Lemma run_reduce_allowed_complete pr dst lookahead
+  (IN_REDUCE : pr ∈ CT.reduce_LA dst lookahead)
+  : exists IN_REDUCE',
+      run_reduce_allowed pr dst lookahead = Some IN_REDUCE'.
+Proof.
+  unfold run_reduce_allowed.
+  destruct (L.in_dec prod'_hasEqDec pr (CT.reduce_LA dst lookahead)) as
+    [IN_REDUCE' | NOT_IN_REDUCE].
+  - eexists. reflexivity.
+  - contradiction.
+Qed.
+
+Lemma reduce_LA_user_lhs q t pr
+  (IN_REDUCE : pr ∈ CT.reduce_LA q t)
+  : exists A, pr.(p_lhs) = Some A.
+Proof.
+  destruct pr as [[A | ] rhs].
+  - exists A. reflexivity.
+  - exfalso. eapply CT.reduce_LA_no_start_prime_lhs with (q := q) (t := t).
+    + exact IN_REDUCE.
+    + reflexivity.
+Qed.
+
+Lemma run_reduce_stack_complete_reduce A omega stack alpha dst lookahead
+  (STACK_SYMBOLS : run_stack_symbols stack = alpha ++ omega)
+  (IN_REDUCE : {| p_lhs := Some A; p_rhs := omega |} ∈
+    CT.reduce_LA dst lookahead)
+  : exists stack',
+      run_reduce_stack {| p_lhs := Some A; p_rhs := omega |} stack =
+      Some stack'.
+Proof.
+  destruct (CT.reduce_LA_sound dst lookahead
+    {| p_lhs := Some A; p_rhs := omega |} IN_REDUCE) as
+    (st & it & STATE & IN_IT & DONE & EQ_PR & PROD & LOOKAHEAD).
+  use Parser.P'_some_prod as (rhs & OMEGA & USER_PROD) with PROD.
+  subst omega.
+  unfold run_reduce_stack.
+  eapply Parser.run_reduce_stack_complete_user. exact STACK_SYMBOLS.
+Qed.
+
+Lemma run_accept_config_complete c nf
+  (FINAL : CN.nq_f = Some nf)
+  (WORD : c.(nc_word) = run_accept_word)
+  (DST : c.(nc_dst) = nf)
+  (REST : c.(nc_rest) = [])
+  : run_accept_config c = true.
+Proof.
+  destruct c as [word src dst rest path]. simpl in *.
+  subst word. subst dst. subst rest.
+  unfold run_accept_config. simpl. rewrite FINAL.
+  assert (DST_EQB : eqb nf nf = true).
+  { rewrite eqb_eq. reflexivity. }
+  rewrite DST_EQB.
+  change
+    ((if (list_hasEqDec V'_hasEqDec) run_accept_word run_accept_word
+      then true else false) = true).
+  destruct ((list_hasEqDec V'_hasEqDec) run_accept_word run_accept_word)
+    as [EQ | NE]; [reflexivity | contradiction NE; reflexivity].
+Qed.
+
+Lemma build_certified_table_success_select_action cert ctbl q t st act
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  (STATE : CN.state_of q = Some st)
+  (IN : act ∈ CT.actions q t)
+  : CT.certified_table_action ctbl q t = Some act.
+Proof.
+  destruct (CT.build_certified_table_success cert ctbl BUILD) as
+    (BUILD_TABLE & CERT_EQ & VALID).
+  destruct (CT.build_table_success_select_action
+    (CT.certified_table_action ctbl) q t st act BUILD_TABLE STATE IN) as
+    (ACTIONS & ACTION).
+  exact ACTION.
+Qed.
+
+Lemma step_LA_parser_step_lt rank c c'
+  (CERT : CT.parser_termination_cert rank)
+  (STEP : step_LA c c')
+  : CT.parser_step_lt rank (nconfig_parser_measure c')
+      (nconfig_parser_measure c).
+Proof.
+  destruct STEP as
+    [alpha src dst rest t dst' path_src path_tgt STEP_DN
+    |alpha omega src p dst rest A dst' path_src path_alpha path_omega
+      path_tgt REDUCE STEP_DN].
+  - simpl. eapply Table.parser_step_lt_shift.
+  - simpl. eapply CT.parser_step_lt_reduce_edge.
+    + exact CERT.
+    + exists {| p_lhs := A; p_rhs := omega |}, p.
+      repeat split; assumption.
+Qed.
+
+Lemma run_shift_branch_guards_complete cert ctbl alpha src dst t dst'
+  (path_src : CN.npath alpha src dst)
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  (STEP : CN.dN dst (inr t) = Some dst')
+  : CT.certified_table_action ctbl dst t = Some (Table.Shift dst') /\
+      exists target,
+        run_shift_target alpha src dst t path_src = Some target.
+Proof.
+  use CN.npath_target_state as (st & STATE) with path_src.
+  split.
+  - eapply build_certified_table_success_select_action;
+      [exact BUILD | exact STATE | ].
+    eapply CT.shift_action_in_actions. exact STEP.
+  - eapply run_shift_target_complete. exact STEP.
+Qed.
+
+Variant run_reduce_branch_guards_complete_spec
+  (ctbl : CT.certified_table) (alpha omega : list V')
+  (src dst : nat) (rest : list T') (B : N) (stack : run_stack) : Prop :=
+  | run_reduce_branch_guards_complete_spec_intro
+      (ACTION : CT.certified_table_action ctbl dst
+        (CT.parser_lookahead rest) =
+        Some (Table.Reduce {| p_lhs := Some B; p_rhs := omega |}))
+      (SPLIT_WORD : run_split_suffix (length omega) (alpha ++ omega) =
+        Some (alpha, omega))
+      (REDUCE_ALLOWED : exists IN_REDUCE',
+        run_reduce_allowed {| p_lhs := Some B; p_rhs := omega |} dst
+          (CT.parser_lookahead rest) = Some IN_REDUCE')
+      (REDUCE_STACK : exists stack',
+        run_reduce_stack {| p_lhs := Some B; p_rhs := omega |} stack =
+          Some stack')
+      (REDUCE_TARGET : exists target,
+        run_reduce_target alpha src dst
+          {| p_lhs := Some B; p_rhs := omega |} = Some target)
+      : run_reduce_branch_guards_complete_spec
+          ctbl alpha omega src dst rest B stack.
+
+Lemma run_reduce_branch_guards_complete cert ctbl alpha omega src p dst
+  rest B dst'
+  (path_src : CN.npath (alpha ++ omega) src dst)
+  (path_alpha : CN.npath alpha src p)
+  (path_omega : CN.npath omega p dst)
+  stack
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  (STACK_SYMBOLS : run_stack_symbols stack = alpha ++ omega)
+  (REDUCE : {| p_lhs := Some B; p_rhs := omega |} ∈
+    CT.reduce_LA dst (CT.parser_lookahead rest))
+  (STEP : CN.dN p (inl (Some B)) = Some dst')
+  : run_reduce_branch_guards_complete_spec
+      ctbl alpha omega src dst rest B stack.
+Proof.
+  use CN.npath_target_state as (st & STATE) with path_src.
+  econstructor.
+  - eapply build_certified_table_success_select_action;
+      [exact BUILD | exact STATE | ].
+    eapply CT.reduce_action_in_actions. exact REDUCE.
+  - unfold run_split_suffix.
+    eapply Parser.run_split_suffix_complete; reflexivity.
+  - eapply run_reduce_allowed_complete. exact REDUCE.
+  - eapply run_reduce_stack_complete_reduce;
+      [exact STACK_SYMBOLS | exact REDUCE].
+  - eapply run_reduce_target_complete;
+      [exact path_alpha | exact path_omega | exact STEP].
+Qed.
+
+Variant run_step_progress_spec
+  (ctbl : CT.certified_table)
+  (CERT : CT.parser_termination_cert (CT.certified_table_rank ctbl))
+  (rs : run_state)
+  (ACC : Acc (CT.parser_step_lt (CT.certified_table_rank ctbl))
+    (run_state_measure rs))
+  (target : nconfig) (w : list T) : Prop :=
+  | run_step_progress_spec_intro rs'
+      (ACC' : Acc (CT.parser_step_lt (CT.certified_table_rank ctbl))
+        (run_state_measure rs'))
+      (TARGET : nconfig_shape_eq rs'.(run_state_config) target)
+      (STEP : step_LA rs.(run_state_config) rs'.(run_state_config))
+      (RUN : run_parser_acc ctbl CERT rs ACC =
+        run_parser_acc ctbl CERT rs' ACC')
+      (STACK_SYMBOLS : run_stack_symbols rs'.(run_state_stack) =
+        rs'.(run_state_config).(nc_word))
+      (STACK_VALID : run_stack_valid rs'.(run_state_stack))
+      (YIELD : run_stack_yield rs'.(run_state_stack) ++
+        parser_input_yield rs'.(run_state_config).(nc_rest) = w)
+      : run_step_progress_spec ctbl CERT rs ACC target w.
+
+Lemma run_shift_step_progress cert ctbl CERT alpha src dst rest t dst'
+  path_src path_tgt stack ACC w
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  (STACK_SYMBOLS : run_stack_symbols stack = alpha)
+  (STACK_VALID : run_stack_valid stack)
+  (YIELD : run_stack_yield stack ++ parser_input_yield (t :: rest) = w)
+  (STEP : CN.dN dst (inr t) = Some dst')
+  : run_step_progress_spec ctbl CERT
+      {| run_state_config :=
+          {| nc_word := alpha; nc_src := src; nc_dst := dst;
+             nc_rest := t :: rest; nc_path := path_src |};
+         run_state_stack := stack |}
+      ACC
+      {| nc_word := alpha ++ [inr t]; nc_src := src; nc_dst := dst';
+         nc_rest := rest; nc_path := path_tgt |}
+      w.
+Proof.
+  destruct ACC as [ACC_INV].
+  use (run_shift_branch_guards_complete cert ctbl alpha src dst t dst'
+    path_src) as (ACTION & target & TARGET) with BUILD STEP.
+  destruct target as (dst_run & STEP_RUN & path_run).
+  assert (DST_RUN : dst_run = dst') by congruence. subst dst_run.
+  use Parser.run_shift_stack_sound as
+    (STACK_SYMBOLS' & STACK_VALID' & YIELD') with
+    STACK_SYMBOLS STACK_VALID YIELD.
+  set (c_run :=
+    {| nc_word := alpha ++ [inr t]; nc_src := src; nc_dst := dst';
+       nc_rest := rest; nc_path := path_run |}).
+  set (stack_run := stack ++ [run_shift_tree t]).
+  set (rs_run :=
+    {| run_state_config := c_run; run_state_stack := stack_run |}).
+  assert (STEP_LT : CT.parser_step_lt (CT.certified_table_rank ctbl)
+    (run_state_measure rs_run)
+    (run_state_measure
+      {| run_state_config :=
+          {| nc_word := alpha; nc_src := src; nc_dst := dst;
+             nc_rest := t :: rest; nc_path := path_src |};
+         run_state_stack := stack |})).
+  { unfold rs_run, c_run, run_state_measure, nconfig_parser_measure.
+    simpl. eapply Table.parser_step_lt_shift. }
+  eapply run_step_progress_spec_intro with
+    (rs' := rs_run) (ACC' := ACC_INV (run_state_measure rs_run) STEP_LT).
+  - unfold rs_run, c_run, nconfig_shape_eq. simpl.
+    repeat split; reflexivity.
+  - unfold rs_run, c_run. simpl. econstructor. exact STEP.
+  - cbn [run_parser_acc]. simpl. rewrite ACTION. rewrite TARGET.
+    eapply run_parser_acc_irrel.
+  - unfold rs_run, c_run, stack_run. simpl. exact STACK_SYMBOLS'.
+  - unfold rs_run, stack_run. simpl. exact STACK_VALID'.
+  - unfold rs_run, c_run, stack_run. simpl. exact YIELD'.
+Qed.
+
+Lemma run_reduce_step_progress cert ctbl CERT alpha omega src p dst rest A
+  dst' (path_src : CN.npath (alpha ++ omega) src dst)
+  (path_alpha : CN.npath alpha src p)
+  (path_omega : CN.npath omega p dst) path_tgt stack ACC w
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  (STACK_SYMBOLS : run_stack_symbols stack = alpha ++ omega)
+  (STACK_VALID : run_stack_valid stack)
+  (YIELD : run_stack_yield stack ++ parser_input_yield rest = w)
+  (REDUCE : {| p_lhs := A; p_rhs := omega |} ∈
+    CT.reduce_LA dst (CT.parser_lookahead rest))
+  (STEP : CN.dN p (inl A) = Some dst')
+  : run_step_progress_spec ctbl CERT
+      {| run_state_config :=
+          {| nc_word := alpha ++ omega; nc_src := src; nc_dst := dst;
+             nc_rest := rest; nc_path := path_src |};
+         run_state_stack := stack |}
+      ACC
+      {| nc_word := alpha ++ [inl A]; nc_src := src; nc_dst := dst';
+         nc_rest := rest; nc_path := path_tgt |}
+      w.
+Proof.
+  destruct ACC as [ACC_INV].
+  use reduce_LA_user_lhs as (B & LHS) with REDUCE.
+  simpl in LHS. subst A.
+  use (run_reduce_branch_guards_complete cert ctbl alpha omega src p dst
+    rest B dst' path_src path_alpha path_omega stack) as GUARDS with
+    BUILD STACK_SYMBOLS REDUCE STEP.
+  destruct GUARDS as
+    [ACTION SPLIT_WORD REDUCE_ALLOWED REDUCE_STACK REDUCE_TARGET].
+  destruct REDUCE_ALLOWED as (IN_REDUCE' & REDUCE_ALLOWED).
+  destruct REDUCE_STACK as (stack_run & REDUCE_STACK).
+  destruct REDUCE_TARGET as (target & REDUCE_TARGET).
+  destruct target as
+    (p_run & dst_run & PATH_ALPHA_RUN & PATH_OMEGA_RUN & STEP_RUN).
+  change (p_rhs {| p_lhs := Some B; p_rhs := omega |}) with omega in *.
+  change (p_lhs {| p_lhs := Some B; p_rhs := omega |}) with (Some B) in *.
+  use CN.npath_deterministic as P_EQ with PATH_ALPHA_RUN path_alpha.
+  subst p_run.
+  assert (DST_RUN : dst_run = dst') by congruence. subst dst_run.
+  use! (run_reduce_stack_sound
+    {| p_lhs := Some B; p_rhs := omega |} stack stack_run
+    (alpha ++ omega) alpha omega dst (CT.parser_lookahead rest)) as
+    (STACK_SYMBOLS' & STACK_VALID' & STACK_YIELD') with
+    STACK_SYMBOLS STACK_VALID SPLIT_WORD REDUCE REDUCE_STACK.
+  set (path_run := npath_snoc alpha src p (inl (Some B)) dst'
+    PATH_ALPHA_RUN STEP_RUN).
+  set (c_run :=
+    {| nc_word := alpha ++ [inl (Some B)]; nc_src := src; nc_dst := dst';
+       nc_rest := rest; nc_path := path_run |}).
+  set (rs_run :=
+    {| run_state_config := c_run; run_state_stack := stack_run |}).
+  set (EDGE :=
+    (@ex_intro _ _ {| p_lhs := Some B; p_rhs := omega |}
+      (@ex_intro _ _ p (conj REDUCE (conj PATH_OMEGA_RUN STEP_RUN)))
+      : CT.reduce_edge (CT.parser_lookahead rest) dst dst')).
+  assert (STEP_LT : CT.parser_step_lt (CT.certified_table_rank ctbl)
+    (run_state_measure rs_run)
+    (run_state_measure
+      {| run_state_config :=
+          {| nc_word := alpha ++ omega; nc_src := src; nc_dst := dst;
+             nc_rest := rest; nc_path := path_src |};
+         run_state_stack := stack |})).
+  { unfold rs_run, c_run, run_state_measure, nconfig_parser_measure.
+    simpl. eapply CT.parser_step_lt_reduce_edge;
+      [exact CERT | exact EDGE]. }
+  eapply run_step_progress_spec_intro with
+    (rs' := rs_run) (ACC' := ACC_INV (run_state_measure rs_run) STEP_LT).
+  - unfold rs_run, c_run, nconfig_shape_eq. simpl.
+    repeat split; reflexivity.
+  - unfold rs_run, c_run. simpl.
+    econstructor;
+      [exact PATH_ALPHA_RUN | exact PATH_OMEGA_RUN | exact REDUCE
+      | exact STEP_RUN].
+  - cbn [run_parser_acc]. rewrite ACTION.
+    change (run_split_suffix
+      (length (p_rhs {| p_lhs := Some B; p_rhs := omega |}))
+      (alpha ++ omega)) with
+      (run_split_suffix (length omega) (alpha ++ omega)).
+    rewrite SPLIT_WORD.
+    change (p_rhs {| p_lhs := Some B; p_rhs := omega |}) with omega.
+    destruct ((list_hasEqDec V'_hasEqDec) omega omega) as
+      [_ | NE_RHS]; [ | contradiction NE_RHS; reflexivity].
+    rewrite REDUCE_ALLOWED. rewrite REDUCE_STACK. rewrite REDUCE_TARGET.
+    eapply run_parser_acc_irrel.
+  - unfold rs_run, c_run. simpl. exact STACK_SYMBOLS'.
+  - unfold rs_run. simpl. exact STACK_VALID'.
+  - unfold rs_run, c_run. simpl. rewrite STACK_YIELD'. exact YIELD.
+Qed.
+
+Lemma run_step_progress cert ctbl CERT rs ACC target w
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  (STACK_SYMBOLS : run_stack_symbols rs.(run_state_stack) =
+    rs.(run_state_config).(nc_word))
+  (STACK_VALID : run_stack_valid rs.(run_state_stack))
+  (YIELD : run_stack_yield rs.(run_state_stack) ++
+    parser_input_yield rs.(run_state_config).(nc_rest) = w)
+  (STEP : step_LA rs.(run_state_config) target)
+  : run_step_progress_spec ctbl CERT rs ACC target w.
+Proof.
+  destruct rs as [c stack].
+  simpl in STACK_SYMBOLS, STACK_VALID, YIELD, STEP.
+  destruct STEP as
+    [alpha src dst rest t dst' path_src path_tgt STEP_DN
+    |alpha omega src p dst rest A dst' path_src path_alpha path_omega
+      path_tgt REDUCE STEP_DN].
+  - eapply run_shift_step_progress;
+      [exact BUILD | exact STACK_SYMBOLS | exact STACK_VALID | exact YIELD
+      | exact STEP_DN].
+  - eapply run_reduce_step_progress with (p := p);
+      [exact path_alpha | exact path_omega | exact BUILD
+      | exact STACK_SYMBOLS | exact STACK_VALID | exact YIELD
+      | exact REDUCE | exact STEP_DN].
+Qed.
+
+Lemma run_accept_state_progress cert ctbl CERT src nf
+  (path_src : CN.npath run_accept_word src nf) stack ACC
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  (FINAL : CN.nq_f = Some nf)
+  (STACK_SYMBOLS : run_stack_symbols stack = run_accept_word)
+  : exists tree,
+      run_parser_acc ctbl CERT
+        {| run_state_config :=
+            {| nc_word := run_accept_word; nc_src := src; nc_dst := nf;
+               nc_rest := []; nc_path := path_src |};
+           run_state_stack := stack |}
+        ACC = Some tree.
+Proof.
+  use CN.nq_f_sound as (qf & FINAL_Q & INDEX & STATE) with FINAL.
+  assert (ACTION : CT.certified_table_action ctbl nf eof =
+    Some Table.Accept).
+  { eapply build_certified_table_success_select_action;
+      [exact BUILD | exact STATE | ].
+    eapply CT.accept_action_in_actions. exact FINAL. }
+  unfold run_stack_symbols in STACK_SYMBOLS.
+  use Parser.run_accept_stack_complete as (tree & STACK) with STACK_SYMBOLS.
+  destruct ACC as [ACC_INV].
+  exists tree. cbn [run_parser_acc].
+  change (CT.parser_lookahead []) with eof. rewrite ACTION.
+  assert (ACCEPT_CONFIG : run_accept_config
+    {| nc_word := run_accept_word; nc_src := src; nc_dst := nf;
+       nc_rest := []; nc_path := path_src |} = true).
+  { eapply run_accept_config_complete with (nf := nf);
+      [exact FINAL | reflexivity | reflexivity | reflexivity]. }
+  rewrite ACCEPT_CONFIG. exact STACK.
+Qed.
+
+Variant run_steps_progress_spec
+  (ctbl : CT.certified_table)
+  (CERT : CT.parser_termination_cert (CT.certified_table_rank ctbl))
+  (rs : run_state)
+  (ACC : Acc (CT.parser_step_lt (CT.certified_table_rank ctbl))
+    (run_state_measure rs))
+  (target : nconfig) (w : list T) : Prop :=
+  | run_steps_progress_spec_intro rs'
+      (ACC' : Acc (CT.parser_step_lt (CT.certified_table_rank ctbl))
+        (run_state_measure rs'))
+      (TARGET : nconfig_shape_eq rs'.(run_state_config) target)
+      (STEPS : steps_LA rs.(run_state_config) rs'.(run_state_config))
+      (RUN : run_parser_acc ctbl CERT rs ACC =
+        run_parser_acc ctbl CERT rs' ACC')
+      (STACK_SYMBOLS : run_stack_symbols rs'.(run_state_stack) =
+        rs'.(run_state_config).(nc_word))
+      (STACK_VALID : run_stack_valid rs'.(run_state_stack))
+      (YIELD : run_stack_yield rs'.(run_state_stack) ++
+        parser_input_yield rs'.(run_state_config).(nc_rest) = w)
+      : run_steps_progress_spec ctbl CERT rs ACC target w.
+
+Lemma run_steps_progress_1n cert ctbl CERT c_abs target
+  (STEPS : clos_refl_trans_1n _ step_LA c_abs target)
+  : forall rs ACC w,
+      CT.build_certified_table cert = inr ctbl ->
+      nconfig_shape_eq rs.(run_state_config) c_abs ->
+      run_stack_symbols rs.(run_state_stack) =
+        rs.(run_state_config).(nc_word) ->
+      run_stack_valid rs.(run_state_stack) ->
+      run_stack_yield rs.(run_state_stack) ++
+        parser_input_yield rs.(run_state_config).(nc_rest) = w ->
+      run_steps_progress_spec ctbl CERT rs ACC target w.
+Proof.
+  induction STEPS as [c | c c_mid c' STEP STEPS_TAIL IH];
+    intros rs ACC w BUILD SHAPE STACK_SYMBOLS STACK_VALID YIELD.
+  - eapply run_steps_progress_spec_intro with (rs' := rs) (ACC' := ACC).
+    + exact SHAPE.
+    + constructor 2.
+    + reflexivity.
+    + exact STACK_SYMBOLS.
+    + exact STACK_VALID.
+    + exact YIELD.
+  - use step_LA_shape_transport as
+      (c_mid_run & SHAPE_MID_RUN & STEP_RUN) with SHAPE STEP.
+    use (run_step_progress cert ctbl CERT rs ACC c_mid_run w) as
+      STEP_PROGRESS with
+      BUILD STACK_SYMBOLS STACK_VALID YIELD STEP_RUN.
+    destruct STEP_PROGRESS as
+      [rs_mid ACC_MID TARGET_MID STEP_MID RUN_MID
+       STACK_SYMBOLS_MID STACK_VALID_MID YIELD_MID].
+    use nconfig_shape_eq_trans as SHAPE_MID with
+      TARGET_MID SHAPE_MID_RUN.
+    use! (IH rs_mid ACC_MID w BUILD SHAPE_MID STACK_SYMBOLS_MID
+      STACK_VALID_MID YIELD_MID) as TAIL_PROGRESS with *.
+    destruct TAIL_PROGRESS as
+      [rs_final ACC_FINAL TARGET_FINAL STEPS_FINAL RUN_FINAL
+       STACK_SYMBOLS_FINAL STACK_VALID_FINAL YIELD_FINAL].
+    eapply run_steps_progress_spec_intro with
+      (rs' := rs_final) (ACC' := ACC_FINAL).
+    + exact TARGET_FINAL.
+    + eapply rt_trans; [constructor 1; exact STEP_MID | exact STEPS_FINAL].
+    + rewrite RUN_MID. exact RUN_FINAL.
+    + exact STACK_SYMBOLS_FINAL.
+    + exact STACK_VALID_FINAL.
+    + exact YIELD_FINAL.
+Qed.
+
+Lemma run_steps_progress cert ctbl CERT rs ACC target w
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  (STACK_SYMBOLS : run_stack_symbols rs.(run_state_stack) =
+    rs.(run_state_config).(nc_word))
+  (STACK_VALID : run_stack_valid rs.(run_state_stack))
+  (YIELD : run_stack_yield rs.(run_state_stack) ++
+    parser_input_yield rs.(run_state_config).(nc_rest) = w)
+  (STEPS : steps_LA rs.(run_state_config) target)
+  : run_steps_progress_spec ctbl CERT rs ACC target w.
+Proof.
+  eapply run_steps_progress_1n.
+  - eapply Operators_Properties.clos_rt_rt1n. exact STEPS.
+  - exact BUILD.
+  - eapply nconfig_shape_eq_refl.
+  - exact STACK_SYMBOLS.
+  - exact STACK_VALID.
+  - exact YIELD.
+Qed.
+
+Lemma steps_LA_shape_transport c_run c_abs c_abs'
+  (SHAPE : nconfig_shape_eq c_run c_abs)
+  (STEPS : steps_LA c_abs c_abs')
+  : exists c_run_final, nconfig_shape_eq c_run_final c_abs' /\
+      steps_LA c_run c_run_final.
+Proof.
+  use Operators_Properties.clos_rt_rt1n as STEPS1N with STEPS.
+  use steps_LA_1n_shape_transport as
+    (c_run_final & SHAPE_RUN & STEPS_RUN) with SHAPE STEPS1N.
+  exists c_run_final. split.
+  - exact SHAPE_RUN.
+  - eapply Operators_Properties.clos_rt1n_rt. exact STEPS_RUN.
+Qed.
+
+Lemma run_parser_impl_L_LA_complete cert ctbl CERT w
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  (ACCEPT : L_LA w)
+  : exists tree, run_parser_impl ctbl CERT w = Some tree.
+Proof.
+  unfold L_LA in ACCEPT.
+  destruct ACCEPT as
+    [nf c0 cf FINAL_N C0_WORD C0_SRC C0_DST C0_REST
+     CF_WORD CF_SRC CF_DST CF_REST STEPS].
+  assert (SHAPE_INIT : nconfig_shape_eq (initial_nconfig w) c0).
+  { unfold nconfig_shape_eq, initial_nconfig. simpl.
+    repeat split; symmetry; assumption. }
+  use steps_LA_shape_transport as
+    (cf_run & SHAPE_CF_RUN & STEPS_RUN) with SHAPE_INIT STEPS.
+  assert (STACK_SYMBOLS_INIT :
+    run_stack_symbols (initial_run_state w).(run_state_stack) =
+      (initial_run_state w).(run_state_config).(nc_word)) by reflexivity.
+  assert (STACK_VALID_INIT :
+    run_stack_valid (initial_run_state w).(run_state_stack)) by exact I.
+  assert (YIELD_INIT :
+    run_stack_yield (initial_run_state w).(run_state_stack) ++
+      parser_input_yield (initial_run_state w).(run_state_config).(nc_rest)
+      = w).
+  { simpl. unfold parser_input_yield, parser_input.
+    rewrite Parser.parser_input_yield_parser_input. reflexivity. }
+  use (run_steps_progress cert ctbl CERT (initial_run_state w)
+    (certified_initial_acc ctbl w) cf_run w) as PROGRESS with
+    BUILD STACK_SYMBOLS_INIT STACK_VALID_INIT YIELD_INIT STEPS_RUN.
+  destruct PROGRESS as
+    [rs_final ACC_FINAL TARGET_FINAL STEPS_FINAL RUN_FINAL
+     STACK_SYMBOLS_FINAL STACK_VALID_FINAL YIELD_FINAL].
+  use nconfig_shape_eq_trans as SHAPE_FINAL with
+    TARGET_FINAL SHAPE_CF_RUN.
+  clear TARGET_FINAL STEPS_FINAL STACK_VALID_FINAL YIELD_FINAL.
+  unfold run_parser_impl.
+  destruct rs_final as [c_final stack_final].
+  destruct c_final as
+    [word_final src_final dst_final rest_final path_final].
+  simpl in ACC_FINAL, RUN_FINAL, STACK_SYMBOLS_FINAL, SHAPE_FINAL.
+  unfold nconfig_shape_eq in SHAPE_FINAL. simpl in SHAPE_FINAL.
+  destruct SHAPE_FINAL as
+    (WORD_FINAL & SRC_FINAL & DST_FINAL & REST_FINAL).
+  rewrite CF_WORD in WORD_FINAL.
+  rewrite CF_DST in DST_FINAL. rewrite CF_REST in REST_FINAL.
+  assert (STACK_SYMBOLS_ACCEPT :
+    run_stack_symbols stack_final = run_accept_word) by congruence.
+  clear STACK_SYMBOLS_FINAL.
+  subst word_final. subst dst_final. subst rest_final.
+  use (run_accept_state_progress cert ctbl CERT src_final nf path_final
+    stack_final ACC_FINAL) as (tree & RUN_ACCEPT) with
+    BUILD FINAL_N STACK_SYMBOLS_ACCEPT.
+  exists tree. rewrite RUN_FINAL. exact RUN_ACCEPT.
+Qed.
+
+Lemma run_parser_impl_L_LA_correct cert ctbl CERT w
+  (BUILD : CT.build_certified_table cert = inr ctbl)
+  : (exists tree, run_parser_impl ctbl CERT w = Some tree) <-> L_LA w.
+Proof.
+  split.
+  - intros (tree & RUN). eapply run_parser_impl_L_LA. exact RUN.
+  - eapply run_parser_impl_L_LA_complete. exact BUILD.
+Qed.
+
 End CanonicalParser.
 
 Module CanonicalBuilder.
@@ -18238,18 +19140,58 @@ Record parser : Type :=
 Definition run_parser (p : parser) (w : list T) : option CP.parse_tree :=
   CP.run_parser_impl p.(parser_table) p.(parser_table_cert) w.
 
+Inductive certified_table_build_view
+  (cert : CT.parser_termination_certificate) : Type :=
+  | certified_table_build_error err
+      (BUILD : CT.build_certified_table cert = inl err)
+  | certified_table_build_success ctbl
+      (BUILD : CT.build_certified_table cert = inr ctbl).
+
+Definition inspect_certified_table_build
+  (cert : CT.parser_termination_certificate)
+  : certified_table_build_view cert :=
+  match CT.build_certified_table cert as result
+    return CT.build_certified_table cert = result ->
+      certified_table_build_view cert with
+  | inl err => fun BUILD => certified_table_build_error cert err BUILD
+  | inr ctbl => fun BUILD => certified_table_build_success cert ctbl BUILD
+  end eq_refl.
+
 Definition build (cert : CT.parser_termination_certificate)
   : BuildErrorM parser.
 Proof.
-  refine (match CT.build_certified_table cert as result return CT.build_certified_table cert = result -> BuildErrorM parser with | inl err => fun _ => inl err | inr ctbl => fun BUILD => inr {| parser_certificate := cert; parser_table := ctbl; parser_table_built := BUILD; parser_table_conflict_free := _; parser_table_cert := _ |} end eq_refl).
-  - eapply CT.build_certified_table_success_conflict_free.
-    exact BUILD.
-  - eapply CT.build_certified_table_success_termination.
-    exact BUILD.
+  destruct (inspect_certified_table_build cert)
+    as [err BUILD | ctbl BUILD].
+  - exact (inl err).
+  - refine (inr {| parser_certificate := cert;
+                   parser_table := ctbl;
+                   parser_table_built := BUILD;
+                   parser_table_conflict_free := _;
+                   parser_table_cert := _ |}).
+    + eapply CT.build_certified_table_success_conflict_free.
+      exact BUILD.
+    + eapply CT.build_certified_table_success_termination.
+      exact BUILD.
 Defined.
 
 Definition build_auto : BuildErrorM parser :=
   build CT.inferred_parser_termination_certificate.
+
+Theorem build_auto_complete
+  (FREE : CT.conflict_free)
+  (ACYCLIC : CT.reduce_graph_acyclic)
+  : exists p, build_auto = inr p.
+Proof.
+  unfold build_auto, build.
+  destruct (inspect_certified_table_build
+    CT.inferred_parser_termination_certificate)
+    as [err BUILD_FAILURE | ctbl BUILD_SUCCESS].
+  - destruct (CT.build_inferred_certified_table_complete FREE ACYCLIC)
+      as (ctbl' & BUILD).
+    unfold CT.build_inferred_certified_table in BUILD.
+    congruence.
+  - eexists. reflexivity.
+Qed.
 
 Theorem parser_build_correct p
   : CT.build_certified_table p.(parser_certificate) = inr p.(parser_table) /\ CT.conflict_free /\ CT.parser_termination_cert (CT.certified_table_rank p.(parser_table)).
@@ -18286,6 +19228,25 @@ Proof.
   unfold run_parser in RUN.
   eapply CP.run_parser_impl_sound.
   exact RUN.
+Qed.
+
+Lemma parser_run_complete p w
+  (ACCEPT : CP.L_LA w)
+  : exists tree, run_parser p w = Some tree.
+Proof.
+  unfold run_parser.
+  eapply CP.run_parser_impl_L_LA_complete.
+  - exact p.(parser_table_built).
+  - exact ACCEPT.
+Qed.
+
+Lemma parser_accepts_correct p w
+  : (exists tree, run_parser p w = Some tree) <-> CP.L_LA w.
+Proof.
+  split.
+  - intros (tree & RUN). unfold run_parser in RUN.
+    eapply CP.run_parser_impl_L_LA. exact RUN.
+  - eapply parser_run_complete.
 Qed.
 
 End CanonicalBuilder.
