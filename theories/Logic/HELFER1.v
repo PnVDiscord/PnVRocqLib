@@ -1748,31 +1748,30 @@ Proof.
     simpl in HH. rewrite <- HH.
     f_equal. eapply IH1. intros z1 z2 ZSIM.
     unfold cons_hsubst. unfold eqb.
-    destruct (B.decide (z1 = (inl y))) as [-> | NE1].
+    destruct (B.decide (z1 = inl y)) as [-> | NE1].
     + destruct z2 as [x | c2]; simpl in ZSIM; try contradiction.
       subst x.
-      destruct (B.decide ((inl y) = (inl y))); [reflexivity | congruence].
+      destruct (B.decide (inl y = inl y)); [reflexivity | congruence].
     + assert (NE2 : ~ z2 = inl y).
       { intro EZ. destruct z1 as [x1 | c1], z2 as [x2 | c2]; simpl in ZSIM; try contradiction; congruence. }
-      destruct (B.decide (z2 = (inl y))) as [EZ1 | _]; [contradiction|].
+      destruct (B.decide (z2 = inl y)) as [EZ1 | _]; [contradiction|].
       exact (SIG z1 z2 ZSIM).
 Qed.
 
-Theorem frm_mapping_replace_constant_in_frm_inj (h_inj : forall c1, forall c2, h c1 = h c2 -> c1 = c2) (c : K1) (ct : trm L1) (q : frm L1)
+Hypothesis h_inj : forall c1, forall c2, h c1 = h c2 -> c1 = c2.
+
+Theorem frm_mapping_replace_constant_in_frm_inj (c : K1) (ct : trm L1) (q : frm L1)
   : frm_mapping h (replace_constant_in_frm c ct q) = replace_constant_in_frm (h c) (trm_mapping h ct) (frm_mapping h q).
 Proof.
-  unfold replace_constant_in_frm.
-  eapply hsubst_frm_graph_eq.
-  intros z1 z2 ZSIM.
-  unfold one_hsubst, cons_hsubst, nil_hsubst.
+  eapply hsubst_frm_graph_eq. intros z1 z2 ZSIM. unfold one_hsubst, cons_hsubst, nil_hsubst.
   destruct z1 as [x1 | c1], z2 as [x2 | c2]; simpl in ZSIM; try contradiction.
   - subst x2. unfold eqb.
-    destruct (B.decide ((inl x1) = (inr c))); [congruence | reflexivity].
+    destruct (B.decide (inl x1 = inr c)); [congruence | reflexivity].
   - subst c2. unfold eqb.
-    destruct (B.decide ((inr c1) = (inr c))) as [EQ1 | NE1].
+    destruct (B.decide (inr c1 = inr c)) as [EQ1 | NE1].
     + inversion EQ1. subst c1.
-      destruct (B.decide ((inr (h c)) = (inr (h c)))); [reflexivity | congruence].
-    + destruct (B.decide ((inr (h c1)) = (inr (h c)))) as [EQ2 | NE2].
+      destruct (B.decide (inr (h c) = inr (h c))); [reflexivity | congruence].
+    + destruct (B.decide (inr (h c1) = inr (h c))) as [EQ2 | NE2].
       * exfalso. eapply NE1. f_equal.
         eapply h_inj. now inversion EQ2.
       * reflexivity.
