@@ -180,12 +180,16 @@ Proof.
   destruct p as [R ts | t1 t2 | p1 | p1 p2 | y p1]; intros hc H; s!.
   - exact (occurs_stage_le_trms _ ts hc H).
   - destruct H as [H | H].
-    + enough (S (projT1 hc) <= max_hc_stage_trm t1) by lia. exact (occurs_stage_le_trm t1 hc H).
-    + enough (S (projT1 hc) <= max_hc_stage_trm t2) by lia. exact (occurs_stage_le_trm t2 hc H).
+    + enough (S (projT1 hc) <= max_hc_stage_trm t1) by lia.
+      exact (occurs_stage_le_trm t1 hc H).
+    + enough (S (projT1 hc) <= max_hc_stage_trm t2) by lia.
+      exact (occurs_stage_le_trm t2 hc H).
   - exact (occurs_stage_le_frm p1 hc H).
   - destruct H as [H | H].
-    + enough (S (projT1 hc) <= max_hc_stage_frm p1) by lia. exact (occurs_stage_le_frm p1 hc H).
-    + enough (S (projT1 hc) <= max_hc_stage_frm p2) by lia. exact (occurs_stage_le_frm p2 hc H).
+    + enough (S (projT1 hc) <= max_hc_stage_frm p1) by lia.
+      exact (occurs_stage_le_frm p1 hc H).
+    + enough (S (projT1 hc) <= max_hc_stage_frm p2) by lia.
+      exact (occurs_stage_le_frm p2 hc H).
   - exact (occurs_stage_le_frm p1 hc H).
 Defined.
 
