@@ -11,7 +11,7 @@ git clone https://github.com/PnVDiscord/PnVRocqLib.git
 cd PnVRocqLib
 eval `opam env`
 rocq makefile -f _CoqProject -o CoqMakefile
-eval $(opam env) && make -f CoqMakefile -j
+eval "$(opam env)" && make -f CoqMakefile -j
 ```
 
 ### `rocq -v`

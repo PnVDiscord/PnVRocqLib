@@ -503,13 +503,13 @@ Proof.
 Defined.
 
 #[universes(polymorphic=yes)]
-Definition vec@{u} (n : nat) (A : Type@{u}) : Type@{u} :=
+Definition vec@{u | } (n : nat) (A : Type@{u}) : Type@{u} :=
   Vector.t A n.
 
-#[local, universes(polymorphic=yes)]
-Instance vec_isMonad@{u} {n : nat} : isMonad@{u u} (vec@{u} n) :=
-  { bind {A : Type@{u}} {B : Type@{u}} (m : vec n A) (k : A -> vec n B) := diagonal (map k m)
-  ; pure {A : Type@{u}} (x : A) := replicate x
+#[local]
+Instance vec_isMonad {n : nat} : isMonad (vec n) :=
+  { bind {A : Type} {B : Type} (m : vec n A) (k : A -> vec n B) := diagonal (map k m)
+  ; pure {A : Type} (x : A) := replicate x
   }.
 
 Definition zipWith {n : nat} {A : Type} {B : Type} {C : Type} (f : A -> B -> C) (xs : Vector.t A n) (ys : Vector.t B n) : Vector.t C n :=

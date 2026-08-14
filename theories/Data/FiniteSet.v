@@ -214,54 +214,6 @@ Proof.
     transitivity (pow2 (length xs)); [exact IH | symmetry; apply Nat.add_0_r].
 Qed.
 
-Fixpoint index_of {A : Type@{U_fs}} `{EQ_DEC : hasEqDec A} (x : A) (xs : list A) {struct xs} : nat :=
-  match xs with
-  | [] => O
-  | x' :: xs' => if B.decide (x = x') then O else S (index_of x xs')
-  end.
-
-Definition lookup {A : Type@{U_fs}} (default : A) (n : nat) (xs : list A) : A :=
-  nth n xs default.
-
-Lemma lookup_index_of {A : Type} `{EQ_DEC : hasEqDec A} (x : A) (xs : list A) (default : A)
-  (IN : x ∈ xs)
-  : lookup default (index_of x xs) xs = x.
-Proof.
-  revert x IN; induction xs as [ | x' xs IH]; simpl; ii; des_ifs; done!.
-Qed.
-
-Lemma index_of_lt {A : Type} `{EQ_DEC : hasEqDec A} (x : A) (xs : list A)
-  (IN : x ∈ xs)
-  : index_of x xs < length xs.
-Proof.
-  revert x IN; induction xs as [ | x' xs IH]; simpl; ii; des_ifs; done.
-Qed.
-
-Lemma index_of_in_seq {A : Type} `{EQ_DEC : hasEqDec A} (x : A) (xs : list A)
-  (IN : x ∈ xs)
-  : index_of x xs ∈ seq 0 (length xs).
-Proof.
-  rewrite in_seq. use index_of_lt as ?. lia.
-Qed.
-
-Lemma index_of_inj {A : Type} `{EQ_DEC : hasEqDec A} (x : A) (y : A) (zs : list A)
-  (IN_X : x ∈ zs)
-  (IN_Y : y ∈ zs)
-  (EQ : index_of x zs = index_of y zs)
-  : x = y.
-Proof.
-  revert x y EQ IN_X IN_Y; induction zs as [ | z zs IH]; simpl; ii.
-  - tauto.
-  - des_ifs; des; try congruence. eapply IH; eauto.
-Qed.
-
-Lemma lookup_in {A : Type} (default : A) (n : nat) (xs : list A)
-  (LT : n < length xs)
-  : lookup default n xs ∈ xs.
-Proof.
-  now eapply nth_In.
-Qed.
-
 #[universes(polymorphic=yes)]
 Definition product@{u v} {A : Type@{u}} {B : Type@{v}} (xs : list A) (ys : list B) : list (A * B) :=
   xs >>= fun x => ys >>= fun y => pure (x, y).
