@@ -2474,11 +2474,7 @@ Proof.
 Qed.
 
 Lemma AddHenkin_stage_list_HC_free (X : ensemble (frm L)) (n : nat) (hc : Henkin_constants)
-  : forall hcs,
-    (~ L.In hc hcs) ->
-    (forall hc', L.In hc' hcs -> hc_stage hc' = n) ->
-    (hc_stage hc = n) ->
-    (forall A, A \in AddHenkin_stage_list X n hcs -> HC_occurs_in_frm hc A = false).
+  : forall hcs, (~ L.In hc hcs) -> (forall hc', L.In hc' hcs -> hc_stage hc' = n) -> (hc_stage hc = n) -> (forall A, A \in AddHenkin_stage_list X n hcs -> HC_occurs_in_frm hc A = false).
 Proof.
   induction hcs as [|hc' hcs IH]; simpl; intros Hnin Hstage Hst A HA.
   - eapply AddHenkin_stage_prev_HC_free; eauto.
@@ -2488,11 +2484,7 @@ Proof.
 Qed.
 
 Lemma remove_Henkin_axioms_list (X : ensemble (frm L)) (n : nat)
-  : forall hcs,
-    L.NoDup hcs ->
-    (forall hc, L.In hc hcs -> hc_stage hc = n) ->
-    inconsistent (AddHenkin_stage_list X n hcs) ->
-    inconsistent (AddHenkin_stage X n).
+  : forall hcs, L.NoDup hcs -> (forall hc, L.In hc hcs -> hc_stage hc = n) -> inconsistent (AddHenkin_stage_list X n hcs) -> inconsistent (AddHenkin_stage X n).
 Proof.
   induction hcs as [|hc hcs IH]; simpl; intros Hnodup Hstage Hincon.
   - exact Hincon.
@@ -2506,9 +2498,7 @@ Proof.
 Qed.
 
 Lemma collect_stage_axioms (X : ensemble (frm L)) (n : nat)
-  : forall ps : list (frm L'),
-    (forall p, p \in E.fromList ps -> p \in AddHenkin_stage X (S n)) ->
-    exists hcs : list Henkin_constants, L.NoDup hcs /\ (forall hc, L.In hc hcs -> hc_stage hc = n) /\ (forall p, p \in E.fromList ps -> p \in AddHenkin_stage_list X n hcs).
+  : forall ps : list (frm L'), (forall p, p \in E.fromList ps -> p \in AddHenkin_stage X (S n)) -> (exists hcs : list Henkin_constants, L.NoDup hcs /\ (forall hc, L.In hc hcs -> hc_stage hc = n) /\ (forall p, p \in E.fromList ps -> p \in AddHenkin_stage_list X n hcs)).
 Proof.
   induction ps as [ | p ps IH]; intros INCL.
   - exists []. splits.
@@ -2615,9 +2605,7 @@ Inductive HenkinAxiomSet : ensemble (frm L') :=
     : HenkinAxiom hc \in HenkinAxiomSet.
 
 Lemma collect_AddHenkin_stage (X : ensemble (frm L))
-  : forall ps : list (frm L'),
-    (forall p, p \in E.fromList ps -> p \in E.union HenkinAxiomSet (E.image embed_frm X)) ->
-    exists n, forall p, p \in E.fromList ps -> p \in AddHenkin_stage X n.
+  : forall ps : list (frm L'), (forall p, p \in E.fromList ps -> p \in E.union HenkinAxiomSet (E.image embed_frm X)) -> (exists n, forall p, p \in E.fromList ps -> p \in AddHenkin_stage X n).
 Proof.
   induction ps as [|p ps IH]; intros INCL.
   - exists O. intros q Hq. contradiction.
