@@ -9,6 +9,7 @@ A Rocq library written by members of [PnV Discord Server](https://github.com/PnV
 ```bash
 git clone https://github.com/PnVDiscord/PnVRocqLib.git
 cd PnVRocqLib
+
 eval `opam env`
 rocq makefile -f _CoqProject -o CoqMakefile
 eval "$(opam env)" && make -f CoqMakefile -j
