@@ -366,8 +366,7 @@ Lemma reachableb_intro (fuel : nat) (x : V) (y : V) (w : list V)
   (LENGTH : L.length w <= fuel)
   : reachableb fuel x y = true.
 Proof.
-  revert fuel LENGTH.
-  induction WALK as [ | v0 v1 w EDGE WALK IH]; i.
+  revert fuel LENGTH. induction WALK as [ | v0 v1 w EDGE WALK IH]; i.
   - destruct fuel as [ | fuel]; simpl.
     + now rewrite eqb_eq.
     + rewrite orb_true_iff. left. now rewrite eqb_eq.
@@ -478,7 +477,7 @@ Section DIGRAPH.
 
 Context {X : Type} {A : Type}.
 
-Inductive digraph_closure {A : Type} (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : Prop :=
+Inductive digraph_closure (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : Prop :=
   | digraph_closure_seed
     (IN : a ∈ seed x)
     : digraph_closure seed deps a x
@@ -487,7 +486,7 @@ Inductive digraph_closure {A : Type} (seed : X -> fin_ensemble A) (deps : X -> f
     (IN : digraph_closure seed deps a y)
     : digraph_closure seed deps a x.
 
-Inductive digraph_trace {A : Type} (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : ensemble (list X) :=
+Inductive digraph_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : ensemble (list X) :=
   | digraph_trace_seed
     (IN : a ∈ seed x)
     : [] \in digraph_trace seed deps a x
