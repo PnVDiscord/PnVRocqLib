@@ -12,6 +12,9 @@ Tactic Notation "rewrite*" uconstr( t ) "by" ident ( H_EQ ) :=
 Tactic Notation "find" simple_intropattern( p ) "by" uconstr( H ) :=
   unshelve hexploit H; [eauto .. | intros p].
 
+Tactic Notation "obtain" simple_intropattern( p ) "by" uconstr( H ) :=
+  hexploit H; [eauto .. | intros p].
+
 Ltac done :=
   des; subst; done!.
 
