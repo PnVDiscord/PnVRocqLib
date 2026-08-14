@@ -595,6 +595,16 @@ Proof.
   intros x a CLOSURE; induction CLOSURE as [x SEED_IN | x y EDGE CLOSURE IH]; ss!.
 Qed.
 
+Theorem digraph_closure_least (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> fin_ensemble A) (x : X) (a : A)
+  (EQUATION : digraph_equation seed deps value)
+  (IN : digraph_closure seed deps a x)
+  : a ∈ value x.
+Proof.
+  induction IN as [x SEED_IN | x y EDGE CLOSURE IH].
+  - exact (proj2 (EQUATION x a) (or_introl SEED_IN)).
+  - exact (proj2 (EQUATION x a) (or_intror (@ex_intro _ _ y (conj EDGE IH)))).
+Qed.
+
 Context `{EQ_DEC : hasEqDec A}.
 
 Fixpoint digraph_value (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) : fin_ensemble A :=
@@ -666,16 +676,6 @@ Proof.
   induction IN as [x SEED_IN | x y EDGE CLOSURE IH].
   - exists O. eapply digraph_value_seed. exact SEED_IN.
   - destruct IH as [fuel VALUE_IN]. exists (S fuel). eapply digraph_value_propagated; eauto.
-Qed.
-
-Theorem digraph_closure_least (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> fin_ensemble A) (x : X) (a : A)
-  (EQUATION : digraph_equation seed deps value)
-  (IN : digraph_closure seed deps a x)
-  : a ∈ value x.
-Proof.
-  induction IN as [x SEED_IN | x y EDGE CLOSURE IH].
-  - exact (proj2 (EQUATION x a) (or_introl SEED_IN)).
-  - exact (proj2 (EQUATION x a) (or_intror (@ex_intro _ _ y (conj EDGE IH)))).
 Qed.
 
 Context `{X_hasEqDec : hasEqDec X}.
