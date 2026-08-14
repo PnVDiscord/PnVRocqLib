@@ -19,7 +19,7 @@ Definition fin_ensemble@{u | } (Elem : Type@{u}) : Type@{u} :=
   list Elem.
 
 Definition Similarity_list_finite_ensemble {ELEM : Type} {ELEM' : Type} (ELEM_sim : Similarity ELEM ELEM') : Similarity (fin_ensemble ELEM) (ensemble ELEM') :=
-  fun xs : fin_ensemble ELEM => fun X' : ensemble ELEM' => ⟪ SUBSET1 : forall x, x ∈ xs -> (exists x', x =~= x' /\ x' \in X') ⟫ /\ ⟪ SUBSET2 : forall x', x' \in X' -> (exists x, x =~= x' /\ x ∈ xs) ⟫.
+  fun xs : fin_ensemble ELEM => fun X' : ensemble ELEM' => forall x : ELEM, forall x' : ELEM', x =~= x' -> ⟪ IFF : x ∈ xs <-> x' \in X' ⟫.
 
 #[global]
 Instance list_corresponds_to_finite_ensemble {ELEM : Type} : Similarity (fin_ensemble ELEM) (ensemble ELEM) :=
@@ -43,14 +43,14 @@ Proof.
   - intros (x & x_in & b_in). exists x. split.
     + rewrite list_corresponds_to_finite_ensemble_iff in xs_sim.
       now rewrite <- xs_sim.
-    + use f_sim as fx_sim.
+    + find fx_sim by f_sim.
       rewrite list_corresponds_to_finite_ensemble_iff in fx_sim.
       now rewrite <- fx_sim.
   - intros (x & x_in & b_in). exists x. split.
     + rewrite list_corresponds_to_finite_ensemble_iff in xs_sim.
       now rewrite -> xs_sim.
     + rewrite list_corresponds_to_finite_ensemble_iff in xs_sim.
-      rewrite <- xs_sim in x_in. use f_sim as fx_sim.
+      rewrite <- xs_sim in x_in. find fx_sim by f_sim.
       rewrite list_corresponds_to_finite_ensemble_iff in fx_sim.
       now rewrite -> fx_sim.
 Qed.
@@ -68,12 +68,12 @@ Instance fin_ensemble_isSetoid (Elem : Type@{U_fs}) (Elem_isSetoid : isSetoid El
   { eqProp (lhs : list Elem) (rhs : list Elem) := (forall e : Elem, forall IN : e ∈ lhs, exists e', e' ∈ rhs /\ e == e') /\ (forall e : Elem, forall IN : e ∈ rhs, exists e', e' ∈ lhs /\ e' == e) }.
 Next Obligation.
   split; [intros xs | intros xs ys [xs_ys ys_xs] | intros xs ys zs [xs_ys ys_xs] [ys_zs zs_ys]]; split; i.
-  - exists e. splits; auto. now reflexivity.
-  - exists e. splits; auto. now reflexivity.
-  - use ys_xs as (e1 & H_in & H_eq) with IN. exists e1. splits; auto. now symmetry.
-  - use xs_ys as (e1 & H_in & H_eq) with IN. exists e1. splits; auto. now symmetry.
-  - use xs_ys as (e1 & H_in & H_eq) with IN. use ys_zs as (e2 & H_in' & H_eq') with H_in. exists e2. splits; auto. now transitivity e1.
-  - use zs_ys as (e1 & H_in & H_eq) with IN. use ys_xs as (e2 & H_in' & H_eq') with H_in. exists e2. splits; auto. now transitivity e1.
+  - exists e. split; auto with *.
+  - exists e. split; auto with *.
+  - find (e1 & H_in & H_eq) by ys_xs. exists e1. split; auto with *.
+  - find (e1 & H_in & H_eq) by xs_ys. exists e1. split; auto with *.
+  - find (e1 & H_in & H_eq) by xs_ys. find (e1' & H_in' & H_eq') by ys_zs. exists e1'. split; auto. transitivity e1; auto with *.
+  - find (e1 & H_in & H_eq) by zs_ys. find (e1' & H_in' & H_eq') by ys_xs. exists e1'. split; auto. transitivity e1; auto with *.
 Qed.
 
 #[global]
@@ -187,7 +187,7 @@ Proof.
   revert x IN; induction xs as [ | y ys IH]; simpl; ii.
   - ss!.
   - des_ifs.
-    + use remove_length_le; ss!.
+    + find ? by remove_length_le; ss!.
     + des; ss!.
 Qed.
 
@@ -283,18 +283,6 @@ Proof.
     enough (x' = x) by done!.
     eapply INJ; ss!.
   - ii; eapply INJ; ss!.
-Qed.
-
-Lemma subset_lemma (A : Type@{U_fs}) (xs : fin_ensemble A) (X : ensemble A)
-  : (exists X' : ensemble@{U_fs} A, xs =~= E.union X X') <-> (forall x : A, E.In x X -> L.In x xs).
-Proof.
-  ss!. exists (E.fromList xs). ss!.
-Qed.
-
-Lemma superset_lemma (A : Type@{U_fs}) (xs : fin_ensemble A) (X : ensemble A)
-  : (exists X' : ensemble@{U_fs} A, xs =~= E.intersection X X') <-> (forall x : A, L.In x xs -> E.In x X).
-Proof.
-  ss!. exists (E.fromList xs). ss!.
 Qed.
 
 End FS.
