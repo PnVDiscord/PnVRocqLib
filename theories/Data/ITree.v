@@ -24,9 +24,9 @@ CoInductive itree (E : Type@{U_discourse} -> Type@{U_discourse}) (R : Type@{U_di
 Bind Scope itree_scope with itree.
 Delimit Scope itree_scope with itree.
 
-Notation Ret r := (go (RetF r)).
-Notation Tau t := (go (TauF t)).
-Notation Vis X e k := (go (VisF X e k)).
+Abbreviation Ret r := (go (RetF r)).
+Abbreviation Tau t := (go (TauF t)).
+Abbreviation Vis X e k := (go (VisF X e k)).
 
 #[universes(template)]
 Inductive callE {I : Type} {R : Type} : Type -> Type :=
@@ -44,6 +44,17 @@ Inductive stateE {S : Type} : Type -> Type :=
 Section ITREE_METHOD.
 
 Context {E : Type@{U_discourse} -> Type@{U_discourse}}.
+
+Fixpoint burnTau_with_nat {R : Type} (fuel : nat) (t : itree E R) {struct fuel} : itree E R := 
+  match fuel with
+  | O => t
+  | S fuel' =>
+    match t.(observe) with
+    | RetF r => Ret r
+    | TauF t => burnTau_with_nat fuel' t
+    | VisF X e k => Vis X e (fun x => burnTau_with_nat fuel' (k x))
+    end
+  end.
 
 Definition itree_trigger : E ~~> itree E :=
   fun X : Type@{U_small} => fun e : E X => Vis X e (fun x : X => Ret x).
@@ -119,7 +130,7 @@ End CATEGORY.
 
 Section RECURSION.
 
-#[local] Notation endo X := (X -> X).
+#[local] Abbreviation endo X := (X -> X).
 
 Definition itree_interpret_mrec {E1 : handlerCat.(CAT.ob)} {E2 : handlerCat.(CAT.ob)} (ctx : E1 ~~> itree (E1 +' E2)) : itree (E1 +' E2) ~~> itree E2 :=
   fun R : Type@{U_discourse} => monad_iter (M := itree E2) (fun t0 : itree (E1 +' E2) R =>
@@ -150,3 +161,22 @@ Definition itree_rec_fix {E : handlerCat.(CAT.ob)} {I : Type} {R : Type} (body :
   itree_rec (E := E) (I := I) (R := R) (body itree_call).
 
 End RECURSION.
+
+Section EXAMPLE.
+
+Import DoNotations.
+
+Context {E : Type -> Type}.
+
+Let fibo : nat -> itree E nat :=
+  itree_rec_fix $ fun go => fun n : nat =>
+    if eqb n 0 then
+      pure 0
+    else if eqb n 1 then
+      pure 1
+    else do
+      'x <- go (n - 1)%nat;
+      'y <- go (n - 2)%nat;
+      pure (x + y)%nat.
+
+End EXAMPLE.

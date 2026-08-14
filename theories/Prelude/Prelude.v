@@ -14,9 +14,13 @@ Require Export Stdlib.Relations.Relation_Definitions.
 Require Export Stdlib.Relations.Relation_Operators.
 Require Export Stdlib.Setoids.Setoid.
 
+Scheme All for and.
+Scheme All for ex.
+
 #[local] Obligation Tactic := idtac.
 
-#[global] Create HintDb simplication_hints.
+Create Rewrite HintDb simplication_hints.
+Create HintDb simplication_hints.
 
 #[global] Hint Rewrite forallb_app orb_true_iff orb_false_iff andb_true_iff andb_false_iff negb_true_iff negb_false_iff Nat.eqb_eq Nat.eqb_neq not_true_iff_false not_false_iff_true : simplication_hints.
 
@@ -63,7 +67,7 @@ Class isSetoid (A : Type) : Type :=
 
 Infix "==" := eqProp : type_scope.
 
-#[global] Notation void := Empty_set.
+#[global] Abbreviation void := Empty_set.
 
 #[global, program]
 Instance void_isSetoid : isSetoid void :=
@@ -133,11 +137,11 @@ Inductive option_eqProp {A : Type} (eqProp : A -> A -> Prop) : forall lhs : opti
 Instance option_eqProp_Equivalence {A : Type} (eqProp : A -> A -> Prop)
   (eqProp_Equivalence : Equivalence eqProp)
   : Equivalence (option_eqProp eqProp).
-Proof with eauto.
+Proof.
   split.
-  - intros [x | ]; econs. reflexivity...
-  - intros ? ? [ | x y x_eq_y]; econs. symmetry...
-  - intros ? ? ? [ | x y x_eq_y] EQ; inv EQ; econs. etransitivity...
+  - intros [x | ]; econs. reflexivity; eauto.
+  - intros ? ? [ | x y x_eq_y]; econs. symmetry; eauto.
+  - intros ? ? ? [ | x y x_eq_y] EQ; inv EQ; econs. etransitivity; eauto.
 Qed.
 
 #[global, program]
@@ -850,7 +854,7 @@ Qed.
 
 End E.
 
-Notation ensemble := E.t.
+Abbreviation ensemble := E.t.
 
 #[global] Bind Scope function_scope with E.t.
 #[global] Bind Scope function_scope with ensemble.
@@ -1057,6 +1061,8 @@ Class isCountable (A : Type) : Type :=
 Module B.
 
 #[local] Open Scope program_scope.
+
+Scheme All for list.
 
 #[universes(template)]
 Inductive rose {A : Type} : Type :=
@@ -1360,7 +1366,7 @@ Record sig {A : Type} {P : A -> Prop} : Type :=
 
 #[global] Arguments B.sig : clear implicits.
 
-Notation exist x y := {| proj1_sig := x; proj2_sig := y; |}.
+Abbreviation exist x y := {| proj1_sig := x; proj2_sig := y; |}.
 
 #[universes(template), projections(primitive)]
 Record sigT {A : Type} {P : A -> Type} : Type :=
@@ -1370,7 +1376,7 @@ Record sigT {A : Type} {P : A -> Type} : Type :=
 
 #[global] Arguments B.sigT : clear implicits.
 
-Notation existT x y := {| projT1 := x; projT2 := y; |}.
+Abbreviation existT x y := {| projT1 := x; projT2 := y; |}.
 
 #[universes(template), projections(primitive)]
 Record prod {A : Type} {B : Type} : Type :=
@@ -1380,7 +1386,7 @@ Record prod {A : Type} {B : Type} : Type :=
 
 #[global] Arguments B.prod : clear implicits.
 
-Notation pair x y := {| fst := x; snd := y; |}.
+Abbreviation pair x y := {| fst := x; snd := y; |}.
 
 #[universes(template), projections(primitive)]
 Class retracts (X : Type) (P : Prop) : Type :=
@@ -1440,8 +1446,8 @@ End STEP_ACC.
 
 Section __.
 
-#[local] Notation _well_founded := well_founded.
-#[local] Notation _inhabited := inhabited.
+#[local] Abbreviation _well_founded := well_founded.
+#[local] Abbreviation _inhabited := inhabited.
 
 Class well_founded {A : Type} (R : A -> A -> Prop) : Prop :=
   mk_Acc : _well_founded R.
@@ -1458,7 +1464,7 @@ End __.
 
 End B.
 
-Notation StateT k := {| B.runStateT := k |}.
+Abbreviation StateT k := {| B.runStateT := k |}.
 
 Infix "+'" := B.sum1 (at level 50, left associativity) : type_scope.
 
@@ -1466,38 +1472,28 @@ Infix "$" := B.dollar.
 Infix ">>=" := bind.
 Infix ">=>" := B.kcompose : program_scope.
 
-#[universes(polymorphic=yes)]
-Class hasEqDec@{u} (A : Type@{u}) : Type@{u} :=
-  eq_dec (x : A) (y : A) : {x = y} + {x <> y}.
-
-#[global]
-Instance hasEqDec_from_Decision@{u} {A : Type@{u}}
-  (EQ_DEC : hasEqDec@{u} A)
-  : forall x : A, forall x' : A, B.Decision (x = x').
-Proof.
-  exact EQ_DEC.
-Defined.
+Abbreviation hasEqDec A := (forall x : A, forall y : A, B.Decision (x = y)).
 
 #[universes(polymorphic=yes)]
-Definition eqb@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (x : A) (y : A) : bool :=
-  if eq_dec@{u} (hasEqDec := hasEqDec) x y then true else false.
+Definition eqb@{u} {A : Type@{u}} {hasEqDec : hasEqDec A} (x : A) (y : A) : bool :=
+  if B.decide (x = y) then true else false.
 
 #[universes(polymorphic=yes)]
-Lemma eqb_eq@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (x : A) (y : A)
+Lemma eqb_eq@{u} {A : Type@{u}} {hasEqDec : hasEqDec A} (x : A) (y : A)
   : eqb@{u} x y = true <-> x = y.
 Proof.
-  unfold eqb. destruct (eq_dec x y) as [H_yes | H_no]; done!.
+  unfold eqb. destruct (B.decide (x = y)) as [H_yes | H_no]; done!.
 Qed.
 
 #[universes(polymorphic=yes)]
-Lemma eqb_neq@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (x : A) (y : A)
+Lemma eqb_neq@{u} {A : Type@{u}} {hasEqDec : hasEqDec A} (x : A) (y : A)
   : eqb@{u} x y = false <-> x <> y.
 Proof.
-  unfold eqb. destruct (eq_dec x y) as [H_yes | H_no]; done!.
+  unfold eqb. destruct (B.decide (x = y)) as [H_yes | H_no]; done!.
 Qed.
 
 #[universes(polymorphic=yes)]
-Theorem eqb_spec@{u} {A : Type@{u}} {hasEqDec : hasEqDec@{u} A} (x : A) (y : A) (b : bool)
+Theorem eqb_spec@{u} {A : Type@{u}} {hasEqDec : hasEqDec A} (x : A) (y : A) (b : bool)
   : eqb@{u} x y = b <-> (if b then x = y else x <> y).
 Proof.
   destruct b; [eapply eqb_eq | eapply eqb_neq].
@@ -1513,44 +1509,44 @@ Defined.
 
 #[global]
 Instance unit_hasEqDec
-  : hasEqDec@{Set} unit.
+  : hasEqDec unit.
 Proof.
   red. decide equality.
 Defined.
 
 #[global]
-Instance nat_hasEqDec : hasEqDec@{Set} nat :=
+Instance nat_hasEqDec : hasEqDec nat :=
   Nat.eq_dec.
 
-#[global, universes(polymorphic=yes)]
-Instance pair_hasEqdec@{u1 u2 u3} {A : Type@{u1}} {B : Type@{u2}}
-  (A_hasEqDec : hasEqDec@{u1} A)
-  (B_hasEqDec : hasEqDec@{u2} B)
-  : hasEqDec@{u3} (A * B).
+#[global]
+Instance pair_hasEqdec {A : Type} {B : Type}
+  (A_hasEqDec : hasEqDec A)
+  (B_hasEqDec : hasEqDec B)
+  : hasEqDec (A * B).
 Proof.
   red in A_hasEqDec, B_hasEqDec. red. decide equality.
 Defined.
 
 #[global]
 Instance bool_hasEqDec
-  : hasEqDec@{Set} bool.
+  : hasEqDec bool.
 Proof.
   red. decide equality.
 Defined.
 
 #[global]
-Instance sum_hasEqDec@{u1 u2 u3} {A : Type@{u1}} {B : Type@{u2}}
-  (A_hasEqDec : hasEqDec@{u1} A)
-  (B_hasEqDec : hasEqDec@{u2} B)
-  : hasEqDec@{u3} (A + B).
+Instance sum_hasEqDec {A : Type} {B : Type}
+  (A_hasEqDec : hasEqDec A)
+  (B_hasEqDec : hasEqDec B)
+  : hasEqDec (A + B).
 Proof.
   red in A_hasEqDec, B_hasEqDec. red. decide equality.
 Defined.
 
 #[global]
-Instance option_hasEqDec@{u1} {A : Type@{u1}}
-  `(EQ_DEC : hasEqDec@{u1} A)
-  : hasEqDec@{u1} (option A).
+Instance option_hasEqDec {A : Type}
+  `(EQ_DEC : hasEqDec A)
+  : hasEqDec (option A).
 Proof.
   exact (fun x : option A => fun y : option A =>
     match x as a, y as b return {a = b} + {a <> b} with
@@ -1572,7 +1568,7 @@ Class Similarity@{u1 u2} (A : Type@{u1}) (B : Type@{u2}) : Type@{max(u1, u2, Set
 
 Section SIMILARITY.
 
-Infix "=~=" := is_similar_to.
+#[local] Infix "=~=" := is_similar_to.
 
 #[global]
 Instance Similarity_forall {D : Type} {D' : Type} {C : D -> Type} {C' : D' -> Type} (DOM_SIM : Similarity D D') (COD_SIM : forall x : D, forall x' : D', is_similar_to (Similarity := DOM_SIM) x x' -> Similarity (C x) (C' x')) : Similarity (forall x : D, C x) (forall x' : D', C' x') :=
@@ -1729,8 +1725,8 @@ Qed.
 #[global] Hint Rewrite null_spec in_map_iff in_app_iff : simplication_hints.
 
 #[universes(polymorphic=yes)]
-Lemma in_remove_iff@{u} (A : Type@{u}) `(EQ_DEC : hasEqDec@{u} A) (x1 : A) (xs2 : list A)
-  : forall z, In z (remove Prelude.eq_dec x1 xs2) <-> (In z xs2 /\ z <> x1).
+Lemma in_remove_iff@{u} (A : Type@{u}) `(EQ_DEC : hasEqDec A) (x1 : A) (xs2 : list A)
+  : forall z, In z (remove EQ_DEC x1 xs2) <-> (In z xs2 /\ z <> x1).
 Proof.
   i; split.
   { intros H_IN. eapply in_remove. exact H_IN. }
@@ -1823,9 +1819,9 @@ Qed.
 
 Lemma forallb_spec {A : Type} (p : A -> bool) (xs : list A)
   : forall b, forallb p xs = b <-> (if b then forall x, In x xs -> p x = true else exists x, In x xs /\ p x = false).
-Proof with try now firstorder.
-  intros [ | ]; [exact (forallb_forall p xs) | induction xs as [ | x xs IH]; simpl in *]...
-  rewrite andb_false_iff; firstorder; subst...
+Proof.
+  intros [ | ]; [exact (forallb_forall p xs) | induction xs as [ | x xs IH]; simpl in *]; try now firstorder.
+  rewrite andb_false_iff; firstorder; subst; try now firstorder.
 Qed.
 
 #[local] Infix "!!" := nth_error : list_scope.
@@ -1833,10 +1829,10 @@ Qed.
 Lemma In_nth_error_Some {A : Type} (xs : list A) (x : A)
   (IN : In x xs)
   : exists n, xs !! n = Some x /\ n < length xs.
-Proof with try (lia || done).
-  revert x IN; induction xs as [ | x1 xs IH]; simpl; intros x0 IN... destruct IN as [<- | IN].
-  - exists 0%nat; split...
-  - pose proof (IH x0 IN) as (n & EQ & LE). exists (S n). split...
+Proof.
+  revert x IN; induction xs as [ | x1 xs IH]; simpl; intros x0 IN; try (lia || done). destruct IN as [<- | IN].
+  - exists 0%nat; split; try (lia || done).
+  - pose proof (IH x0 IN) as (n & EQ & LE). exists (S n). split; try (lia || done).
 Qed.
 
 Lemma last_cons {A : Type} (x0 : A) (x1 : A) (xs : list A)
@@ -1887,15 +1883,15 @@ Proof.
 Qed.
 
 #[universes(polymorphic=yes)]
-Fixpoint lookup@{u1 u2} {A : Type@{u1}} {B : Type@{u2}} {EQ_DEC : hasEqDec@{u1} A} (x : A) (zs : list (A * B)) : option B :=
+Fixpoint lookup@{u1 u2} {A : Type@{u1}} {B : Type@{u2}} {EQ_DEC : hasEqDec A} (x : A) (zs : list (A * B)) : option B :=
   match zs with
   | [] => None
-  | (x', y) :: zs' => if eq_dec x x' then Some y else lookup x zs'
+  | (x', y) :: zs' => if B.decide (x = x') then Some y else lookup x zs'
   end.
 
-Notation is_finsubset_of xs X := (forall x, L.In x xs -> x \in X).
+Abbreviation is_finsubset_of xs X := (forall x, L.In x xs -> x \in X).
 
-Notation is_listrep_of xs X := (forall x, L.In x xs <-> x \in X).
+Abbreviation is_listrep_of xs X := (forall x, L.In x xs <-> x \in X).
 
 Lemma map_image_eq {A : Type} {B : Type} {C : Type} (f : A -> C) (g : B -> C) (xs : list A)
   (IMAGE : forall x, L.In x xs -> { y : B | f x = g y })
@@ -2302,18 +2298,18 @@ Definition OpenSets_in_COD : ensemble (ensemble COD) :=
 #[global]
 Instance OpenSets_in_COD_satisfiesAxiomsForOpenSets
   : AxiomsForOpenSets COD OpenSets_in_COD.
-Proof with reflexivity || eauto.
+Proof.
   unfold OpenSets_in_COD. destruct TOPOLOGY.(AxiomsForTopology) as [H1 H2 H3 H4]. split.
-  - red. eapply isOpen_compatWith_ext_eq with (O1 := E.full)... intros x. split; intros IN... econs...
+  - red. eapply isOpen_compatWith_ext_eq with (O1 := E.full); reflexivity || eauto. intros x. split; intros IN; reflexivity || eauto. econs; reflexivity || eauto.
   - i. red. do 2 red in OPENs. eapply isOpen_compatWith_ext_eq with (O1 := E.unions (fun U => exists O, O \in Os /\ isOpen U /\ E.preimage f O == U)).
-    + eapply H2. intros U H_U. red in H_U. destruct H_U as (O & O_in & U_in & EQ). eapply isOpen_compatWith_ext_eq with (O1 := E.preimage f O)...
+    + eapply H2. intros U H_U. red in H_U. destruct H_U as (O & O_in & U_in & EQ). eapply isOpen_compatWith_ext_eq with (O1 := E.preimage f O); reflexivity || eauto.
     + intros x. split; intros H_IN.
-      * destruct H_IN as [U H_IN U_IN]. red in U_IN. destruct U_IN as (O & O_IN & U_IN & H_EQ). rewrite <- H_EQ in H_IN. econs... done!.
+      * destruct H_IN as [U H_IN U_IN]. red in U_IN. destruct U_IN as (O & O_IN & U_IN & H_EQ). rewrite <- H_EQ in H_IN. econs; reflexivity || eauto. done!.
       * destruct H_IN as [O -> H_IN]. destruct H_IN as [O H_IN O_IN]. exists (E.preimage f O); done!.
   - i. red in OPEN1, OPEN2 |- *. eapply isOpen_compatWith_ext_eq with (O1 := E.intersection (E.preimage f O1) (E.preimage f O2)).
-    + eapply intersection_isOpen...
+    + eapply intersection_isOpen; reflexivity || eauto.
     + intros x; split; intros H_IN; ss!.
-  - i. red in OPEN |- *. change (O1 == O2) in EXT_EQ. eapply isOpen_compatWith_ext_eq with (O1 := E.preimage f O1)... intros x. rewrite EXT_EQ...
+  - i. red in OPEN |- *. change (O1 == O2) in EXT_EQ. eapply isOpen_compatWith_ext_eq with (O1 := E.preimage f O1); reflexivity || eauto. intros x. rewrite EXT_EQ; reflexivity || eauto.
 Qed.
 
 End COD_TOP.
@@ -2514,112 +2510,60 @@ Class isField (K : Type) {SETOID : isSetoid K} : Type :=
 
 End A.
 
-Module Type FINITE_ENUM.
+#[projections(primitive)]
+Class isFinite@{u} (A : Type@{u}) : Type@{u} :=
+  { finite_hasEqDec : hasEqDec A
+  ; finite_enumeration : list A
+  ; finite_enumeration_complete
+    : forall x : A, L.In x finite_enumeration
+  ; finite_enumeration_NoDup
+    : NoDup finite_enumeration
+  }.
 
-Parameter t : Set.
+#[global] Existing Instance finite_hasEqDec.
 
-Parameter t_hasEqDec : hasEqDec@{Set} t.
-
-Parameter all : list t.
-
-Parameter all_complete : forall x : t, L.In x all.
-
-Parameter all_no_dup : NoDup all.
-
-End FINITE_ENUM.
-
-Module Option (E : FINITE_ENUM) <: FINITE_ENUM.
-
-Definition t : Set :=
-  option E.t.
-
-#[local]
-Instance t_hasEqDec : hasEqDec@{Set} Option.t :=
-  option_hasEqDec E.t_hasEqDec.
-
-Definition all : list Option.t :=
-  None :: map Some E.all.
-
-Lemma all_complete
-  : forall x : Option.t, L.In x Option.all.
+#[global, refine]
+Instance option_isFinite {A : Type} (A_isFinite : isFinite A) : isFinite (option A) :=
+  { finite_hasEqDec := option_hasEqDec finite_hasEqDec
+  ; finite_enumeration := None :: map Some finite_enumeration
+  }.
 Proof.
-  intros [x | ]; simpl.
-  - right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E.all_complete].
-  - left. reflexivity.
-Qed.
+  - intros [x | ]; simpl.
+    + right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply finite_enumeration_complete].
+    + left. reflexivity.
+  - simpl. constructor.
+    + intros IN. rewrite L.in_map_iff in IN. destruct IN as (x & EQ & _). discriminate.
+    + eapply L.NoDup_map_injective_on.
+      * intros x y _ _ EQ. congruence.
+      * eapply finite_enumeration_NoDup.
+Defined.
 
-Lemma all_no_dup
-  : NoDup Option.all.
+#[global, refine]
+Instance sum_isFinite {A : Type} {B : Type} (A_isFinite : isFinite A) (B_isFinite : isFinite B) : isFinite (A + B) :=
+  { finite_hasEqDec := sum_hasEqDec finite_hasEqDec finite_hasEqDec
+  ; finite_enumeration := map inl finite_enumeration ++ map inr finite_enumeration
+  }.
 Proof.
-  simpl. constructor.
-  - intros IN. rewrite L.in_map_iff in IN. destruct IN as (x & EQ & _). discriminate.
-  - eapply L.NoDup_map_injective_on.
-    + intros x y _ _ EQ. congruence.
-    + eapply E.all_no_dup.
-Qed.
+  - intros [x | x]; rewrite L.in_app_iff.
+    + left. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply finite_enumeration_complete].
+    + right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply finite_enumeration_complete].
+  - eapply NoDup_app.
+    + eapply L.NoDup_map_injective_on; [intros x y _ _ EQ; congruence | eapply finite_enumeration_NoDup].
+    + eapply L.NoDup_map_injective_on; [intros x y _ _ EQ; congruence | eapply finite_enumeration_NoDup].
+    + intros x IN_LEFT IN_RIGHT.
+      rewrite L.in_map_iff in IN_LEFT. rewrite L.in_map_iff in IN_RIGHT.
+      destruct IN_LEFT as (x1 & EQ1 & _), IN_RIGHT as (x2 & EQ2 & _).
+      subst x. discriminate.
+Defined.
 
-End Option.
-
-Module Sum (E1 : FINITE_ENUM) (E2 : FINITE_ENUM) <: FINITE_ENUM.
-
-Definition t : Set :=
-  E1.t + E2.t.
-
-#[local]
-Instance t_hasEqDec : hasEqDec@{Set} Sum.t :=
-  sum_hasEqDec E1.t_hasEqDec E2.t_hasEqDec.
-
-Definition all : list Sum.t :=
-  map inl E1.all ++ map inr E2.all.
-
-Lemma all_complete
-  : forall x : Sum.t, L.In x Sum.all.
+#[global, refine]
+Instance bool_isFinite : isFinite bool :=
+  { finite_hasEqDec := bool_hasEqDec
+  ; finite_enumeration := [false; true]
+  }.
 Proof.
-  intros [x | x]; unfold all; rewrite L.in_app_iff.
-  - left. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E1.all_complete].
-  - right. rewrite L.in_map_iff. exists x. split; [reflexivity | eapply E2.all_complete].
-Qed.
-
-Lemma all_no_dup
-  : NoDup Sum.all.
-Proof.
-  unfold all. eapply NoDup_app.
-  - eapply L.NoDup_map_injective_on.
-    + intros x y _ _ EQ. congruence.
-    + eapply E1.all_no_dup.
-  - eapply L.NoDup_map_injective_on.
-    + intros x y _ _ EQ. congruence.
-    + eapply E2.all_no_dup.
-  - intros x IN_LEFT IN_RIGHT.
-    rewrite L.in_map_iff in IN_LEFT. rewrite L.in_map_iff in IN_RIGHT.
-    destruct IN_LEFT as (x1 & EQ1 & _), IN_RIGHT as (x2 & EQ2 & _).
-    subst x. discriminate.
-Qed.
-
-End Sum.
-
-Module Bool_FinEnum <: FINITE_ENUM.
-
-Definition t : Set :=
-  bool.
-
-Definition t_hasEqDec : hasEqDec@{Set} Bool_FinEnum.t :=
-  bool_hasEqDec.
-
-Definition all : list bool :=
-  [false; true].
-
-Lemma all_complete
-  : forall x : Bool_FinEnum.t, L.In x Bool_FinEnum.all.
-Proof.
-  intros [ | ]; simpl; tauto.
-Qed.
-
-Lemma all_no_dup
-  : NoDup Bool_FinEnum.all.
-Proof.
-  assert (EQ : L.nodup (@eq_dec@{Set} bool bool_hasEqDec) all = all) by reflexivity.
-  rewrite <- EQ. eapply L.NoDup_nodup.
-Qed.
-
-End Bool_FinEnum.
+  - intros [ | ]; simpl; tauto.
+  - constructor.
+    + simpl. intros [EQ | []]. discriminate.
+    + constructor; [simpl; tauto | constructor].
+Defined.

@@ -1348,6 +1348,8 @@ Ltac abstr_aux x var_name :=
 Tactic Notation "abstr" constr(H) := let var_name := fresh "abstr_var_name" in abstr_aux H var_name.
 Tactic Notation "abstr" constr(H) ident(var_name) := abstr_aux H var_name.
 
+Create Rewrite HintDb simpl_bool.
+
 Hint Rewrite
      andb_true_iff andb_false_iff
      orb_true_iff orb_false_iff

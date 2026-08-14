@@ -13,7 +13,7 @@ Inductive bit : Set :=
 Definition t : Set :=
   list bit.
 
-Notation pos := POS.t.
+Abbreviation pos := POS.t.
 
 Definition to_nat (p : pos) : nat :=
   fold_left (fun i : nat => bit_rec _ (i * 2) (i * 2 + 1)) p 1.
@@ -29,19 +29,19 @@ Qed.
 Lemma to_nat_inj (p1 : pos) (p2 : pos)
   (to_nat_EQ : to_nat p1 = to_nat p2)
   : p1 = p2.
-Proof with lia || eauto.
+Proof.
   revert to_nat_EQ. unfold to_nat; do 2 rewrite <- fold_left_rev_right.
   intros to_nat_EQ; eapply rev_inj; revert to_nat_EQ.
   generalize (rev p2) as bs2. generalize (rev p1) as bs1. clear p1 p2.
   set (myF := fold_right (fun d : bit => fun i : nat => bit_rec _ (i * 2) (i * 2 + 1) d) 1).
   assert (claim : forall bs, myF bs > 0).
-  { induction bs as [ | b bs IH]... simpl... destruct b as [ | ]; simpl bit_rec... }
-  induction bs1 as [ | b1 bs1 IH], bs2 as [ | b2 bs2]; simpl...
-  - destruct b2; simpl bit_rec... pose proof (claim bs2)...
-  - destruct b1; simpl bit_rec... pose proof (claim bs1)...
-  - destruct b1, b2; simpl bit_rec...
-    all: intros ?; assert (claim1: myF bs1 = myF bs2)...
-    all: f_equal...
+  { induction bs as [ | b bs IH]; lia || eauto. simpl; lia || eauto. destruct b as [ | ]; simpl bit_rec; lia || eauto. }
+  induction bs1 as [ | b1 bs1 IH], bs2 as [ | b2 bs2]; simpl; lia || eauto.
+  - destruct b2; simpl bit_rec; lia || eauto. pose proof (claim bs2); lia || eauto.
+  - destruct b1; simpl bit_rec; lia || eauto. pose proof (claim bs1); lia || eauto.
+  - destruct b1, b2; simpl bit_rec; lia || eauto.
+    all: intros ?; assert (claim1: myF bs1 = myF bs2); lia || eauto.
+    all: f_equal; lia || eauto.
 Qed.
 
 Lemma to_nat_last (p : pos) (b : bit) :
@@ -55,8 +55,8 @@ Proof.
   unfold to_nat. rewrite <- fold_left_rev_right. now destruct b as [ | ].
 Qed.
 
-#[local] Notation b0 := bO.
-#[local] Notation b1 := bI.
+#[local] Abbreviation b0 := bO.
+#[local] Abbreviation b1 := bI.
 
 Lemma to_nat_unfold (p : pos) :
   to_nat p =
@@ -65,26 +65,26 @@ Lemma to_nat_unfold (p : pos) :
   | bO :: p' => to_nat p' + 2^(length p')
   | bI :: p' => to_nat p' + 2^(length p' + 1)
   end.
-Proof with lia || eauto.
-  destruct p as [ | [ | ] p]...
-  - induction p as [ | [ | ] p IH] using rev_ind...
+Proof.
+  destruct p as [ | [ | ] p]; lia || eauto.
+  - induction p as [ | [ | ] p IH] using rev_ind; lia || eauto.
     + replace (b0 :: p ++ [b0]) with ((b0 :: p) ++ [b0]) by reflexivity.
-      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl...
+      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl; lia || eauto.
     + replace (b0 :: p ++ [b1]) with ((b0 :: p) ++ [b1]) by reflexivity.
-      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl...
-  - induction p as [ | [ | ] p IH] using rev_ind...
+      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl; lia || eauto.
+  - induction p as [ | [ | ] p IH] using rev_ind; lia || eauto.
     + replace (b1 :: p ++ [b0]) with ((b1 :: p) ++ [b0]) by reflexivity.
-      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl...
+      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl; lia || eauto.
     + replace (b1 :: p ++ [b1]) with ((b1 :: p) ++ [b1]) by reflexivity.
-      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl...
+      repeat rewrite to_nat_last. rewrite IH. rewrite last_length. simpl; lia || eauto.
 Qed.
 
 Lemma pos_from_nat (n : nat)
   (n_gt_0 : n > 0)
   : { p : pos | to_nat p = n }.
-Proof with try lia.
+Proof.
   revert n n_gt_0. induction n as [n IH] using lt_wf_rec. i. destruct n as [ | [ | n']].
-  - exfalso...
+  - exfalso; try lia.
   - exists []. reflexivity.
   - remember (S (S n')) as n eqn: n_is.
     assert (n_le_2 : n >= 2) by lia.
@@ -93,22 +93,22 @@ Proof with try lia.
     + assert ({ p : pos | to_nat p = n / 2 }) as [p H_p].
       { eapply IH.
         - pose proof (positive_even n ((n) / 2)) as H.
-          assert (H1 : n = 2 * ((n) / 2))...
-          pose proof (Nat.div_mod n 2)...
-        - pose proof (Nat.div_mod n 2)... 
+          assert (H1 : n = 2 * ((n) / 2)); try lia.
+          pose proof (Nat.div_mod n 2); try lia.
+        - pose proof (Nat.div_mod n 2); try lia. 
       }
       exists (p ++ [b0]). rewrite to_nat_last.
-      pose proof (Nat.div_mod n 2)...
+      pose proof (Nat.div_mod n 2); try lia.
     + assert ({ p : pos | to_nat p = (n - 1) / 2 }) as [p H_p].
       { eapply IH.
         - pose proof (positive_odd n ((n - 1) / 2)) as H.
-          assert (H1 : n = 2 * ((n - 1) / 2) + 1)...
+          assert (H1 : n = 2 * ((n - 1) / 2) + 1); try lia.
         - pose proof (Nat.div_mod (n - 1) 2) as H.
-          pose proof (positive_odd n ((n - 1) / 2))...
+          pose proof (positive_odd n ((n - 1) / 2)); try lia.
       }
       exists (p ++ [b1]). rewrite to_nat_last.
-      pose proof (positive_odd n ((n - 1) / 2))...
-    + pose proof (Nat.mod_bound_pos n 2)...
+      pose proof (positive_odd n ((n - 1) / 2)); try lia.
+    + pose proof (Nat.mod_bound_pos n 2); try lia.
 Qed.
 
 Definition of_nat (n : nat) (n_gt_0 : n > 0) : pos :=
@@ -408,11 +408,11 @@ Qed.
 #[local] Hint Resolve from_num_aux_aux2 : core.
 
 Fixpoint from_num_aux (n : nat) (H_Acc : @Acc nat lt n) {struct H_Acc} : list nat :=
-  match eq_dec n 0 with
+  match B.decide (n = 0) with
   | left EQ => []
   | right NE =>
     let r := n mod b in
-    if eq_dec r 0 then
+    if B.decide (r = 0) then
       from_num_aux ((n / b) - 1) (Acc_inv H_Acc _ (from_num_aux_aux2 _ NE)) ++ [b]
     else
       from_num_aux (n / b) (Acc_inv H_Acc _ (from_num_aux_aux1 _ NE)) ++ [r]
@@ -420,7 +420,7 @@ Fixpoint from_num_aux (n : nat) (H_Acc : @Acc nat lt n) {struct H_Acc} : list na
 
 Fixpoint from_num_aux_pirrel1 (n : nat) (H_Acc : Acc lt n) (H_Acc' : Acc lt n) {struct H_Acc} : from_num_aux n H_Acc = from_num_aux n H_Acc'.
 Proof.
-  destruct H_Acc, H_Acc'; simpl. destruct (eq_dec _ _); f_equal. destruct (eq_dec _ _); f_equal; eapply from_num_aux_pirrel1.
+  destruct H_Acc, H_Acc'; simpl. destruct (B.decide (_ = _)); f_equal. destruct (B.decide (_ = _)); f_equal; eapply from_num_aux_pirrel1.
 Qed.
 
 Lemma from_num_aux_pirrel (n : nat) (m : nat) (EQ : n = m) (H_Acc : Acc lt n) (H_Acc' : Acc lt m) : from_num_aux n H_Acc = from_num_aux m H_Acc'.
@@ -430,11 +430,11 @@ Qed.
 
 Lemma from_num_aux_unfold (n : nat) (H_Acc : @Acc nat lt n) :
   from_num_aux n H_Acc =
-  match eq_dec n 0 with
+  match B.decide (n = 0) with
   | left EQ => []
   | right NE =>
     let r := n mod b in
-    if eq_dec r 0 then
+    if B.decide (r = 0) then
       from_num_aux ((n / b) - 1) (Acc_inv H_Acc _ (from_num_aux_aux2 _ NE)) ++ [b]
     else
       from_num_aux (n / b) (Acc_inv H_Acc _ (from_num_aux_aux1 _ NE)) ++ [r]
@@ -448,20 +448,20 @@ Definition from_num (n : nat) : list nat :=
 
 Lemma from_num_unfold n :
   from_num n =
-  match eq_dec n 0 with
+  match B.decide (n = 0) with
   | left EQ => []
   | right NE =>
     let r := n mod b in
-    if eq_dec r 0 then
+    if B.decide (r = 0) then
       from_num ((n / b) - 1) ++ [b]
     else
       from_num (n / b) ++ [r]
   end.
 Proof.
   unfold from_num at 1. rewrite from_num_aux_unfold.
-  destruct (eq_dec _ _) as [EQ1 | NE1].
+  destruct (B.decide (_ = _)) as [EQ1 | NE1].
   - reflexivity.
-  - cbn zeta. destruct (eq_dec _ _) as [EQ2 | NE2]; f_equal; eapply from_num_aux_pirrel1.
+  - cbn zeta. destruct (B.decide (_ = _)) as [EQ2 | NE2]; f_equal; eapply from_num_aux_pirrel1.
 Qed.
 
 #[local] Opaque from_num.
@@ -473,8 +473,8 @@ Lemma to_num_from_num n
   : to_num (from_num n) = n.
 Proof.
   induction (lt_wf n) as [n _ IH]. rewrite from_num_unfold.
-  destruct (eq_dec _ _) as [EQ1 | NE1]; eauto.
-  cbn zeta. destruct (eq_dec _ _) as [EQ2 | NE2].
+  destruct (B.decide (_ = _)) as [EQ1 | NE1]; eauto.
+  cbn zeta. destruct (B.decide (_ = _)) as [EQ2 | NE2].
   - unfold to_num in *. rewrite fold_left_app. simpl. rewrite IH; eauto.
     erewrite Nat.div_mod with (x := n) (y := b) at 2; try lia. rewrite EQ2.
     rewrite Nat.add_0_r. replace (n / b) with (1 + ((n / b) - 1)) at 2; try lia.
@@ -491,7 +491,7 @@ Proof.
   rewrite Forall_app in ns_bound. destruct ns_bound as [ns_bound n_bound].
   specialize (IH ns_bound). unfold to_num. rewrite fold_left_app. simpl.
   rewrite from_num_unfold. cbn zeta. inv n_bound.
-  destruct (eq_dec _ _) as [EQ1 | NE1]; try lia. destruct (eq_dec _ _) as [EQ2 | NE2].
+  destruct (B.decide (_ = _)) as [EQ1 | NE1]; try lia. destruct (B.decide (_ = _)) as [EQ2 | NE2].
   - rewrite Nat.mul_comm in EQ2. rewrite Nat.Div0.mod_add in EQ2.
     assert (claim1 : n = b).
     { enough (~ n < b) by lia. intros H_contra.

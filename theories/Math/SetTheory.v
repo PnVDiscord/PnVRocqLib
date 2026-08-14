@@ -364,7 +364,7 @@ Definition Card : Type@{Set_V} :=
 Definition _card (t : V) : Card :=
   Cardinality.mk (children t) (children_isSetoid t).
 
-Notation card := _card.
+Abbreviation card := _card.
 
 Definition _Card_eq : Card -> Card -> Prop :=
   @eqProp Cardinality.t Cardinality.t_isSetoid.

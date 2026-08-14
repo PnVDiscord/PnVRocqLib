@@ -15,7 +15,7 @@ Delimit Scope name_scope with name.
 
 #[global]
 Instance name_hasEqDec
-  : hasEqDec@{Set} name.
+  : hasEqDec name.
 Proof.
   red; decide equality; eapply Nat.eq_dec.
 Defined.
@@ -218,7 +218,7 @@ String Notation name parse_name print_name : name_scope.
 
 Module Name.
 
-Notation t := name.
+Abbreviation t := name.
 
 Definition is_valid (nm : Name.t) : bool :=
   B.isSome (print_name nm >>= parse_name).
@@ -253,19 +253,19 @@ Qed.
 Lemma maxs_subset (ns1 : list Name.t) (ns2 : list Name.t)
   (H_SUBSET : forall n, In n ns1 -> In n ns2)
   : un_name (maxs ns1) <= un_name (maxs ns2).
-Proof with try now (lia || firstorder; eauto).
-  revert ns2 H_SUBSET; induction ns1 as [ | n1 ns1 IH]; simpl...
+Proof.
+  revert ns2 H_SUBSET; induction ns1 as [ | n1 ns1 IH]; simpl; try now (lia || firstorder; eauto).
   intros ns2 H. destruct (le_gt_dec (un_name n1) (un_name (maxs ns1))).
-  - enough (ENOUGH : (un_name (maxs ns1)) <= un_name (maxs ns2))...
-  - enough (ENOUGH : (un_name n1) <= un_name (maxs ns2))... eapply in_le_maxs...
+  - enough (ENOUGH : (un_name (maxs ns1)) <= un_name (maxs ns2)); try now (lia || firstorder; eauto).
+  - enough (ENOUGH : (un_name n1) <= un_name (maxs ns2)); try now (lia || firstorder; eauto). eapply in_le_maxs; try now (lia || firstorder; eauto).
 Qed.
 
 Lemma maxs_ext (ns1 : list Name.t) (ns2 : list Name.t)
   (H_EXT_EQ : forall n, In n ns1 <-> In n ns2)
   : Name.maxs ns1 = Name.maxs ns2.
-Proof with try now firstorder.
+Proof.
   assert (claim1 : un_name (maxs ns1) <= un_name (maxs ns2) /\ un_name (maxs ns2) <= un_name (maxs ns1)).
-  { split; eapply maxs_subset... }
+  { split; eapply maxs_subset; try now firstorder. }
   eapply un_name_inj. lia.
 Qed.
 
@@ -289,7 +289,7 @@ Qed.
 Lemma eq_ne_dec nm1 nm2
   : {eq nm1 nm2} + {ne nm1 nm2}.
 Proof.
-  pose proof (eq_dec nm1 nm2) as [EQ | NE].
+  pose proof (B.decide (nm1 = nm2)) as [EQ | NE].
   - left; exact (EQ).
   - right; exact (proj2 (ne_iff nm1 nm2) NE).
 Defined.

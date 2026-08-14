@@ -16,7 +16,7 @@ Import FolNotations.
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
-#[local] Notation In := L.In.
+#[local] Abbreviation In := L.In.
 
 Import FolHilbert.
 
@@ -31,7 +31,7 @@ Import HELFER1_ii.
 
 Context {L : language} {function_symbols_hasEqDec : hasEqDec L.(function_symbols)} {constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)} {relation_symbols_hasEqDec : hasEqDec L.(relation_symbols)}.
 
-#[local] Notation L' := (augmented_language L (Henkin_constants L)).
+#[local] Abbreviation L' := (augmented_language L (Henkin_constants L)).
 
 #[local] Existing Instance Henkin_constants_hasEqDec.
 
@@ -42,7 +42,7 @@ Variable X : ensemble (frm L).
 Hypothesis CONSISTENT : X ⊬ Bot_frm.
 
 Let Hbase : ensemble (frm L') :=
-  E.union HenkinAxiomSet (E.image embed_frm X).
+  E.union (HenkinAxiomSet (Henkin_constants_hasEqDec := Henkin_constants_hasEqDec)) (E.image embed_frm X).
 
 Lemma Hbase_consistent
   : Hbase ⊬ Bot_frm.
@@ -151,10 +151,10 @@ Proof.
   - intros UNIV t. eapply MaxCS_closed.
     eapply UniversalE with (A := phi). eapply ByAssumption. exact UNIV.
   - intros UNIV.
-    pose proof (hc_decode_isSurjective x phi) as [hc Hdec].
-    assert (HEN_IN : HenkinAxiom hc \in Hbase).
+    pose proof (hc_decode_isSurjective (Henkin_constants_hasEqDec := Henkin_constants_hasEqDec) x phi) as [hc Hdec].
+    assert (HEN_IN : HenkinAxiom (Henkin_constants_hasEqDec := Henkin_constants_hasEqDec) hc \in Hbase).
     { left. econs. }
-    assert (HEN_IN_MCS : HenkinAxiom hc \in MaxCS).
+    assert (HEN_IN_MCS : HenkinAxiom (Henkin_constants_hasEqDec := Henkin_constants_hasEqDec) hc \in MaxCS).
     { eapply MaxCS_incl_Hbase. exact HEN_IN. }
     unfold HenkinAxiom in HEN_IN_MCS. rewrite Hdec in HEN_IN_MCS.
     eapply MaxCS_IMPLICATION_FAITHFUL with (p := subst_frm (one_subst x (@Con_trm L' (inr hc))) phi).
@@ -326,7 +326,7 @@ Proof.
     + intros INFERS [P [t Ht]]. rename y into x. set (s := one_subst x t). set (d := @exist _ _ _ _).
       assert (claim : interpret_frm trmModel ivar_interpret (subst_frm s p1) <-> interpret_frm trmModel (upd_env x d ivar_interpret) p1).
       { rewrite <- substitution_lemma_frm. eapply interpret_frm_ext. ii. unfold compose, upd_env, s, one_subst, cons_subst, nil_subst.
-        destruct (eq_dec z x) as [EQ1 | NE1]; trivial. subst z. eapply interpret_equation_intro. simpl. intros t'.
+        destruct (B.decide (z = x)) as [EQ1 | NE1]; trivial. subst z. eapply interpret_equation_intro. simpl. intros t'.
         rewrite -> Ht. pose proof (interpret_trm_trmModel t) as HH. split.
         - destruct (interpret_trm trmModel ivar_interpret t) as [P'' [t'' IFF]]; simpl in *; intros Ht''.
           rewrite -> IFF in HH, Ht''. eapply proves_symmetry. eapply proves_transitivity with (t2 := t''); eauto. eapply proves_symmetry; eauto.
@@ -338,7 +338,7 @@ Proof.
     + intros INTERPRET. rewrite MaxCS_infers_iff. eapply MaxCS_FORALL_FAITHFUL.
       intros t. rewrite <- MaxCS_infers_iff. rewrite -> IH with (p' := subst_frm (one_subst y t) p1) by now rewrite subst_preserves_rank; lia.
       rewrite <- substitution_lemma_frm. eapply interpret_frm_ext with (env' := upd_env y (interpret_trm trmModel ivar_interpret t) ivar_interpret); eauto.
-      ii. unfold compose, upd_env, one_subst, cons_subst, nil_subst. destruct (eq_dec z y) as [EQ1 | NE1]; trivial.
+      ii. unfold compose, upd_env, one_subst, cons_subst, nil_subst. destruct (B.decide (z = y)) as [EQ1 | NE1]; trivial.
 Qed.
 
 End WITH_MCS.
@@ -419,9 +419,7 @@ Import HELFER1_ii.
 
 #[local] Existing Instance V.vec_isSetoid.
 
-Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {L : language} {function_symbols_hasEqDec : hasEqDec L.(function_symbols)} {constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)} {relation_symbols_hasEqDec : hasEqDec L.(relation_symbols)}.
-
-#[local] Notation L' := (augmented_language L (Henkin_constants L)).
+Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}.
 
 #[local] Existing Instance Henkin_constants_hasEqDec.
 
@@ -431,28 +429,27 @@ Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext 
 
 #[local] Hint Unfold E.insert : core.
 
-Theorem HilbertCalculus_complete (X : ensemble (frm L)) (b : frm L)
-  (CONSEQUENCE : X ⊨ b)
-  : X ⊢ b.
-Proof with eauto.
-  eapply NNPP. intros NO. set (Gamma := E.insert (Neg_frm b) X).
+Theorem HilbertCalculus_complete (L : language) `(function_symbols_hasEqDec : hasEqDec L.(function_symbols)) `(constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)) `(relation_symbols_hasEqDec : hasEqDec L.(relation_symbols))
+  : forall X : ensemble (frm L), forall b : frm L, forall CONSEQUENCE : X ⊨ b, X ⊢ b.
+Proof.
+  ii. eapply NNPP. intros NO. set (Gamma := E.insert (Neg_frm b) X).
   assert (CONSISTENT : Gamma ⊬ Bot_frm).
-  { intros INCONSISTENT. contradiction NO. eapply NegationE... }
+  { intros INCONSISTENT. contradiction NO. eapply NegationE; eauto. }
   pose proof (exists_MCS Gamma CONSISTENT) as (MCS & HBsub & HCons & HMax).
-  set (STRUCTURE := trmModel MCS). set (env := ivar_interpret MCS).
+  set (augmented_language L _) as L' in *. set (STRUCTURE := trmModel MCS). set (env := ivar_interpret MCS).
   assert (MODEL : forall p : frm L, interpret_frm STRUCTURE env (embed_frm p) <-> interpret_frm (restrict_structure STRUCTURE) env p).
   { ii. eapply restrict_structure_frm. }
   assert (claim : Gamma ⊭ Bot_frm).
   { intros SAT. eapply SAT with (STRUCTURE := restrict_structure (trmModel MCS)) (env := ivar_interpret MCS).
-    - ii...
-    - red. fold env. fold STRUCTURE. intros A AIN. red. rewrite <- MODEL with (p := A).
-      unfold STRUCTURE, env. rewrite <- trmModel_isModel with (X := Gamma) (MaxCS := MCS)...
-      eapply HBsub. right. rewrite E.in_image_iff. exists A...
+    - ii; eauto.
+    - red. fold env. fold STRUCTURE. intros A IN. red. rewrite <- MODEL with (p := A).
+      unfold STRUCTURE, env. rewrite <- trmModel_isModel with (X := Gamma) (MaxCS := MCS); eauto.
+      eapply HBsub. right. subst L'. rewrite E.in_image_iff. exists A; eauto.
     - simpl. intros t. unfold interpret_equation. reflexivity.
   }
   contradiction claim. subst STRUCTURE env. intros ? H_eqProp_iff_eq ? ? SAT. unfold Gamma in SATISFY.
   red in SATISFY. pose proof (SATISFY (Neg_frm b)) as CONTRA. simpl in CONTRA.
-  contradiction CONTRA... eapply CONSEQUENCE... ii. eapply SATISFY...
+  contradiction CONTRA; eauto. eapply CONSEQUENCE; eauto. ii. eapply SATISFY; eauto.
 Qed.
 
 End COMPLETENESS_THEOREM.

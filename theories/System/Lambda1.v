@@ -16,8 +16,8 @@ Inductive typ (basic_types : Type) : Type :=
 
 #[global, universes(polymorphic=yes)]
 Instance typ_hasEqDec@{u} (basic_types : Type@{u})
-  (bty_hasEqDec : hasEqDec@{u} basic_types)
-  : hasEqDec@{u} (typ basic_types).
+  (bty_hasEqDec : hasEqDec basic_types)
+  : hasEqDec (typ basic_types).
 Proof.
   red in bty_hasEqDec |- *. decide equality.
 Defined.
@@ -27,8 +27,8 @@ Class language : Type :=
   { basic_types : Set
   ; constants : Set
   ; signature (c : constants) : typ basic_types
-  ; basic_types_hasEqDec :: hasEqDec@{Set} basic_types
-  ; constants_hasEqDec :: hasEqDec@{Set} constants
+  ; basic_types_hasEqDec :: hasEqDec basic_types
+  ; constants_hasEqDec :: hasEqDec constants
   }.
 
 End StlcLang.
@@ -38,11 +38,11 @@ End StlcLang.
 
 Module ChurchStyleStlc.
 
-Notation language := StlcLang.language.
-Notation basic_types := StlcLang.basic_types.
-Notation constants := StlcLang.constants.
-Notation signature := StlcLang.signature.
-Notation bty := StlcLang.bty.
+Abbreviation language := StlcLang.language.
+Abbreviation basic_types := StlcLang.basic_types.
+Abbreviation constants := StlcLang.constants.
+Abbreviation signature := StlcLang.signature.
+Abbreviation bty := StlcLang.bty.
 
 Definition typ (L : language) : Set :=
   StlcLang.typ L.(basic_types).
@@ -58,15 +58,15 @@ Section STLC.
 
 #[local] Hint Resolve Name.ne_pirrel : core.
 
-#[local] Notation bty := (StlcLang.bty _).
+#[local] Abbreviation bty := (StlcLang.bty _).
 
 Context `{L : !language}.
 
-#[local] Notation typ := (typ L).
+#[local] Abbreviation typ := (typ L).
 
 #[global]
 Instance typ_hasEqDec
-  : hasEqDec@{Set} typ.
+  : hasEqDec typ.
 Proof.
   exact (StlcLang.typ_hasEqDec L.(basic_types) StlcLang.basic_types_hasEqDec).
 Defined.
@@ -93,7 +93,7 @@ Fixpoint FVs (e : trm) : list name :=
   match e with
   | Var_trm x => [x]
   | App_trm e1 e2 => FVs e1 ++ FVs e2
-  | Lam_trm y ty e1 => L.remove eq_dec y (FVs e1)
+  | Lam_trm y ty e1 => L.remove name_hasEqDec y (FVs e1)
   | Con_trm c => []
   end.
 
@@ -108,7 +108,7 @@ Definition nil_subst : subst :=
   fun z : name => Var_trm z.
 
 Definition cons_subst (x : name) (e : trm) (s : subst) : subst :=
-  fun z : name => if eq_dec z x then e else s z.
+  fun z : name => if B.decide (z = x) then e else s z.
 
 Definition one_subst (x : name) (e : trm) : subst :=
   cons_subst x e nil_subst.
@@ -210,14 +210,14 @@ Proof.
   - done!.
   - split.
     + intros H_forallb.
-      pose proof (eq_dec z (chi s (Lam_trm y ty e))) as [YES | NO]; [left; ss! | right].
-      eapply IHe. rewrite L.forallb_forall. intros x x_in. s!. destruct (eq_dec x y) as [H_eq | H_ne].
+      pose proof (B.decide (z = (chi s (Lam_trm y ty e)))) as [YES | NO]; [left; ss! | right].
+      eapply IHe. rewrite L.forallb_forall. intros x x_in. s!. destruct (B.decide (x = y)) as [H_eq | H_ne].
       * subst y. ss!.
       * rewrite forallb_forall in H_forallb. rewrite <- negb_true_iff. eapply H_forallb. ss!.
     + intros [-> | NOT_FREE].
       * rewrite forallb_forall. intros x x_in. ss!. eapply chi_not_free. ss!.
       * apply IHe in NOT_FREE. rewrite forallb_forall in NOT_FREE. rewrite forallb_forall. intros x x_in; s!.
-        exploit (NOT_FREE x). ss!. destruct (eq_dec x y) as [EQ | NE]; ss!.
+        exploit (NOT_FREE x). ss!. destruct (B.decide (x = y)) as [EQ | NE]; ss!.
   - done!.
 Qed.
 
@@ -239,7 +239,7 @@ Proof.
   - eapply EQUIV. ss!.
   - f_equal; [eapply IHe1 | eapply IHe2]; ss!.
   - assert (claim1 : chi s1 (Lam_trm y ty e) = chi s2 (Lam_trm y ty e)) by now eapply chi_compat_equiv_subst.
-    f_equal; trivial. eapply IHe; ii; destruct (eq_dec z y) as [EQ | NE]; ss!. ii; eapply EQUIV; ss!.
+    f_equal; trivial. eapply IHe; ii; destruct (B.decide (z = y)) as [EQ | NE]; ss!. ii; eapply EQUIV; ss!.
   - reflexivity.
 Qed.
 
@@ -247,17 +247,17 @@ Definition subst_compose (s1 : subst) (s2 : subst) : subst :=
   fun z => subst_trm s2 (s1 z).
 
 Lemma distr_compose_one (s1 : subst) (s2 : subst) (x : Name.t) (x' : Name.t) (e : trm) (z : Name.t) (e' : trm)
-  (FRESH : forallb (negb ∘ is_free_in x ∘ s1) (remove eq_dec x' (FVs e')) = true)
+  (FRESH : forallb (negb ∘ is_free_in x ∘ s1) (remove name_hasEqDec x' (FVs e')) = true)
   (FREE : is_free_in z e' = true)
   : cons_subst x' e (subst_compose s1 s2) z = subst_compose (cons_subst x' (Var_trm x) s1) (cons_subst x e s2) z.
 Proof.
-  unfold subst_compose, cons_subst. destruct (eq_dec z x') as [H_eq | H_ne].
-  - subst z. simpl. destruct (eq_dec x x); [reflexivity | contradiction].
+  unfold subst_compose, cons_subst. destruct (B.decide (z = x')) as [H_eq | H_ne].
+  - subst z. simpl. destruct (B.decide (x = x)); [reflexivity | contradiction].
   - rewrite forallb_forall in FRESH. unfold "∘" in FRESH.
     assert (NOT_FREE : is_free_in x (s1 z) = false).
     { rewrite <- negb_true_iff. eapply FRESH. ss!. }
     eapply equiv_subst_implies_subst_same.
-    intros z' FREE'. destruct (eq_dec z' x) as [EQ | NE]; [congruence | reflexivity].
+    intros z' FREE'. destruct (B.decide (z' = x)) as [EQ | NE]; [congruence | reflexivity].
 Qed.
 
 Definition free_in_wrt (x : Name.t) (s : subst) (e : trm) : Prop :=
@@ -286,11 +286,11 @@ Proof.
         assert (claim2 : In w (FVs (Lam_trm y ty e))).
         { done!. }
         apply claim1 in claim2. done!.
-      * eapply IHe. exists w. ss!. destruct (eq_dec w y) as [? | ?]; ss!.
+      * eapply IHe. exists w. ss!. destruct (B.decide (w = y)) as [? | ?]; ss!.
     + rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_spec.
       set (w := chi s (Lam_trm y ty e)). intros [NE FREE].
       rewrite <- IHe in FREE. destruct FREE as [x [FREE FREE']].
-      unfold cons_subst in FREE'. destruct (eq_dec x y) as [x_eq_y | x_ne_y].
+      unfold cons_subst in FREE'. destruct (B.decide (x = y)) as [x_eq_y | x_ne_y].
       * subst x. contradiction NE. done!.
       * exists x. done!.
   - ss!.
@@ -338,7 +338,7 @@ Proof.
     + simpl. unfold free_in_wrt. intros [x [FREE FREE']]. simpl in FREE.
       rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite eqb_spec in FREE.
       destruct FREE as [NE FREE]. rewrite <- free_in_wrt_iff in FREE. unfold free_in_wrt in FREE.
-      destruct FREE as [w [FREE1 FREE2]]. unfold cons_subst in FREE2. destruct (eq_dec w y) as [w_eq_y | w_ne_y].
+      destruct FREE as [w [FREE1 FREE2]]. unfold cons_subst in FREE2. destruct (B.decide (w = y)) as [w_eq_y | w_ne_y].
       * unfold is_free_in in FREE2. subst w. exists x. done!.
       * exists w. split; ss!. rewrite <- free_in_wrt_iff. red. exists x. ss!.
     + intros [x [FREE FREE']]. s!. destruct FREE as [NE FREE].
@@ -354,10 +354,10 @@ Lemma subst_cons_lemma_aux1 N M gamma x y ty
   : subst_trm nil_subst (subst_trm (one_subst x N) (subst_trm (cons_subst y (Var_trm x) gamma) M)) = subst_trm nil_subst (subst_trm (cons_subst y N gamma) M).
 Proof.
   repeat rewrite <- subst_compose_spec. eapply equiv_subst_implies_subst_same.
-  red; i. set (iota := nil_subst). s!. destruct (eq_dec _ _) as [EQ1 | NE1]; s!.
-  - destruct (eq_dec _ _) as [EQ2 | NE2]; ss!.
+  red; i. set (iota := nil_subst). s!. destruct (B.decide (_ = _)) as [EQ1 | NE1]; s!.
+  - destruct (B.decide (_ = _)) as [EQ2 | NE2]; ss!.
   - eapply equiv_subst_implies_subst_same. red; intros u FREE'. s!.
-    destruct (eq_dec u x) as [EQ3 | NE3]; trivial. subst u x.
+    destruct (B.decide (u = x)) as [EQ3 | NE3]; trivial. subst u x.
     assert (claim1 : is_free_in z (Lam_trm y ty M) = true) by ss!.
     pose proof (chi_is_fresh_in_subst (Lam_trm y ty M) gamma) as claim2.
     set (u := chi gamma (Lam_trm y ty M)) in *. unfold is_fresh_in_subst in claim2.
@@ -417,7 +417,7 @@ Defined.
 
 Fixpoint Lookup_from_lookup_eq (Gamma : ctx) {struct Gamma} : forall x, forall ty, Some ty = L.lookup (EQ_DEC := name_hasEqDec) x Gamma -> Lookup x ty Gamma.
 Proof.
-  destruct Gamma as [ | [x' ty'] Gamma]; simpl; intros ? ? E; [congruence | destruct (eq_dec x x') as [EQ | NE]].
+  destruct Gamma as [ | [x' ty'] Gamma]; simpl; intros ? ? E; [congruence | destruct (B.decide (x = x')) as [EQ | NE]].
   - pose proof (f_equal (B.fromMaybe ty') E) as E'. simpl in E'. econs 1; eassumption.
   - pose proof (Lookup_from_lookup_eq Gamma _ _ E) as LOOKUP. rewrite <- Name.ne_iff in NE. econs 2; eassumption.
 Defined.
@@ -426,7 +426,7 @@ Theorem Lookup_iff x ty Gamma
   : inhabited (Lookup x ty Gamma) <-> L.lookup (EQ_DEC := name_hasEqDec) x Gamma = Some ty.
 Proof.
   split.
-  - intros [X]. induction X; simpl; destruct (eq_dec x x') as [EQ | NE]; try congruence.
+  - intros [X]. induction X; simpl; destruct (B.decide (x = x')) as [EQ | NE]; try congruence.
     rewrite Name.ne_iff in x_ne. contradiction.
   - intros E. econs. now eapply Lookup_from_lookup_eq.
 Qed.
@@ -434,14 +434,14 @@ Qed.
 Fixpoint LookupProp (x : name) (ty : typ) (Gamma : ctx) {struct Gamma} : Prop :=
   match Gamma with
   | [] => False
-  | (x', ty') :: Gamma' => if eq_dec x x' then ty = ty' else LookupProp x ty Gamma'
+  | (x', ty') :: Gamma' => if B.decide (x = x') then ty = ty' else LookupProp x ty Gamma'
   end.
 
 Lemma Lookup_to_LookupProp x ty Gamma
   (LOOKUP : Lookup x ty Gamma)
   : LookupProp x ty Gamma.
 Proof.
-  induction LOOKUP; simpl; destruct (eq_dec _ _) as [EQ | NE]; eauto.
+  induction LOOKUP; simpl; destruct (B.decide (_ = _)) as [EQ | NE]; eauto.
   - contradiction.
   - rewrite Name.ne_iff in x_ne. contradiction.
 Defined.
@@ -452,7 +452,7 @@ Lemma LookupProp_to_Lookup x ty Gamma
 Proof.
   induction Gamma as [ | [x' ty'] Gamma IH]; simpl in *.
   - exact (False_rec _ LOOKUP).
-  - destruct (eq_dec x x') as [EQ | NE].
+  - destruct (B.decide (x = x')) as [EQ | NE].
     + econs 1; eassumption.
     + econs 2; [rewrite <- Name.ne_iff in NE; eassumption | exact (IH LOOKUP)].
 Defined.
@@ -462,10 +462,10 @@ Lemma LookupProp_Lookup_LookupProp x ty Gamma
   : LookupProp_to_Lookup x ty Gamma (Lookup_to_LookupProp x ty Gamma X) = X.
 Proof.
   induction X; simpl.
-  - destruct (eq_dec x x') as [EQ | NE].
+  - destruct (B.decide (x = x')) as [EQ | NE].
     + f_equal. eapply eq_pirrel_fromEqDec.
     + contradiction.
-  - destruct (eq_dec x x') as [EQ | NE].
+  - destruct (B.decide (x = x')) as [EQ | NE].
     + pose proof (COPY := x_ne). rewrite -> Name.ne_iff in COPY. contradiction.
     + f_equal; try eapply Name.ne_pirrel. congruence.
 Qed.
@@ -489,7 +489,7 @@ Lemma LookupProp_pirrel x ty Gamma
 Proof.
   revert LOOKUP LOOKUP'; induction Gamma as [ | [x' ty'] Gamma IH]; simpl; intros.
   - tauto.
-  - destruct (eq_dec x x') as [EQ | NE].
+  - destruct (B.decide (x = x')) as [EQ | NE].
     + eapply eq_pirrel_fromEqDec.
     + eapply IH.
 Qed.
@@ -654,7 +654,7 @@ Lemma TypeInfer_eq_Some_intro Gamma e ty
 Proof.
   induction TYPING; simpl.
   - rewrite <- Lookup_iff. econs; eassumption.
-  - rewrite IHTYPING1. rewrite IHTYPING2. unfold eqb. destruct (eq_dec _ _) as [EQ | NE]; [reflexivity | contradiction].
+  - rewrite IHTYPING1. rewrite IHTYPING2. unfold eqb. destruct (B.decide (_ = _)) as [EQ | NE]; [reflexivity | contradiction].
   - rewrite IHTYPING. reflexivity.
   - reflexivity.
 Defined.
@@ -666,7 +666,7 @@ Proof.
   - eapply Var_typ; eapply Lookup_from_lookup_eq; eassumption.
   - destruct (TypeInfer Gamma e1) as [[b | ty1' ty2'] | ] eqn: VIEW1; try congruence.
     destruct (TypeInfer Gamma e2) as [ty' | ] eqn: VIEW2; try congruence.
-    unfold eqb in E. destruct (eq_dec _ _) as [EQ | NE]; try congruence.
+    unfold eqb in E. destruct (B.decide (_ = _)) as [EQ | NE]; try congruence.
     eapply App_typ with (ty1 := ty'); eapply IH; congruence.
   - destruct (TypeInfer ((y, ty1) :: Gamma) e1) as [ty2 | ] eqn: VIEW1; try congruence.
     apply f_equal with (f := B.fromMaybe ty) in E. simpl in E. subst ty.
@@ -804,7 +804,7 @@ Proof.
   transitivity (subst_trm (subst_compose (one_subst x N) s) M).
   - eapply alpha_equiv_subst_ext. intros z FREE.
     unfold subst_compose, one_subst, cons_subst.
-    destruct (eq_dec z x) as [EQ | NE].
+    destruct (B.decide (z = x)) as [EQ | NE].
     + subst z. reflexivity.
     + cbn. reflexivity.
   - red. rewrite subst_compose_spec. reflexivity.
@@ -817,7 +817,7 @@ Proof.
   red. repeat rewrite <- subst_compose_spec.
   eapply equiv_subst_implies_subst_same. intros u FREE.
   unfold subst_compose, one_subst, cons_subst, nil_subst.
-  destruct (eq_dec u z) as [EQ | NE].
+  destruct (B.decide (u = z)) as [EQ | NE].
   - subst u. exact ALPHA.
   - reflexivity.
 Qed.
@@ -903,7 +903,7 @@ Lemma subst_nil_renaming x z M
 Proof.
   set (s := cons_subst x (Var_trm z) nil_subst).
   assert (EXT : forall u, subst_compose s nil_subst u = s u).
-  { intros u. unfold s, subst_compose, cons_subst, nil_subst. destruct (eq_dec u x); reflexivity. }
+  { intros u. unfold s, subst_compose, cons_subst, nil_subst. destruct (B.decide (u = x)); reflexivity. }
   transitivity (subst_trm (subst_compose s nil_subst) M).
   { symmetry. eapply equiv_subst_implies_subst_same. intros u FREE. exact (EXT u). }
   rewrite subst_nil_precompose.
@@ -1005,13 +1005,13 @@ Lemma is_free_in_Lam_intro x y ty M
   (FREE : is_free_in x M = true)
   : is_free_in x (Lam_trm y ty M) = true.
 Proof.
-  simpl. unfold eqb. destruct (eq_dec x y) as [EQ | NE']; ss!.
+  simpl. unfold eqb. destruct (B.decide (x = y)) as [EQ | NE']; ss!.
 Qed.
 
 Lemma is_free_in_Var_refl x
   : is_free_in x (Var_trm x) = true.
 Proof.
-  simpl. unfold eqb. destruct (eq_dec x x); ss!.
+  simpl. unfold eqb. destruct (B.decide (x = x)); ss!.
 Qed.
 
 Lemma Typing_context_invariance {Gamma : ctx} {Delta : ctx} {M : trm} {ty : typ}
@@ -1044,7 +1044,7 @@ Lemma Typing_shadowing {Gamma : ctx} {M : trm} {ty : typ} z z_ty
 Proof.
   eapply Typing_context_invariance; [exact TYPING |].
   intros x ty' FREE LOOKUP.
-  destruct (eq_dec x z) as [EQ | NE].
+  destruct (B.decide (x = z)) as [EQ | NE].
   - subst x. congruence.
   - rewrite <- Name.ne_iff in NE.
     exact (Lookup_S x ty' Gamma z z_ty NE LOOKUP).
@@ -1068,11 +1068,11 @@ Proof.
     eapply Lam_typ with (ty2 := ty2). eapply IHTYPING. intros x ty FREE LOOKUP.
     pattern LOOKUP. revert LOOKUP. eapply Lookup_cons.
     + intros x_EQ ty_EQ. subst x ty.
-      unfold cons_subst. destruct (eq_dec y y) as [_ | CONTRA].
+      unfold cons_subst. destruct (B.decide (y = y)) as [_ | CONTRA].
       * econs 1. exact (Lookup_Z z ty1 Gamma' z ty1 eq_refl eq_refl).
       * contradiction.
     + intros x_ne LOOKUP.
-      unfold cons_subst. destruct (eq_dec x y) as [EQ | NE].
+      unfold cons_subst. destruct (B.decide (x = y)) as [EQ | NE].
       * subst x. pose proof (COPY := x_ne).
         rewrite -> Name.ne_iff in COPY. contradiction.
       * assert (LAM_FREE : is_free_in x (Lam_trm y ty1 e1) = true).
@@ -1102,13 +1102,13 @@ Section BASIC_THEORY2_ON_SYNTAX.
 
 #[local] Opaque chi.
 
-#[local] Notation bty := (bty _).
+#[local] Abbreviation bty := (bty _).
 #[local] Infix "≡ₐ" := alpha_equiv : type_scope.
 
 Lemma alpha_equiv_subst_shadow x e gamma M
   : subst_trm (cons_subst x e (cons_subst x e gamma)) M ≡ₐ subst_trm (cons_subst x e gamma) M.
 Proof.
-  eapply alpha_equiv_subst_ext. intros z FREE. unfold cons_subst. destruct (eq_dec z x); reflexivity.
+  eapply alpha_equiv_subst_ext. intros z FREE. unfold cons_subst. destruct (B.decide (z = x)); reflexivity.
 Qed.
 
 Lemma alpha_equiv_subst_swap x y e e' gamma M
@@ -1116,13 +1116,13 @@ Lemma alpha_equiv_subst_swap x y e e' gamma M
   : subst_trm (cons_subst y e' (cons_subst x e gamma)) M ≡ₐ subst_trm (cons_subst x e (cons_subst y e' gamma)) M.
 Proof.
   eapply alpha_equiv_subst_ext. intros z FREE. unfold cons_subst.
-  destruct (eq_dec z y) as [z_eq_y | z_ne_y].
-  - subst z. destruct (eq_dec y x) as [y_eq_x | y_ne_x].
+  destruct (B.decide (z = y)) as [z_eq_y | z_ne_y].
+  - subst z. destruct (B.decide (y = x)) as [y_eq_x | y_ne_x].
     + rewrite Name.ne_iff in NE. contradiction.
     + reflexivity.
-  - destruct (eq_dec z x) as [z_eq_x | z_ne_x].
+  - destruct (B.decide (z = x)) as [z_eq_x | z_ne_x].
     + reflexivity.
-    + destruct (eq_dec z y) as [z_eq_y | z_ne_y']; [contradiction | reflexivity].
+    + destruct (B.decide (z = y)) as [z_eq_y | z_ne_y']; [contradiction | reflexivity].
 Qed.
 
 End BASIC_THEORY2_ON_SYNTAX.

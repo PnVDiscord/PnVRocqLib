@@ -18,7 +18,7 @@ Section HENKIN_INFRASTRUCTURE.
 
 Section ABSTRACT_HENKIN_CONSTANTS.
 
-Class abstract_Henkin_constants (Henkin_constants : Set) (L : language) {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants} : Set :=
+Class abstract_Henkin_constants (Henkin_constants : Set) (L : language) {Henkin_constants_hasEqDec : hasEqDec Henkin_constants} : Set :=
   { hc_decode (hc : Henkin_constants) : ivar * frm (augmented_language L Henkin_constants)
   ; hc_stage (hc : Henkin_constants) : nat
   ; hc_decode_isSurjective (x : ivar) (theta : frm (augmented_language L Henkin_constants))
@@ -30,9 +30,9 @@ Class abstract_Henkin_constants (Henkin_constants : Set) (L : language) {Henkin_
     : forall hc_k', HC_occurs_in_frm hc_k' theta_k = true -> (hc_stage hc_k' < hc_stage hc_k)%nat
   }.
 
-Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
+Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
 
-#[local] Notation L' := (augmented_language L Henkin_constants).
+#[local] Abbreviation L' := (augmented_language L Henkin_constants).
 
 Context {AHC : abstract_Henkin_constants Henkin_constants L}.
 
@@ -55,9 +55,9 @@ Context {L : language} {constant_symbols1 : Set} {constant_symbols2 : Set}.
 
 Variable constant_symbols_mapping : constant_symbols1 -> constant_symbols2.
 
-#[local] Notation L1 := (augmented_language L constant_symbols1).
+#[local] Abbreviation L1 := (augmented_language L constant_symbols1).
 
-#[local] Notation L2 := (augmented_language L constant_symbols2).
+#[local] Abbreviation L2 := (augmented_language L constant_symbols2).
 
 Fixpoint trm_mapping (t : trm L1) : trm L2 :=
   match t with
@@ -102,7 +102,7 @@ Definition L_stage (k : nat) : language :=
 Definition Henkin_constants : Set :=
   { k : nat & ivar * frm (L_stage k) }.
 
-#[local] Notation L_infty := (augmented_language L Henkin_constants).
+#[local] Abbreviation L_infty := (augmented_language L Henkin_constants).
 
 Fixpoint hc_k_to_hc_infty (k : nat) : Henkin_constants_stage k -> Henkin_constants :=
   match k as k return Henkin_constants_stage k -> Henkin_constants with
@@ -375,7 +375,7 @@ Section EQDEC_INSTANCES.
 
 #[local] Obligation Tactic := idtac.
 
-Context {L : language} {function_symbols_hasEqDec : hasEqDec@{Set} L.(function_symbols)} {constant_symbols_hasEqDec : hasEqDec@{Set} L.(constant_symbols)} {relation_symbols_hasEqDec : hasEqDec@{Set} L.(relation_symbols)}.
+Context {L : language} {function_symbols_hasEqDec : hasEqDec L.(function_symbols)} {constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)} {relation_symbols_hasEqDec : hasEqDec L.(relation_symbols)}.
 
 #[global]
 Instance Henkin_constants_stage_hasEqDec (n : nat)
@@ -460,9 +460,9 @@ Section HSUBST.
 
 #[local] Notation "x ≠ y" := (~ eq x y).
 
-Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
+Context {L : language} {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
 
-#[local] Notation L' := (augmented_language L Henkin_constants).
+#[local] Abbreviation L' := (augmented_language L Henkin_constants).
 
 Lemma HC_occurs_in_embed_trm_false (t : trm L)
   : forall hc : Henkin_constants, HC_occurs_in_trm hc (embed_trm t) = false
@@ -490,9 +490,9 @@ Qed.
 
 #[local] Hint Rewrite HC_occurs_in_embed_frm_false : simplication_hints.
 
-#[local] Notation hatom := (ivar + Henkin_constants)%type.
+#[local] Abbreviation hatom := (ivar + Henkin_constants)%type.
 
-#[local] Notation hsubst := (hatom -> trm L').
+#[local] Abbreviation hsubst := (hatom -> trm L').
 
 #[local] Open Scope list_scope.
 
@@ -556,7 +556,7 @@ Fixpoint accum_hatom_in_frm (p : frm L') : list hatom :=
   | Eqn_frm t1 t2 => accum_hatom_in_trm t1 ++ accum_hatom_in_trm t2
   | Neg_frm p1 => accum_hatom_in_frm p1
   | Imp_frm p1 p2 => accum_hatom_in_frm p1 ++ accum_hatom_in_frm p2
-  | All_frm y p1 => L.remove (eq_dec@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec)) (inl y) (accum_hatom_in_frm p1)
+  | All_frm y p1 => L.remove ((@sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec)) (inl y) (accum_hatom_in_frm p1)
   end.
 
 Lemma in_accum_hatom_in_frm_iff_is_free_in_frm x (p : frm L')
@@ -603,7 +603,7 @@ Lemma to_hsubst_cons_subst (x : ivar) (t : trm L') (s : subst L')
   : forall z, to_hsubst (cons_subst x t s) z = cons_hsubst (inl x) t (to_hsubst s) z.
 Proof.
   intros [z | z]; unfold to_hsubst, cons_hsubst, nil_hsubst, cons_subst, nil_subst.
-  - destruct (eq_dec _ _) as [EQ | NE], (eqb _ _) as [ | ] eqn: H_OBS; done!.
+  - destruct (B.decide (_ = _)) as [EQ | NE], (eqb _ _) as [ | ] eqn: H_OBS; done!.
   - destruct (eqb (inr z) (inl x)) as [ | ] eqn: H_OBS; done!.
 Qed.
 
@@ -614,7 +614,7 @@ Lemma to_hsubst_one_subst (x : ivar) (t : trm L')
   : forall z, to_hsubst (one_subst x t) z = one_hsubst (inl x) t z.
 Proof.
   intros [z | z]; unfold to_hsubst, one_hsubst, cons_hsubst, nil_hsubst, one_subst, cons_subst, nil_subst.
-  - destruct (eq_dec z x) as [EQ | NE], (eqb (inl z) (inl x)) as [ | ] eqn: H_OBS; done!.
+  - destruct (B.decide (z = x)) as [EQ | NE], (eqb (inl z) (inl x)) as [ | ] eqn: H_OBS; done!.
   - destruct (eqb (inr z) (inl x)) as [ | ] eqn: H_OBS; done!.
 Qed.
 
@@ -826,7 +826,7 @@ Proof.
       { simpl. right. done!. }
       { left. rewrite Nat.eqb_neq in OBS. eapply IH1. rewrite forallb_forall.
         intros x x_in. unfold "∘"%prg. rewrite negb_true_iff. unfold cons_hsubst.
-        unfold Prelude.eqb. destruct (Prelude.eq_dec x (inl y)) as [H_eq | H_ne].
+        unfold Prelude.eqb. destruct (B.decide (x = (inl y))) as [H_eq | H_ne].
         - destruct (is_free_in_trm z (Var_trm (hchi_frm sigma (All_frm y p1)))) as [ | ] eqn : EQ.
           + contradiction OBS. symmetry. subst x. rewrite <- fv_is_free_in_trm in EQ.
             simpl in EQ. done!.
@@ -838,11 +838,11 @@ Proof.
       { eapply IH1 in NOT_FREE. rewrite forallb_forall in NOT_FREE. rewrite forallb_forall.
         intros x x_in. rewrite negb_true_iff. rewrite L.in_remove_iff in x_in. destruct x_in as [x_in x_ne_y].
         apply NOT_FREE in x_in. rewrite negb_true_iff in x_in. unfold cons_hsubst in x_in.
-        unfold Prelude.eqb in *. destruct (Prelude.eq_dec x (inl y)) as [H_eq | H_ne]; try done!.
+        unfold Prelude.eqb in *. destruct (B.decide (x = (inl y))) as [H_eq | H_ne]; try done!.
       }
       { rewrite forallb_forall. intros x x_in. apply L.in_remove_iff in x_in. destruct x_in as [x_in x_ne_y].
         rewrite negb_true_iff. eapply hchi_frm_not_free. simpl. rewrite andb_true_iff.
-        split; [rewrite <- occurs_free_in_frm_iff in x_in | rewrite negb_true_iff; unfold Prelude.eqb; destruct (eq_dec x (inl y))]; try done!.
+        split; [rewrite <- occurs_free_in_frm_iff in x_in | rewrite negb_true_iff; unfold Prelude.eqb; destruct (B.decide (x = (inl y)))]; try done!.
       }
 Qed.
 
@@ -920,22 +920,22 @@ Proof.
     + eapply IH2. ii. eapply EQUIV. rewrite orb_true_iff. done!.
   - f_equal.
     + eapply hchi_frm_compat_equiv_hsubst. unfold equiv_hsubst_in_frm. simpl. done.
-    + eapply IH1. ii. unfold cons_hsubst. unfold eqb in *. destruct (eq_dec z (inl y)) as [H_yes | H_no].
+    + eapply IH1. ii. unfold cons_hsubst. unfold eqb in *. destruct (B.decide (z = (inl y))) as [H_yes | H_no].
       { f_equal. subst z. eapply hchi_frm_compat_equiv_hsubst. unfold equiv_hsubst_in_frm. simpl. done. }
-      { eapply EQUIV. rewrite andb_true_iff. split. done. eapply negb_true_iff. unfold Prelude.eqb. destruct (eq_dec z (inl y)); done. }
+      { eapply EQUIV. rewrite andb_true_iff. split. done. eapply negb_true_iff. unfold Prelude.eqb. destruct (B.decide (z = (inl y))); done. }
 Qed.
 
 Lemma distr_hcompose_one (sigma1 : hsubst) (sigma2 : hsubst) (x : hatom) (y : ivar) (z : hatom) (t : trm L') (p : frm L')
-  (FRESH : forallb (negb ∘ occurs_free_in_trm (inl y) ∘ sigma1)%prg (remove (eq_dec@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec)) x (accum_hatom_in_frm p)) = true)
+  (FRESH : forallb (negb ∘ occurs_free_in_trm (inl y) ∘ sigma1)%prg (remove ((@sum_hasEqDec ivar Henkin_constants nat_hasEqDec Henkin_constants_hasEqDec)) x (accum_hatom_in_frm p)) = true)
   (FREE : occurs_free_in_frm z p = true)
   : cons_hsubst x t (hsubst_compose sigma1 sigma2) z = hsubst_compose (cons_hsubst x (Var_trm y) sigma1) (cons_hsubst (inl y) t sigma2) z.
 Proof.
-  unfold hsubst_compose, cons_hsubst. unfold Prelude.eqb. destruct (eq_dec z x) as [H_eq | H_ne].
-  - subst z. simpl. destruct (eq_dec (inl y) (inl y)); done!.
+  unfold hsubst_compose, cons_hsubst. unfold Prelude.eqb. destruct (B.decide (z = x)) as [H_eq | H_ne].
+  - subst z. simpl. destruct (B.decide ((inl y) = (inl y))); done!.
   - rewrite forallb_forall in FRESH. unfold "∘"%prg in FRESH.
     assert (NOT_FREE : occurs_free_in_trm (inl y) (sigma1 z) = false).
     { rewrite <- negb_true_iff. eapply FRESH. rewrite L.in_remove_iff. rewrite <- occurs_free_in_frm_iff. done!. }
-    eapply equiv_hsubst_in_trm_implies_hsubst_trm_same. intros z' FREE'. destruct (eq_dec z' (inl y)) as [EQ | NE]; try done!.
+    eapply equiv_hsubst_in_trm_implies_hsubst_trm_same. intros z' FREE'. destruct (B.decide (z' = (inl y))) as [EQ | NE]; try done!.
 Qed.
 
 #[local] Tactic Notation "done" :=
@@ -1007,7 +1007,7 @@ Proof.
     + intros [w [FREE FREE']]. rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite eqb_neq in FREE.
       destruct FREE as [FREE w_ne_y]. rewrite andb_true_iff. rewrite negb_true_iff. split.
       * eapply IH1. exists w. split; trivial. unfold cons_hsubst.
-        unfold Prelude.eqb. destruct (eq_dec w (inl y)) as [EQ | NE]; done!.
+        unfold Prelude.eqb. destruct (B.decide (w = (inl y))) as [EQ | NE]; done!.
       * rewrite eqb_neq. intros CONTRA.
         assert (claim1 : frm_is_fresh_in_hsubst (hchi_frm sigma (All_frm y p1)) sigma (All_frm y p1) = true).
         { exact (hchi_frm_is_fresh_in_hsubst (All_frm y p1) sigma). }
@@ -1019,7 +1019,7 @@ Proof.
     + rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq.
       set (w := hchi_frm sigma (All_frm y p1)). intros [FREE NE].
       apply IH1 in FREE. destruct FREE as [x [FREE FREE']].
-      unfold cons_hsubst in FREE'. unfold eqb in FREE'. destruct (eq_dec x (inl y)) as [x_eq_y | x_ne_y].
+      unfold cons_hsubst in FREE'. unfold eqb in FREE'. destruct (B.decide (x = (inl y))) as [x_eq_y | x_ne_y].
       * subst x. contradiction NE. apply occurs_free_in_trm_iff in FREE'. simpl in FREE'. done!.
       * exists x. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. done!.
 Qed.
@@ -1100,7 +1100,7 @@ Proof.
     + simpl. unfold occurs_free_in_frm_wrt. intros [x [FREE FREE']]. simpl in FREE.
       rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite eqb_neq in FREE.
       destruct FREE as [FREE NE]. apply occurs_free_in_frm_wrt_iff in FREE. unfold free_in_frm_wrt in FREE.
-      destruct FREE as [w [FREE1 FREE2]]. unfold cons_hsubst in FREE2. unfold eqb in FREE2. destruct (eq_dec w (inl y)) as [w_eq_y | w_ne_y].
+      destruct FREE as [w [FREE1 FREE2]]. unfold cons_hsubst in FREE2. unfold eqb in FREE2. destruct (B.decide (w = (inl y))) as [w_eq_y | w_ne_y].
       * unfold occurs_free_in_trm in FREE2. rewrite eqb_eq in FREE2. subst. done!.
       * exists w. simpl. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. split; try tauto.
         eapply occurs_free_in_trm_wrt_iff. done.
@@ -1114,7 +1114,7 @@ Lemma hcompose_one_hsubst_frm (x1 : hatom) (t1 : trm L') (sigma : hsubst) (p : f
   : hsubst_frm sigma (hsubst_frm (one_hsubst x1 t1) p) = hsubst_frm (cons_hsubst x1 (hsubst_trm sigma t1) sigma) p.
 Proof.
   unfold one_hsubst. rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. ii.
-  unfold cons_hsubst, hsubst_compose, eqb. destruct (eq_dec z x1) as [z_eq_x1 | z_ne_x1]; try done!.
+  unfold cons_hsubst, hsubst_compose, eqb. destruct (B.decide (z = x1)) as [z_eq_x1 | z_ne_x1]; try done!.
   unfold nil_hsubst. destruct z; try done!.
 Qed.
 
@@ -1123,13 +1123,13 @@ Lemma cons_hsubst_hsubst_frm (x1 : hatom) (t1 : trm L') (y : hatom) (p : frm L')
   : hsubst_frm (cons_hsubst x1 t1 sigma) p = hsubst_frm (cons_hsubst y t1 sigma) (hsubst_frm (one_hsubst x1 (nil_hsubst y)) p).
 Proof.
   unfold one_hsubst. rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same.
-  ii. unfold cons_hsubst, hsubst_compose, eqb. destruct (eq_dec z x1) as [z_eq_x1 | z_ne_x1].
+  ii. unfold cons_hsubst, hsubst_compose, eqb. destruct (B.decide (z = x1)) as [z_eq_x1 | z_ne_x1].
   - subst z. unfold nil_hsubst. destruct y as [x | c]; simpl.
-    + destruct (eq_dec (inl x) (inl x)); try done!.
-    + destruct (eq_dec (inr c) (inr c)); try done!.
+    + destruct (B.decide ((inl x) = (inl x))); try done!.
+    + destruct (B.decide ((inr c) = (inr c))); try done!.
   - destruct z as [x | c]; simpl.
-    + destruct (eq_dec (inl x) y) as [z_eq_y | z_ne_y]; try done!.
-    + destruct (eq_dec (inr c) y) as [z_eq_y | z_ne_y]; try done!.
+    + destruct (B.decide ((inl x) = y)) as [z_eq_y | z_ne_y]; try done!.
+    + destruct (B.decide ((inr c) = y)) as [z_eq_y | z_ne_y]; try done!.
 Qed.
 
 Lemma nil_hsubst_trm (t : trm L')
@@ -1152,7 +1152,7 @@ Lemma trivial_hsubst (x : hatom) (p : frm L')
   : hsubst_frm (one_hsubst x (nil_hsubst x)) p = hsubst_frm nil_hsubst p.
 Proof.
   eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. ii. unfold one_hsubst, cons_hsubst.
-  unfold eqb. destruct (eq_dec z x); try done!.
+  unfold eqb. destruct (B.decide (z = x)); try done!.
 Qed.
 
 Theorem subst_hsubst_compat_in_trm (s : subst L') (sigma : hsubst) (t : trm L')
@@ -1200,10 +1200,10 @@ Proof.
     }
     f_equal; trivial. rewrite claim. eapply IH1. intros [x | c]; simpl.
     + unfold cons_hsubst, cons_subst. destruct (eqb (inl x) (inl y)) as [ | ] eqn : H_OBS.
-      { rewrite eqb_eq in H_OBS. inv H_OBS. destruct (eq_dec y y); try done!. }
-      { rewrite eqb_neq in H_OBS. destruct (eq_dec x y); try done!. eapply SIM with (z := inl x). }
+      { rewrite eqb_eq in H_OBS. inv H_OBS. destruct (B.decide (y = y)); try done!. }
+      { rewrite eqb_neq in H_OBS. destruct (B.decide (x = y)); try done!. eapply SIM with (z := inl x). }
     + unfold cons_hsubst, cons_subst. unfold eqb.
-      destruct (eq_dec (inr c) (inl y)) as [EQ | NE].
+      destruct (B.decide ((inr c) = (inl y))) as [EQ | NE].
       { inv EQ. }
       { eapply SIM with (z := inr c). }
 Qed.
@@ -1253,10 +1253,10 @@ Proof.
   rewrite replace_constant_in_frm_compat_subst.
   - eapply equiv_subst_in_frm_implies_subst_frm_same. unfold "∘"%prg. ii.
     unfold replace_constant_in_trm, one_hsubst, one_subst, cons_hsubst, cons_subst.
-    destruct (eq_dec z x); try done!.
+    destruct (B.decide (z = x)); try done!.
   - intros z FREE. apply fv_is_free_in_trm in FREE. simpl in FREE. destruct FREE as [-> | []].
     unfold one_subst, nil_subst, cons_subst. unfold one_hsubst, cons_hsubst, nil_hsubst.
-    destruct (eq_dec z x); try done!.
+    destruct (B.decide (z = x)); try done!.
 Qed.
 
 Lemma embed_frm_Fun_eqAxm (f : L.(function_symbols))
@@ -1282,10 +1282,10 @@ Import HELFER1_i.
 Context {L : language} {constant_symbols1 : Set} {constant_symbols2 : Set}.
 Variable constant_symbols_mapping : constant_symbols1 -> constant_symbols2.
 
-#[local] Notation L1 := (augmented_language L constant_symbols1).
-#[local] Notation L2 := (augmented_language L constant_symbols2).
+#[local] Abbreviation L1 := (augmented_language L constant_symbols1).
+#[local] Abbreviation L2 := (augmented_language L constant_symbols2).
 
-#[local] Notation h := constant_symbols_mapping.
+#[local] Abbreviation h := constant_symbols_mapping.
 
 Definition subst_mapping (s : subst L1) : subst L2 :=
   fun z => trm_mapping h (s z).
@@ -1385,7 +1385,7 @@ Proof.
   - rewrite <- (frm_mapping_chi s (All_frm y p1)). f_equal.
     rewrite IH1. eapply equiv_subst_in_frm_implies_subst_frm_same.
     intros z z_free. unfold subst_mapping, cons_subst. simpl.
-    destruct (eq_dec z y); reflexivity.
+    destruct (B.decide (z = y)); reflexivity.
 Qed.
 
 Lemma frm_mapping_not_free (x : ivar) (p : frm L1)
@@ -1442,7 +1442,7 @@ Proof.
     + constructor.
     + eapply equiv_subst_in_frm_implies_subst_frm_same. intros z z_free.
       unfold subst_mapping, one_subst, cons_subst, nil_subst.
-      destruct (eq_dec z x); reflexivity.
+      destruct (B.decide (z = x)); reflexivity.
   - simpl. constructor.
     rewrite -> frm_mapping_not_free. exact NOT_FREE.
   - simpl. constructor.
@@ -1472,10 +1472,10 @@ Context {L : language} {K1 : Set} {K2 : Set}.
 
 Variable h : K1 -> K2.
 
-#[local] Notation L1 := (augmented_language L K1).
-#[local] Notation L2 := (augmented_language L K2).
-#[local] Notation hatom1 := (ivar + K1)%type.
-#[local] Notation hatom2 := (ivar + K2)%type.
+#[local] Abbreviation L1 := (augmented_language L K1).
+#[local] Abbreviation L2 := (augmented_language L K2).
+#[local] Abbreviation hatom1 := (ivar + K1)%type.
+#[local] Abbreviation hatom2 := (ivar + K2)%type.
 
 Inductive constant_symbols_similarity : Similarity L1.(constant_symbols) L2.(constant_symbols) :=
   | constant_symbols_similarity_inl (c : L.(constant_symbols))
@@ -1547,7 +1547,7 @@ Proof.
   - econs. exact IH1.
 Qed.
 
-Context {K1_hasEqDec : hasEqDec@{Set} K1} {K2_hasEqDec : hasEqDec@{Set} K2}.
+Context {K1_hasEqDec : hasEqDec K1} {K2_hasEqDec : hasEqDec K2}.
 
 Lemma trm_similarity_graph_eq (t1 : trm L1) (t2 : trm L2)
   (SIM : t1 =~= t2)
@@ -1744,13 +1744,13 @@ Proof.
     simpl in HH. rewrite <- HH.
     f_equal. eapply IH1. intros z1 z2 ZSIM.
     unfold cons_hsubst. unfold eqb.
-    destruct (eq_dec z1 (inl y)) as [-> | NE1].
+    destruct (B.decide (z1 = (inl y))) as [-> | NE1].
     + destruct z2 as [x | c2]; simpl in ZSIM; try contradiction.
       subst x.
-      destruct (eq_dec (inl y) (inl y)); [reflexivity | congruence].
+      destruct (B.decide ((inl y) = (inl y))); [reflexivity | congruence].
     + assert (NE2 : ~ z2 = inl y).
       { intro EZ. destruct z1 as [x1 | c1], z2 as [x2 | c2]; simpl in ZSIM; try contradiction; congruence. }
-      destruct (eq_dec z2 (inl y)) as [EZ1 | _]; [contradiction|].
+      destruct (B.decide (z2 = (inl y))) as [EZ1 | _]; [contradiction|].
       exact (SIG z1 z2 ZSIM).
 Qed.
 
@@ -1763,12 +1763,12 @@ Proof.
   unfold one_hsubst, cons_hsubst, nil_hsubst.
   destruct z1 as [x1 | c1], z2 as [x2 | c2]; simpl in ZSIM; try contradiction.
   - subst x2. unfold eqb.
-    destruct (eq_dec (inl x1) (inr c)); [congruence | reflexivity].
+    destruct (B.decide ((inl x1) = (inr c))); [congruence | reflexivity].
   - subst c2. unfold eqb.
-    destruct (eq_dec (inr c1) (inr c)) as [EQ1 | NE1].
+    destruct (B.decide ((inr c1) = (inr c))) as [EQ1 | NE1].
     + inversion EQ1. subst c1.
-      destruct (eq_dec (inr (h c)) (inr (h c))); [reflexivity | congruence].
-    + destruct (eq_dec (inr (h c1)) (inr (h c))) as [EQ2 | NE2].
+      destruct (B.decide ((inr (h c)) = (inr (h c)))); [reflexivity | congruence].
+    + destruct (B.decide ((inr (h c1)) = (inr (h c)))) as [EQ2 | NE2].
       * exfalso. eapply NE1. f_equal.
         eapply h_inj. now inversion EQ2.
       * reflexivity.
@@ -1787,19 +1787,19 @@ Section DEDUCTION.
 #[local] Infix "\subseteq" := E.isSubsetOf.
 #[local] Notation "x ≠ y" := (~ eq x y) : type_scope.
 #[local] Infix "⊢" := HilbertFol.proves : type_scope.
-#[local] Notation inconsistent := FolHilbert.inconsistent.
+#[local] Abbreviation inconsistent := FolHilbert.inconsistent.
 
 Context {L : language}.
 
 Section MAPPING_REPLACE_CONSTANT.
 
-Context {K1 : Set} {K2 : Set} {K1_hasEqDec : hasEqDec@{Set} K1} {K2_hasEqDec : hasEqDec@{Set} K2}.
+Context {K1 : Set} {K2 : Set} {K1_hasEqDec : hasEqDec K1} {K2_hasEqDec : hasEqDec K2}.
 
 Variable h : K1 -> K2.
 
-#[local] Notation L1 := (augmented_language L K1).
+#[local] Abbreviation L1 := (augmented_language L K1).
 
-#[local] Notation L2 := (augmented_language L K2).
+#[local] Abbreviation L2 := (augmented_language L K2).
 
 Hypothesis h_inj : forall c1, forall c2, h c1 = h c2 -> c1 = c2.
 
@@ -1835,15 +1835,15 @@ Qed.
 
 End MAPPING_REPLACE_CONSTANT.
 
-Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
+Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
 
-#[local] Notation L' := (augmented_language L Henkin_constants).
+#[local] Abbreviation L' := (augmented_language L Henkin_constants).
 #[local] Infix "≡" := alpha_equiv.
 
 Section BOUNDED_HC.
 
 Definition hcs_of_ps_p (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L') : list Henkin_constants :=
-  L.nodup eq_dec (hc0 :: flat_map accum_HCs_frm ps ++ accum_HCs_frm p).
+  L.nodup Henkin_constants_hasEqDec (hc0 :: flat_map accum_HCs_frm ps ++ accum_HCs_frm p).
 
 Lemma in_hcs_of_ps_p_hc0 (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L')
   : In hc0 (hcs_of_ps_p hc0 ps p).
@@ -1869,11 +1869,11 @@ Proof.
 Qed.
 
 Definition Kf (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L') : Set :=
-  { hc : Henkin_constants | (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) = true }.
+  { hc : Henkin_constants | (if in_dec Henkin_constants_hasEqDec hc (hcs_of_ps_p hc0 ps p) then true else false) = true }.
 
 #[program]
 Definition f (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L') : Henkin_constants -> Kf hc0 ps p :=
-  fun hc => (@exist _ _ (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then hc else hc0) _).
+  fun hc => (@exist _ _ (if in_dec Henkin_constants_hasEqDec hc (hcs_of_ps_p hc0 ps p) then hc else hc0) _).
 Next Obligation.
   - destruct (in_dec _ hc _) as [IN | NOT_IN].
     + destruct (in_dec _ hc _) as [IN1 | NOT_IN1].
@@ -1904,14 +1904,14 @@ Proof.
     fix index_of (hc : Henkin_constants) (xs : list Henkin_constants) : nat :=
       match xs with
       | [] => O
-      | hc' :: xs' => if eq_dec hc hc' then O else S (index_of hc xs')
+      | hc' :: xs' => if B.decide (hc = hc') then O else S (index_of hc xs')
       end
   ) as index_of.
   rename xs into hcs.
   assert (INDEX_OF_OK : forall hc, forall xs, In hc xs -> nth (index_of hc xs) xs hc = hc).
   { intros hc. induction xs as [ | hc' xs IH]; simpl; intros IN.
     - contradiction.
-    - destruct (eq_dec hc hc') as [-> | NE]; ss!.
+    - destruct (B.decide (hc = hc')) as [-> | NE]; ss!.
   }
   assert (HH : forall n : nat, In (L.nth n hcs hc0) hcs).
   { intros n. assert (length hcs <= n \/ n < length hcs)%nat as [? | ?] by lia.
@@ -1919,7 +1919,7 @@ Proof.
     - eapply nth_In; eauto.
   }
   exists (fun k => index_of (proj1_sig k) hcs).
-  assert (H_nth : forall n : nat, (if in_dec eq_dec (L.nth n hcs hc0) (hcs_of_ps_p hc0 ps p) then true else false) = true).
+  assert (H_nth : forall n : nat, (if in_dec Henkin_constants_hasEqDec (L.nth n hcs hc0) (hcs_of_ps_p hc0 ps p) then true else false) = true).
   { intros n. destruct (in_dec _ _ _) as [IN1 | NOT_IN1].
     - reflexivity.
     - contradiction NOT_IN1. fold hcs. eapply HH.
@@ -1930,8 +1930,8 @@ Proof.
   revert i. fold hcs. clearbody hcs. clear. revert k. induction hcs as [ | h hcs IH]; simpl; intros.
   - lia.
   - destruct i as [? | ?].
-    + subst. destruct (eq_dec _ _) as [? | ?]; ss!.
-    + destruct (eq_dec _ _) as [? | ?]; ss!.
+    + subst. destruct (B.decide (_ = _)) as [? | ?]; ss!.
+    + destruct (B.decide (_ = _)) as [? | ?]; ss!.
 Qed.
 
 Lemma trm_mapping_proj1_sig_f_fix (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L') (t : trm L')
@@ -1980,9 +1980,9 @@ Section FINITE_TO_NAT_FIX.
 
 Context (hc0 : Henkin_constants) (ps : list (frm L')) (p : frm L').
 
-#[local] Notation K := (Kf hc0 ps p).
-#[local] Notation LK := (augmented_language L K).
-#[local] Notation LN := (augmented_language L nat).
+#[local] Abbreviation K := (Kf hc0 ps p).
+#[local] Abbreviation LK := (augmented_language L K).
+#[local] Abbreviation LN := (augmented_language L nat).
 
 Variable g : K -> nat.
 Variable g_back : nat -> K.
@@ -2022,7 +2022,7 @@ Theorem proves_replace_constant_in_frm (hc0 : Henkin_constants) (y0 : ivar) (Gam
 Proof.
   destruct PROVE as [ps [INCL [PF]]].
   assert (Kf_hasEqDec : hasEqDec (Kf hc0 ps p)).
-  { unfold Kf. intros [hc Hhc] [hc' Hhc']; simpl. pose proof (eq_dec hc hc') as [EQ | NE].
+  { unfold Kf. intros [hc Hhc] [hc' Hhc']; simpl. pose proof (B.decide (hc = hc')) as [EQ | NE].
     - left. now eapply exist_eq_bool.
     - right. congruence.
   }
@@ -2080,7 +2080,7 @@ Proof.
     rewrite HC0_FIX. simpl.
     exploit (frm_mapping_proj1_sig_f_fix hc0 ps p p).
     - intros hc OCC. eapply in_hcs_of_ps_p_of_p. exact OCC.
-    - intros X. set (XX := frm_mapping (@proj1_sig _ (fun hc => (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) = true)) (frm_mapping f0 p)).
+    - intros X. set (XX := frm_mapping (@proj1_sig _ (fun hc => (if in_dec Henkin_constants_hasEqDec hc (hcs_of_ps_p hc0 ps p) then true else false) = true)) (frm_mapping f0 p)).
       change (XX = p) in X. congruence.
   }
   eapply extend_proves; cycle 1.
@@ -2100,7 +2100,7 @@ Proof.
     exploit (frm_mapping_proj1_sig_f_fix hc0 ps p q').
     + intros hc OCC. eapply in_hcs_of_ps_p_of_ps; eauto.
     + intros X.
-      set (XX := frm_mapping (@proj1_sig _ (fun hc => (if in_dec eq_dec hc (hcs_of_ps_p hc0 ps p) then true else false) = true)) (frm_mapping f0 q')).
+      set (XX := frm_mapping (@proj1_sig _ (fun hc => (if in_dec Henkin_constants_hasEqDec hc (hcs_of_ps_p hc0 ps p) then true else false) = true)) (frm_mapping f0 q')).
       change (XX = q') in X. congruence.
   - eapply INCL. do 2 red. exact INq'.
 Qed.
@@ -2176,7 +2176,7 @@ Proof.
       * right. right. exact Hp2'.
   - set (chi := chi_frm s (All_frm y p1)). intro H.
     assert (HS' : forall z, HC_occurs_in_trm hc (cons_subst y (Var_trm chi) s z) = true -> hc = hc').
-    { s!. intros z Hz. destruct (eq_dec _ _) as [EQ | NE].
+    { s!. intros z Hz. destruct (B.decide (_ = _)) as [EQ | NE].
       - s!. congruence.
       - eapply HS. exact Hz.
     }
@@ -2189,7 +2189,7 @@ Lemma one_subst_only_introduces_hc' hc hc' x z
   (H_occurs : HC_occurs_in_trm hc (one_subst x (@Con_trm L' (inr hc')) z) = true)
   : hc = hc'.
 Proof.
-  unfold one_subst, cons_subst, nil_subst in H_occurs. destruct (eq_dec _ _).
+  unfold one_subst, cons_subst, nil_subst in H_occurs. destruct (B.decide (_ = _)).
   - s!. exact H_occurs.
   - s!. congruence.
 Qed.
@@ -2254,9 +2254,9 @@ Qed.
 
 Section HENKIN_STAGES.
 
-#[local] Notation hatom := (ivar + Henkin_constants)%type.
+#[local] Abbreviation hatom := (ivar + Henkin_constants)%type.
 
-#[local] Notation hsubst := (hatom -> trm L').
+#[local] Abbreviation hsubst := (hatom -> trm L').
 
 Definition HenkinAxms_upto (n : nat) : ensemble (frm L') :=
   fun A => exists hc, (hc_stage hc < n)%nat /\ A = HenkinAxiom hc.
@@ -2308,10 +2308,10 @@ Proof.
       rewrite <- hsubst_compose_frm_spec. erewrite -> subst_hsubst_compat_in_frm by now ii; reflexivity.
       eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. ii. unfold hsubst_compose, one_hsubst, cons_hsubst, nil_hsubst.
       unfold to_hsubst. destruct (eqb _ _) as [ | ] eqn: H_OBS; rewrite eqb_spec in H_OBS; destruct z; simpl.
-      - unfold one_subst, cons_subst, nil_subst. repeat destruct (eq_dec _ _) as [? | ?]; try congruence.
-      - unfold one_subst, cons_subst, nil_subst. repeat destruct (eq_dec _ _) as [? | ?]; try congruence.
-      - unfold one_subst, cons_subst, nil_subst. repeat destruct (eq_dec _ _) as [? | ?]; try congruence.
-      - unfold one_subst, cons_subst, nil_subst. repeat destruct (eq_dec _ _) as [? | ?]; try congruence.
+      - unfold one_subst, cons_subst, nil_subst. repeat destruct (B.decide (_ = _)) as [? | ?]; try congruence.
+      - unfold one_subst, cons_subst, nil_subst. repeat destruct (B.decide (_ = _)) as [? | ?]; try congruence.
+      - unfold one_subst, cons_subst, nil_subst. repeat destruct (B.decide (_ = _)) as [? | ?]; try congruence.
+      - unfold one_subst, cons_subst, nil_subst. repeat destruct (B.decide (_ = _)) as [? | ?]; try congruence.
         unfold s, one_hsubst, cons_hsubst, nil_hsubst. destruct (eqb _ _) as [ | ] eqn: H_OBS'; rewrite eqb_spec in H_OBS'.
         + inv H_OBS'. rewrite occurs_free_in_frm_iff in FREE. rewrite in_accum_hatom_in_frm_iff_HC_occurs_in_frm in FREE. congruence.
         + simpl; reflexivity. 
@@ -2435,7 +2435,7 @@ Proof.
           2: { intros z. reflexivity. }
           rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. intros [u | u] u_free.
           - unfold to_hsubst, hsubst_compose. unfold one_subst, cons_subst, nil_subst. unfold one_hsubst, cons_hsubst, nil_hsubst.
-            destruct (eq_dec u x) as [Hu | Hu].
+            destruct (B.decide (u = x)) as [Hu | Hu].
             + subst u. unfold c. rewrite hsubst_trm_unfold.
               destruct (eqb _ _) as [ | ] eqn: Hobs; rewrite eqb_spec in Hobs; congruence.
             + reflexivity.
@@ -2523,7 +2523,7 @@ Proof.
         intros q Hq. s!. destruct Hq as [<- | Hq].
         { eapply AddHenkin_stage_list_contains_base. left. exists hc. split; [exact Hlt' | reflexivity]. }
         { eapply Hsub. exact Hq. }
-      * pose proof (in_dec eq_dec hc hcs) as [Hin | Hnin].
+      * pose proof (in_dec Henkin_constants_hasEqDec hc hcs) as [Hin | Hnin].
         { exists hcs. repeat split; try exact Hnodup; try exact Hstage.
           intros q Hq. s!. destruct Hq as [<- | Hq].
           - eapply AddHenkin_stage_list_contains_axiom. exact Hin.
@@ -2570,7 +2570,7 @@ Proof.
     eapply remove_Henkin_axioms_list; eauto.
 Qed.
 
-#[local] Notation embed_frm := (embed_frm (Henkin_constants := Henkin_constants)).
+#[local] Abbreviation embed_frm := (embed_frm (Henkin_constants := Henkin_constants)).
 
 Lemma AddHenkin_stage0_equiconsistent (X : ensemble (frm L))
   : inconsistent (E.image embed_frm X) <-> inconsistent (AddHenkin_stage X O).

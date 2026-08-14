@@ -196,12 +196,12 @@ Qed.
 Add Parametric Morphism
   : isSubsetOf with signature (eqProp ==> eqProp ==> iff)
   as isSubsetOf_compatWith_eqProp.
-Proof with eauto with *.
+Proof.
   intros x1 y1 EQ1 x2 y2 EQ2. transitivity (x1 \subseteq y2); unfold "\subseteq"; split; intros SUBSET z H_in.
-  - rewrite <- EQ2...
-  - rewrite -> EQ2...
-  - rewrite <- EQ1 in H_in...
-  - rewrite -> EQ1 in H_in...
+  - rewrite <- EQ2; eauto with *.
+  - rewrite -> EQ2; eauto with *.
+  - rewrite <- EQ1 in H_in; eauto with *.
+  - rewrite -> EQ1 in H_in; eauto with *.
 Qed.
 
 #[global]
@@ -668,13 +668,13 @@ Theorem AxiomOfChoice_implies_StrongCollection (P : Tree -> Tree -> Prop)
   (COMPAT1 : forall y, isCompatibleWith_eqProp (fun x => P x y))
   (COMPAT2 : forall x, isCompatibleWith_eqProp (fun y => P x y))
   : forall X, (forall x, x \in X -> exists y, P x y) -> exists Y, (forall x, x \in X -> exists y, y \in Y /\ P x y) /\ (forall y, y \in Y -> exists x, x \in X /\ P x y).
-Proof with eauto with *.
+Proof.
   intros X NONEMPTY. set (base_set := children X).
   assert (claim : exists f : base_set -> Tree, forall x : base_set, P (childnodes X x) (f x)).
-  { eapply AC with (P := fun x : base_set => fun y : Tree => P (childnodes X x) y)... }
+  { eapply AC with (P := fun x : base_set => fun y : Tree => P (childnodes X x) y); eauto with *. }
   destruct claim as [f claim]. exists (mkNode base_set (fun x => f x)). split.
-  - intros x [c EQ]. exists (f c). split... eapply COMPAT1...
-  - intros x [c EQ]. exists (childnodes X c). split... eapply COMPAT2...
+  - intros x [c EQ]. exists (f c). split; eauto with *. eapply COMPAT1; eauto with *.
+  - intros x [c EQ]. exists (childnodes X c). split; eauto with *. eapply COMPAT2; eauto with *.
 Qed.
 
 End STRONG_COLLECTION.
@@ -1458,7 +1458,7 @@ Section well_founded_to_Woset.
 
 Context {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_founded R).
 
-#[local] Notation hash := (@fromWf A R R_wf).
+#[local] Abbreviation hash := (@fromWf A R R_wf).
 
 #[local]
 Instance mkSetoid_from_wellfounded : isSetoid A :=
@@ -1589,7 +1589,7 @@ Proof.
   symmetry. pose proof (R_wf i x) as H_Acc. unfold fromWf.
   induction H_Acc as [x _ IH]; simpl. eapply extensionality. intros z; split; intros H_IN.
   - rewrite fromAcc_unfold in H_IN |- *. destruct H_IN as [[y R_y_x] EQ]; simpl in *.
-    assert (toWellPoset_lt R (existT _ i (Some y)) (existT _ i (Some x))) as claim1.
+    assert (toWellPoset_lt R (@existT _ _ i (Some y)) (@existT _ _ i (Some x))) as claim1.
     { exists (Some y); ss!.
       - econs 2; ss!.
       - intros H_contra. apply projT2_eq in H_contra. inv H_contra. contradiction (well_founded_implies_Irreflexive (R i) (R_wf i) y).

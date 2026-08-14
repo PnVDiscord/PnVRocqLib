@@ -7,7 +7,7 @@ Require Import PnV.Logic.BasicFol.
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
-#[local] Notation In := L.In.
+#[local] Abbreviation In := L.In.
 
 #[local] Hint Rewrite @L.forallb_forall @Prelude.eqb_spec@{Set} : simplication_hints.
 
@@ -34,9 +34,9 @@ Context {L : language}.
 
 Section __.
 
-Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec@{Set} Henkin_constants}.
+Context {Henkin_constants : Set} {Henkin_constants_hasEqDec : hasEqDec Henkin_constants}.
 
-Notation L' := (augmented_language L Henkin_constants).
+Abbreviation L' := (augmented_language L Henkin_constants).
 
 Fixpoint HC_occurs_in_trm (hc : Henkin_constants) (t : trm L') : bool :=
   match t with
@@ -184,7 +184,7 @@ End __.
 Definition Henkin_constants : Set :=
   nat.
 
-Notation L' := (augmented_language L Henkin_constants).
+Abbreviation L' := (augmented_language L Henkin_constants).
 
 Lemma last_HC_gt_frm (hc : Henkin_constants)
   : forall p : frm L', hc > maxs (accum_HCs_frm p) -> HC_occurs_in_frm hc p = false.
@@ -205,9 +205,9 @@ Proof.
     + eapply IH; trivial. lia.
 Qed.
 
-#[local] Notation hatom := (ivar + Henkin_constants)%type.
+#[local] Abbreviation hatom := (ivar + Henkin_constants)%type.
 
-#[local] Notation hsubst := (hatom -> trm L').
+#[local] Abbreviation hsubst := (hatom -> trm L').
 
 Section HSUBST.
 
@@ -273,7 +273,7 @@ Fixpoint accum_hatom_in_frm (p : frm L') : list hatom :=
   | Eqn_frm t1 t2 => accum_hatom_in_trm t1 ++ accum_hatom_in_trm t2
   | Neg_frm p1 => accum_hatom_in_frm p1
   | Imp_frm p1 p2 => accum_hatom_in_frm p1 ++ accum_hatom_in_frm p2
-  | All_frm y p1 => L.remove (eq_dec@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec)) (inl y) (accum_hatom_in_frm p1)
+  | All_frm y p1 => L.remove ((@sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec)) (inl y) (accum_hatom_in_frm p1)
   end.
 
 Lemma in_accum_hatom_in_frm_iff_is_free_in_frm x (p : frm L')
@@ -320,7 +320,7 @@ Lemma to_hsubst_cons_subst (x : ivar) (t : trm L') (s : subst L')
   : forall z, to_hsubst (cons_subst x t s) z = cons_hsubst (inl x) t (to_hsubst s) z.
 Proof.
   intros [z | z]; unfold to_hsubst, cons_hsubst, nil_hsubst, cons_subst, nil_subst.
-  - destruct (eq_dec _ _) as [EQ | NE], (eqb _ _) as [ | ] eqn: H_OBS; done!.
+  - destruct (B.decide (_ = _)) as [EQ | NE], (eqb _ _) as [ | ] eqn: H_OBS; done!.
   - destruct (eqb (inr z) (inl x)) as [ | ] eqn: H_OBS; done!.
 Qed.
 
@@ -331,7 +331,7 @@ Lemma to_hsubst_one_subst (x : ivar) (t : trm L')
   : forall z, to_hsubst (one_subst x t) z = one_hsubst (inl x) t z.
 Proof.
   intros [z | z]; unfold to_hsubst, one_hsubst, cons_hsubst, nil_hsubst, one_subst, cons_subst, nil_subst.
-  - destruct (eq_dec z x) as [EQ | NE], (eqb (inl z) (inl x)) as [ | ] eqn: H_OBS; done!.
+  - destruct (B.decide (z = x)) as [EQ | NE], (eqb (inl z) (inl x)) as [ | ] eqn: H_OBS; done!.
   - destruct (eqb (inr z) (inl x)) as [ | ] eqn: H_OBS; done!.
 Qed.
 
@@ -543,7 +543,7 @@ Proof.
       { simpl. right. done. }
       { left. rewrite Nat.eqb_neq in OBS. eapply IH1. rewrite forallb_forall.
         intros x x_in. unfold "∘"%prg. rewrite negb_true_iff. unfold cons_hsubst.
-        unfold Prelude.eqb. destruct (Prelude.eq_dec x (inl y)) as [H_eq | H_ne].
+        unfold Prelude.eqb. destruct (B.decide (x = (inl y))) as [H_eq | H_ne].
         - destruct (is_free_in_trm z (Var_trm (hchi_frm sigma (All_frm y p1)))) as [ | ] eqn : EQ.
           + contradiction OBS. symmetry. subst x. rewrite <- fv_is_free_in_trm in EQ.
             simpl in EQ. done!.
@@ -555,11 +555,11 @@ Proof.
       { eapply IH1 in NOT_FREE. rewrite forallb_forall in NOT_FREE. rewrite forallb_forall.
         intros x x_in. rewrite negb_true_iff. rewrite L.in_remove_iff in x_in. destruct x_in as [x_in x_ne_y].
         apply NOT_FREE in x_in. rewrite negb_true_iff in x_in. unfold cons_hsubst in x_in.
-        unfold Prelude.eqb in *. destruct (Prelude.eq_dec x (inl y)) as [H_eq | H_ne]; try done.
+        unfold Prelude.eqb in *. destruct (B.decide (x = (inl y))) as [H_eq | H_ne]; try done.
       }
       { rewrite forallb_forall. intros x x_in. apply L.in_remove_iff in x_in. destruct x_in as [x_in x_ne_y].
         rewrite negb_true_iff. eapply hchi_frm_not_free. simpl. rewrite andb_true_iff.
-        split; [rewrite <- occurs_free_in_frm_iff in x_in | rewrite negb_true_iff; unfold Prelude.eqb; destruct (eq_dec x (inl y))]; try done.
+        split; [rewrite <- occurs_free_in_frm_iff in x_in | rewrite negb_true_iff; unfold Prelude.eqb; destruct (B.decide (x = (inl y)))]; try done.
       }
 Qed.
 
@@ -637,22 +637,22 @@ Proof.
     + eapply IH2. ii. eapply EQUIV. rewrite orb_true_iff. done!.
   - f_equal.
     + eapply hchi_frm_compat_equiv_hsubst. unfold equiv_hsubst_in_frm. simpl. done.
-    + eapply IH1. ii. unfold cons_hsubst. unfold eqb in *. destruct (eq_dec z (inl y)) as [H_yes | H_no].
+    + eapply IH1. ii. unfold cons_hsubst. unfold eqb in *. destruct (B.decide (z = (inl y))) as [H_yes | H_no].
       { f_equal. subst z. eapply hchi_frm_compat_equiv_hsubst. unfold equiv_hsubst_in_frm. simpl. done. }
-      { eapply EQUIV. rewrite andb_true_iff. split. done. eapply negb_true_iff. unfold Prelude.eqb. destruct (eq_dec z (inl y)); done. }
+      { eapply EQUIV. rewrite andb_true_iff. split. done. eapply negb_true_iff. unfold Prelude.eqb. destruct (B.decide (z = (inl y))); done. }
 Qed.
 
 Lemma distr_hcompose_one (sigma1 : hsubst) (sigma2 : hsubst) (x : hatom) (y : ivar) (z : hatom) (t : trm L') (p : frm L')
-  (FRESH : forallb (negb ∘ occurs_free_in_trm (inl y) ∘ sigma1)%prg (remove (eq_dec@{Set} (hasEqDec := @sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec)) x (accum_hatom_in_frm p)) = true)
+  (FRESH : forallb (negb ∘ occurs_free_in_trm (inl y) ∘ sigma1)%prg (remove ((@sum_hasEqDec ivar Henkin_constants nat_hasEqDec nat_hasEqDec)) x (accum_hatom_in_frm p)) = true)
   (FREE : occurs_free_in_frm z p = true)
   : cons_hsubst x t (hsubst_compose sigma1 sigma2) z = hsubst_compose (cons_hsubst x (Var_trm y) sigma1) (cons_hsubst (inl y) t sigma2) z.
 Proof.
-  unfold hsubst_compose, cons_hsubst. unfold Prelude.eqb. destruct (eq_dec z x) as [H_eq | H_ne].
-  - subst z. simpl. destruct (eq_dec (inl y) (inl y)); done.
+  unfold hsubst_compose, cons_hsubst. unfold Prelude.eqb. destruct (B.decide (z = x)) as [H_eq | H_ne].
+  - subst z. simpl. destruct (B.decide ((inl y) = (inl y))); done.
   - rewrite forallb_forall in FRESH. unfold "∘"%prg in FRESH.
     assert (NOT_FREE : occurs_free_in_trm (inl y) (sigma1 z) = false).
     { rewrite <- negb_true_iff. eapply FRESH. rewrite L.in_remove_iff. rewrite <- occurs_free_in_frm_iff. done!. }
-    eapply equiv_hsubst_in_trm_implies_hsubst_trm_same. intros z' FREE'. destruct (eq_dec z' (inl y)) as [EQ | NE]; try done!.
+    eapply equiv_hsubst_in_trm_implies_hsubst_trm_same. intros z' FREE'. destruct (B.decide (z' = (inl y))) as [EQ | NE]; try done!.
 Qed.
 
 #[local] Tactic Notation "done" :=
@@ -724,7 +724,7 @@ Proof.
     + intros [w [FREE FREE']]. rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite eqb_neq in FREE.
       destruct FREE as [FREE w_ne_y]. rewrite andb_true_iff. rewrite negb_true_iff. split.
       * eapply IH1. exists w. split; trivial. unfold cons_hsubst.
-        unfold Prelude.eqb. destruct (eq_dec w (inl y)) as [EQ | NE]; done.
+        unfold Prelude.eqb. destruct (B.decide (w = (inl y))) as [EQ | NE]; done.
       * rewrite eqb_neq. intros CONTRA.
         assert (claim1 : frm_is_fresh_in_hsubst (hchi_frm sigma (All_frm y p1)) sigma (All_frm y p1) = true).
         { exact (hchi_frm_is_fresh_in_hsubst (All_frm y p1) sigma). }
@@ -736,7 +736,7 @@ Proof.
     + rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq.
       set (w := hchi_frm sigma (All_frm y p1)). intros [FREE NE].
       apply IH1 in FREE. destruct FREE as [x [FREE FREE']].
-      unfold cons_hsubst in FREE'. unfold eqb in FREE'. destruct (eq_dec x (inl y)) as [x_eq_y | x_ne_y].
+      unfold cons_hsubst in FREE'. unfold eqb in FREE'. destruct (B.decide (x = (inl y))) as [x_eq_y | x_ne_y].
       * subst x. contradiction NE. apply occurs_free_in_trm_iff in FREE'. simpl in FREE'. done.
       * exists x. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. done.
 Qed.
@@ -817,7 +817,7 @@ Proof.
     + simpl. unfold occurs_free_in_frm_wrt. intros [x [FREE FREE']]. simpl in FREE.
       rewrite andb_true_iff in FREE. rewrite negb_true_iff in FREE. rewrite eqb_neq in FREE.
       destruct FREE as [FREE NE]. apply occurs_free_in_frm_wrt_iff in FREE. unfold free_in_frm_wrt in FREE.
-      destruct FREE as [w [FREE1 FREE2]]. unfold cons_hsubst in FREE2. unfold eqb in FREE2. destruct (eq_dec w (inl y)) as [w_eq_y | w_ne_y].
+      destruct FREE as [w [FREE1 FREE2]]. unfold cons_hsubst in FREE2. unfold eqb in FREE2. destruct (B.decide (w = (inl y))) as [w_eq_y | w_ne_y].
       * unfold occurs_free_in_trm in FREE2. rewrite eqb_eq in FREE2. subst. done.
       * exists w. simpl. rewrite andb_true_iff. rewrite negb_true_iff. rewrite eqb_neq. split; try tauto.
         eapply occurs_free_in_trm_wrt_iff. done.
@@ -831,7 +831,7 @@ Lemma hcompose_one_hsubst_frm (x1 : hatom) (t1 : trm L') (sigma : hsubst) (p : f
   : hsubst_frm sigma (hsubst_frm (one_hsubst x1 t1) p) = hsubst_frm (cons_hsubst x1 (hsubst_trm sigma t1) sigma) p.
 Proof.
   unfold one_hsubst. rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. ii.
-  unfold cons_hsubst, hsubst_compose, eqb. destruct (eq_dec z x1) as [z_eq_x1 | z_ne_x1]; try done.
+  unfold cons_hsubst, hsubst_compose, eqb. destruct (B.decide (z = x1)) as [z_eq_x1 | z_ne_x1]; try done.
   unfold nil_hsubst. destruct z; try done.
 Qed.
 
@@ -840,13 +840,13 @@ Lemma cons_hsubst_hsubst_frm (x1 : hatom) (t1 : trm L') (y : hatom) (p : frm L')
   : hsubst_frm (cons_hsubst x1 t1 sigma) p = hsubst_frm (cons_hsubst y t1 sigma) (hsubst_frm (one_hsubst x1 (nil_hsubst y)) p).
 Proof.
   unfold one_hsubst. rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same.
-  ii. unfold cons_hsubst, hsubst_compose, eqb. destruct (eq_dec z x1) as [z_eq_x1 | z_ne_x1].
+  ii. unfold cons_hsubst, hsubst_compose, eqb. destruct (B.decide (z = x1)) as [z_eq_x1 | z_ne_x1].
   - subst z. unfold nil_hsubst. destruct y as [x | c]; simpl.
-    + destruct (eq_dec (inl x) (inl x)); try done.
-    + destruct (eq_dec (inr c) (inr c)); try done.
+    + destruct (B.decide ((inl x) = (inl x))); try done.
+    + destruct (B.decide ((inr c) = (inr c))); try done.
   - destruct z as [x | c]; simpl.
-    + destruct (eq_dec (inl x) y) as [z_eq_y | z_ne_y]; try done.
-    + destruct (eq_dec (inr c) y) as [z_eq_y | z_ne_y]; try done.
+    + destruct (B.decide ((inl x) = y)) as [z_eq_y | z_ne_y]; try done.
+    + destruct (B.decide ((inr c) = y)) as [z_eq_y | z_ne_y]; try done.
 Qed.
 
 Lemma nil_hsubst_trm (t : trm L')
@@ -869,7 +869,7 @@ Lemma trivial_hsubst (x : hatom) (p : frm L')
   : hsubst_frm (one_hsubst x (nil_hsubst x)) p = hsubst_frm nil_hsubst p.
 Proof.
   eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. ii. unfold one_hsubst, cons_hsubst.
-  unfold eqb. destruct (eq_dec z x); try done.
+  unfold eqb. destruct (B.decide (z = x)); try done.
 Qed.
 
 Theorem subst_hsubst_compat_in_trm (s : subst L') (sigma : hsubst) (t : trm L')
@@ -917,10 +917,10 @@ Proof.
     }
     f_equal; trivial. rewrite claim. eapply IH1. intros [x | c]; simpl.
     + unfold cons_hsubst, cons_subst. destruct (eqb (inl x) (inl y)) as [ | ] eqn : H_OBS.
-      { rewrite eqb_eq in H_OBS. inv H_OBS. destruct (eq_dec y y); try done. }
-      { rewrite eqb_neq in H_OBS. destruct (eq_dec x y); try done. eapply SIM with (z := inl x). }
+      { rewrite eqb_eq in H_OBS. inv H_OBS. destruct (B.decide (y = y)); try done. }
+      { rewrite eqb_neq in H_OBS. destruct (B.decide (x = y)); try done. eapply SIM with (z := inl x). }
     + unfold cons_hsubst, cons_subst. unfold eqb.
-      destruct (eq_dec (inr c) (inl y)) as [EQ | NE].
+      destruct (B.decide ((inr c) = (inl y))) as [EQ | NE].
       { inv EQ. }
       { eapply SIM with (z := inr c). }
 Qed.
@@ -970,10 +970,10 @@ Proof.
   rewrite replace_constant_in_frm_compat_subst.
   - eapply equiv_subst_in_frm_implies_subst_frm_same. unfold "∘"%prg. ii.
     unfold replace_constant_in_trm, one_hsubst, one_subst, cons_hsubst, cons_subst.
-    destruct (eq_dec z x); try done.
+    destruct (B.decide (z = x)); try done.
   - intros z FREE. apply fv_is_free_in_trm in FREE. simpl in FREE. destruct FREE as [-> | []].
     unfold one_subst, nil_subst, cons_subst. unfold one_hsubst, cons_hsubst, nil_hsubst.
-    destruct (eq_dec z x); try done.
+    destruct (B.decide (z = x)); try done.
 Qed.
 
 End HSUBST.
@@ -1135,11 +1135,11 @@ Proof.
   - rewrite IH1. rewrite twilight_chi_frm. f_equal. eapply equiv_subst_in_frm_implies_subst_frm_same.
     intros u u_free. unfold twilight, cons_hsubst, cons_subst. simpl. obs_eqb (u mod 2) 0.
     + destruct (eqb _ _) as [ | ] eqn: H_OBS'; rewrite eqb_spec in H_OBS'.
-      * destruct (eq_dec _ _) as [EQ | NE]; trivial. contradiction NE. hinv H_OBS'. unfold id. transitivity (2 * (u / 2) + u mod 2). eapply Nat.div_mod. lia. lia.
-      * destruct (eq_dec _ _) as [EQ | NE]; trivial. contradiction H_OBS'. f_equal. unfold id. rewrite EQ. symmetry. eapply Nat.div_unique with (r := 0). lia. lia.
+      * destruct (B.decide (_ = _)) as [EQ | NE]; trivial. contradiction NE. hinv H_OBS'. unfold id. transitivity (2 * (u / 2) + u mod 2). eapply Nat.div_mod. lia. lia.
+      * destruct (B.decide (_ = _)) as [EQ | NE]; trivial. contradiction H_OBS'. f_equal. unfold id. rewrite EQ. symmetry. eapply Nat.div_unique with (r := 0). lia. lia.
     + destruct (eqb _ _) as [ | ] eqn: H_OBS'; rewrite eqb_spec in H_OBS'.
-      * destruct (eq_dec _ _) as [EQ | NE]; trivial. congruence.
-      * destruct (eq_dec _ _) as [EQ | NE]; trivial. contradiction H_OBS. rewrite EQ. symmetry. eapply Nat.mod_unique with (q := y). lia. lia.
+      * destruct (B.decide (_ = _)) as [EQ | NE]; trivial. congruence.
+      * destruct (B.decide (_ = _)) as [EQ | NE]; trivial. contradiction H_OBS. rewrite EQ. symmetry. eapply Nat.mod_unique with (q := y). lia. lia.
 Qed.
 
 Lemma untwilight_trm (t : trm L')
@@ -1173,15 +1173,15 @@ Proof.
   - simpl. econs; [eapply IH1 | eapply IH2]; intros c; specialize HENKIN_FREE with (c := c); ss!.
   - simpl. rewrite IH1. 2:{ intros c. exact (HENKIN_FREE c). } eapply alpha_All_frm with (z := 2 * y).
     + rewrite Nat.mul_comm. eapply alpha_equiv_eq_intro. do 2 rewrite <- subst_compose_frm_spec. eapply equiv_subst_in_frm_implies_subst_frm_same.
-      intros u u_free. unfold subst_compose, one_subst, cons_subst, nil_subst. rewrite subst_trm_unfold with (t := Var_trm _). destruct (eq_dec u y) as [EQ1 | NE1].
-      * destruct (eq_dec _ _) as [EQ2 | NE2]; try lia. rewrite subst_trm_unfold. destruct (eq_dec _ _); done.
-      * destruct (eq_dec _ _) as [EQ2 | NE2]; try lia. rewrite subst_trm_unfold. destruct (eq_dec _ _) as [EQ3 | NE3]; try done.
+      intros u u_free. unfold subst_compose, one_subst, cons_subst, nil_subst. rewrite subst_trm_unfold with (t := Var_trm _). destruct (B.decide (u = y)) as [EQ1 | NE1].
+      * destruct (B.decide (_ = _)) as [EQ2 | NE2]; try lia. rewrite subst_trm_unfold. destruct (B.decide (_ = _)); done.
+      * destruct (B.decide (_ = _)) as [EQ2 | NE2]; try lia. rewrite subst_trm_unfold. destruct (B.decide (_ = _)) as [EQ3 | NE3]; try done.
         exploit (@chi_frm_not_free L' (fun z : ivar => Var_trm (z * 2)) (All_frm y p1) u).
         { s!. split; trivial. }
         intros claim. rewrite <- EQ3 in claim. rewrite is_free_in_trm_unfold in claim. rewrite Nat.eqb_neq in claim. contradiction.
     + ss!.
-    + set (s := fun z : ivar => Var_trm (z * 2)). set (chi := (chi_frm s (All_frm y p1))). s!. destruct (eq_dec (2 * y) chi) as [EQ1 | NE1]; [right | left]; trivial.
-      eapply frm_is_fresh_in_subst_iff. unfold frm_is_fresh_in_subst. s!. intros u u_free. destruct (eq_dec u y) as [EQ2 | NE2]; s!; lia.
+    + set (s := fun z : ivar => Var_trm (z * 2)). set (chi := (chi_frm s (All_frm y p1))). s!. destruct (B.decide ((2 * y) = chi)) as [EQ1 | NE1]; [right | left]; trivial.
+      eapply frm_is_fresh_in_subst_iff. unfold frm_is_fresh_in_subst. s!. intros u u_free. destruct (B.decide (u = y)) as [EQ2 | NE2]; s!; lia.
 Qed.
 
 Lemma twilight_trm_spec (t : trm L')
@@ -1214,18 +1214,18 @@ Proof.
   - ss!.
   - simpl. rewrite IH1. eapply alpha_All_frm with (z := 2 * y).
     + rewrite Nat.mul_comm. rewrite subst_nil_frm with (s := one_subst (y * 2) (Var_trm (y * 2))).
-      2:{ ii. unfold one_subst, cons_subst, nil_subst. destruct (eq_dec x (y * 2)); done!. }
+      2:{ ii. unfold one_subst, cons_subst, nil_subst. destruct (B.decide (x = (y * 2))); done!. }
       erewrite subst_hsubst_compat_in_frm. 2: ii; reflexivity. symmetry. eapply alpha_equiv_eq_intro.
       rewrite <- hsubst_compose_frm_spec. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same. intros u u_free.
       unfold hsubst_compose, one_subst, cons_hsubst, cons_subst, nil_subst. destruct (eqb _ _) as [ | ] eqn: H_OBS1.
-      * rewrite eqb_eq in H_OBS1. rewrite hsubst_trm_unfold. subst u. simpl. destruct (eq_dec _ _) as [EQ1 | NE1]; done!.
+      * rewrite eqb_eq in H_OBS1. rewrite hsubst_trm_unfold. subst u. simpl. destruct (B.decide (_ = _)) as [EQ1 | NE1]; done!.
       * rewrite eqb_neq in H_OBS1. erewrite <- subst_hsubst_compat_in_trm. 2: ii; reflexivity.
-        eapply subst_nil_trm. intros x x_free. destruct (eq_dec _ _) as [EQ1 | NE1]; trivial.
+        eapply subst_nil_trm. intros x x_free. destruct (B.decide (_ = _)) as [EQ1 | NE1]; trivial.
         subst x. exploit (hchi_frm_not_free s (All_frm y p1) u).
         { simpl. rewrite andb_true_iff, negb_true_iff, eqb_neq. split; trivial. }
         intros claim. rewrite claim in x_free. discriminate.
     + ss!.
-    + s!. set (hchi := hchi_frm s (All_frm y p1)). destruct (eq_dec (2 * y) hchi) as [EQ1 | NE1]; [right | left]; trivial.
+    + s!. set (hchi := hchi_frm s (All_frm y p1)). destruct (B.decide ((2 * y) = hchi)) as [EQ1 | NE1]; [right | left]; trivial.
       eapply frm_is_fresh_in_hsubst_iff. unfold frm_is_fresh_in_hsubst. s!. intros u u_free. rewrite negb_true_iff.
       unfold cons_hsubst. destruct (eqb _ _) as [ | ] eqn: H_OBS.
       * ss!.
@@ -1240,11 +1240,11 @@ Proof.
   rewrite twilight_trm_spec. fold eta. do 2 rewrite <- hsubst_compose_frm_spec. eapply alpha_equiv_eq_intro. eapply equiv_hsubst_in_frm_implies_hsubst_frm_same.
   ii. unfold hsubst_compose, to_hsubst, one_hsubst, cons_hsubst, nil_subst. destruct z as [z | z]; simpl.
   - destruct (eqb _ _) as [ | ] eqn: H_OBS1; rewrite eqb_spec in H_OBS1.
-    + hinv H_OBS1. unfold one_subst, cons_subst, nil_subst. rewrite Nat.mul_comm. destruct (eq_dec _ _) as [EQ2 | NE2]; done.
-    + unfold one_subst, cons_subst, nil_subst. rewrite Nat.mul_comm. destruct (eq_dec _ _) as [EQ2 | NE2].
+    + hinv H_OBS1. unfold one_subst, cons_subst, nil_subst. rewrite Nat.mul_comm. destruct (B.decide (_ = _)) as [EQ2 | NE2]; done.
+    + unfold one_subst, cons_subst, nil_subst. rewrite Nat.mul_comm. destruct (B.decide (_ = _)) as [EQ2 | NE2].
       * assert (EQ : x = z) by lia. congruence.
       * simpl. rewrite Nat.mul_comm. reflexivity.
-  - unfold one_subst, cons_subst, nil_subst. destruct (eq_dec _ _) as [EQ2 | NE2]; trivial. lia.
+  - unfold one_subst, cons_subst, nil_subst. destruct (B.decide (_ = _)) as [EQ2 | NE2]; trivial. lia.
 Qed.
 
 End TWILIGHT.

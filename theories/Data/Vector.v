@@ -252,9 +252,9 @@ Fixpoint incrFin {m : nat} (n : nat) (i : Fin.t m) {struct n} : Fin.t (n + m) :=
 
 Lemma incrFin_spec {m : nat} (n : nat) (i : Fin.t m)
   : evalFin (incrFin n i) = n + evalFin i.
-Proof with eauto.
-  induction n as [ | n IH]; simpl...
-  rewrite evalFin_unfold. f_equal...
+Proof.
+  induction n as [ | n IH]; simpl; eauto.
+  rewrite evalFin_unfold. f_equal; eauto.
 Qed.
 
 #[global, program]
@@ -283,8 +283,8 @@ Inductive Similarity_Fin : forall n : nat, Similarity (Fin.t n) nat :=
 
 End Fin.
 
-Notation FZ := Fin.FZ.
-Notation FS := Fin.FS.
+Abbreviation FZ := Fin.FZ.
+Abbreviation FS := Fin.FS.
 
 #[global] Declare Scope vec_scope.
 
@@ -308,8 +308,8 @@ Notation " [ ] " := (@Vector.VNil _) : vec_scope.
 Notation " x :: xs " := (@Vector.VCons _ _ x xs) : vec_scope.
 Notation " [ x ] " := (@Vector.VCons _ _ x (@Vector.VNil _)) : vec_scope.
 
-Notation VNil := Vector.VNil.
-Notation VCons := Vector.VCons.
+Abbreviation VNil := Vector.VNil.
+Abbreviation VCons := Vector.VCons.
 
 Module V.
 
@@ -319,7 +319,7 @@ Section Accessories.
 
 Context {A : Type}.
 
-#[local] Notation vec := (Vector.t A).
+#[local] Abbreviation vec := (Vector.t A).
 
 Lemma case0 (phi : Vector.t A O -> Type)
   (phi_nil : phi (@VNil A))
@@ -485,8 +485,8 @@ Section INSTANCES.
 
 #[global, universes(polymorphic=yes)]
 Instance vector_hasEqDec@{u} {A : Type@{u}} {n : nat}
-  (A_hasEqDec : hasEqDec@{u} A)
-  : hasEqDec@{u} (Vector.t A n).
+  (A_hasEqDec : hasEqDec A)
+  : hasEqDec (Vector.t A n).
 Proof.
   red. induction n as [ | n IH]; intros lhs rhs.
   - left. revert lhs rhs. introVNil; introVNil; reflexivity.
@@ -503,13 +503,13 @@ Proof.
 Defined.
 
 #[universes(polymorphic=yes)]
-Definition vec@{u} (n : nat) (A : Type@{u}) : Type@{u} :=
+Definition vec@{u | } (n : nat) (A : Type@{u}) : Type@{u} :=
   Vector.t A n.
 
-#[local, universes(polymorphic=yes)]
-Instance vec_isMonad@{u} {n : nat} : isMonad@{u u} (vec@{u} n) :=
-  { bind {A : Type@{u}} {B : Type@{u}} (m : vec n A) (k : A -> vec n B) := diagonal (map k m)
-  ; pure {A : Type@{u}} (x : A) := replicate x
+#[local]
+Instance vec_isMonad {n : nat} : isMonad (vec n) :=
+  { bind {A : Type} {B : Type} (m : vec n A) (k : A -> vec n B) := diagonal (map k m)
+  ; pure {A : Type} (x : A) := replicate x
   }.
 
 Definition zipWith {n : nat} {A : Type} {B : Type} {C : Type} (f : A -> B -> C) (xs : Vector.t A n) (ys : Vector.t B n) : Vector.t C n :=
@@ -614,6 +614,8 @@ Inductive vec_heq (n : nat) (xs : Vector.t A n) : forall m : nat, Vector.t A m -
   | vec_ext_heq_refl
     : vec_heq n xs n xs.
 
+Scheme Rewriting for vec_heq.
+
 #[local] Notation " xs =~= xs' " := (vec_heq _ xs _ xs') : type_scope.
 
 Lemma len_eq_from_vec_heq (n : nat) (m : nat) (xs : Vector.t A n) (xs' : Vector.t A m)
@@ -636,7 +638,7 @@ Proof.
     | vec_ext_heq_refl _ _ => @eq_refl (@sigT nat (Vector.t A)) (@existT nat (Vector.t A) n xs)
     end
   ) as EQ.
-  unshelve eapply projT2_eq_fromEqDec in EQ; [exact nat_hasEqDec | exact EQ].
+  exact (@projT2_eq_fromEqDec nat (Vector.t A) nat_hasEqDec n xs xs' EQ).
 Defined.
 
 Lemma from_list_to_list (n : nat) (xs : Vector.t A n)
@@ -839,4 +841,4 @@ Ltac introVCons x' xs' :=
 
 Infix "!!" := V.nth.
 
-Notation nth_list := V.nth_list.
+Abbreviation nth_list := V.nth_list.
