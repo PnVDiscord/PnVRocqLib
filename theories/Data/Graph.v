@@ -477,127 +477,127 @@ Section DIGRAPH.
 
 Context {X : Type} {A : Type}.
 
-Inductive digraph_closure (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : Prop :=
-  | digraph_closure_seed
+Inductive propagate_closure (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : Prop :=
+  | propagate_closure_seed
     (IN : a ∈ seed x)
-    : digraph_closure seed deps a x
-  | digraph_closure_step y
+    : propagate_closure seed deps a x
+  | propagate_closure_step y
     (EDGE : y ∈ deps x)
-    (IN : digraph_closure seed deps a y)
-    : digraph_closure seed deps a x.
+    (IN : propagate_closure seed deps a y)
+    : propagate_closure seed deps a x.
 
-Inductive digraph_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : ensemble (list X) :=
-  | digraph_trace_seed
+Inductive propagate_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : ensemble (list X) :=
+  | propagate_trace_seed
     (IN : a ∈ seed x)
-    : [] \in digraph_trace seed deps a x
-  | digraph_trace_step y tr
+    : [] \in propagate_trace seed deps a x
+  | propagate_trace_step y tr
     (EDGE : y ∈ deps x)
-    (TRACE : digraph_trace seed deps a y tr)
-    : y :: tr \in digraph_trace seed deps a x.
+    (TRACE : propagate_trace seed deps a y tr)
+    : y :: tr \in propagate_trace seed deps a x.
 
-Theorem digraph_closure_iff_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
-  : digraph_closure seed deps a x <-> (exists tr, tr \in digraph_trace seed deps a x).
+Theorem propagate_closure_iff_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+  : propagate_closure seed deps a x <-> (exists tr, tr \in propagate_trace seed deps a x).
 Proof.
   split.
   - intros IN. induction IN as [x IN | x y EDGE IN IH].
-    + exists []. eapply digraph_trace_seed. exact IN.
-    + destruct IH as [tr TRACE]. exists (y :: tr). eapply digraph_trace_step; eauto.
+    + exists []. eapply propagate_trace_seed. exact IN.
+    + destruct IH as [tr TRACE]. exists (y :: tr). eapply propagate_trace_step; eauto.
   - intros [tr TRACE]. induction TRACE as [x IN | x y tr EDGE TRACE IH].
-    + eapply digraph_closure_seed; eauto.
-    + eapply digraph_closure_step; eauto.
+    + eapply propagate_closure_seed; eauto.
+    + eapply propagate_closure_step; eauto.
 Qed.
 
-Lemma digraph_trace_in_nodes (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+Lemma propagate_trace_in_nodes (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
-  (TRACE : tr \in digraph_trace seed deps a x)
+  (TRACE : tr \in propagate_trace seed deps a x)
   : Forall (fun y => y ∈ nodes) tr.
 Proof.
   induction TRACE as [x IN | x y tr EDGE TRACE IH]; [econs 1 | econs 2]; eauto.
 Qed.
 
-Definition digraph_graph (deps : X -> fin_ensemble X) : GRAPH.t :=
+Definition propagate_graph (deps : X -> fin_ensemble X) : GRAPH.t :=
   {|
     GRAPH.vertices := X;
     GRAPH.edges := fun '(x, x') => x' ∈ deps x;
   |}.
 
-Lemma digraph_trace_seed_at_last (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
-  (TRACE : tr \in digraph_trace seed deps a x)
+Lemma propagate_trace_seed_at_last (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+  (TRACE : tr \in propagate_trace seed deps a x)
   : a ∈ seed (last tr x).
 Proof.
   induction TRACE as [x IN | x y tr EDGE TRACE IH]; ss!.
 Qed.
 
-Lemma digraph_trace_walk (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
-  (TRACE : tr \in digraph_trace seed deps a x)
-  : x ~~~[ tr ]~~>*( digraph_graph deps ) last tr x.
+Lemma propagate_trace_walk (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+  (TRACE : tr \in propagate_trace seed deps a x)
+  : x ~~~[ tr ]~~>*( propagate_graph deps ) last tr x.
 Proof.
   induction TRACE as [x IN | x y tr EDGE TRACE IH]; ss!.
 Qed.
 
-Lemma digraph_walk_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (x' : X) (tr : list X)
-  (WALK : x ~~~[ tr ]~~>*( digraph_graph deps ) x')
+Lemma propagate_walk_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (x' : X) (tr : list X)
+  (WALK : x ~~~[ tr ]~~>*( propagate_graph deps ) x')
   (IN : a ∈ seed x')
-  : tr \in digraph_trace seed deps a x.
+  : tr \in propagate_trace seed deps a x.
 Proof.
   induction WALK as [ | v0 v1 w EDGE WALK IH]; now constructor.
 Qed.
 
-Lemma digraph_trace_simple `{X_hasEqDec : hasEqDec X} (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
-  (TRACE : tr \in digraph_trace seed deps a x)
-  : exists simple, digraph_trace seed deps a x simple /\ NoDup simple.
+Lemma propagate_trace_simple `{X_hasEqDec : hasEqDec X} (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+  (TRACE : tr \in propagate_trace seed deps a x)
+  : exists simple, propagate_trace seed deps a x simple /\ NoDup simple.
 Proof.
-  pose proof (digraph_trace_walk seed deps x a tr TRACE) as WALK.
-  pose proof (digraph_trace_seed_at_last seed deps x a tr TRACE) as SEED.
-  assert (exists simple : list GRAPH.vertices, x ---[ simple ]-->*( digraph_graph deps ) last tr x) as [simple PATH].
+  pose proof (propagate_trace_walk seed deps x a tr TRACE) as WALK.
+  pose proof (propagate_trace_seed_at_last seed deps x a tr TRACE) as SEED.
+  assert (exists simple : list GRAPH.vertices, x ---[ simple ]-->*( propagate_graph deps ) last tr x) as [simple PATH].
   { eapply walk_finds_path with (w := tr); auto. intros v vs.
     now pose proof (@L.in_dec X X_hasEqDec v vs) as [YES | NO]; [left | right].
   }
   rewrite path_iff_no_dup_walk in PATH. destruct PATH as [WALK' NO_DUP].
-  obtain ? by (digraph_walk_trace seed deps _ _ _ simple). ss!.
+  obtain ? by (propagate_walk_trace seed deps _ _ _ simple). ss!.
 Qed.
 
-Lemma digraph_trace_simple_bounded `{X_hasEqDec : hasEqDec X} (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+Lemma propagate_trace_simple_bounded `{X_hasEqDec : hasEqDec X} (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
-  (TRACE : tr \in digraph_trace seed deps a x)
-  : exists simple, simple \in digraph_trace seed deps a x /\ length simple <= length nodes.
+  (TRACE : tr \in propagate_trace seed deps a x)
+  : exists simple, simple \in propagate_trace seed deps a x /\ length simple <= length nodes.
 Proof.
-  pose proof (digraph_trace_simple seed deps x a tr TRACE) as (simple & TRACE' & NO_DUP).
-  pose proof (digraph_trace_in_nodes nodes seed deps x a simple deps_CLOSED TRACE') as IN_NODES.
+  pose proof (propagate_trace_simple seed deps x a tr TRACE) as (simple & TRACE' & NO_DUP).
+  pose proof (propagate_trace_in_nodes nodes seed deps x a simple deps_CLOSED TRACE') as IN_NODES.
   exists simple. split; trivial. eapply L.NoDup_incl_length; [exact NO_DUP | intros y IN].
   rewrite Forall_forall in IN_NODES. now eapply IN_NODES.
 Qed.
 
-Definition digraph_equation (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> fin_ensemble A) : Prop :=
+Definition propagate_equation (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> fin_ensemble A) : Prop :=
   forall x, forall a, a ∈ value x <-> ⟪ UNFOLD : a ∈ seed x \/ (exists y, y ∈ deps x /\ a ∈ value y) ⟫.
 
 #[local] Open Scope function_scope.
 
-Definition digraph_fixedpoint (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value' : X -> ensemble A) : Prop :=
+Definition propagate_fixedpoint (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value' : X -> ensemble A) : Prop :=
   forall x, forall a, a \in value' x <-> ⟪ STEP : a ∈ seed x \/ (exists y, y ∈ deps x /\ a \in value' y) ⟫.
 
-Theorem digraph_closure_fixedpoint (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X)
-  : digraph_fixedpoint seed deps (fun x => { a : A | digraph_closure seed deps a x }).
+Theorem propagate_closure_fixedpoint (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X)
+  : propagate_fixedpoint seed deps (fun x => { a : A | propagate_closure seed deps a x }).
 Proof.
   intros x a. unfold E.In; unnw. split.
   - intros CLOSURE. destruct CLOSURE as [SEED_IN | y EDGE CLOSURE].
     + now left.
     + now right; exists y.
   - intros [SEED_IN | (y & EDGE & CLOSURE)].
-    + now eapply digraph_closure_seed.
-    + now eapply digraph_closure_step with (y := y).
+    + now eapply propagate_closure_seed.
+    + now eapply propagate_closure_step with (y := y).
 Qed.
 
-Theorem digraph_closure_least_fixedpoint (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> ensemble A)
-  (FIXPOINT : digraph_fixedpoint seed deps value)
-  : forall x, { a : A | digraph_closure seed deps a x } \subseteq value x.
+Theorem propagate_closure_least_fixedpoint (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> ensemble A)
+  (FIXPOINT : propagate_fixedpoint seed deps value)
+  : forall x, { a : A | propagate_closure seed deps a x } \subseteq value x.
 Proof.
   intros x a CLOSURE; induction CLOSURE as [x SEED_IN | x y EDGE CLOSURE IH]; ss!.
 Qed.
 
-Theorem digraph_closure_least (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> fin_ensemble A) (x : X) (a : A)
-  (EQUATION : digraph_equation seed deps value)
-  (IN : digraph_closure seed deps a x)
+Theorem propagate_closure_least (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> fin_ensemble A) (x : X) (a : A)
+  (EQUATION : propagate_equation seed deps value)
+  (IN : propagate_closure seed deps a x)
   : a ∈ value x.
 Proof.
   induction IN as [x SEED_IN | x y EDGE CLOSURE IH].
@@ -607,98 +607,98 @@ Qed.
 
 Context `{EQ_DEC : hasEqDec A}.
 
-Fixpoint digraph_value (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) : fin_ensemble A :=
+Fixpoint propagate_value (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) : fin_ensemble A :=
   match fuel with
   | O => normalize (seed x)
-  | S fuel' => normalize (union (seed x) (flat_map (digraph_value fuel' seed deps) (deps x)))
+  | S fuel' => normalize (union (seed x) (flat_map (propagate_value fuel' seed deps) (deps x)))
   end.
 
-Lemma digraph_value_seed (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Lemma propagate_value_seed (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
   (IN : a ∈ seed x)
-  : a ∈ digraph_value fuel seed deps x.
+  : a ∈ propagate_value fuel seed deps x.
 Proof.
   destruct fuel as [ | fuel]; ss!.
 Qed.
 
-Lemma digraph_value_propagated (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (y : X) (a : A)
+Lemma propagate_value_propagated (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (y : X) (a : A)
   (EDGE : y ∈ deps x)
-  (IN : a ∈ digraph_value fuel seed deps y)
-  : a ∈ digraph_value (S fuel) seed deps x.
+  (IN : a ∈ propagate_value fuel seed deps y)
+  : a ∈ propagate_value (S fuel) seed deps x.
 Proof.
   ss!.
 Qed.
 
-Theorem digraph_value_elim (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
-  (IN : a ∈ digraph_value fuel seed deps x)
-  : digraph_closure seed deps a x.
+Theorem propagate_value_elim (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+  (IN : a ∈ propagate_value fuel seed deps x)
+  : propagate_closure seed deps a x.
 Proof.
   revert x a IN. induction fuel as [ | fuel IH]; intros x a IN; simpl in IN.
-  - eapply digraph_closure_seed. ss!.
+  - eapply propagate_closure_seed. ss!.
   - ss!.
-    + now eapply digraph_closure_seed.
-    + eapply digraph_closure_step; ss!.
+    + now eapply propagate_closure_seed.
+    + eapply propagate_closure_step; ss!.
 Qed.
 
-Lemma digraph_value_monotone_step (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
-  (IN : a ∈ digraph_value fuel seed deps x)
-  : a ∈ digraph_value (S fuel) seed deps x.
+Lemma propagate_value_monotone_step (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+  (IN : a ∈ propagate_value fuel seed deps x)
+  : a ∈ propagate_value (S fuel) seed deps x.
 Proof.
   revert x a IN; induction fuel as [ | fuel IH]; intros x a IN; simpl in IN |- *; ss!.
 Qed.
 
-Lemma digraph_value_monotone (fuel1 : nat) (fuel2 : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Lemma propagate_value_monotone (fuel1 : nat) (fuel2 : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
   (LE : fuel1 <= fuel2)
-  (IN : a ∈ digraph_value fuel1 seed deps x)
-  : a ∈ digraph_value fuel2 seed deps x.
+  (IN : a ∈ propagate_value fuel1 seed deps x)
+  : a ∈ propagate_value fuel2 seed deps x.
 Proof.
   revert fuel1 x a LE IN; induction fuel2 as [ | fuel2 IH]; intros fuel1 x a LE IN.
   - assert (fuel1 = O) as EQ by lia.
     done!.
   - pose proof (Nat.eq_dec fuel1 (S fuel2)) as [EQ | NE].
     + done!.
-    + eapply digraph_value_monotone_step. eapply IH with (fuel1 := fuel1) (x := x) (a := a); done!.
+    + eapply propagate_value_monotone_step. eapply IH with (fuel1 := fuel1) (x := x) (a := a); done!.
 Qed.
 
-Theorem digraph_trace_value (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X) (fuel : nat)
-  (TRACE : tr \in digraph_trace seed deps a x)
+Theorem propagate_trace_value (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X) (fuel : nat)
+  (TRACE : tr \in propagate_trace seed deps a x)
   (LE : length tr <= fuel)
-  : a ∈ digraph_value fuel seed deps x.
+  : a ∈ propagate_value fuel seed deps x.
 Proof.
   revert fuel LE; induction TRACE as [x IN | x y tr EDGE TRACE IH]; intros fuel LE.
-  - now eapply digraph_value_seed.
-  - destruct fuel as [ | fuel]; simpl in LE; [lia | eapply digraph_value_propagated]; done!.
+  - now eapply propagate_value_seed.
+  - destruct fuel as [ | fuel]; simpl in LE; [lia | eapply propagate_value_propagated]; done!.
 Qed.
 
-Theorem digraph_closure_intro (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
-  (IN : digraph_closure seed deps a x)
-  : exists fuel, a ∈ digraph_value fuel seed deps x.
+Theorem propagate_closure_intro (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+  (IN : propagate_closure seed deps a x)
+  : exists fuel, a ∈ propagate_value fuel seed deps x.
 Proof.
   induction IN as [x SEED_IN | x y EDGE CLOSURE IH].
-  - exists O. eapply digraph_value_seed. exact SEED_IN.
-  - destruct IH as [fuel VALUE_IN]. exists (S fuel). eapply digraph_value_propagated; eauto.
+  - exists O. eapply propagate_value_seed. exact SEED_IN.
+  - destruct IH as [fuel VALUE_IN]. exists (S fuel). eapply propagate_value_propagated; eauto.
 Qed.
 
 Context `{X_hasEqDec : hasEqDec X}.
 
-Theorem digraph_closure_intro_bounded (fuel : nat) (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Theorem propagate_closure_intro_bounded (fuel : nat) (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
   (fuel_ENOUGH : length nodes <= fuel)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
-  (IN : digraph_closure seed deps a x)
-  : a ∈ digraph_value fuel seed deps x.
+  (IN : propagate_closure seed deps a x)
+  : a ∈ propagate_value fuel seed deps x.
 Proof.
-  rewrite digraph_closure_iff_trace in IN. destruct IN as [tr TRACE].
-  find (simple & TRACE' & LENGTH) by (digraph_trace_simple_bounded nodes seed deps).
-  eapply digraph_trace_value with (tr := simple); ss!.
+  rewrite propagate_closure_iff_trace in IN. destruct IN as [tr TRACE].
+  find (simple & TRACE' & LENGTH) by (propagate_trace_simple_bounded nodes seed deps).
+  eapply propagate_trace_value with (tr := simple); ss!.
 Qed.
 
-Theorem digraph_value_iff_closure_bounded (fuel : nat) (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Theorem propagate_value_iff_closure_bounded (fuel : nat) (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
   (fuel_ENOUGH : length nodes <= fuel)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
-  : a ∈ digraph_value fuel seed deps x <-> digraph_closure seed deps a x.
+  : a ∈ propagate_value fuel seed deps x <-> propagate_closure seed deps a x.
 Proof.
   split.
-  - exact (digraph_value_elim fuel seed deps x a).
-  - intros IN. eapply digraph_closure_intro_bounded; eauto.
+  - exact (propagate_value_elim fuel seed deps x a).
+  - intros IN. eapply propagate_closure_intro_bounded; eauto.
 Qed.
 
 End DIGRAPH.

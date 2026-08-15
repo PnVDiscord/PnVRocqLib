@@ -1357,7 +1357,7 @@ Proof.
   unfold chi_frm, subst_mapping.
   rewrite frm_mapping_fvs_eq.
   f_equal. f_equal. eapply maxs_ext.
-  intro x. unfold compose. s!. split; i; des.
+  intros x. unfold compose. s!. split; i; des.
   - exists x0. now rewrite trm_mapping_last_ivar in H.
   - exists x0. now rewrite trm_mapping_last_ivar.
 Qed.
@@ -1381,7 +1381,7 @@ Lemma frm_mapping_subst_frm (s : subst L1) (p : frm L1)
   : frm_mapping h (subst_frm s p) = subst_frm (subst_mapping s) (frm_mapping h p).
 Proof.
   revert s.
-  frm_ind p; intro s; simpl.
+  frm_ind p; intros s; simpl.
   - now rewrite trms_mapping_subst_trms.
   - now rewrite trm_mapping_subst_trm, trm_mapping_subst_trm.
   - now rewrite IH1.
@@ -1588,12 +1588,12 @@ Qed.
 Lemma HC_occurs_in_trm_map (c : K1) (t : trm L1) : HC_occurs_in_trm c t = true -> HC_occurs_in_trm (h c) (trm_mapping h t) = true
 with HC_occurs_in_trms_map (c : K1) (n : nat) (ts : trms L1 n) : HC_occurs_in_trms c ts = true -> HC_occurs_in_trms (h c) (trms_mapping h ts) = true.
 Proof.
-  - destruct t as [x | f ts | [cc | c']]; simpl; intro H.
+  - destruct t as [x | f ts | [cc | c']]; simpl; intros H.
     + exact H.
     + exact (HC_occurs_in_trms_map c _ ts H).
     + exact H.
     + s!. congruence.
-  - destruct ts as [ |  n t ts]; simpl; intro H.
+  - destruct ts as [ |  n t ts]; simpl; intros H.
     + exact H.
     + s!. destruct H as [H | H].
       * left. exact (HC_occurs_in_trm_map c t H).
@@ -1603,12 +1603,12 @@ Qed.
 Lemma HC_occurs_in_trm_map_inv (c2 : K2) (t : trm L1) : HC_occurs_in_trm c2 (trm_mapping h t) = true -> (exists c1, HC_occurs_in_trm c1 t = true /\ h c1 = c2)
 with HC_occurs_in_trms_map_inv (c2 : K2) (n : nat) (ts : trms L1 n) : HC_occurs_in_trms c2 (trms_mapping h ts) = true -> (exists c1, HC_occurs_in_trms c1 ts = true /\ h c1 = c2).
 Proof.
-  - destruct t as [x | f ts | [cc | c1]]; simpl; intro H.
+  - destruct t as [x | f ts | [cc | c1]]; simpl; intros H.
     + inv H.
     + exact (HC_occurs_in_trms_map_inv c2 _ ts H).
     + inv H.
     + clear HC_occurs_in_trm_map_inv. s!. exists c1. split; ss!.
-  - destruct ts as [| n t ts]; simpl; intro H.
+  - destruct ts as [| n t ts]; simpl; intros H.
     + inv H.
     + s!. destruct H as [H | H].
       * pose proof (HC_occurs_in_trm_map_inv c2 t H) as [c1 [H1 H2]].
@@ -1619,7 +1619,7 @@ Qed.
 
 Lemma HC_occurs_in_frm_map (c : K1) (p : frm L1) : HC_occurs_in_frm c p = true -> HC_occurs_in_frm (h c) (frm_mapping h p) = true.
 Proof.
-  frm_ind p; simpl; intro H.
+  frm_ind p; simpl; intros H.
   - exact (HC_occurs_in_trms_map c _ ts H).
   - rewrite orb_true_iff in H |- *.
     destruct H as [H | H].
@@ -1635,7 +1635,7 @@ Qed.
 
 Lemma HC_occurs_in_frm_map_inv (c2 : K2) (p : frm L1) : HC_occurs_in_frm c2 (frm_mapping h p) = true -> (exists c1, HC_occurs_in_frm c1 p = true /\ h c1 = c2).
 Proof.
-  frm_ind p; simpl; intro H.
+  frm_ind p; simpl; intros H.
   - exact (HC_occurs_in_trms_map_inv c2 _ ts H).
   - rewrite orb_true_iff in H.
     destruct H as [H | H].
@@ -1665,9 +1665,7 @@ Lemma hchi_frm_graph_eq (sigma1 : hatom1 -> trm L1) (sigma2 : hatom2 -> trm L2) 
   (SIG : forall z1, forall z2, hatom_similarity z1 z2 -> trm_mapping h (sigma1 z1) = sigma2 z2)
   : hchi_frm sigma1 p = hchi_frm sigma2 (frm_mapping h p).
 Proof.
-  unfold hchi_frm. f_equal. f_equal.
-  eapply maxs_ext. intro n. unfold "∘"%prg.
-  split; intro H.
+  unfold hchi_frm. f_equal. f_equal. eapply maxs_ext. intros n. unfold "∘"%prg. split; intros H.
   - rewrite in_map_iff in H.
     destruct H as [z2 [Hz2 IN2]].
     destruct z2 as [x | c2]; s!.
@@ -1753,7 +1751,7 @@ Proof.
       subst x.
       destruct (B.decide (inl y = inl y)); [reflexivity | congruence].
     + assert (NE2 : ~ z2 = inl y).
-      { intro EZ. destruct z1 as [x1 | c1], z2 as [x2 | c2]; simpl in ZSIM; try contradiction; congruence. }
+      { intros EZ. destruct z1 as [x1 | c1], z2 as [x2 | c2]; simpl in ZSIM; try contradiction; congruence. }
       destruct (B.decide (z2 = inl y)) as [EZ1 | _]; [contradiction|].
       exact (SIG z1 z2 ZSIM).
 Qed.
@@ -2130,13 +2128,13 @@ with HC_occurs_in_subst_trms_inv (n : nat) (ts : trms L' n) :
   (hc = hc' \/ HC_occurs_in_trms hc ts = true).
 Proof.
   - destruct t as [x | f ts | c]; simpl; intros s hc hc' HS.
-    + rewrite subst_trm_unfold. intro H.
+    + rewrite subst_trm_unfold. intros H.
       left. eapply HS. exact H.
-    + rewrite subst_trm_unfold. intro H.
+    + rewrite subst_trm_unfold. intros H.
       pose proof (HC_occurs_in_subst_trms_inv _ ts s hc hc' HS H) as [-> | Hts].
       * now left.
       * right. exact Hts.
-    + intro H. right. exact H.
+    + intros H. right. exact H.
   - intros s hc hc' HS. destruct ts as [ | n t ts]; simpl.
     + rewrite subst_trms_unfold. s!. congruence.
     + rewrite subst_trms_unfold. s!. intros [Ht | Hts].
@@ -2148,36 +2146,32 @@ Proof.
         { right. right. exact Hts'. }
 Qed.
 
-Fixpoint HC_occurs_in_subst_frm_inv (p : frm L') :
-  forall s, forall hc, forall hc',
-  (forall z, HC_occurs_in_trm hc (s z) = true -> hc = hc') ->
-  (HC_occurs_in_frm hc (subst_frm s p) = true) ->
-  (hc = hc' \/ HC_occurs_in_frm hc p = true).
+Fixpoint HC_occurs_in_subst_frm_inv (p : frm L') : forall s, forall hc, forall hc', (forall z, HC_occurs_in_trm hc (s z) = true -> hc = hc') -> (HC_occurs_in_frm hc (subst_frm s p) = true) -> (hc = hc' \/ HC_occurs_in_frm hc p = true).
 Proof.
   destruct p as [R ts | t1 t2 | p1 | p1 p2 | y p1]; simpl; intros s hc hc' HS.
-  - intro H.
+  - intros H.
     pose proof (HC_occurs_in_subst_trms_inv _ ts s hc hc' HS H) as [? | Hts].
     + now left.
     + right. exact Hts.
-  - intro H. s!. destruct H as [Ht1 | Ht2].
+  - intros H. s!. destruct H as [Ht1 | Ht2].
     + pose proof (HC_occurs_in_subst_trm_inv t1 s hc hc' HS Ht1) as [? | Ht1'].
       * now left.
       * right. left. exact Ht1'.
     + pose proof (HC_occurs_in_subst_trm_inv t2 s hc hc' HS Ht2) as [? | Ht2'].
       * now left.
       * right. right. exact Ht2'.
-  - intro H. s!.
+  - intros H. s!.
     pose proof (HC_occurs_in_subst_frm_inv p1 s hc hc' HS H) as [? | Hp1].
     + now left.
     + right. exact Hp1.
-  - intro H. s!. destruct H as [Hp1 | Hp2].
+  - intros H. s!. destruct H as [Hp1 | Hp2].
     + pose proof (HC_occurs_in_subst_frm_inv p1 s hc hc' HS Hp1) as [? | Hp1'].
       * now left.
       * right. left. exact Hp1'.
     + pose proof (HC_occurs_in_subst_frm_inv p2 s hc hc' HS Hp2) as [? | Hp2'].
       * now left.
       * right. right. exact Hp2'.
-  - set (chi := chi_frm s (All_frm y p1)). intro H.
+  - set (chi := chi_frm s (All_frm y p1)). intros H.
     assert (HS' : forall z, HC_occurs_in_trm hc (cons_subst y (Var_trm chi) s z) = true -> hc = hc').
     { s!. intros z Hz. destruct (B.decide (_ = _)) as [EQ | NE].
       - s!. congruence.
@@ -2204,7 +2198,7 @@ Lemma occurs_in_other_HenkinAxiom_inv hc hc' x phi
   : HC_occurs_in_frm hc phi = true.
 Proof.
   revert H_occurs. unfold HenkinAxiom. rewrite Hdec. simpl.
-  intro H. s!. destruct H as [Hsub | Hphi].
+  intros H. s!. destruct H as [Hsub | Hphi].
   - pose proof (HC_occurs_in_subst_frm_inv phi (one_subst x (@Con_trm L' (inr hc'))) hc hc' (fun z => fun Hz => one_subst_only_introduces_hc' hc hc' x z Hz) Hsub) as [Heq | Hphi'].
     + contradiction.
     + exact Hphi'.
@@ -2219,7 +2213,7 @@ Lemma same_stage_other_axiom_hc_free hc hc' n
 Proof.
   destruct (hc_decode hc') as [x phi] eqn: Hdec.
   rewrite <- not_true_iff_false.
-  intro Hocc.
+  intros Hocc.
   pose proof (occurs_in_other_HenkinAxiom_inv hc hc' x phi Hdec Hneq Hocc) as Hphi.
   pose proof (hc_stage_well_founded hc' x phi Hdec hc Hphi) as Hlt.
   lia.
@@ -2353,9 +2347,9 @@ Lemma earlier_stage_axiom_HC_free n hc hc'
 Proof.
   destruct (hc_decode hc') as [x phi] eqn:Hdec.
   rewrite <- not_true_iff_false.
-  intro Hocc.
+  intros Hocc.
   assert (Hneq : hc ≠ hc').
-  { intro Heq. subst hc'. lia. }
+  { intros Heq. subst hc'. lia. }
   pose proof (occurs_in_other_HenkinAxiom_inv hc hc' x phi Hdec Hneq Hocc) as Hphi.
   pose proof (hc_stage_well_founded hc' x phi Hdec hc Hphi) as Hlt'.
   lia.
@@ -2422,7 +2416,7 @@ Proof.
         { subst u. rewrite in_accum_hatom_in_frm_iff_HC_occurs_in_frm in u_free. pose proof (BG_free q (INCL _ INq)) as Hfree. congruence. }
         { destruct u as [u | u].
           - rewrite in_accum_hatom_in_frm_iff_is_free_in_frm in u_free. rewrite is_free_in_trm_unfold. erewrite Nat.eqb_neq.
-            intro Hy. subst u. rewrite <- not_false_iff_true in u_free.
+            intros Hy. subst u. rewrite <- not_false_iff_true in u_free.
             eapply u_free. eapply last_ivar_frm_gt. red. red.
             transitivity (1 + maxs (map last_ivar_frm ps)).
             + enough (WTS : last_ivar_frm q <= maxs (map last_ivar_frm ps)) by lia.
@@ -2446,7 +2440,7 @@ Proof.
             destruct (eqb _ _) as [ | ] eqn:Hobs; rewrite eqb_spec in Hobs.
             + rewrite Hobs in u_free. rewrite occurs_free_in_frm_iff in u_free. rewrite in_accum_hatom_in_frm_iff_HC_occurs_in_frm in u_free.
               assert (Hfresh : HC_occurs_in_frm hc phi = false).
-              { rewrite <- not_true_iff_false. intro Hocc. pose proof (hc_stage_well_founded hc x phi Hdec hc Hocc) as Hlt. lia. }
+              { rewrite <- not_true_iff_false. intros Hocc. pose proof (hc_stage_well_founded hc x phi Hdec hc Hocc) as Hlt. lia. }
               congruence.
             + reflexivity.
         }
@@ -2568,7 +2562,7 @@ Qed.
 Lemma AddHenkin_stage0_equiconsistent (X : ensemble (frm L))
   : inconsistent (E.image embed_frm X) <-> inconsistent (AddHenkin_stage X O).
 Proof.
-  split; intro H.
+  split; intros H.
   - rewrite inconsistent_iff in *. eapply extend_proves; eauto.
     intros A HA. right. exact HA.
   - rewrite inconsistent_iff in *. eapply extend_proves; eauto.
@@ -2590,13 +2584,9 @@ Qed.
 Lemma AddHenkin_stage_all_equiconsistent (X : ensemble (frm L)) (n : nat)
   : inconsistent (E.image embed_frm X) <-> inconsistent (AddHenkin_stage X n).
 Proof.
-  induction n as [|n IH].
+  induction n as [ | n IH].
   - eapply AddHenkin_stage0_equiconsistent.
-  - destruct IH as [IH1 IH2].
-    destruct (AddHenkin_stage_equiconsistent X n) as [H1 H2].
-    split; intro H.
-    + eapply H1. eapply IH1. exact H.
-    + eapply IH2. eapply H2. exact H.
+  - pose proof (AddHenkin_stage_equiconsistent X n). tauto.
 Qed.
 
 Inductive HenkinAxiomSet : ensemble (frm L') :=
@@ -2613,8 +2603,7 @@ Proof.
     destruct (IH INCL_ps) as [n IHn].
     pose proof (INCL p (or_introl eq_refl)) as Hp.
     destruct Hp as [Hp | Hp].
-    + inv Hp. exists (Nat.max n (hc_stage hc + 1)).
-      intros q Hq. s!. destruct Hq as [<- | Hq].
+    + inv Hp. exists (Nat.max n (hc_stage hc + 1)). intros q Hq. s!. destruct Hq as [<- | Hq].
       * left. exists hc. split; [lia | reflexivity].
       * eapply AddHenkin_stage_monotone with (n := n); [lia | eapply IHn; eauto].
     + exists n. intros q Hq. destruct Hq as [-> | Hq].
@@ -2632,8 +2621,7 @@ Proof.
     destruct H as [ps [INCL PF]].
     destruct (collect_AddHenkin_stage X ps INCL) as [n Hn].
     assert (Hstage : inconsistent (AddHenkin_stage X n)).
-    { rewrite inconsistent_iff.
-      exists ps. split.
+    { rewrite inconsistent_iff. exists ps. split.
       - intros p Hp. eapply Hn. exact Hp.
       - exact PF.
     }

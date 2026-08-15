@@ -301,7 +301,7 @@ Qed.
 Variant WellParen (s : string) : Prop :=
   | WellParen_intro
     (count_L_eq_count_R : count L s = count R s)
-    (PREFIX : forall s_prefix, forall H_prefix : s_prefix \prefix s, count L s_prefix >= count R s_prefix).
+    (PREFIX : forall s_prefix : string, forall H_prefix : s_prefix \prefix s, count L s_prefix >= count R s_prefix).
 
 Variant WellParen' (s : string) : Prop :=
   | WellParen'_intro
@@ -319,18 +319,16 @@ Proof.
     { congruence. }
     { exfalso; lia. }
     induction suffix as [ | [ | ] suffix _] using rev_ind; s!.
-    { exfalso. lia. }
-    { enough (R = L) by congruence.
+    + exfalso. lia.
+    + enough (R = L) by congruence.
       assert (H_view : R = last (L :: s ++ [R]) R).
       { rewrite L.last_cons. rewrite L.last_last; eauto. }
       assert (H_view' : L = last (L :: (prefix ++ suffix) ++ [L]) R).
       { rewrite L.last_cons. rewrite L.last_last; eauto. }
       congruence.
-    }
-    { apply L.app_cancel_l with (prefix := [L]) in H.
+    + apply L.app_cancel_l with (prefix := [L]) in H.
       apply L.app_cancel_r with (suffix := [R]) in H.
       exploit (PREFIX prefix); ss!.
-    }
   - split; eauto. intros ? H_prefix; inversion H_prefix.
     rename s_prefix into s1, s_suffix into s2. subst s.
     enough (count L ([L] ++ s1) > count R ([L] ++ s1)) by ss!.
@@ -353,18 +351,16 @@ Proof.
   - ss!.
   - destruct WELLPAREN. intros xs Hxs. inv Hxs. destruct xs as [ | [ | ] s_prefix]; s!; try congruence || lia.
     induction s_suffix as [ | [ | ] s_suffix _] using rev_ind; s!.
-    { apply L.app_cancel_l with (prefix := [L]) in H0. subst s_prefix. s!. lia. }
-    { enough (R = L) by congruence.
+    + apply L.app_cancel_l with (prefix := [L]) in H0. subst s_prefix. s!. lia.
+    + enough (R = L) by congruence.
       assert (H_view : R = last (L :: s ++ [R]) R).
       { rewrite L.last_cons. rewrite L.last_last; eauto. }
       assert (H_view' : L = last (L :: (s_prefix ++ s_suffix) ++ [L]) R).
       { rewrite L.last_cons. rewrite L.last_last; eauto. }
       congruence.
-    }
-    { apply L.app_cancel_l with (prefix := [L]) in H0.
+    + apply L.app_cancel_l with (prefix := [L]) in H0.
       apply L.app_cancel_r with (suffix := [R]) in H0.
       exploit (PREFIX s_prefix); ss!.
-    }
 Qed.
 
 Lemma WellParen_concat s1 s2
@@ -395,7 +391,7 @@ Proof.
   { econs 1. }
   set (w := L :: s) in *.
   set (P := fun i : nat => i > 0 /\ count L (L.firstn i w) = count R (L.firstn i w)).
-  assert (P_dec : forall i, {P i} + {~ P i}).
+  assert (P_dec : forall i : nat, {P i} + {~ P i}).
   { intros [ | n].
     - right. unfold P. intros [? ?]; lia.
     - set (i := S n) in *. pose proof (Nat.eq_dec (count L (L.firstn i w)) (count R (L.firstn i w))) as [YES | NO]; [left | right]; unfold P; lia.
@@ -444,7 +440,7 @@ Proof.
             - s!. lia.
             - s!. lia.
           }
-          { inv H_prefix. destruct s_suffix; s!; lia. }
+          inv H_prefix. destruct s_suffix; s!; lia.
     }
   - destruct H_j as [POS count_L_eq_count_R]. eapply IH.
     + rewrite length_skipn. subst w. s!. destruct j; simpl; lia.
