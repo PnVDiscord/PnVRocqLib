@@ -1582,6 +1582,15 @@ Instance Similarity_BsigT {A : Type} {A' : Type} {B : A -> Type} {B' : A' -> Typ
 
 #[global] Arguments Similarity_BsigT {A} {A'} {B} {B'} /.
 
+Inductive Similarity_option_option {A : Type} {A' : Type} (Sim_A_A' : Similarity A A') : Similarity (option A) (option A') :=
+  | sim_None_None
+    : None =~= None
+  | sim_Some_Some (x : A) (x' : A')
+    (sim_x_x' : x =~= x')
+    : Some x =~= Some x'.
+
+#[local] Existing Instance Similarity_option_option.
+
 Inductive Similarity_sum {A : Type} {A' : Type} {B : Type} {B' : Type} (A_SIM : Similarity A A') (B_SIM : Similarity B B') : Similarity (A + B) (A' + B') :=
   | inl_corres (x : A) (x' : A')
     (x_corres : x =~= x')

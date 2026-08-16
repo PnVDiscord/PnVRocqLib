@@ -4,9 +4,6 @@ Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.FiniteMap.
 Require Import PnV.Prelude.X.
 
-Import FS.
-Import FM.
-
 #[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 
@@ -145,7 +142,7 @@ Lemma mk_subpath (v0 : V) (v1 : V) (v : V) (p : list V)
 Proof.
   revert v1 ELEM. induction PATH as [ | v0 v1 p H_edge PATH IH NOT_IN]; i; inv ELEM.
   - exists [v2]. split; eauto.
-  - obtain (p'&PATH1&p''&PATH2&EQ) by IH.
+  - find* (p'&PATH1&p''&PATH2&EQ) by IH.
     exists (v1 :: p'). split.
     + econstructor 2; eauto. subst p. rewrite in_app_iff in NOT_IN. tauto.
     + exists p''. split; [exact PATH2 | now rewrite EQ].
@@ -162,7 +159,7 @@ Proof.
   - rewrite -> walk_app_iff in WALK. destruct WALK as (v1&WALK1&WALK2).
     inv WALK2. inv H_walk. pose proof (IH v0 v1 WALK1) as [p PATH].
     pose proof (In_dec v' p) as [ELEM | NOT_IN].
-    + obtain (p'&PATH'&_) by (mk_subpath _ _ _ _ PATH). ss!.
+    + find* (p'&PATH'&_) by (mk_subpath _ _ _ _ PATH). ss!.
     + exists (p ++ [v']). rewrite -> path_iff_no_dup_walk. split.
       * rewrite -> walk_app_iff. exists v1. split.
         { now eapply path_iff_no_dup_walk. }
@@ -255,6 +252,49 @@ Module DigraphFixedpoint.
 
 #[local] Hint Rewrite L.in_flat_map : simplication_hints.
 
+(** A finite ensemble presented as a plain list.  This is the old
+    [FS.list_corresponds_to_finite_ensemble] from [PnV.Data.FiniteSet], kept local here:
+    it is about [list], not about [fset], so it does not belong in the [fset] library. *)
+
+Definition Similarity_list_ensemble {A : Type} {A' : Type} (Sim_A_A' : Similarity A A') : Similarity (list A) (ensemble A') :=
+  fun xs : list A => fun X' : ensemble A' => forall x : A, forall x' : A', is_similar_to (Similarity := Sim_A_A') x x' -> (In x xs <-> x' \in X').
+
+#[local]
+Instance list_corresponds_to_finite_ensemble {A : Type} : Similarity (list A) (ensemble A) :=
+  Similarity_list_ensemble eq.
+
+Lemma list_corresponds_to_finite_ensemble_iff {A : Type} (xs : list A) (X : ensemble A)
+  : is_similar_to (Similarity := list_corresponds_to_finite_ensemble) xs X <-> (forall x : A, In x xs <-> x \in X).
+Proof.
+  split.
+  - intros SIM x. exact (SIM x x eq_refl).
+  - intros H_iff x x' x_eq_x'. change (x = x') in x_eq_x'. subst x'. exact (H_iff x).
+Qed.
+
+Lemma in_ensemble_bind_iff {A : Type} {B : Type} (X : ensemble A) (F : A -> ensemble B) (b : B)
+  : b \in (X >>= F) <-> (exists x : A, x \in X /\ b \in F x).
+Proof.
+  reflexivity.
+Qed.
+
+Theorem list_corresponds_to_finite_ensemble_flat_map {A : Type} {B : Type} (xs : list A) (X : ensemble A) (f : A -> list B) (F : A -> ensemble B)
+  (xs_sim : is_similar_to (Similarity := list_corresponds_to_finite_ensemble) xs X)
+  (f_sim : forall x : A, In x xs -> is_similar_to (Similarity := list_corresponds_to_finite_ensemble) (f x) (F x))
+  : is_similar_to (Similarity := list_corresponds_to_finite_ensemble) (L.flat_map f xs) (X >>= F).
+Proof.
+  pose proof (proj1 (list_corresponds_to_finite_ensemble_iff xs X) xs_sim) as xs_iff.
+  eapply (proj2 (list_corresponds_to_finite_ensemble_iff (L.flat_map f xs) (X >>= F))).
+  intros b. rewrite L.in_flat_map, in_ensemble_bind_iff. split.
+  - intros (x & x_in & b_in).
+    pose proof (proj1 (list_corresponds_to_finite_ensemble_iff (f x) (F x)) (f_sim x x_in)) as fx_iff.
+    exists x. split; [rewrite <- xs_iff | rewrite <- fx_iff]; assumption.
+  - intros (x & x_in & b_in).
+    assert (x_in' : In x xs) by now rewrite xs_iff.
+    pose proof (proj1 (list_corresponds_to_finite_ensemble_iff (f x) (F x)) (f_sim x x_in')) as fx_iff.
+    exists x. split; [exact x_in' | rewrite fx_iff; exact b_in].
+Qed.
+
+
 Section DIGRAPH_FIXEDPOINT.
 
 #[local] Notation " src '~~~[' w ']~~>*('  G  ')' tgt " := (@walk G tgt src w).
@@ -305,11 +345,11 @@ Proof.
   - rewrite -> FIXPOINT with (x := x) (a := a). right. exists y. split; eauto.
 Qed.
 
-Variable seed' : V -> fin_ensemble A.
+Variable seed' : V -> list A.
 
 Hypothesis seed_sim : forall v, seed' v =~= seed v.
 
-Variable vertices' : fin_ensemble V.
+Variable vertices' : list V.
 
 Definition reachable (x : V) : ensemble V :=
   fun y => exists w, x ~~~[ w ]~~> y.
@@ -322,7 +362,7 @@ Fixpoint reachableb (fuel : nat) (x : V) (y : V) {struct fuel} : bool :=
   | S fuel' => eqb x y || L.existsb (fun z => if E_dec x z then reachableb fuel' z y else false) vertices'
   end.
 
-Definition reachable' (x : V) : fin_ensemble V :=
+Definition reachable' (x : V) : list V :=
   x :: L.filter (reachableb (L.length vertices') x) vertices'.
 
 Lemma reachableb_elim (fuel : nat) (x : V) (y : V)
@@ -450,7 +490,7 @@ Proof.
   - intros (y & REACH & SEED). eapply reachable_seed_gmu; eauto.
 Qed.
 
-Definition gmu' (x : V) : fin_ensemble A :=
+Definition gmu' (x : V) : list A :=
   L.flat_map seed' (reachable' x).
 
 Theorem gmu_sim (x : V)
@@ -473,11 +513,14 @@ Section DIGRAPH.
 #[local] Notation " src '===[' t ']==>*('  G  ')' tgt " := (@trail G tgt src t).
 
 #[local] Infix "\in" := E.In.
-#[local] Infix "∈" := L.In.
 
-Context {X : Type} {A : Type}.
+(* every [∈] below is membership in a finite set, i.e. in its underlying sorted list *)
+#[local] Notation "x '∈' X" := (L.In x X.(FSet.data)) (at level 70, no associativity) : type_scope.
 
-Inductive propagate_closure (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : Prop :=
+Context {X : Type} {POSET_X : isPoset X} {HsOrd_X : HsOrd X (POSET := POSET_X)}.
+Context {A : Type} {POSET_A : isPoset A} {HsOrd_A : HsOrd A (POSET := POSET_A)}.
+
+Inductive propagate_closure (seed : X -> fset A) (deps : X -> fset X) (a : A) (x : X) : Prop :=
   | propagate_closure_seed
     (IN : a ∈ seed x)
     : propagate_closure seed deps a x
@@ -486,7 +529,7 @@ Inductive propagate_closure (seed : X -> fin_ensemble A) (deps : X -> fin_ensemb
     (IN : propagate_closure seed deps a y)
     : propagate_closure seed deps a x.
 
-Inductive propagate_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (a : A) (x : X) : ensemble (list X) :=
+Inductive propagate_trace (seed : X -> fset A) (deps : X -> fset X) (a : A) (x : X) : ensemble (list X) :=
   | propagate_trace_seed
     (IN : a ∈ seed x)
     : [] \in propagate_trace seed deps a x
@@ -495,7 +538,7 @@ Inductive propagate_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble
     (TRACE : propagate_trace seed deps a y tr)
     : y :: tr \in propagate_trace seed deps a x.
 
-Theorem propagate_closure_iff_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Theorem propagate_closure_iff_trace (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A)
   : propagate_closure seed deps a x <-> (exists tr, tr \in propagate_trace seed deps a x).
 Proof.
   split.
@@ -507,7 +550,7 @@ Proof.
     + eapply propagate_closure_step; eauto.
 Qed.
 
-Lemma propagate_trace_in_nodes (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+Lemma propagate_trace_in_nodes (nodes : fset X) (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A) (tr : list X)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
   (TRACE : tr \in propagate_trace seed deps a x)
   : Forall (fun y => y ∈ nodes) tr.
@@ -515,27 +558,27 @@ Proof.
   induction TRACE as [x IN | x y tr EDGE TRACE IH]; [econs 1 | econs 2]; eauto.
 Qed.
 
-Definition propagate_graph (deps : X -> fin_ensemble X) : GRAPH.t :=
+Definition propagate_graph (deps : X -> fset X) : GRAPH.t :=
   {|
     GRAPH.vertices := X;
     GRAPH.edges := fun '(x, x') => x' ∈ deps x;
   |}.
 
-Lemma propagate_trace_seed_at_last (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+Lemma propagate_trace_seed_at_last (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A) (tr : list X)
   (TRACE : tr \in propagate_trace seed deps a x)
   : a ∈ seed (last tr x).
 Proof.
   induction TRACE as [x IN | x y tr EDGE TRACE IH]; ss!.
 Qed.
 
-Lemma propagate_trace_walk (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+Lemma propagate_trace_walk (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A) (tr : list X)
   (TRACE : tr \in propagate_trace seed deps a x)
   : x ~~~[ tr ]~~>*( propagate_graph deps ) last tr x.
 Proof.
   induction TRACE as [x IN | x y tr EDGE TRACE IH]; ss!.
 Qed.
 
-Lemma propagate_walk_trace (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (x' : X) (tr : list X)
+Lemma propagate_walk_trace (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A) (x' : X) (tr : list X)
   (WALK : x ~~~[ tr ]~~>*( propagate_graph deps ) x')
   (IN : a ∈ seed x')
   : tr \in propagate_trace seed deps a x.
@@ -543,7 +586,7 @@ Proof.
   induction WALK as [ | v0 v1 w EDGE WALK IH]; now constructor.
 Qed.
 
-Lemma propagate_trace_simple `{X_hasEqDec : hasEqDec X} (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+Lemma propagate_trace_simple `{X_hasEqDec : hasEqDec X} (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A) (tr : list X)
   (TRACE : tr \in propagate_trace seed deps a x)
   : exists simple, propagate_trace seed deps a x simple /\ NoDup simple.
 Proof.
@@ -554,13 +597,13 @@ Proof.
     now pose proof (@L.in_dec X X_hasEqDec v vs) as [YES | NO]; [left | right].
   }
   rewrite path_iff_no_dup_walk in PATH. destruct PATH as [WALK' NO_DUP].
-  obtain ? by (propagate_walk_trace seed deps _ _ _ simple). ss!.
+  find* ? by (propagate_walk_trace seed deps _ _ _ simple). ss!.
 Qed.
 
-Lemma propagate_trace_simple_bounded `{X_hasEqDec : hasEqDec X} (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X)
+Lemma propagate_trace_simple_bounded `{X_hasEqDec : hasEqDec X} (nodes : fset X) (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A) (tr : list X)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
   (TRACE : tr \in propagate_trace seed deps a x)
-  : exists simple, simple \in propagate_trace seed deps a x /\ length simple <= length nodes.
+  : exists simple, simple \in propagate_trace seed deps a x /\ length simple <= length nodes.(FSet.data).
 Proof.
   pose proof (propagate_trace_simple seed deps x a tr TRACE) as (simple & TRACE' & NO_DUP).
   pose proof (propagate_trace_in_nodes nodes seed deps x a simple deps_CLOSED TRACE') as IN_NODES.
@@ -568,15 +611,15 @@ Proof.
   rewrite Forall_forall in IN_NODES. now eapply IN_NODES.
 Qed.
 
-Definition propagate_equation (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> fin_ensemble A) : Prop :=
+Definition propagate_equation (seed : X -> fset A) (deps : X -> fset X) (value : X -> fset A) : Prop :=
   forall x, forall a, a ∈ value x <-> ⟪ UNFOLD : a ∈ seed x \/ (exists y, y ∈ deps x /\ a ∈ value y) ⟫.
 
 #[local] Open Scope function_scope.
 
-Definition propagate_fixedpoint (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value' : X -> ensemble A) : Prop :=
+Definition propagate_fixedpoint (seed : X -> fset A) (deps : X -> fset X) (value' : X -> ensemble A) : Prop :=
   forall x, forall a, a \in value' x <-> ⟪ STEP : a ∈ seed x \/ (exists y, y ∈ deps x /\ a \in value' y) ⟫.
 
-Theorem propagate_closure_fixedpoint (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X)
+Theorem propagate_closure_fixedpoint (seed : X -> fset A) (deps : X -> fset X)
   : propagate_fixedpoint seed deps (fun x => { a : A | propagate_closure seed deps a x }).
 Proof.
   intros x a. unfold E.In; unnw. split.
@@ -588,14 +631,14 @@ Proof.
     + now eapply propagate_closure_step with (y := y).
 Qed.
 
-Theorem propagate_closure_least_fixedpoint (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> ensemble A)
+Theorem propagate_closure_least_fixedpoint (seed : X -> fset A) (deps : X -> fset X) (value : X -> ensemble A)
   (FIXPOINT : propagate_fixedpoint seed deps value)
   : forall x, { a : A | propagate_closure seed deps a x } \subseteq value x.
 Proof.
   intros x a CLOSURE; induction CLOSURE as [x SEED_IN | x y EDGE CLOSURE IH]; ss!.
 Qed.
 
-Theorem propagate_closure_least (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (value : X -> fin_ensemble A) (x : X) (a : A)
+Theorem propagate_closure_least (seed : X -> fset A) (deps : X -> fset X) (value : X -> fset A) (x : X) (a : A)
   (EQUATION : propagate_equation seed deps value)
   (IN : propagate_closure seed deps a x)
   : a ∈ value x.
@@ -605,71 +648,78 @@ Proof.
   - exact (proj2 (EQUATION x a) (or_intror (@ex_intro _ _ y (conj EDGE IH)))).
 Qed.
 
-Context `{EQ_DEC : hasEqDec A}.
-
-Fixpoint propagate_value (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) : fin_ensemble A :=
+Fixpoint propagate_value (fuel : nat) (seed : X -> fset A) (deps : X -> fset X) (x : X) : fset A :=
   match fuel with
-  | O => normalize (seed x)
-  | S fuel' => normalize (union (seed x) (flat_map (propagate_value fuel' seed deps) (deps x)))
+  | O => seed x
+  | S fuel' => FS.union (seed x) (FS.bind (deps x) (propagate_value fuel' seed deps))
   end.
 
-Lemma propagate_value_seed (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Lemma propagate_value_seed (fuel : nat) (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A)
   (IN : a ∈ seed x)
   : a ∈ propagate_value fuel seed deps x.
 Proof.
-  destruct fuel as [ | fuel]; ss!.
+  destruct fuel as [ | fuel]; cbn [propagate_value].
+  - exact IN.
+  - rewrite FS.in_union_iff. left. exact IN.
 Qed.
 
-Lemma propagate_value_propagated (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (y : X) (a : A)
+Lemma propagate_value_propagated (fuel : nat) (seed : X -> fset A) (deps : X -> fset X) (x : X) (y : X) (a : A)
   (EDGE : y ∈ deps x)
   (IN : a ∈ propagate_value fuel seed deps y)
   : a ∈ propagate_value (S fuel) seed deps x.
 Proof.
-  ss!.
+  cbn [propagate_value]. rewrite FS.in_union_iff. right.
+  rewrite FS.in_bind_iff. exists y. split; assumption.
 Qed.
 
-Theorem propagate_value_elim (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Theorem propagate_value_elim (fuel : nat) (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A)
   (IN : a ∈ propagate_value fuel seed deps x)
   : propagate_closure seed deps a x.
 Proof.
-  revert x a IN. induction fuel as [ | fuel IH]; intros x a IN; simpl in IN.
-  - eapply propagate_closure_seed. ss!.
-  - ss!.
-    + now eapply propagate_closure_seed.
-    + eapply propagate_closure_step; ss!.
+  revert x a IN. induction fuel as [ | fuel IH]; intros x a IN; cbn [propagate_value] in IN.
+  - eapply propagate_closure_seed. exact IN.
+  - rewrite FS.in_union_iff in IN. destruct IN as [SEED_IN | BIND_IN].
+    + eapply propagate_closure_seed. exact SEED_IN.
+    + rewrite FS.in_bind_iff in BIND_IN. destruct BIND_IN as (y & EDGE & IN').
+      eapply propagate_closure_step; [exact EDGE | exact (IH y a IN')].
 Qed.
 
-Lemma propagate_value_monotone_step (fuel : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Lemma propagate_value_monotone_step (fuel : nat) (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A)
   (IN : a ∈ propagate_value fuel seed deps x)
   : a ∈ propagate_value (S fuel) seed deps x.
 Proof.
-  revert x a IN; induction fuel as [ | fuel IH]; intros x a IN; simpl in IN |- *; ss!.
+  revert x a IN. induction fuel as [ | fuel IH]; intros x a IN; cbn [propagate_value] in IN |- *.
+  - rewrite FS.in_union_iff. left. exact IN.
+  - rewrite FS.in_union_iff in IN |- *. destruct IN as [SEED_IN | BIND_IN]; [now left | right].
+    rewrite FS.in_bind_iff in BIND_IN |- *. destruct BIND_IN as (y & EDGE & IN').
+    exists y. split; [exact EDGE | exact (IH y a IN')].
 Qed.
 
-Lemma propagate_value_monotone (fuel1 : nat) (fuel2 : nat) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Lemma propagate_value_monotone (fuel1 : nat) (fuel2 : nat) (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A)
   (LE : fuel1 <= fuel2)
   (IN : a ∈ propagate_value fuel1 seed deps x)
   : a ∈ propagate_value fuel2 seed deps x.
 Proof.
   revert fuel1 x a LE IN; induction fuel2 as [ | fuel2 IH]; intros fuel1 x a LE IN.
-  - assert (fuel1 = O) as EQ by lia.
-    done!.
+  - assert (fuel1 = O) as EQ by lia. subst fuel1. exact IN.
   - pose proof (Nat.eq_dec fuel1 (S fuel2)) as [EQ | NE].
-    + done!.
-    + eapply propagate_value_monotone_step. eapply IH with (fuel1 := fuel1) (x := x) (a := a); done!.
+    + subst fuel1. exact IN.
+    + eapply propagate_value_monotone_step.
+      eapply IH with (fuel1 := fuel1) (x := x) (a := a); [lia | exact IN].
 Qed.
 
-Theorem propagate_trace_value (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A) (tr : list X) (fuel : nat)
+Theorem propagate_trace_value (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A) (tr : list X) (fuel : nat)
   (TRACE : tr \in propagate_trace seed deps a x)
   (LE : length tr <= fuel)
   : a ∈ propagate_value fuel seed deps x.
 Proof.
   revert fuel LE; induction TRACE as [x IN | x y tr EDGE TRACE IH]; intros fuel LE.
   - now eapply propagate_value_seed.
-  - destruct fuel as [ | fuel]; simpl in LE; [lia | eapply propagate_value_propagated]; done!.
+  - destruct fuel as [ | fuel]; simpl in LE; [lia | ].
+    eapply propagate_value_propagated; [exact EDGE | eapply IH; lia].
 Qed.
 
-Theorem propagate_closure_intro (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
+Theorem propagate_closure_intro (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A)
   (IN : propagate_closure seed deps a x)
   : exists fuel, a ∈ propagate_value fuel seed deps x.
 Proof.
@@ -680,19 +730,19 @@ Qed.
 
 Context `{X_hasEqDec : hasEqDec X}.
 
-Theorem propagate_closure_intro_bounded (fuel : nat) (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
-  (fuel_ENOUGH : length nodes <= fuel)
+Theorem propagate_closure_intro_bounded (fuel : nat) (nodes : fset X) (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A)
+  (fuel_ENOUGH : length nodes.(FSet.data) <= fuel)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
   (IN : propagate_closure seed deps a x)
   : a ∈ propagate_value fuel seed deps x.
 Proof.
   rewrite propagate_closure_iff_trace in IN. destruct IN as [tr TRACE].
-  find (simple & TRACE' & LENGTH) by (propagate_trace_simple_bounded nodes seed deps).
-  eapply propagate_trace_value with (tr := simple); ss!.
+  pose proof (propagate_trace_simple_bounded nodes seed deps x a tr deps_CLOSED TRACE) as (simple & TRACE' & LENGTH).
+  eapply propagate_trace_value with (tr := simple); [exact TRACE' | lia].
 Qed.
 
-Theorem propagate_value_iff_closure_bounded (fuel : nat) (nodes : fin_ensemble X) (seed : X -> fin_ensemble A) (deps : X -> fin_ensemble X) (x : X) (a : A)
-  (fuel_ENOUGH : length nodes <= fuel)
+Theorem propagate_value_iff_closure_bounded (fuel : nat) (nodes : fset X) (seed : X -> fset A) (deps : X -> fset X) (x : X) (a : A)
+  (fuel_ENOUGH : length nodes.(FSet.data) <= fuel)
   (deps_CLOSED : forall x, forall y, y ∈ deps x -> y ∈ nodes)
   : a ∈ propagate_value fuel seed deps x <-> propagate_closure seed deps a x.
 Proof.

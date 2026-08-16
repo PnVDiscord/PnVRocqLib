@@ -1329,7 +1329,7 @@ Proof.
   - split; discriminate || eauto with *. intros [[? | ?] ?]; discriminate || eauto with *.
 Qed.
 
-#[local]
+#[global]
 Instance list_lexicographical_order : isProset (list A) :=
   { leProp := lex_le
   ; Proset_isSetoid := list_isSetoid_of_elementwise_comparison
@@ -1339,7 +1339,7 @@ Instance list_lexicographical_order : isProset (list A) :=
 
 #[local] Obligation Tactic := cbn; unfold lex_le, lex_eq; ii.
 
-#[global, program]
+#[local, program]
 Instance list_hsOrd : hsOrd (list A) (PROSET := list_lexicographical_order) :=
   { compare := lex_compare }.
 Next Obligation.
@@ -1356,7 +1356,7 @@ End list_hsOrd.
 
 Section nat_hsOrd.
 
-#[local]
+#[global]
 Instance nat_isProset : isProset nat :=
   { leProp := Nat.le
   ; Proset_isSetoid := mkSetoid_from_eq
