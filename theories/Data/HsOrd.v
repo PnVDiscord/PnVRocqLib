@@ -112,40 +112,40 @@ Section HsOrd_pair.
 
 Context {A : Type} {B : Type} {A_isPoset : isPoset A} {B_isPoset : isPoset B} {HsOrd_A : HsOrd A} {HsOrd_B : HsOrd B}.
 
-Definition pair_compare (p : A * B) (q : A * B) : comparison :=
-  match compare (fst p) (fst q) with
+Definition pair_compare (p : A * B) (p' : A * B) : comparison :=
+  match compare (fst p) (fst p') with
   | Lt => Lt
-  | Eq => compare (snd p) (snd q)
+  | Eq => compare (snd p) (snd p')
   | Gt => Gt
   end.
 
-Lemma pair_compare_eq_iff (p : A * B) (q : A * B)
-  : pair_compare p q = Eq <-> p = q.
+Lemma pair_compare_eq_iff (p : A * B) (p' : A * B)
+  : pair_compare p p' = Eq <-> p = p'.
 Proof.
-  destruct p as [x1 y1], q as [x2 y2]. unfold pair_compare. simpl. split.
+  destruct p as [x1 y1], p' as [x2 y2]. unfold pair_compare. simpl. split.
   - intros OBS_Eq. destruct (compare x1 x2) as [ | | ] eqn: H_OBS; try discriminate OBS_Eq.
     rewrite compare_eq_iff in H_OBS. rewrite compare_eq_iff in OBS_Eq. congruence.
   - intros H_eq. inversion H_eq; subst x2 y2.
     rewrite compare_refl. exact (compare_refl y1).
 Qed.
 
-Lemma pair_compare_Gt_flip (p : A * B) (q : A * B)
-  (OBS_Gt : pair_compare p q = Gt)
-  : pair_compare q p = Lt.
+Lemma pair_compare_Gt_flip (p : A * B) (p' : A * B)
+  (OBS_Gt : pair_compare p p' = Gt)
+  : pair_compare p' p = Lt.
 Proof.
-  destruct p as [x1 y1], q as [x2 y2]. unfold pair_compare in *. simpl in *.
+  destruct p as [x1 y1], p' as [x2 y2]. unfold pair_compare in *. simpl in *.
   destruct (compare x1 x2) as [ | | ] eqn: H_OBS; try congruence.
   - rewrite compare_eq_iff in H_OBS. subst x2.
     rewrite compare_refl. exact (compare_Gt_flip y1 y2 OBS_Gt).
   - rewrite (compare_Gt_flip x1 x2 H_OBS). reflexivity.
 Qed.
 
-Lemma pair_compare_Lt_trans (p : A * B) (q : A * B) (r : A * B)
-  (OBS_Lt1 : pair_compare p q = Lt)
-  (OBS_Lt2 : pair_compare q r = Lt)
-  : pair_compare p r = Lt.
+Lemma pair_compare_Lt_trans (p : A * B) (p' : A * B) (p'' : A * B)
+  (OBS_Lt1 : pair_compare p p' = Lt)
+  (OBS_Lt2 : pair_compare p' p'' = Lt)
+  : pair_compare p p'' = Lt.
 Proof.
-  destruct p as [x1 y1], q as [x2 y2], r as [x3 y3]. unfold pair_compare in *. simpl in *.
+  destruct p as [x1 y1], p' as [x2 y2], p'' as [x3 y3]. unfold pair_compare in *. simpl in *.
   destruct (compare x1 x2) as [ | | ] eqn: H_OBS1; destruct (compare x2 x3) as [ | | ] eqn: H_OBS2; try congruence.
   - rewrite compare_eq_iff in H_OBS1, H_OBS2. subst x2 x3. rewrite compare_refl.
     exact (compare_Lt_trans y1 y2 y3 OBS_Lt1 OBS_Lt2).
@@ -155,7 +155,8 @@ Proof.
     exact (compare_Lt_trans x1 x2 x3 H_OBS1 H_OBS2).
 Qed.
 
-Lemma pair_compare_Lt_StrictOrder
+#[global]
+Instance pair_compare_Lt_StrictOrder
   : StrictOrder (fun p : A * B => fun p' : A * B => pair_compare p p' = Lt).
 Proof.
   split.
@@ -200,7 +201,7 @@ End HsOrd_pair.
 
 #[global]
 Instance HsOrd_implies_EqDec {A : Type} `{POSET_A : isPoset A}
-  `(HsOrd_A : HsOrd A)
+  (HsOrd_A : HsOrd A)
   : hasEqDec A.
 Proof.
   intros x y.
