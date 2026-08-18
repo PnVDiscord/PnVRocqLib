@@ -35,7 +35,7 @@ Definition Between (n : nat) (m : nat) : Prop :=
 Lemma Between_refl (n : nat)
   : Between n n.
 Proof.
-  split. lia. eapply wBetween_refl.
+  split; [lia | eapply wBetween_refl].
 Qed.
 
 Lemma Between_next (n : nat)
