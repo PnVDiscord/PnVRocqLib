@@ -197,3 +197,15 @@ Instance HsOrd_pair : HsOrd (A * B) (POSET := pair_isPoset) :=
 End HsOrd_pair.
 
 #[global] Arguments HsOrd_pair {A} {B} {_} {_} _ _.
+
+#[global]
+Instance HsOrd_implies_EqDec {A : Type} `{POSET_A : isPoset A}
+  `(HsOrd_A : HsOrd A)
+  : hasEqDec A.
+Proof.
+  intros x y.
+  destruct (compare x y) as [ | | ] eqn: H_OBS.
+  - left. rewrite compare_eq_iff in H_OBS. exact H_OBS.
+  - right. intros H_eq. rewrite <- compare_eq_iff in H_eq. congruence.
+  - right. intros H_eq. rewrite <- compare_eq_iff in H_eq. congruence.
+Defined.

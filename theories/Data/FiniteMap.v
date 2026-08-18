@@ -15,16 +15,16 @@ Require Import PnV.Data.FiniteSet.
 Module FiniteMap.
 
 #[universes(template), projections(primitive)]
-Record t {K : Type} {V : Type} {isSorted : list K -> bool} : Type :=
+Record t {K : Type} {isSorted : list K -> bool} {V : Type} : Type :=
   mk
   { data : list (K * V)
   ; data_isSorted : isSorted (map fst data) = true
   }.
 
 #[global] Arguments t : clear implicits.
-#[global] Arguments mk {K} {V} {isSorted}.
+#[global] Arguments mk {K} {isSorted} {V}.
 
-Lemma t_eq_iff {K : Type} {V : Type} {isSorted : list K -> bool} (m : FiniteMap.t K V isSorted) (m' : FiniteMap.t K V isSorted)
+Lemma t_eq_iff {K : Type} {V : Type} {isSorted : list K -> bool} (m : FiniteMap.t K isSorted V) (m' : FiniteMap.t K isSorted V)
   : m = m' <-> m.(data) = m'.(data).
 Proof.
   split.
@@ -37,7 +37,7 @@ Qed.
 
 End FiniteMap.
 
-Abbreviation finite_map K V := (FiniteMap.t K V (isSorted compare)).
+Abbreviation finite_map K := (FiniteMap.t K (isSorted compare)).
 
 Section BASICS.
 
@@ -387,7 +387,8 @@ Proof.
   split.
   - intros H_sim. do 4 red in H_sim. intros x. pose proof (H_sim x x eq_refl) as H. destruct H; f_equal; auto.
   - intros H_eq. do 4 red. intros x x' x_eq_x'. change (x = x') in x_eq_x'. subst x'.
-    pose proof (H_eq x) as H. destruct (lookup x m), (m' x); try congruence; econs; red; congruence.
+    pose proof (H_eq x) as H. revert H. generalize (lookup x m) as o. generalize (m' x) as o'. clear.
+    intros [x' | ] [x | ] H; try congruence; econs; red; congruence.
 Qed.
 
 End SIMILARITY.
@@ -446,3 +447,12 @@ Instance HsOrd_finite_map : HsOrd (finite_map K V) (POSET := finite_map_isPoset)
   { HsOrd_hsOrd := finite_map_hsOrd }.
 
 End HsOrd_finite_map.
+
+#[global, refine]
+Instance finite_map_isFunctor {K : Type} {POSET_K : isPoset K} (HsOrd_K : HsOrd K (POSET := POSET_K)) : isFunctor (finite_map K) :=
+  fun V : Type => fun V' : Type => fun v_to_v' : V -> V' => fun m : finite_map K V => {| FiniteMap.data := map (fun '(k, v) => (k, v_to_v' v)) m.(FiniteMap.data); FiniteMap.data_isSorted := _ |}.
+Proof.
+  replace (map fst (map (fun '(k, v) => (k, v_to_v' v)) m.(FiniteMap.data))) with (map fst m.(FiniteMap.data)).
+  - exact m.(FiniteMap.data_isSorted).
+  - generalize (FiniteMap.data m) as xs; clear. induction xs as [ | [k v] xs IH]; simpl; f_equal; auto.
+Defined.

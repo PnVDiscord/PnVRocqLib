@@ -461,7 +461,7 @@ Proof.
         }
         { rewrite SPEC. intros z z_in. rewrite in_filter_iff in z_in.
           destruct z_in as [z_in_Y H_p]. cbv beta in H_p.
-          destruct (Y_sub z z_in_Y) as [x_eq_z | z_in_xs]; trivial.
+          pose proof (Y_sub z z_in_Y) as [x_eq_z | z_in_xs]; trivial.
           subst z. rewrite compare_refl in H_p. discriminate H_p.
         }
       * left. rewrite SPEC. intros z z_in_Y.
@@ -507,17 +507,17 @@ Proof.
         { intros w_in. contradiction (claim Y Y_in w_in). }
         { intros w_in. contradiction (claim Z Z_in w_in). }
       * split.
-        { intros w_in. destruct (proj1 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
+        { intros w_in. pose proof (proj1 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
           subst w. rewrite compare_refl in H_OBS. discriminate H_OBS.
         }
-        { intros w_in. destruct (proj2 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
+        { intros w_in. pose proof (proj2 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
           subst w. rewrite compare_refl in H_OBS. discriminate H_OBS.
         }
       * split.
-        { intros w_in. destruct (proj1 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
+        { intros w_in. pose proof (proj1 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
           subst w. rewrite compare_refl in H_OBS. discriminate H_OBS.
         }
-        { intros w_in. destruct (proj2 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
+        { intros w_in. pose proof (proj2 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
           subst w. rewrite compare_refl in H_OBS. discriminate H_OBS.
         }
     + intros Y Y_in Y_in'. rewrite L.in_map_iff in Y_in'.
