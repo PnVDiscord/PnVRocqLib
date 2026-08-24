@@ -4,7 +4,6 @@ Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Math.ThN.
 Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Math.ClassicalSetTheory.
-Require Import PnV.Math.ClassicalCardinal.
 Require Import PnV.Data.Vector.
 Require Import Stdlib.Arith.Wf_nat.
 Require Export PnV.Logic.HELFER1.
