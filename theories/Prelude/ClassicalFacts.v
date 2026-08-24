@@ -54,3 +54,28 @@ Proof.
   pose proof (Axiom_of_Choice X (fun _ => X) step Hstep) as Hsucc.
   exact (FUN_FACTS.AC_implies_DC step x0 Hstep Hsucc).
 Qed.
+
+Lemma AC_implies_inhabited_informative_excluded_middle `{Axms : ClassicalAxioms (b_AC := true)}
+  : forall P : Prop, inhabited ({P} + {~ P}).
+Proof.
+  exploit (Axiom_of_Choice Prop (fun _ => bool) (fun P : Prop => fun b : bool => if b then P else ~ P)).
+  - intros P. now pose proof (classic P) as [YES | NO]; [exists true | exists false].
+  - intros [oracle H_oracle] P. pose proof (H_oracle P). now destruct (oracle P) as [ | ]; econs; [left | right].
+Qed.
+
+Theorem AC_implies_inhabited_choice `{Axms : ClassicalAxioms (b_AC := true)} (I : Type) (X : I -> Type)
+  (NONEMPTY : forall i : I, inhabited (X i))
+  : inhabited (forall i : I, X i).
+Proof.
+  exploit (Axiom_of_Choice I X (fun i : I => fun _ : X i => True)).
+  - intros i. pose proof (NONEMPTY i) as [x]. exists x. econs.
+  - intros [WTS _]. econs. exact WTS.
+Qed.
+
+Corollary AC_implies_inhabited_hasEqDec `{Axms : ClassicalAxioms (b_AC := true)} (A : Type)
+  : inhabited (hasEqDec A).
+Proof.
+  exploit (AC_implies_inhabited_choice (A * A) (fun '(lhs, rhs) => {lhs = rhs} + {lhs <> rhs})).
+  - intros [x y]. eapply AC_implies_inhabited_informative_excluded_middle.
+  - intros [H_dec]. econs. intros x y. now pose proof (H_dec (x, y)) as [YES | NO]; [left | right].
+Qed.

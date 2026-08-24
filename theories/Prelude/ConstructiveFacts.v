@@ -73,27 +73,27 @@ Proof.
     + inv SEARCH; lia.
 Defined.
 
-Fixpoint search_go (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (acc : Acc (flip (search_step P)) n) {struct acc} : A.
+Fixpoint search_go (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (H_Acc : Acc (flip (search_step P)) n) {struct H_Acc} : A.
 Proof.
   destruct (B.Some_dec (decode n)) as [[y SOME] | NONE].
   - destruct (P_dec y) as [YES | NO].
     + exact y.
-    + exact (search_go P P_dec (S n) (Acc_inv acc (search_step_Some P n y NO SOME))).
-  - exact (search_go P P_dec (S n) (Acc_inv acc (search_step_None P n NONE))).
+    + exact (search_go P P_dec (S n) (Acc_inv H_Acc (search_step_Some P n y NO SOME))).
+  - exact (search_go P P_dec (S n) (Acc_inv H_Acc (search_step_None P n NONE))).
 Defined.
 
-Fixpoint search_go_correct (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (acc : Acc (flip (search_step P)) n) {struct acc} : P (search_go P P_dec n acc).
+Fixpoint search_go_correct (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (H_Acc : Acc (flip (search_step P)) n) {struct H_Acc} : P (search_go P P_dec n H_Acc).
 Proof.
-  destruct acc; simpl. destruct (B.Some_dec (decode n)) as [[? ?] | ?].
+  destruct H_Acc as [H_Acc_inv]; simpl. destruct (B.Some_dec (decode n)) as [[? ?] | ?].
   - destruct (P_dec x) as [YES | NO].
     + exact YES.
     + eapply search_go_correct.
   - eapply search_go_correct.
 Qed.
 
-Fixpoint search_go_pirrel (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (acc : Acc (flip (search_step P)) n) (acc' : Acc (flip (search_step P)) n) {struct acc} : search_go P P_dec n acc = search_go P P_dec n acc'.
+Fixpoint search_go_pirrel (P : A -> Prop) (P_dec : forall x, {P x} + {~ P x}) (n : nat) (H_Acc : Acc (flip (search_step P)) n) (H_Acc' : Acc (flip (search_step P)) n) {struct H_Acc} : search_go P P_dec n H_Acc = search_go P P_dec n H_Acc'.
 Proof.
-  destruct acc, acc'; simpl in *.
+  destruct H_Acc as [H_Acc_inv], H_Acc' as [H_Acc_inv']; simpl in *.
   destruct (B.Some_dec (decode n)) as [[? ?] | ?] eqn: ?.
   - destruct (P_dec x) as [? | ?].
     + reflexivity.
@@ -129,8 +129,8 @@ Proof.
     { exists id Some. reflexivity. }
     assert (P_dec : forall x : nat, {f x = false} + {f x <> false}).
     { intros x. now destruct (f x) as [ | ]; [right | left]. }
-    pose proof (FUEL := @initial_step nat COUNTABLE (fun x : nat => f x = false) EXISTENCE).
-    exists (@search_go nat COUNTABLE (fun x : nat => f x = false) P_dec 0 FUEL). eapply search_go_correct.
+    pose proof (H_Acc := @initial_step nat COUNTABLE (fun x : nat => f x = false) EXISTENCE).
+    exists (@search_go nat COUNTABLE (fun x : nat => f x = false) P_dec 0 H_Acc). eapply search_go_correct.
   - pose proof (LEM (exists n : nat, f n = false)) as [YES | NO].
     + exact YES.
     + contradiction NOT_ALL_TRUE. intros x. destruct (f x) as [ | ] eqn: H_OBS; now firstorder.
@@ -225,8 +225,8 @@ Proof.
   { exists id Some. reflexivity. }
   assert (P_dec : forall x : nat, {p x = true} + {p x <> true}).
   { intros x. now destruct (p x) as [ | ]; [left | right]. }
-  pose proof (FUEL := @initial_step nat COUNTABLE (fun x : nat => p x = true) EXISTENCE).
-  exists (@search_go nat COUNTABLE (fun x : nat => p x = true) P_dec 0 FUEL). eapply search_go_correct.
+  pose proof (H_Acc := @initial_step nat COUNTABLE (fun x : nat => p x = true) EXISTENCE).
+  exists (@search_go nat COUNTABLE (fun x : nat => p x = true) P_dec 0 H_Acc). eapply search_go_correct.
 Defined.
 
 Definition nullary_mu (f : nat -> nat)
@@ -250,7 +250,7 @@ Theorem infinite_descent (P : nat -> Prop)
   (DESCENT : forall n, P n -> exists m, m < n /\ P m)
   : forall n, ~ P n.
 Proof.
-  intros n. induction (lt_wf n) as [n _ IH]. intros P_n.
+  intros n. induction (lt_wf n) as [n H_Acc_inv IH]. intros P_n.
   pose proof (DESCENT n P_n) as [m [LT P_m]].
   contradiction (IH m LT P_m).
 Qed.
@@ -521,7 +521,7 @@ Let POW (P : Prop) : Prop :=
 Let RETRACT2_POW_A_POW_B (A : Prop) (B : Prop)
   : RETRACT2 (POW A) (POW B).
 Proof.
-  destruct (exclusive_middle (RETRACT (POW A) (POW B))) as [hyp_yes | hyp_no].
+  pose proof (exclusive_middle (RETRACT (POW A) (POW B))) as [hyp_yes | hyp_no].
   - exact ({| _i2 := _i hyp_yes; _j2 := _j hyp_yes; _inv2 := fun _ : RETRACT (POW A) (POW B) => _inv hyp_yes |}).
   - exact ({| _i2 := fun _ : POW A => fun _ : B => FalseBB; _j2 := fun _ : POW B => fun _ : A => FalseBB; _inv2 := fun r : RETRACT (POW A) (POW B) => False_ind (forall pa : POW A, (fun _ : A => FalseBB) = pa) (hyp_no r) |}).
 Qed.
@@ -594,7 +594,7 @@ Theorem exclusive_middle_implies_proof_irrelevance (P : Prop)
   : pirrel_STMT P.
 Proof.
   eapply TrueBB_eq_FalseBB_iff_pirrel.
-  destruct (exclusive_middle (RUSSELL = TrueBB)) as [RUSSELL_eq_TrueBB | RUSSELL_ne_TrueBB].
+  pose proof (exclusive_middle (RUSSELL = TrueBB)) as [RUSSELL_eq_TrueBB | RUSSELL_ne_TrueBB].
   - rewrite <- RUSSELL_eq_TrueBB. rewrite PARADOX_OF_BERARDI. now eapply NOT_BB_SPEC1.
   - contradiction (RUSSELL_ne_TrueBB). rewrite PARADOX_OF_BERARDI. now eapply NOT_BB_SPEC2.
 Qed.
@@ -757,13 +757,19 @@ Proof.
 Qed.
 
 Lemma AC_implies_DC {X : Type} (step : X -> X -> Prop) (x0 : X)
-  (Hstep : forall x, exists x', step x x')
-  (AC : exists S : X -> X, forall n, step n (S n))
+  (Hstep : forall x : X, exists x' : X, step x x')
+  (AC : exists S : X -> X, forall n : X, step n (S n))
   : exists seq : nat -> X, seq O = x0 /\ ⟪ STEP : forall n : nat, step (seq n) (seq (S n)) ⟫.
 Proof.
   destruct AC as [succ Hsucc].
-  exists (fix seq (n : nat) {struct n} : X := match n with O => x0 | S n' => succ (seq n') end).
-  split; ss!.
+  exists (
+    fix seq (n : nat) {struct n} : X :=
+    match n with
+    | O => x0
+    | S n' => succ (seq n')
+    end
+  ).
+  ss!.
 Qed.
 
 End FUN_FACTS.

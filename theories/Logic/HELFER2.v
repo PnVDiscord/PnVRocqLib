@@ -4,6 +4,7 @@ Require Import PnV.Prelude.ClassicalFacts.
 Require Import PnV.Math.ThN.
 Require Import PnV.Math.BooleanAlgebra.
 Require Import PnV.Math.ClassicalSetTheory.
+Require Import PnV.Math.ClassicalCardinal.
 Require Import PnV.Data.Vector.
 Require Import Stdlib.Arith.Wf_nat.
 Require Export PnV.Logic.HELFER1.
@@ -429,7 +430,7 @@ Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext 
 
 #[local] Hint Unfold E.insert : core.
 
-Theorem HilbertCalculus_complete (L : language) `(function_symbols_hasEqDec : hasEqDec L.(function_symbols)) `(constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)) `(relation_symbols_hasEqDec : hasEqDec L.(relation_symbols))
+Theorem HilbertCalculus_complete' (L : language) `(function_symbols_hasEqDec : hasEqDec L.(function_symbols)) `(constant_symbols_hasEqDec : hasEqDec L.(constant_symbols)) `(relation_symbols_hasEqDec : hasEqDec L.(relation_symbols))
   : forall X : ensemble (frm L), forall b : frm L, forall CONSEQUENCE : X ⊨ b, X ⊢ b.
 Proof.
   ii. eapply NNPP. intros NO. set (Gamma := E.insert (Neg_frm b) X).
@@ -453,5 +454,15 @@ Proof.
 Qed.
 
 End COMPLETENESS_THEOREM.
+
+Theorem HilbertCalculus_complete `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} `{L : language} (Gamma : ensemble (frm L)) (C : frm L)
+  (CONSEQUENCE : Gamma ⊨ C)
+  : Gamma ⊢ C.
+Proof.
+  hexploit (AC_implies_inhabited_hasEqDec L.(function_symbols)); intros [function_symbols_hasEqDec].
+  hexploit (AC_implies_inhabited_hasEqDec L.(relation_symbols)); intros [relation_symbols_hasEqDec].
+  hexploit (AC_implies_inhabited_hasEqDec L.(constant_symbols)); intros [constant_symbols_hasEqDec].
+  eapply HilbertCalculus_complete'; eauto.
+Qed.
 
 End HELFER2.
