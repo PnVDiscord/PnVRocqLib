@@ -4,9 +4,6 @@ Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.FiniteMap.
 Require Import PnV.Prelude.X.
 
-#[local] Abbreviation In := L.In.
-#[local] Infix "\in" := E.In : type_scope.
-
 Module GRAPH.
 
 #[projections(primitive)]
@@ -17,6 +14,9 @@ Class t : Type :=
   } as G.
 
 End GRAPH.
+
+#[local] Abbreviation In := L.In.
+#[local] Infix "\in" := E.In : type_scope.
 
 Section GraphTheory_basic1.
 
@@ -289,7 +289,6 @@ Proof.
     pose proof (proj1 (list_corresponds_to_finite_ensemble_iff (f x) (F x)) (f_sim x x_in')) as fx_iff.
     exists x. split; [exact x_in' | rewrite fx_iff; exact b_in].
 Qed.
-
 
 Section DIGRAPH_FIXEDPOINT.
 
