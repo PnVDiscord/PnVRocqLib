@@ -631,7 +631,7 @@ Qed.
 
 Theorem propagate_closure_least_fixedpoint (value : X -> ensemble A)
   (FIXPOINT : propagate_fixedpoint value)
-  : forall x, { a : A | propagate_closure a x } \subseteq value x.
+  : forall x, { a : A | x \in propagate_closure a } \subseteq value x.
 Proof.
   intros x a CLOSURE; induction CLOSURE as [x SEED_IN | x y EDGE CLOSURE IH]; ss!.
 Qed.
