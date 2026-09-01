@@ -85,7 +85,7 @@ Inductive path (v : V) : V -> list V -> Prop :=
   | path_step (v0 : V) (v1 : V) (p : list V)
     (H_edge : (v0, v1) \in E)
     (H_path : v1 ---[ p ]--> v)
-    (NOT_IN : ~ In v1 p)
+    (NOT_IN : ~ In v0 (v1 :: p))
     : v0 ---[ v1 :: p ]--> v
   where " src ---[ p ]--> tgt " := (path tgt src p) : type_scope.
 
@@ -93,26 +93,24 @@ Inductive path (v : V) : V -> list V -> Prop :=
 
 Lemma path_vertices_no_dup (v0 : V) (v : V) (p : list V)
   (H_path : v0 ---[ p ]--> v)
-  : NoDup p.
+  : NoDup (v0 :: p).
 Proof.
-  induction H_path as [ | v0 v1 p H_edge H_path IH NOT_IN]; econstructor; eauto.
+  induction H_path as [ | v0 v1 p H_edge H_path IH NOT_IN]; econs; eauto. econs.
 Qed.
 
 Lemma no_dup_walk_is_path (v0 : V) (v : V) (w : list V)
-  (NO_DUP : NoDup w)
+  (NO_DUP : NoDup (v0 :: w))
   (H_walk : v0 ~~~[ w ]~~> v)
   : v0 ---[ w ]--> v.
 Proof.
-  induction H_walk as [ | v0 v1 w H_edge H_walk IH]; i.
-  - econstructor 1.
-  - econstructor 2.
-    + exact H_edge.
-    + eapply IH. now inv NO_DUP.
-    + now inv NO_DUP.
+  induction H_walk as [ | v0 v1 w H_edge H_walk IH]; i; econs.
+  - exact H_edge.
+  - eapply IH. now inv NO_DUP.
+  - now inv NO_DUP.
 Qed.
 
 Theorem path_iff_no_dup_walk (v0 : V) (v : V) (vs : list V)
-  : v0 ---[ vs ]--> v <-> (v0 ~~~[ vs ]~~> v /\ NoDup vs).
+  : v0 ---[ vs ]--> v <-> (v0 ~~~[ vs ]~~> v /\ NoDup (v0 :: vs)).
 Proof.
   split.
   - intros H_path. split.
@@ -126,11 +124,10 @@ Lemma path_app_inv (v0 : V) (v' : V) (vs1 : list V) (vs2 : list V)
   (PATH : v0 ---[ vs1 ++ vs2 ]--> v')
   : exists v, v0 ---[ vs1 ]--> v /\ v ---[ vs2 ]--> v'.
 Proof.
-  rewrite -> path_iff_no_dup_walk in PATH. destruct PATH as [WALK NO_DUP].
-  rewrite -> walk_app_iff in WALK. destruct WALK as (v&WALK1&WALK2).
-  exists v. split; rewrite -> path_iff_no_dup_walk.
-  - split; trivial. eapply NoDup_app_remove_r; eauto.
-  - split; trivial. eapply NoDup_app_remove_l; eauto.
+  revert v0 v' vs2 PATH. induction vs1 as [ | v1 vs1 IH]; simpl; i.
+  - exists v0. split; eauto.
+  - inv PATH. find* (v & PATH1 & PATH2) by IH.
+    exists v. split; eauto. econstructor 2; eauto. ii. contradiction NOT_IN. ss!.
 Qed.
 
 Section Walk_finds_Path.
@@ -141,10 +138,10 @@ Lemma mk_subpath (v0 : V) (v1 : V) (v : V) (p : list V)
   : exists p', v0 ---[ p' ]--> v1 /\ (exists p'', v1 ---[ p'' ]--> v /\ p = p' ++ p'').
 Proof.
   revert v1 ELEM. induction PATH as [ | v0 v1 p H_edge PATH IH NOT_IN]; i; inv ELEM.
-  - exists [v2]. split; eauto.
+  - exists [v2]. split; eauto. econstructor 2; eauto. ii. contradiction NOT_IN. ss!.
   - find* (p'&PATH1&p''&PATH2&EQ) by IH.
     exists (v1 :: p'). split.
-    + econstructor 2; eauto. subst p. rewrite in_app_iff in NOT_IN. tauto.
+    + econstructor 2; eauto. subst p. ii. apply NOT_IN. ss!.
     + exists p''. split; [exact PATH2 | now rewrite EQ].
 Qed.
 
@@ -158,13 +155,16 @@ Proof.
   - inv WALK. exists []. econstructor 1.
   - rewrite -> walk_app_iff in WALK. destruct WALK as (v1&WALK1&WALK2).
     inv WALK2. inv H_walk. pose proof (IH v0 v1 WALK1) as [p PATH].
-    pose proof (In_dec v' p) as [ELEM | NOT_IN].
-    + find* (p'&PATH'&_) by (mk_subpath _ _ _ _ PATH). ss!.
+    pose proof (In_dec v' (v0 :: p)) as [ELEM | NOT_IN].
+    + inv ELEM.
+      * exists []. econstructor 1.
+      * find* (p'&PATH'&_) by (mk_subpath _ _ _ _ PATH). ss!.
     + exists (p ++ [v']). rewrite -> path_iff_no_dup_walk. split.
       * rewrite -> walk_app_iff. exists v1. split.
         { now eapply path_iff_no_dup_walk. }
         { econstructor 2; eauto. }
-      * rewrite <- rev_involutive. eapply NoDup_rev.
+      * change (NoDup ((v0 :: p) ++ [v'])).
+        rewrite <- rev_involutive. eapply NoDup_rev.
         rewrite -> rev_unit. econstructor 2.
         { now rewrite <- In_rev. }
         { eapply NoDup_rev. eapply path_iff_no_dup_walk. exact PATH. }
@@ -184,7 +184,7 @@ Proof.
   rewrite path_iff_no_dup_walk in PATH.
   destruct PATH as [WALK NO_DUP]. split.
   - exact WALK.
-  - eapply L.no_dup_mk_edge_seq. exact NO_DUP.
+  - eapply L.no_dup_mk_edge_seq. now inv NO_DUP.
 Qed.
 
 Inductive Walk (v : V) : V -> Type :=
@@ -428,8 +428,8 @@ Proof.
     rewrite path_iff_no_dup_walk in PATH.
     clear WALK. destruct PATH as [WALK NO_DUP].
     eapply reachableb_intro; eauto.
-    eapply L.NoDup_incl_length; eauto.
-    ii; eapply walk_elem_in_vertices; eauto.
+    eapply L.NoDup_incl_length; [now inv NO_DUP | ii].
+    eapply walk_elem_in_vertices; eauto.
 Qed.
 
 Lemma reachable_sim (x : V)
@@ -594,7 +594,7 @@ Proof.
   { eapply walk_finds_path with (w := tr); auto. intros v vs.
     now pose proof (@L.in_dec X (HsOrd_implies_EqDec HsOrd_X) v vs) as [YES | NO]; [left | right].
   }
-  rewrite path_iff_no_dup_walk in PATH. destruct PATH as [WALK' NO_DUP].
+  rewrite path_iff_no_dup_walk in PATH. destruct PATH as [WALK' NO_DUP]. inv NO_DUP.
   find* ? by (propagate_walk_trace _ _ _ simple). ss!.
 Qed.
 
