@@ -37,7 +37,7 @@ Qed.
 
 End FiniteMap.
 
-Abbreviation finite_map K := (FiniteMap.t K (isSorted compare)).
+Abbreviation fpmap K := (FiniteMap.t K (isSorted compare)).
 
 Section BASICS.
 
@@ -55,7 +55,7 @@ Definition lookup' (k0 : K) : list (K * V) -> option V :=
     end
   end.
 
-Definition lookup (k : K) (m : finite_map K V) : option V :=
+Definition lookup (k : K) (m : fpmap K V) : option V :=
   lookup' k m.(FiniteMap.data).
 
 Lemma lookup'_nil (k0 : K)
@@ -95,7 +95,7 @@ Proof.
     destruct z_in as (q & fst_q_eq_z & q_in). subst z. exact (SORTED_hd q q_in).
 Qed.
 
-Theorem finite_map_eq_spec (m : finite_map K V) (m' : finite_map K V)
+Theorem fpmap_eq_spec (m : fpmap K V) (m' : fpmap K V)
   : m = m' <-> (forall k, lookup k m = lookup k m').
 Proof.
   rewrite FiniteMap.t_eq_iff. unfold lookup. split.
@@ -162,13 +162,13 @@ Proof.
       exfalso. inversion H_eq; subst k1 v1. rewrite compare_refl in H_OBS. discriminate H_OBS.
 Qed.
 
-Theorem lookup_spec (m : finite_map K V) (k : K) (v : V)
+Theorem lookup_spec (m : fpmap K V) (k : K) (v : V)
   : lookup k m = Some v <-> (k, v) ∈ m.(FiniteMap.data).
 Proof.
   exact (lookup'_spec m.(FiniteMap.data) m.(FiniteMap.data_isSorted) k v).
 Qed.
 
-Definition empty : finite_map K V :=
+Definition empty : fpmap K V :=
   FiniteMap.mk [] eq_refl.
 
 Theorem lookup_empty (k : K)
@@ -226,10 +226,10 @@ Proof.
   rewrite map_fst_insert'. exact (FS.isSorted_insert k0 (map fst kvs) kvs_isSorted).
 Qed.
 
-Definition insert (k : K) (v : V) (m : finite_map K V) : finite_map K V :=
+Definition insert (k : K) (v : V) (m : fpmap K V) : fpmap K V :=
   FiniteMap.mk (insert' k v m.(FiniteMap.data)) (isSorted_insert' k v m.(FiniteMap.data) m.(FiniteMap.data_isSorted)).
 
-Theorem lookup_insert_eq (k : K) (v : V) (m : finite_map K V)
+Theorem lookup_insert_eq (k : K) (v : V) (m : fpmap K V)
   : lookup k (insert k v m) = Some v.
 Proof.
   unfold lookup, insert. cbn [FiniteMap.data].
@@ -242,7 +242,7 @@ Proof.
     + rewrite lookup'_cons, H_OBS. exact IH.
 Qed.
 
-Theorem lookup_insert_ne (k : K) (v : V) (m : finite_map K V) (k0 : K)
+Theorem lookup_insert_ne (k : K) (v : V) (m : fpmap K V) (k0 : K)
   (NE : k0 ≠ k)
   : lookup k0 (insert k v m) = lookup k0 m.
 Proof.
@@ -315,10 +315,10 @@ Proof.
     intros q q_in. exact (k_lt_kvs q (in_remove'_incl k0 kvs q q_in)).
 Qed.
 
-Definition remove (k : K) (m : finite_map K V) : finite_map K V :=
+Definition remove (k : K) (m : fpmap K V) : fpmap K V :=
   FiniteMap.mk (remove' k m.(FiniteMap.data)) (isSorted_remove' k m.(FiniteMap.data) m.(FiniteMap.data_isSorted)).
 
-Theorem lookup_remove_eq (k : K) (m : finite_map K V)
+Theorem lookup_remove_eq (k : K) (m : fpmap K V)
   : lookup k (remove k m) = None.
 Proof.
   unfold lookup, remove. cbn [FiniteMap.data].
@@ -333,7 +333,7 @@ Proof.
   - rewrite lookup'_cons, H_OBS. exact (IH kvs_isSorted').
 Qed.
 
-Theorem lookup_remove_ne (k : K) (m : finite_map K V) (k0 : K)
+Theorem lookup_remove_ne (k : K) (m : fpmap K V) (k0 : K)
   (NE : k0 ≠ k)
   : lookup k0 (remove k m) = lookup k0 m.
 Proof.
@@ -354,10 +354,10 @@ Proof.
     exact (IH kvs_isSorted').
 Qed.
 
-Definition keys (m : finite_map K V) : fset K :=
+Definition keys (m : fpmap K V) : fset K :=
   FSet.mk (map fst m.(FiniteMap.data)) m.(FiniteMap.data_isSorted).
 
-Theorem in_keys_iff (m : finite_map K V) (k : K)
+Theorem in_keys_iff (m : fpmap K V) (k : K)
   : k ∈ (keys m).(FSet.data) <-> (exists v : V, lookup k m = Some v).
 Proof.
   cbv [keys]; simpl. rewrite L.in_map_iff. split.
@@ -372,16 +372,16 @@ Section SIMILARITY.
 
 #[local] Existing Instance Similarity_option_option.
 
-Definition Similarity_finite_map_partial_map {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET := POSET_K)} {K' : Type} {V' : Type} (Similarity_K_K' : Similarity K K') (Similarity_V_V' : Similarity V V') : Similarity (finite_map K V) (K' -> option V') :=
-  fun m : finite_map K V => fun m' : K' -> option V' => forall k : K, forall k' : K', k =~= k' -> lookup k m =~= m' k'.
+Definition Similarity_fpmap_partial_map {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET := POSET_K)} {K' : Type} {V' : Type} (Similarity_K_K' : Similarity K K') (Similarity_V_V' : Similarity V V') : Similarity (fpmap K V) (K' -> option V') :=
+  fun m : fpmap K V => fun m' : K' -> option V' => forall k : K, forall k' : K', k =~= k' -> lookup k m =~= m' k'.
 
 Context {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET := POSET_K)}.
 
 #[global]
-Instance finite_map_corresponds_to_partial_map : Similarity (finite_map K V) (K -> option V) :=
-  Similarity_finite_map_partial_map eq eq.
+Instance fpmap_corresponds_to_partial_map : Similarity (fpmap K V) (K -> option V) :=
+  Similarity_fpmap_partial_map eq eq.
 
-Theorem finite_map_corresponds_to_partial_map_iff (m : finite_map K V) (m' : K -> option V)
+Theorem fpmap_corresponds_to_partial_map_iff (m : fpmap K V) (m' : K -> option V)
   : m =~= m' <-> (forall x : K, lookup x m = m' x).
 Proof.
   split.
@@ -393,15 +393,15 @@ Qed.
 
 End SIMILARITY.
 
-Section HsOrd_finite_map.
+Section HsOrd_fpmap.
 
 #[local] Obligation Tactic := idtac.
 
 Context {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET := POSET_K)} {POSET_V : isPoset V} {HsOrd_V : HsOrd V (POSET := POSET_V)}.
 
 #[local, program]
-Instance finite_map_isProset : isProset (finite_map K V) :=
-  { leProp (m : finite_map K V) (m' : finite_map K V) := m.(FiniteMap.data) =< m'.(FiniteMap.data)
+Instance fpmap_isProset : isProset (fpmap K V) :=
+  { leProp (m : fpmap K V) (m' : fpmap K V) := m.(FiniteMap.data) =< m'.(FiniteMap.data)
   ; Proset_isSetoid := mkSetoid_from_eq
   }.
 Next Obligation.
@@ -417,14 +417,14 @@ Next Obligation.
 Qed.
 
 #[global]
-Instance finite_map_isPoset : isPoset (finite_map K V) :=
-  { Poset_isProset := finite_map_isProset
-  ; Poset_eqProp_spec (m : finite_map K V) (m' : finite_map K V) := conj (fun H : m = m' => H) (fun H : m = m' => H)
+Instance fpmap_isPoset : isPoset (fpmap K V) :=
+  { Poset_isProset := fpmap_isProset
+  ; Poset_eqProp_spec (m : fpmap K V) (m' : fpmap K V) := conj (fun H : m = m' => H) (fun H : m = m' => H)
   }.
 
 #[local, program]
-Instance finite_map_hsOrd : hsOrd (finite_map K V) (PROSET := Poset_isProset) :=
-  { compare (m : finite_map K V) (m' : finite_map K V) := compare m.(FiniteMap.data) m'.(FiniteMap.data) }.
+Instance fpmap_hsOrd : hsOrd (fpmap K V) (PROSET := Poset_isProset) :=
+  { compare (m : fpmap K V) (m' : fpmap K V) := compare m.(FiniteMap.data) m'.(FiniteMap.data) }.
 Next Obligation.
   intros m m' OBS_Lt. pose proof (compare_Lt m.(FiniteMap.data) m'.(FiniteMap.data) OBS_Lt) as [LE NE]. split.
   - exact LE.
@@ -443,16 +443,17 @@ Next Obligation.
 Qed.
 
 #[global]
-Instance HsOrd_finite_map : HsOrd (finite_map K V) (POSET := finite_map_isPoset) :=
-  { HsOrd_hsOrd := finite_map_hsOrd }.
+Instance HsOrd_fpmap : HsOrd (fpmap K V) (POSET := fpmap_isPoset) :=
+  { HsOrd_hsOrd := fpmap_hsOrd }.
 
-End HsOrd_finite_map.
+End HsOrd_fpmap.
 
 #[global, refine]
-Instance finite_map_isFunctor {K : Type} {POSET_K : isPoset K} (HsOrd_K : HsOrd K (POSET := POSET_K)) : isFunctor (finite_map K) :=
-  fun V : Type => fun V' : Type => fun v_to_v' : V -> V' => fun m : finite_map K V => {| FiniteMap.data := map (fun '(k, v) => (k, v_to_v' v)) m.(FiniteMap.data); FiniteMap.data_isSorted := _ |}.
+Instance fpmap_isFunctor {K : Type} {POSET_K : isPoset K} (HsOrd_K : HsOrd K (POSET := POSET_K)) : isFunctor (fpmap K) :=
+  fun V : Type => fun V' : Type => fun v_to_v' : V -> V' => fun m : fpmap K V => {| FiniteMap.data := map (fun '(k, v) => (k, v_to_v' v)) m.(FiniteMap.data); FiniteMap.data_isSorted := _ |}.
 Proof.
   replace (map fst (map (fun '(k, v) => (k, v_to_v' v)) m.(FiniteMap.data))) with (map fst m.(FiniteMap.data)).
   - exact m.(FiniteMap.data_isSorted).
-  - generalize (FiniteMap.data m) as xs; clear. induction xs as [ | [k v] xs IH]; simpl; f_equal; auto.
+  - generalize (FiniteMap.data m) as xs; clear.
+    induction xs as [ | [k v] xs IH]; simpl; f_equal; auto.
 Defined.
