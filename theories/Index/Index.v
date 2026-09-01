@@ -40,14 +40,10 @@ Require Import PnV.Math.ThN.
 
 Require Import PnV.System.BasicITreeTh.
 Require Import PnV.System.LGS.
-Require Import PnV.System.LGSSem.
-Require Import PnV.System.LGSCorrect.
 Require Import PnV.System.P.
 Require Import PnV.System.Lambda1.
 Require Import PnV.System.Lang.
 Require Import PnV.System.PGS.
-Require Import PnV.System.PGSSem.
-Require Import PnV.System.PGSCorrect.
 Require Import PnV.System.Regex.
 Require Import PnV.System.STLC.
 
@@ -60,7 +56,6 @@ Require Import PnV.Logic.ClassicalPropositionalLogic.
 Require Import PnV.Logic.HELFER2.
 
 Require Import PnV.Math.ClassicalSetTheory.
-Require Import PnV.Math.ClassicalCardinal.
 Require Import PnV.Math.ClassicalDomainTheory.
 
 Require Import PnV.System.FolFramework.
