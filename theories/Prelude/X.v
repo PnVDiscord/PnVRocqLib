@@ -1,19 +1,16 @@
-Require Import PnV.Prelude.Prelude.
+Require Import Stdlib.NArith.BinNat.
+Require Export PnV.Prelude.Prelude.
+Require Export PnV.Prelude.PnVTacs.
+
+#[universes(polymorphic=yes)]
+Definition mp@{u v | } {A : Type@{u}} {B : Type@{v}} (x : A) (f : A -> B) : B :=
+  f x.
+
+#[global] Arguments mp {A} {B} /.
+
+Infix "&" := mp (at level 90, left associativity).
 
 Notation "lhs ≠ rhs" := (~ (lhs = rhs)) : type_scope.
-
-Tactic Notation "rewrite*" uconstr( t ) "by" ident ( H_EQ ) :=
-  let lhs := fresh "lhs" in
-  set (lhs := t) in |- *;
-  match type of H_EQ with
-  | ?X = ?Y => change (lhs = Y) in H_EQ; rewrite -> H_EQ; subst lhs
-  end.
-
-Tactic Notation "find" simple_intropattern( p ) "by" uconstr( H ) :=
-  unshelve hexploit H; [eauto .. | intros p].
-
-Tactic Notation "find*" simple_intropattern( p ) "by" uconstr( H ) :=
-  hexploit H; [eauto .. | intros p].
 
 Ltac done :=
   des; subst; done!.
@@ -32,22 +29,6 @@ Proof.
 Qed.
 
 #[global] Hint Rewrite inject_pair_eq : simplication_hints.
-
-Fixpoint iter {A : Type} (fuel : nat) (step : A -> A) (x : A) {struct fuel} : A :=
-  match fuel with
-  | O => x
-  | S fuel' => iter fuel' step (step x)
-  end.
-
-Lemma iter_succ (A : Type) (fuel : nat) (step : A -> A) (x : A)
-  : iter (S fuel) step x = step (iter fuel step x).
-Proof.
-  revert x; induction fuel as [ | fuel IH]; intros x; simpl.
-  - reflexivity.
-  - eapply IH.
-Qed.
-
-#[global] Hint Rewrite iter_succ : simplication_hints.
 
 Definition nonempty {A : Type} (xs : list A) : bool :=
   negb (L.null xs).
@@ -150,6 +131,244 @@ Proof.
   - eapply IH. intros a1 b1 a1_in b1_in H_eq.  exact (INJ a1 b1 (or_intror a1_in) (or_intror b1_in) H_eq).
 Qed.
 
+Section ITERATE_UNTIL.
+
+Context {A : Type}.
+
+Fixpoint iter (fuel : nat) (step : A -> A) (x : A) {struct fuel} : A :=
+  match fuel with
+  | O => x
+  | S fuel' => iter fuel' step (step x)
+  end.
+
+Lemma iter_succ (fuel : nat) (step : A -> A) (x : A)
+  : iter (S fuel) step x = step (iter fuel step x).
+Proof.
+  revert x; induction fuel as [ | fuel IH]; intros x; simpl.
+  - reflexivity.
+  - eapply IH.
+Qed.
+
+Lemma iter_invariant (P : A -> Prop) (F : A -> A) (n : nat) (x : A)
+  (STEP : forall y : A, P y -> P (F y))
+  (BASE : P x)
+  : P (iter n F x).
+Proof.
+  revert x BASE. induction n as [ | n IH]; intros x BASE.
+  - exact BASE.
+  - simpl. eapply IH. eapply STEP. exact BASE.
+Qed.
+
+Lemma iter_fixed (n : nat) (F : A -> A) (x : A)
+  (FIXED : F x = x)
+  : iter n F x = x.
+Proof.
+  revert x FIXED. induction n as [ | n IH]; intros x FIXED.
+  - reflexivity.
+  - simpl. rewrite FIXED. eapply IH. exact FIXED.
+Qed.
+
+Context {A_hasEqDec : hasEqDec A}.
+
+Fixpoint iterun (n : nat) (F : A -> A) (x : A) {struct n} : A :=
+  match n with
+  | O => x
+  | S n' =>
+    let y := F x in
+    if eqb y x then x else iterun n' F y
+  end.
+
+Theorem iterun_eq_iter (n : nat) (F : A -> A) (x : A)
+  : iterun n F x = iter n F x.
+Proof.
+  revert x. induction n as [ | n IH]; intros x.
+  - reflexivity.
+  - simpl. destruct (eqb (F x) x) as [ | ] eqn: H_OBS.
+    + rewrite eqb_eq in H_OBS. rewrite H_OBS. symmetry. eapply iter_fixed. exact H_OBS.
+    + eapply IH.
+Qed.
+
+End ITERATE_UNTIL.
+
+#[global] Hint Rewrite @iter_succ : simplication_hints.
+
+Section splits.
+
+Context {X : Type}.
+
+Fixpoint splits (xs : list X) {struct xs} : list (list X * list X) :=
+  match xs with
+  | [] => [([], [])]
+  | x :: xs' => ([], x :: xs') :: L.map (fun '(ys, zs) => (x :: ys, zs)) (splits xs')
+  end.
+
+Lemma splits_nil_head (xs : list X)
+  : L.In ([], xs) (splits xs).
+Proof.
+  destruct xs as [ | x xs]; simpl; now left.
+Qed.
+
+Lemma splits_shift (omega : list X) (alpha : list X) (x : X) (beta : list X)
+  (IN : L.In (alpha, x :: beta) (splits omega))
+  : L.In (alpha ++ [x], beta) (splits omega).
+Proof.
+  revert alpha beta IN. induction omega as [ | y omega IH]; intros alpha beta IN.
+  - simpl in IN. destruct IN as [EQ | []]. congruence.
+  - simpl in IN. destruct IN as [EQ | IN].
+    + inversion EQ; subst. simpl.
+      right. rewrite L.in_map_iff. exists ([], beta). split.
+      * reflexivity.
+      * eapply splits_nil_head.
+    + rewrite L.in_map_iff in IN. destruct IN as ([alpha' beta'] & EQ & IN').
+      simpl in EQ. inversion EQ; subst. simpl.
+      right. rewrite L.in_map_iff. exists (alpha' ++ [x], beta). split.
+      * reflexivity.
+      * eapply IH. exact IN'.
+Qed.
+
+End splits.
+
+Definition mfail_if (b : bool) : option unit :=
+  if b then None else Some tt.
+
+Definition mfail_unless (b : bool) : option unit :=
+  mfail_if (negb b).
+
+Lemma bind_Some_inv {A : Type} {B : Type} (o : option A) (f : A -> option B) (b : B)
+  (EQ : (o >>= f) = Some b)
+  : exists a : A, o = Some a /\ f a = Some b.
+Proof.
+  destruct o as [a | ]; [exists a; split; [reflexivity | exact EQ] | discriminate EQ].
+Qed.
+
+Lemma mfail_if_Some_inv {A : Type} (b : bool) (f : unit -> option A) (a : A)
+  (EQ : (mfail_if b >>= f) = Some a)
+  : b = false /\ f tt = Some a.
+Proof.
+  pose proof (bind_Some_inv (mfail_if b) f a EQ) as (u & EQ1 & EQ2).
+  destruct b as [ | ]; [discriminate EQ1 | ].
+  destruct u. split; [reflexivity | exact EQ2].
+Qed.
+
+Lemma mfail_unless_Some_inv {A : Type} (b : bool) (f : unit -> option A) (a : A)
+  (EQ : (mfail_unless b >>= f) = Some a)
+  : b = true /\ f tt = Some a.
+Proof.
+  pose proof (mfail_if_Some_inv (negb b) f a EQ) as [NEG EQ'].
+  destruct b as [ | ]; [split; [reflexivity | exact EQ'] | discriminate NEG].
+Qed.
+
+Inductive rtc {A : Type} (R : A -> A -> Prop) (x : A) : A -> Prop :=
+  | rtc_refl
+    : rtc R x x
+  | rtc_step (y : A) (z : A)
+    (STEP : R x y)
+    (REST : rtc R y z)
+    : rtc R x z.
+
+Inductive rtcn {A : Type} (R : A -> A -> Prop) : nat -> A -> A -> Prop :=
+  | rtcn_O (x : A)
+    : rtcn R O x x
+  | rtcn_S (n : nat) (x : A) (y : A) (z : A)
+    (STEP : R x y)
+    (REST : rtcn R n y z)
+    : rtcn R (S n) x z.
+
+Inductive lexlt (p : nat * nat) (p' : nat * nat) : Prop :=
+  | lexlt_fst
+    (LT : fst p < fst p')
+    : lexlt p p'
+  | lexlt_snd
+    (EQ : fst p = fst p')
+    (LT : snd p < snd p')
+    : lexlt p p'.
+
+Lemma lexlt_aux_fst (a' : nat) (a0 : nat) (a : nat)
+  (C : Nat.ltb a' a0 = true)
+  (E : a0 = a)
+  : a' < a.
+Proof.
+  rewrite Nat.ltb_lt in C. lia.
+Qed.
+
+Lemma lexlt_aux_snd (a' : nat) (b' : nat) (a0 : nat) (b : nat)
+  (H : lexlt (a', b') (a0, b))
+  (C : Nat.ltb a' a0 = false)
+  : b' < b.
+Proof.
+  inversion H; simpl in *; [rewrite Nat.ltb_ge in C; lia | lia].
+Qed.
+
+Lemma lexlt_aux_eq (a' : nat) (b' : nat) (a0 : nat) (b : nat) (a : nat)
+  (H : lexlt (a', b') (a0, b))
+  (C : Nat.ltb a' a0 = false)
+  (E : a0 = a)
+  : a' = a.
+Proof.
+  inversion H; simpl in *; [rewrite Nat.ltb_ge in C; lia | lia].
+Qed.
+
+Definition lexAccB (a : nat) (rec : forall a' : nat, a' < a -> forall b' : nat, Acc lexlt (a', b')) : forall b : nat, Acc Nat.lt b -> forall a0 : nat, a0 = a -> Acc lexlt (a0, b).
+Proof.
+  refine (fix goB (b : nat) (H_Acc : Acc Nat.lt b) {struct H_Acc} : forall a0 : nat, a0 = a -> Acc lexlt (a0, b) := _).
+  intros a0 E0. econs. intros p H. destruct p as [a' b'].
+  destruct (Nat.ltb a' a0) as [ | ] eqn: C.
+  - exact (rec a' (lexlt_aux_fst a' a0 a C E0) b').
+  - exact (goB b' (Acc_inv H_Acc (lexlt_aux_snd a' b' a0 b H C)) a' (lexlt_aux_eq a' b' a0 b a H C E0)).
+Defined.
+
+Definition lexAcc : forall a : nat, Acc Nat.lt a -> forall b : nat, Acc lexlt (a, b).
+Proof.
+  refine (fix goA (a : nat) (H_Acc : Acc Nat.lt a) {struct H_Acc} : forall b : nat, Acc lexlt (a, b) := _).
+  exact (fun b => lexAccB a (fun a' : nat => fun LT : a' < a => goA a' (Acc_inv H_Acc LT)) b (lt_wf b) a eq_refl).
+Defined.
+
+Definition lexlt_wf : well_founded lexlt.
+Proof.
+  intros [a b]. exact (lexAcc a (lt_wf a) b).
+Defined.
+
+Definition lexltb (p : nat * nat) (p' : nat * nat) : bool :=
+  Nat.ltb (fst p) (fst p') || (Nat.eqb (fst p) (fst p') && Nat.ltb (snd p) (snd p')).
+
+Lemma lexltb_lexlt (p : nat * nat) (p' : nat * nat)
+  (TEST : lexltb p p' = true)
+  : lexlt p p'.
+Proof.
+  unfold lexltb in TEST. destruct (Nat.ltb (fst p) (fst p')) as [ | ] eqn: C; simpl in TEST.
+  - eapply lexlt_fst. rewrite Nat.ltb_lt in C. exact C.
+  - rewrite andb_true_iff in TEST. destruct TEST as [EQ LT].
+    rewrite Nat.eqb_eq in EQ. rewrite Nat.ltb_lt in LT.
+    eapply lexlt_snd; [exact EQ | exact LT].
+Qed.
+
+Lemma lexlt_lexltb (p : nat * nat) (p' : nat * nat)
+  (LT : lexlt p p')
+  : lexltb p p' = true.
+Proof.
+  unfold lexltb. destruct (Nat.ltb (fst p) (fst p')) as [ | ] eqn: C; [reflexivity | simpl].
+  rewrite Nat.ltb_ge in C. rewrite andb_true_iff, Nat.eqb_eq, Nat.ltb_lt.
+  inversion LT; [lia | split; assumption].
+Qed.
+
+Fixpoint accLtGen (n : nat) (m : nat) {struct n} : Acc Nat.lt m :=
+  match n with
+  | O => lt_wf m
+  | S n' => Acc_intro m (fun p : nat => fun _ : (p < m)%nat => accLtGen n' p)
+  end.
+
+Fixpoint accNGen (n : nat) (m : N) {struct n} : Acc N.lt m :=
+  match n with
+  | O => N.lt_wf_0 m
+  | S n' => Acc_intro m (fun p : N => fun _ : (p < m)%N => accNGen n' p)
+  end.
+
+Definition accLt (m : nat) : Acc Nat.lt m :=
+  accLtGen (S m) m.
+
+Definition accNlt (m : N) : Acc N.lt m :=
+  accNGen (S (N.to_nat m)) m.
+
 Module SN.
 
 Section Strong_Normalisation.
@@ -172,6 +391,14 @@ Fixpoint sn_guard {x : A} (n : nat) (H_sn : sn R x) {struct n} : sn R x :=
   | O => H_sn
   | S n' => sn_intro R x (fun x' : A => fun H_R : R x x' => sn_guard n' (sn_inv x H_sn x' H_R))
   end.
+
+Definition sn_of_wf
+  (H_wf : well_founded R)
+  : forall x0 : A, sn (fun x => fun x' => R x' x) x0.
+Proof.
+  intros x. induction (H_wf x) as [x _ IH].
+  econs. exact IH.
+Defined.
 
 End Strong_Normalisation.
 
