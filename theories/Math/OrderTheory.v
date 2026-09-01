@@ -16,7 +16,7 @@ Definition wltProp_upto_eqProp (x : A) (y : A) : Prop :=
 Lemma wltProp_upto_eqProp_well_founded
   : well_founded wltProp_upto_eqProp.
 Proof.
-  intros x. induction (R_wf x) as [x _ IH]. econs.
+  intros x. induction (R_wf x) as [x H_Acc_inv IH]. econs.
   intros y (z & R_y_z & x_eq_z). eapply IH.
   eapply R_eqPropCompatible2 with (x2 := y) (y2 := z); eauto with *.
 Qed.
@@ -49,7 +49,7 @@ Lemma Acc_implies_nonexistence_of_decr_seq {A : Type} {N : Type} (O : N) (S : N 
   (H_Acc : Acc R x)
   : ~ ⟪ EXISTENCE : exists f : N -> A, f O = x /\ ⟪ DECR : forall n : N, R (f (S n)) (f n) ⟫ ⟫.
 Proof.
-  unnw. induction H_Acc as [x _ IH]. intros (f & H_EQ & H_decr).
+  unnw. induction H_Acc as [x H_Acc_inv IH]. intros (f & H_EQ & H_decr).
   subst x. eapply IH with (y := f (S O)); eauto. exists (fun n : N => f (S n)); eauto.
 Qed.
 
@@ -86,7 +86,7 @@ Lemma well_founded_implies_Irreflexive {A : Type} (R : A -> A -> Prop)
   (WF : well_founded R)
   : Irreflexive R.
 Proof.
-  intros x H_R. induction (WF x) as [x _ IH]. eapply IH with (y := x); exact H_R.
+  intros x H_R. induction (WF x) as [x H_Acc_inv IH]. eapply IH with (y := x); exact H_R.
 Qed.
 
 Lemma well_founded_eqPropCl {A : Type} {SETOID : isSetoid A} (R : A -> A -> Prop)
@@ -94,7 +94,7 @@ Lemma well_founded_eqPropCl {A : Type} {SETOID : isSetoid A} (R : A -> A -> Prop
   (COMPAT : forall x1 : A, forall x2 : A, x1 == x2 -> forall x : A, R x1 x -> R x2 x)
   : forall x : A, Acc (fun x1 => fun x2 => exists x0 : A, x1 == x0 /\ R x0 x2) x.
 Proof.
-  intros x. induction (WF x) as [x _ IH]; intros.
+  intros x. induction (WF x) as [x H_Acc_inv IH]; intros.
   econs. intros x' (x0 & H1_EQ & H2_EQ). eapply IH.
   now eapply COMPAT with (x1 := x0); eauto.
 Qed.
@@ -106,7 +106,7 @@ Lemma well_founded_implies_Irreflexive' {A : Type} {SETOID : isSetoid A} (R : A 
 Proof.
   intros x1 x2 EQ. revert x1 EQ.
   pose proof (well_founded_eqPropCl R WF COMPAT x2) as H_Acc.
-  induction H_Acc as [x2 _ IH]. ii. eapply IH with (x1 := x1) (y := x2); eauto.
+  induction H_Acc as [x2 H_Acc_inv IH]. ii. eapply IH with (x1 := x1) (y := x2); eauto.
   exists x1. now split.
 Qed.
 
@@ -604,7 +604,7 @@ Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
   (DESCENT : forall n, P n -> exists m, m ⪵ n /\ P m)
   : forall n, ~ P n.
 Proof.
-  intros n. induction (wltProp_well_founded n) as [n _ IH]. intros P_n.
+  intros n. induction (wltProp_well_founded n) as [n H_Acc_inv IH]. intros P_n.
   pose proof (DESCENT n P_n) as [m [LT P_m]].
   contradiction (IH m LT P_m).
 Qed.
@@ -620,8 +620,8 @@ Context {classic : forall P : Prop, P \/ ~ P}.
 Theorem wlt_trichotomous {A : Type} {SETOID : isSetoid A} {WOSET : isWoset A} (a : A) (b : A)
   : (a == b) \/ (a ≺ b \/ b ≺ a).
 Proof.
-  revert b. pose proof (wltProp_well_founded a) as H_Acc_a. induction H_Acc_a as [a _ IH_a].
-  intros b. pose proof (wltProp_well_founded b) as H_Acc_b. induction H_Acc_b as [b _ IH_b].
+  revert b. pose proof (wltProp_well_founded a) as H_Acc. induction H_Acc as [a H_Acc_inv IH_a].
+  intros b. pose proof (wltProp_well_founded b) as H_Acc'. induction H_Acc' as [b H_Acc_inv' IH_b].
   pose proof (classic ((exists b', wlt b' b /\ wlt a b') \/ (exists b', wlt b' b /\ a == b'))) as [[H_LT | H_EQ] | H_GT].
   { des. right. left. transitivity b'; eauto. }
   { destruct H_EQ as [a' [H_LT H_EQ]]. right. left. rewrite -> H_EQ. exact H_LT. }
@@ -667,8 +667,8 @@ Next Obligation.
   assert (NNPP : forall phi : Prop, ⟪ NNP : ~ (~ phi) ⟫ -> phi).
   { intros phi NNP; unnw. pose proof (classic phi) as [YES | NO]; tauto. }
   unnw.
-  intros a. pose proof (wltProp_well_founded a) as H_Acc_a. induction H_Acc_a as [a _ IH_a].
-  intros b. pose proof (wltProp_well_founded b) as H_Acc_b. induction H_Acc_b as [b _ IH_b].
+  intros a. pose proof (wltProp_well_founded a) as H_Acc. induction H_Acc as [a H_Acc_inv IH_a].
+  intros b. pose proof (wltProp_well_founded b) as H_Acc'. induction H_Acc' as [b H_Acc_inv' IH_b].
   intros EXT_EQ. eapply NNPP. intros CONTRA.
   enough (not_balanced : exists c : A, (wltProp c a /\ ~ wltProp c b) \/ (wltProp c b /\ ~ wltProp c a)).
   { destruct not_balanced as [c [[? ?] | [? ?]]]; ss!. }
@@ -804,9 +804,9 @@ Lemma prod_wlt_well_founded (p : A * B)
 Proof.
   destruct p as [x y]. revert y.
   enough (forall x0 : A, x == x0 -> forall y : B, Acc prod_wlt (x0, y)) as ETS by now eapply ETS.
-  pose proof (wltProp_well_founded x) as H_Acc_x. induction H_Acc_x as [x _ IHx].
+  pose proof (wltProp_well_founded x) as H_Acc. induction H_Acc as [x H_Acc_inv IHx].
   intros x0 x_eq_x0 y.
-  pose proof (wltProp_well_founded y) as H_Acc_y. revert x0 x_eq_x0. induction H_Acc_y as [y _ IHy].
+  pose proof (wltProp_well_founded y) as H_Acc'. revert x0 x_eq_x0. induction H_Acc' as [y H_Acc_inv' IHy].
   change (forall x' : A, x' ≺ x -> forall x0 : A, x' == x0 -> forall y' : B, Acc prod_wlt (x0, y')) in IHx.
   change (forall y' : B, y' ≺ y -> forall x0 : A, x == x0 -> Acc prod_wlt (x0, y')) in IHy.
   econs. intros [x' y'] [fst_lt | fst_eq snd_lt]; simpl in *.

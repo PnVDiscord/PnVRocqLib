@@ -1,3 +1,4 @@
+Require Import Stdlib.NArith.BinNat.
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.X.
 Require Export PnV.Math.ThN.
@@ -210,3 +211,296 @@ Proof.
   - right. intros H_eq. rewrite <- compare_eq_iff in H_eq. congruence.
   - right. intros H_eq. rewrite <- compare_eq_iff in H_eq. congruence.
 Defined.
+
+Section HsOrd_unit.
+
+Definition unit_compare (x : unit) (y : unit) : comparison :=
+  Eq.
+
+Lemma unit_compare_eq_iff (x : unit) (y : unit)
+  : unit_compare x y = Eq <-> x = y.
+Proof.
+  destruct x, y. split; intros _; reflexivity.
+Qed.
+
+#[global]
+Instance unit_compare_Lt_StrictOrder
+  : StrictOrder (fun x : unit => fun y : unit => unit_compare x y = Lt).
+Proof.
+  split.
+  - intros x OBS_Lt. discriminate OBS_Lt.
+  - intros x y z OBS_Lt. discriminate OBS_Lt.
+Qed.
+
+#[global]
+Instance unit_isPoset : isPoset unit :=
+  mkProsetFrom_ltProp_isPoset unit_compare_Lt_StrictOrder.
+
+#[local] Obligation Tactic := idtac.
+
+#[local, program]
+Instance unit_hsOrd : hsOrd unit (PROSET := Poset_isProset) :=
+  { compare := unit_compare }.
+Next Obligation.
+  intros x y OBS_Lt. discriminate OBS_Lt.
+Qed.
+Next Obligation.
+  intros x y OBS_Eq. exact (proj1 (unit_compare_eq_iff x y) OBS_Eq).
+Qed.
+Next Obligation.
+  intros x y OBS_Gt. discriminate OBS_Gt.
+Qed.
+
+#[global]
+Instance HsOrd_unit : HsOrd unit (POSET := unit_isPoset) :=
+  { HsOrd_hsOrd := unit_hsOrd }.
+
+End HsOrd_unit.
+
+Section HsOrd_sum.
+
+Context {A : Type} {B : Type} {A_isPoset : isPoset A} {B_isPoset : isPoset B} {HsOrd_A : HsOrd A} {HsOrd_B : HsOrd B}.
+
+Definition sum_compare (s : A + B) (s' : A + B) : comparison :=
+  match s, s' with
+  | inl x, inl x' => compare x x'
+  | inl _, inr _ => Lt
+  | inr _, inl _ => Gt
+  | inr y, inr y' => compare y y'
+  end.
+
+Lemma sum_compare_eq_iff (s : A + B) (s' : A + B)
+  : sum_compare s s' = Eq <-> s = s'.
+Proof.
+  destruct s as [x | y], s' as [x' | y']; simpl; split; try congruence.
+  - intros OBS_Eq. f_equal. exact (proj1 (compare_eq_iff x x') OBS_Eq).
+  - intros H_eq. inversion H_eq; subst x'. exact (compare_refl x).
+  - intros OBS_Eq. f_equal. exact (proj1 (compare_eq_iff y y') OBS_Eq).
+  - intros H_eq. inversion H_eq; subst y'. exact (compare_refl y).
+Qed.
+
+Lemma sum_compare_Gt_flip (s : A + B) (s' : A + B)
+  (OBS_Gt : sum_compare s s' = Gt)
+  : sum_compare s' s = Lt.
+Proof.
+  destruct s as [x | y], s' as [x' | y']; simpl in *; try congruence.
+  - exact (compare_Gt_flip x x' OBS_Gt).
+  - exact (compare_Gt_flip y y' OBS_Gt).
+Qed.
+
+Lemma sum_compare_Lt_trans (s : A + B) (s' : A + B) (s'' : A + B)
+  (OBS_Lt1 : sum_compare s s' = Lt)
+  (OBS_Lt2 : sum_compare s' s'' = Lt)
+  : sum_compare s s'' = Lt.
+Proof.
+  destruct s as [x | y], s' as [x' | y'], s'' as [x'' | y'']; simpl in *; try congruence.
+  - exact (compare_Lt_trans x x' x'' OBS_Lt1 OBS_Lt2).
+  - exact (compare_Lt_trans y y' y'' OBS_Lt1 OBS_Lt2).
+Qed.
+
+#[global]
+Instance sum_compare_Lt_StrictOrder
+  : StrictOrder (fun s : A + B => fun s' : A + B => sum_compare s s' = Lt).
+Proof.
+  split.
+  - intros s OBS_Lt. pose proof (proj2 (sum_compare_eq_iff s s) eq_refl) as OBS_Eq. congruence.
+  - intros s s' s''. exact (sum_compare_Lt_trans s s' s'').
+Qed.
+
+#[global]
+Instance sum_isPoset : isPoset (A + B) :=
+  mkProsetFrom_ltProp_isPoset sum_compare_Lt_StrictOrder.
+
+#[local] Obligation Tactic := idtac.
+
+#[local, program]
+Instance sum_hsOrd : hsOrd (A + B) (PROSET := Poset_isProset) :=
+  { compare := sum_compare }.
+Next Obligation.
+  intros s s' OBS_Lt. split.
+  - left. exact OBS_Lt.
+  - intros s_eq_s'. change (s = s') in s_eq_s'. subst s'.
+    enough (sum_compare s s = Eq) by congruence.
+    exact (proj2 (sum_compare_eq_iff s s) eq_refl).
+Qed.
+Next Obligation.
+  intros s s' OBS_Eq. exact (proj1 (sum_compare_eq_iff s s') OBS_Eq).
+Qed.
+Next Obligation.
+  intros s s' OBS_Gt. split.
+  - left. exact (sum_compare_Gt_flip s s' OBS_Gt).
+  - intros s_eq_s'. change (s = s') in s_eq_s'. subst s'.
+    enough (sum_compare s s = Eq) by congruence.
+    exact (proj2 (sum_compare_eq_iff s s) eq_refl).
+Qed.
+
+#[global]
+Instance HsOrd_sum : HsOrd (A + B) (POSET := sum_isPoset) :=
+  { HsOrd_hsOrd := sum_hsOrd }.
+
+End HsOrd_sum.
+
+#[global] Arguments HsOrd_sum {A} {B} {_} {_} _ _.
+
+Section HsOrd_of_injection.
+
+Context {A : Type} {B : Type} {B_isPoset : isPoset B} {HsOrd_B : HsOrd B}.
+
+Variable code : A -> B.
+
+Hypothesis code_inj : forall x : A, forall y : A, code x = code y -> x = y.
+
+Definition inj_compare (x : A) (y : A) : comparison :=
+  compare (code x) (code y).
+
+Lemma inj_compare_eq_iff (x : A) (y : A)
+  : inj_compare x y = Eq <-> x = y.
+Proof.
+  unfold inj_compare. rewrite compare_eq_iff. split.
+  - exact (code_inj x y).
+  - intros H_eq. now subst y.
+Qed.
+
+Lemma inj_compare_Gt_flip (x : A) (y : A)
+  (OBS_Gt : inj_compare x y = Gt)
+  : inj_compare y x = Lt.
+Proof.
+  unfold inj_compare in *. exact (compare_Gt_flip (code x) (code y) OBS_Gt).
+Qed.
+
+Lemma inj_compare_Lt_trans (x : A) (y : A) (z : A)
+  (OBS_Lt1 : inj_compare x y = Lt)
+  (OBS_Lt2 : inj_compare y z = Lt)
+  : inj_compare x z = Lt.
+Proof.
+  unfold inj_compare in *.
+  exact (compare_Lt_trans (code x) (code y) (code z) OBS_Lt1 OBS_Lt2).
+Qed.
+
+#[local]
+Instance inj_compare_Lt_StrictOrder
+  : StrictOrder (fun x : A => fun y : A => inj_compare x y = Lt).
+Proof.
+  split.
+  - intros x OBS_Lt. pose proof (proj2 (inj_compare_eq_iff x x) eq_refl) as OBS_Eq. congruence.
+  - intros x y z. exact (inj_compare_Lt_trans x y z).
+Qed.
+
+#[local]
+Instance inj_isPoset : isPoset A :=
+  mkProsetFrom_ltProp_isPoset inj_compare_Lt_StrictOrder.
+
+#[local] Obligation Tactic := idtac.
+
+#[local, program]
+Instance inj_hsOrd : hsOrd A (PROSET := Poset_isProset) :=
+  { compare := inj_compare }.
+Next Obligation.
+  intros x y OBS_Lt. split.
+  - left. exact OBS_Lt.
+  - intros x_eq_y. change (x = y) in x_eq_y. subst y.
+    enough (inj_compare x x = Eq) by congruence.
+    exact (proj2 (inj_compare_eq_iff x x) eq_refl).
+Qed.
+Next Obligation.
+  intros x y OBS_Eq. exact (proj1 (inj_compare_eq_iff x y) OBS_Eq).
+Qed.
+Next Obligation.
+  intros x y OBS_Gt. split.
+  - left. exact (inj_compare_Gt_flip x y OBS_Gt).
+  - intros x_eq_y. change (x = y) in x_eq_y. subst y.
+    enough (inj_compare x x = Eq) by congruence.
+    exact (proj2 (inj_compare_eq_iff x x) eq_refl).
+Qed.
+
+#[local]
+Instance inj_HsOrd_local : HsOrd A (POSET := inj_isPoset) :=
+  { HsOrd_hsOrd := inj_hsOrd }.
+
+Definition mkPoset_inj : isPoset A :=
+  inj_isPoset.
+
+Definition mkHsOrd_inj : HsOrd A (POSET := mkPoset_inj) :=
+  inj_HsOrd_local.
+
+End HsOrd_of_injection.
+
+#[global] Arguments mkPoset_inj {A} {B} {_} {_} code code_inj.
+#[global] Arguments mkHsOrd_inj {A} {B} {_} {_} code code_inj.
+
+Section HsOrd_N.
+
+#[global]
+Instance N_compare_Lt_StrictOrder
+  : StrictOrder (fun x : N => fun y : N => N.compare x y = Lt).
+Proof.
+  split.
+  - intros x LT. rewrite N.compare_lt_iff in LT. lia.
+  - intros x y z LT1 LT2. rewrite N.compare_lt_iff in LT1, LT2 |- *. lia.
+Qed.
+
+#[global]
+Instance N_isPoset : isPoset N :=
+  mkProsetFrom_ltProp_isPoset N_compare_Lt_StrictOrder.
+
+#[local] Obligation Tactic := idtac.
+
+#[local, program]
+Instance N_hsOrd : hsOrd N (PROSET := Poset_isProset) :=
+  { compare := N.compare }.
+Next Obligation.
+  intros x y OBS_Lt. split.
+  - left. exact OBS_Lt.
+  - intros x_eq_y. change (x = y) in x_eq_y. subst y.
+    rewrite N.compare_refl in OBS_Lt. discriminate OBS_Lt.
+Qed.
+Next Obligation.
+  intros x y OBS_Eq. exact (proj1 (N.compare_eq_iff x y) OBS_Eq).
+Qed.
+Next Obligation.
+  intros x y OBS_Gt. split.
+  - left. rewrite N.compare_gt_iff in OBS_Gt.
+    rewrite N.compare_lt_iff. lia.
+  - intros x_eq_y. change (x = y) in x_eq_y. subst y.
+    rewrite N.compare_refl in OBS_Gt. discriminate OBS_Gt.
+Qed.
+
+#[global]
+Instance HsOrd_N : HsOrd N (POSET := N_isPoset) :=
+  { HsOrd_hsOrd := N_hsOrd }.
+
+End HsOrd_N.
+
+Lemma compare_N_Lt_iff (x : N) (y : N)
+  : compare x y = Lt <-> (x < y)%N.
+Proof.
+  exact (N.compare_lt_iff x y).
+Qed.
+
+Section SORTED_APP.
+
+Context {A : Type} {A_isPoset : isPoset A}
+  {HsOrd_A : HsOrd A (POSET := A_isPoset)}.
+
+Lemma isSorted_app (l1 : list A) (l2 : list A)
+  (H1 : isSorted compare l1 = true)
+  (H2 : isSorted compare l2 = true)
+  (CROSS : forall x : A, forall y : A,
+    L.In x l1 -> L.In y l2 -> compare x y = Lt)
+  : isSorted compare (l1 ++ l2) = true.
+Proof.
+  revert H1 CROSS. induction l1 as [ | x l1 IH]; intros H1 CROSS;
+    [exact H2 | ].
+  pose proof (proj1 (isSorted_cons_iff x l1) H1) as
+    [x_lt_l1 l1_sorted].
+  cbn [L.app].
+  eapply (proj2 (isSorted_cons_iff x (l1 ++ l2))). split.
+  - intros z z_in. rewrite L.in_app_iff in z_in.
+    destruct z_in as [z_in | z_in].
+    + exact (x_lt_l1 z z_in).
+    + eapply CROSS; [now left | exact z_in].
+  - eapply IH; [exact l1_sorted | ]. intros u v u_in v_in.
+    eapply CROSS; [now right | exact v_in].
+Qed.
+
+End SORTED_APP.

@@ -402,7 +402,7 @@ Defined.
 
 End Strong_Normalisation.
 
-Strategy 100 [sn_guard].
+#[global] Strategy 100 [sn_guard].
 
 Section Strict_Progress_on_Prosets.
 

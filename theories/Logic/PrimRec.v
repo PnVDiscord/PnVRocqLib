@@ -199,9 +199,9 @@ Inductive PrimRecSpec : forall n : arity, PrimRec n -> Vector.t nat n -> nat -> 
   | PR_primRec_spec_O n g h xs z
     (g_spec : PrimRecSpec n g xs z)
     : PrimRecSpec (S n) (PR_primRec n g h) (O :: xs) z
-  | PR_primRec_spec_S n g h xs z a acc
-    (ACC : PrimRecSpec (S n) (PR_primRec n g h) (a :: xs) acc)
-    (h_spec : PrimRecSpec (S (S n)) h (a :: acc :: xs) z)
+  | PR_primRec_spec_S n g h xs z a accum
+    (ACC : PrimRecSpec (S n) (PR_primRec n g h) (a :: xs) accum)
+    (h_spec : PrimRecSpec (S (S n)) h (a :: accum :: xs) z)
     : PrimRecSpec (S n) (PR_primRec n g h) (S a :: xs) z
 with PrimRecsSpec : forall n : arity, forall m : arity, PrimRecs n m -> Vector.t nat n -> Vector.t nat m -> Prop :=
   | PRs_nil_spec n xs
@@ -263,7 +263,7 @@ Proof.
       * eapply PrimRecsGraph_complete. exact g_spec.
       * eapply PrimRecGraph_complete. exact SPEC.
     + eapply PrimRecGraph_complete. exact SPEC.
-    + exists acc. unfold V.tail. simpl. split.
+    + exists accum. unfold V.tail. simpl. split.
       * apply PrimRecGraph_complete in SPEC1. exact SPEC1.
       * apply PrimRecGraph_complete in SPEC2. exact SPEC2.
   - destruct SPEC; simpl.

@@ -616,7 +616,7 @@ Proof.
     - intros alpha beta LE. exact (proj1 (proj2 (REC beta)) alpha LE).
     - intros alpha beta LT. exact (proj2 (proj2 (REC beta)) alpha LT).
   }
-  intros beta. induction (rLt_wf beta) as [beta _ IH]. destruct beta as [cs ts]. rewrite Ord_orec_unfold.
+  intros beta. induction (rLt_wf beta) as [beta H_Acc_inv IH]. destruct beta as [cs ts]. rewrite Ord_orec_unfold.
   assert (BASE : base ≦ᵣ Ord_join base (Ord.sup cs (fun c : cs => next (Ord.orec base next (ts c))))).
   { eapply Ord_join_l. }
   assert (NEXT : forall alpha : Ord.t, alpha <ᵣ mkNode cs ts -> next (Ord.orec base next alpha) ≦ᵣ Ord_join base (Ord.sup cs (fun c : cs => next (Ord.orec base next (ts c))))).
@@ -771,7 +771,7 @@ Qed.
 Lemma Ord_add_base_r (alpha : Ord.t) (beta : Ord.t)
   : beta ≦ᵣ Ord.add alpha beta.
 Proof.
-  revert alpha. induction (rLt_wf beta) as [beta _ IH]. intros alpha. destruct beta as [cs ts]. eapply rLe_intro_var1.
+  revert alpha. induction (rLt_wf beta) as [beta H_Acc_inv IH]. intros alpha. destruct beta as [cs ts]. eapply rLe_intro_var1.
   intros beta' IN. destruct IN as [c EQ]. eapply rLe_rLt_rLt with (y := ts c).
   - eapply eqTree_rLe_rLe; [exact EQ | reflexivity].
   - eapply rLt_rLe_rLt with (y := Ord.suc (Ord.add alpha (ts c))).
@@ -856,7 +856,7 @@ Lemma Ord_add_rLe_l (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   (LE : alpha ≦ᵣ beta)
   : Ord.add alpha alpha1 ≦ᵣ Ord.add beta alpha1.
 Proof.
-  revert alpha beta LE. induction (rLt_wf alpha1) as [alpha1 _ IH]. intros alpha beta LE. destruct alpha1 as [cs ts].
+  revert alpha beta LE. induction (rLt_wf alpha1) as [alpha1 H_Acc_inv IH]. intros alpha beta LE. destruct alpha1 as [cs ts].
   unfold Ord.add. rewrite 2 Ord_orec_unfold. eapply Ord_join_spec.
   { transitivity beta; [exact LE | eapply Ord_join_l]. }
   eapply Ord_sup_rLe_intro. intros c. transitivity (Ord.suc (Ord.orec beta Ord.suc (ts c))).
@@ -930,7 +930,7 @@ Qed.
 Lemma Ord_add_assoc (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   : Ord.add (Ord.add alpha beta) alpha1 =ᵣ Ord.add alpha (Ord.add beta alpha1).
 Proof.
-  revert alpha beta. induction (rLt_wf alpha1) as [alpha1 _ IH]. intros alpha beta. destruct alpha1 as [cs ts].
+  revert alpha beta. induction (rLt_wf alpha1) as [alpha1 H_Acc_inv IH]. intros alpha beta. destruct alpha1 as [cs ts].
   etransitivity.
   { eapply Ord_add_mkNode. }
   symmetry. etransitivity.
@@ -953,7 +953,7 @@ Lemma Ord_orec_add (base : Ord.t) (next : Ord.t -> Ord.t) (alpha : Ord.t) (beta 
   (NEXT_MON : forall alpha : Ord.t, forall beta : Ord.t, alpha ≦ᵣ beta -> next alpha ≦ᵣ next beta)
   : Ord.orec base next (Ord.add alpha beta) =ᵣ Ord.orec (Ord.orec base next alpha) next beta.
 Proof.
-  revert alpha. induction (rLt_wf beta) as [beta _ IH]. intros alpha. destruct beta as [cs ts].
+  revert alpha. induction (rLt_wf beta) as [beta H_Acc_inv IH]. intros alpha. destruct beta as [cs ts].
   etransitivity.
   { eapply Ord_orec_rEq_r; eauto. eapply Ord_add_mkNode. }
   etransitivity.
@@ -1006,7 +1006,7 @@ Lemma Ord_mul_rLe_l (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   (LE : alpha ≦ᵣ beta)
   : Ord.mul alpha alpha1 ≦ᵣ Ord.mul beta alpha1.
 Proof.
-  revert alpha beta LE. induction (rLt_wf alpha1) as [alpha1 _ IH]. intros alpha beta LE. destruct alpha1 as [cs ts].
+  revert alpha beta LE. induction (rLt_wf alpha1) as [alpha1 H_Acc_inv IH]. intros alpha beta LE. destruct alpha1 as [cs ts].
   unfold Ord.mul. rewrite 2 Ord_orec_unfold. eapply Ord_join_spec.
   - eapply Ord_zer_rLe.
   - eapply Ord_sup_rLe_intro. intros c. transitivity (Ord.add (Ord.orec Ord.zer (fun beta1 : Ord.t => Ord.add beta1 beta) (ts c)) alpha).
@@ -1142,7 +1142,7 @@ Qed.
 Lemma Ord_mul_dist (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   : Ord.mul alpha (Ord.add beta alpha1) =ᵣ Ord.add (Ord.mul alpha beta) (Ord.mul alpha alpha1).
 Proof.
-  revert alpha beta. induction (rLt_wf alpha1) as [alpha1 _ IH]. intros alpha beta. destruct alpha1 as [cs ts].
+  revert alpha beta. induction (rLt_wf alpha1) as [alpha1 H_Acc_inv IH]. intros alpha beta. destruct alpha1 as [cs ts].
   etransitivity.
   { eapply Ord_mul_rEq_r. eapply Ord_add_mkNode. }
   etransitivity.
@@ -1164,7 +1164,7 @@ Qed.
 Lemma Ord_mul_assoc (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   : Ord.mul (Ord.mul alpha beta) alpha1 =ᵣ Ord.mul alpha (Ord.mul beta alpha1).
 Proof.
-  revert alpha beta. induction (rLt_wf alpha1) as [alpha1 _ IH]. intros alpha beta. destruct alpha1 as [cs ts].
+  revert alpha beta. induction (rLt_wf alpha1) as [alpha1 H_Acc_inv IH]. intros alpha beta. destruct alpha1 as [cs ts].
   etransitivity.
   { eapply Ord_mul_mkNode. }
   symmetry. etransitivity.
@@ -1236,7 +1236,7 @@ Lemma Ord_exp_rLe_l (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   (LE : alpha ≦ᵣ beta)
   : Ord_exp alpha alpha1 ≦ᵣ Ord_exp beta alpha1.
 Proof.
-  revert alpha beta LE. induction (rLt_wf alpha1) as [alpha1 _ IH]. intros alpha beta LE. destruct alpha1 as [cs ts].
+  revert alpha beta LE. induction (rLt_wf alpha1) as [alpha1 H_Acc_inv IH]. intros alpha beta LE. destruct alpha1 as [cs ts].
   transitivity (Ord_join Ord_one (Ord.sup cs (fun c : cs => Ord.mul (Ord_exp alpha (ts c)) alpha))).
   { exact (proj1 (proj1 (rEq_iff _ _) (Ord_exp_mkNode alpha cs ts))). }
   transitivity (Ord_join Ord_one (Ord.sup cs (fun c : cs => Ord.mul (Ord_exp beta (ts c)) beta))).
@@ -1324,7 +1324,7 @@ Lemma Ord_exp_add (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   (POS : Ord.zer <ᵣ alpha)
   : Ord_exp alpha (Ord.add beta alpha1) =ᵣ Ord.mul (Ord_exp alpha beta) (Ord_exp alpha alpha1).
 Proof.
-  revert beta. induction (rLt_wf alpha1) as [alpha1 _ IH]. intros beta. destruct alpha1 as [cs ts].
+  revert beta. induction (rLt_wf alpha1) as [alpha1 H_Acc_inv IH]. intros beta. destruct alpha1 as [cs ts].
   etransitivity.
   { eapply Ord_exp_rEq_r. exact POS. eapply Ord_add_mkNode. }
   etransitivity.
@@ -1354,7 +1354,7 @@ Lemma Ord_exp_mul (alpha : Ord.t) (beta : Ord.t) (alpha1 : Ord.t)
   (POS : Ord.zer <ᵣ alpha)
   : Ord_exp alpha (Ord.mul beta alpha1) =ᵣ Ord_exp (Ord_exp alpha beta) alpha1.
 Proof.
-  revert beta. induction (rLt_wf alpha1) as [alpha1 _ IH]. intros beta. destruct alpha1 as [cs ts].
+  revert beta. induction (rLt_wf alpha1) as [alpha1 H_Acc_inv IH]. intros beta. destruct alpha1 as [cs ts].
   etransitivity.
   { eapply Ord_exp_rEq_r. exact POS. eapply Ord_mul_mkNode. }
   etransitivity.

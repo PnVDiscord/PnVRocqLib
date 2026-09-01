@@ -398,7 +398,7 @@ Lemma relation_on_image_liftsWellFounded {A : Type} {B : Type} (R : B -> B -> Pr
   : well_founded (binary_relation_on_image R f).
 Proof.
   intros x. remember (f x) as y eqn: y_eq_f_x.
-  revert x y_eq_f_x. induction (WF y) as [y' _ IH].
+  revert x y_eq_f_x. induction (WF y) as [y' H_Acc_inv IH].
   intros x' hyp_eq. econs. intros x f_x_R_f_x'.
   subst y'. eapply IH; [exact f_x_R_f_x' | reflexivity].
 Defined.
@@ -1123,8 +1123,8 @@ Lemma transitiveClosure_lifts_well_founded {A : Type} (R : A -> A -> Prop)
   (R_wf : well_founded R)
   : well_founded (transitiveClosure R).
 Proof.
-  intros x. pose proof (R_wf x) as H_ACC. clear R_wf.
-  induction H_ACC as [x H_ACC_inv IH]. constructor 1.
+  intros x. pose proof (R_wf x) as H_Acc. clear R_wf.
+  induction H_Acc as [x H_Acc_inv IH]. constructor 1.
   induction 1 as [x y R_x_y | x y z H1 IH1 H2 IH2]; eauto.
   eapply IH2; eauto.
 Qed.
@@ -1133,7 +1133,7 @@ Theorem transitiveClosure_well_founded_iff {A : Type} (R : A -> A -> Prop)
   : well_founded (transitiveClosure R) <-> well_founded R.
 Proof.
   split; [intros H_wf x | eapply transitiveClosure_lifts_well_founded].
-  pose proof (H_wf x) as H_ACC. induction H_ACC as [x H_ACC_inv IH].
+  pose proof (H_wf x) as H_Acc. induction H_Acc as [x H_Acc_inv IH].
   econs. intros y R_y_x. eapply IH. econs 1. exact R_y_x.
 Qed.
 
@@ -1158,8 +1158,8 @@ Lemma wf_lexprod@{u v} (A : Type@{u}) (B : A -> Type@{v}) (R_A : A -> A -> Prop)
   : well_founded (lexprod A B R_A R_B).
 Proof.
   intros [a b]. revert b.
-  induction (WF_A a) as [a _ IH_A]. intros b.
-  induction (WF_B a b) as [b _ IH_B].
+  induction (WF_A a) as [a H_Acc_inv IH_A]. intros b.
+  induction (WF_B a b) as [b H_Acc_inv' IH_B].
   econs. intros [a' b'] STEP.
   simpl in STEP. destruct STEP as [STEP | [EQ STEP]].
   - eapply IH_A; eauto.
@@ -1178,6 +1178,8 @@ Definition isSome {A : Type@{option.u0}} (m : option A) : bool :=
 #[universes(polymorphic=yes)]
 Definition dollar@{u v | } {A : Type@{u}} {B : A -> Type@{v}} (f : forall x : A, B x) (x : A) : B x :=
   f x.
+
+#[global] Arguments dollar {A} {B} /.
 
 #[local] Infix "$" := dollar.
 #[local] Infix ">>=" := bind.
@@ -1270,6 +1272,16 @@ Definition ne_None_elim {A : Type} (x : option A) (ne_None : x <> None) : { x' :
 Instance list_isMonad : isMonad list :=
   { pure {A : Type} (x : A) := [x]
   ; bind {A : Type} {B : Type} (xs : list A) (k : A -> list B) := concat (map k xs)
+  }.
+
+#[global]
+Instance sum_isMonad (E : Type) : isMonad (sum E) :=
+  { pure {A : Type} := @inr E A
+  ; bind {A : Type} {B : Type} (m : E + A) (k : A -> (E + B)) :=
+    match m with
+    | inl e => inl e
+    | inr x => k x
+    end
   }.
 
 #[global]
@@ -1434,7 +1446,8 @@ Theorem transition_well_founded_implies_one_or_more_transitions_well_founded
   (H_wf : well_founded transition)
   : well_founded one_or_more_transitions.
 Proof.
-  intros v_out. pose proof (H_wf v_out) as H_ACC. induction H_ACC as [v_out _ IH].
+  intros v_out. pose proof (H_wf v_out) as H_Acc. induction H_Acc as [v_out H_Acc_inv IH].
+  clear H_Acc_inv.
   constructor. intros v' [ls STEPS]. revert v' ls STEPS. induction 1.
   - eapply IH. exists ls. exact STEP.
   - eapply IHSTEPS1.
@@ -2065,7 +2078,7 @@ Lemma length_lt_wf (f := @length A)
   : well_founded (fun x => fun y => f x < f y)%nat.
 Proof.
   intros x. remember (f x) as y eqn: y_eq_f_x.
-  revert x y_eq_f_x. induction (lt_wf y) as [y' _ IH].
+  revert x y_eq_f_x. induction (lt_wf y) as [y' H_Acc_inv IH].
   intros x' hyp_eq. econstructor. intros x f_x_R_f_x'.
   subst y'. eapply IH; [exact f_x_R_f_x' | reflexivity].
 Defined.
@@ -2076,7 +2089,7 @@ Lemma subseq_trans xs ys zs
   : subseq xs zs.
 Proof.
   pose proof (COPY := SUBSEQ1). apply proper_subseq_length in COPY. destruct COPY as [-> | LENGTH1]; trivial.
-  revert xs ys LENGTH1 SUBSEQ1 SUBSEQ2. induction (length_lt_wf zs) as [zs _ IH]; intros.
+  revert xs ys LENGTH1 SUBSEQ1 SUBSEQ2. induction (length_lt_wf zs) as [zs H_Acc_inv IH]; intros.
   pose proof (COPY := SUBSEQ2). apply proper_subseq_length in COPY. destruct COPY as [-> | LENGTH2]; trivial.
   destruct SUBSEQ2; eauto; rename xs0 into zs.
   - econstructor 2. eapply IH with (ys := zs); eauto.
@@ -2120,7 +2133,7 @@ Qed.
 Lemma strict_subseq_well_founded
   : well_founded strict_subseq.
 Proof.
-  intros xs. induction (length_lt_wf xs) as [xs _ IH].
+  intros xs. induction (length_lt_wf xs) as [xs H_Acc_inv IH].
   econstructor. intros ys H_ys. eapply IH. now eapply strict_subseq_length_lt.
 Qed.
 

@@ -89,7 +89,7 @@ Lemma DisjunctionE_preserves (Gamma : ensemble formula) (A : formula) (B : formu
   (ENTAILS3 : E.insert B Gamma ⊨ C)
   : Gamma ⊨ C.
 Proof.
-  ii. unfold entails in ENTAILS1. simpl in ENTAILS1. destruct (ENTAILS1 e H) as [? | ?]; [eapply ENTAILS2 | eapply ENTAILS3]; done!.
+  ii. unfold entails in ENTAILS1. simpl in ENTAILS1. pose proof (ENTAILS1 e H) as [? | ?]; [eapply ENTAILS2 | eapply ENTAILS3]; done!.
 Qed.
 
 Lemma ImplicationI_preserves (Gamma : ensemble formula) (A : formula) (B : formula)

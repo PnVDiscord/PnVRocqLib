@@ -5,6 +5,7 @@ Require Import PnV.Math.OrderTheory.
 Require Import PnV.Math.DomainTheory.
 Require Import PnV.Math.SetTheory.
 Require Import PnV.Math.ClassicalSetTheory.
+Require Import PnV.Math.ClassicalCardinal.
 
 Import TypeTheoreticImplementation.
 
@@ -1451,7 +1452,7 @@ Lemma directed_sup_from_ipo_exists_at (IPO : is_ipo D) (alpha : Ord.t) (X : ense
   (DIRECTED : isDirected X)
   : exists sup_X : D, is_supremum_of sup_X X.
 Proof.
-  revert X H_rEq DIRECTED. induction (Aczel.rLt_wf alpha) as [alpha _ IH]. intros X X_CARD DIRECTED.
+  revert X H_rEq DIRECTED. induction (Aczel.rLt_wf alpha) as [alpha H_Acc_inv IH]. intros X X_CARD DIRECTED.
   pose proof (classic (Cardinal2.isFiniteEnsemble X)) as [FINITE | INFINITE].
   - eapply directed_sup_from_finite_exists; eauto.
   - pose proof (markowsky_cover_exists X DIRECTED INFINITE) as (A & Xs & _ & DIRECTEDs & SMALLs & CHAIN_SUB & COVER).

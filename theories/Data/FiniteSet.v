@@ -258,8 +258,42 @@ Fixpoint mem' (x : A) (xs : list A) {struct xs} : bool :=
     end
   end.
 
+Fixpoint memSorted' (x : A) (xs : list A) {struct xs} : bool :=
+  match xs with
+  | [] => false
+  | y :: ys =>
+    match compare x y with
+    | Lt => false
+    | Eq => true
+    | Gt => memSorted' x ys
+    end
+  end.
+
+Lemma mem'_all_lt_false (x : A) (xs : list A)
+  (ALL_LT : forall y : A, y ∈ xs -> compare x y = Lt)
+  : mem' x xs = false.
+Proof.
+  induction xs as [ | y ys IH]; trivial.
+  cbn [mem']. rewrite (ALL_LT y (or_introl eq_refl)).
+  eapply IH. intros z z_in. eapply ALL_LT. now right.
+Qed.
+
+Lemma memSorted'_eq_mem' (x : A) (xs : list A)
+  (SORTED : isSorted compare xs = true)
+  : memSorted' x xs = mem' x xs.
+Proof.
+  revert SORTED. induction xs as [ | y ys IH]; intros SORTED; trivial.
+  rewrite isSorted_cons_iff in SORTED.
+  destruct SORTED as [y_lt_ys ys_isSorted].
+  cbn [memSorted' mem'].
+  destruct (compare x y) as [ | | ] eqn: OBS; trivial.
+  - symmetry. eapply mem'_all_lt_false. intros z z_in.
+    exact (compare_Lt_trans x y z OBS (y_lt_ys z z_in)).
+  - exact (IH ys_isSorted).
+Qed.
+
 Definition mem (x : A) (X : fset A) : bool :=
-  mem' x X.(FSet.data).
+  memSorted' x X.(FSet.data).
 
 Definition isSubsetOf (X : fset A) (X' : fset A) : Prop :=
   forall z : A, z ∈ X.(FSet.data) -> z ∈ X'.(FSet.data).
@@ -318,7 +352,8 @@ Theorem mem_spec (x : A) (X : fset A)
   : forall b : bool, mem x X = b <-> (if b then x ∈ X.(FSet.data) else ~ x ∈ X.(FSet.data)).
 Proof.
   assert (claim : mem x X = true <-> x ∈ X.(FSet.data)).
-  { unfold mem. generalize X.(FSet.data) as xs. clear X.
+  { unfold mem. rewrite (memSorted'_eq_mem' x X.(FSet.data) X.(FSet.data_isSorted)).
+    generalize X.(FSet.data) as xs. clear X.
     induction xs as [ | y ys IH]; simpl.
     - split; [congruence | tauto].
     - destruct (compare x y) as [ | | ] eqn: H_OBS.
@@ -465,7 +500,7 @@ Proof.
           subst z. rewrite compare_refl in H_p. discriminate H_p.
         }
       * left. rewrite SPEC. intros z z_in_Y.
-        destruct (Y_sub z z_in_Y) as [x_eq_z | z_in_xs]; trivial.
+        pose proof (Y_sub z z_in_Y) as [x_eq_z | z_in_xs]; trivial.
         subst z. exfalso. rewrite mem_spec in H_mem. contradiction (H_mem z_in_Y).
 Qed.
 
@@ -545,3 +580,346 @@ End POWERSET.
 #[global] Hint Rewrite @in_empty_iff @in_add_iff @in_fromList_iff @in_union_iff @in_unions_iff @in_filter_iff @in_map_iff @in_bind_iff @product_iff @in_powerset_iff @mem_spec : simplication_hints.
 
 End FS.
+
+Lemma fset_NoDup {A : Type} {POSET_A : isPoset A} {HsOrd_A : HsOrd A} (X : fset A)
+  : L.NoDup X.(FSet.data).
+Proof.
+  destruct X as [xs SORTED]. cbn [FSet.data]. revert SORTED.
+  induction xs as [ | x xs IH]; intros SORTED; [econstructor | ].
+  rewrite isSorted_cons_iff in SORTED. destruct SORTED as [LT SORTED].
+  econstructor; [ | exact (IH SORTED)].
+  intros IN. pose proof (LT x IN) as CONTRA. rewrite compare_refl in CONTRA. discriminate CONTRA.
+Qed.
+
+Module LazyList.
+
+Inductive tail {A : Type} : list A -> list A -> Prop :=
+  | tail_step (x : A) (xs : list A)
+      : tail xs (x :: xs).
+
+Fixpoint tailWf {A : Type} (xs : list A) : Acc tail xs.
+Proof.
+  destruct xs as [ | x xs].
+  - constructor. intros next STEP. inversion STEP.
+  - constructor. intros next STEP. inversion STEP; subst.
+    exact (@tailWf A xs).
+Defined.
+
+Definition wf {A : Type} : well_founded (@tail A) := tailWf.
+
+End LazyList.
+
+Section SET_OPERATIONS.
+
+Context {A : Type} {A_isPoset : isPoset A}
+  {HsOrd_A : HsOrd A (POSET := A_isPoset)}.
+
+Lemma fset_length_le (X : fset A) (Y : fset A)
+  (SUB : forall z : A,
+    L.In z X.(FSet.data) -> L.In z Y.(FSet.data))
+  : length X.(FSet.data) <= length Y.(FSet.data).
+Proof.
+  eapply L.NoDup_incl_length; [exact (fset_NoDup X) | exact SUB].
+Qed.
+
+Definition fsetSaturationInv (V X : fset A) : Prop :=
+  forall z : A, L.In z X.(FSet.data) -> L.In z V.(FSet.data).
+
+Definition fsetSaturationMeasure (V X : fset A) : nat :=
+  length V.(FSet.data) - length X.(FSet.data).
+
+Inductive fsetSaturationRel
+  (step : fset A -> fset A) : fset A -> fset A -> Prop :=
+  | fsetSaturationRel_step (X : fset A)
+      (CHANGED : step X <> X)
+      : fsetSaturationRel step (step X) X.
+
+Lemma fsetSaturationStep_lt
+  (V : fset A) (step : fset A -> fset A)
+  (MONO : forall X : fset A, forall z : A,
+    L.In z X.(FSet.data) -> L.In z (step X).(FSet.data))
+  (CLOSED : forall X : fset A,
+    fsetSaturationInv V X -> fsetSaturationInv V (step X))
+  (X : fset A) (INV : fsetSaturationInv V X)
+  (CHANGED : step X <> X)
+  : fsetSaturationMeasure V (step X) < fsetSaturationMeasure V X.
+Proof.
+  set (Y := step X) in *.
+  assert (XY : forall z : A,
+    L.In z X.(FSet.data) -> L.In z Y.(FSet.data)).
+  { exact (MONO X). }
+  assert (LT : length X.(FSet.data) < length Y.(FSet.data)).
+  { pose proof (fset_length_le X Y XY) as LE.
+    assert (NE_LENGTH :
+      length X.(FSet.data) <> length Y.(FSet.data)).
+    { intros EQ. apply CHANGED. rewrite fset_eq_spec. intros z. split.
+      - intros IN.
+        assert (LEN_REV :
+          length Y.(FSet.data) <= length X.(FSet.data)) by lia.
+        pose proof
+          (L.NoDup_length_incl (fset_NoDup X) LEN_REV XY) as REV.
+        exact (REV z IN).
+      - exact (XY z). }
+    lia. }
+  pose proof (fset_length_le Y V (CLOSED X INV)) as YV.
+  unfold fsetSaturationMeasure. lia.
+Qed.
+
+Definition fsetSaturationRelAcc
+  (V : fset A) (step : fset A -> fset A)
+  (MONO : forall X : fset A, forall z : A,
+    L.In z X.(FSet.data) -> L.In z (step X).(FSet.data))
+  (CLOSED : forall X : fset A,
+    fsetSaturationInv V X -> fsetSaturationInv V (step X))
+  : forall X : fset A,
+      fsetSaturationInv V X ->
+      Acc Nat.lt (fsetSaturationMeasure V X) ->
+      Acc (fsetSaturationRel step) X.
+Proof.
+  refine (fix go (X : fset A) (INV : fsetSaturationInv V X)
+    (H_Acc : Acc Nat.lt (fsetSaturationMeasure V X)) {struct H_Acc}
+    : Acc (fsetSaturationRel step) X := _).
+  constructor. intros Y REL. destruct REL as [X NE].
+  exact (go (step X) (CLOSED X INV)
+    (Acc_inv H_Acc
+      (fsetSaturationStep_lt V step MONO CLOSED X INV NE))).
+Defined.
+
+Definition fsetSaturationCounter
+  (V X : fset A) (credit : list A) : Prop :=
+  fsetSaturationMeasure V X <= length credit.
+
+Lemma fsetSaturationCounter_start
+  (V X : fset A) (credit : list A)
+  (CARRIER : length V.(FSet.data) <= length credit)
+  : fsetSaturationCounter V X credit.
+Proof.
+  unfold fsetSaturationCounter, fsetSaturationMeasure. lia.
+Qed.
+
+Lemma fsetSaturationCounter_step
+  (V : fset A) (step : fset A -> fset A)
+  (MONO : forall X : fset A, forall z : A,
+    L.In z X.(FSet.data) -> L.In z (step X).(FSet.data))
+  (CLOSED : forall X : fset A,
+    fsetSaturationInv V X -> fsetSaturationInv V (step X))
+  (X : fset A) (INV : fsetSaturationInv V X)
+  (CHANGED : step X <> X) (x : A) (credit : list A)
+  (COUNTER : fsetSaturationCounter V X (x :: credit))
+  : fsetSaturationCounter V (step X) credit.
+Proof.
+  unfold fsetSaturationCounter in *. cbn [length] in COUNTER.
+  pose proof
+    (fsetSaturationStep_lt V step MONO CLOSED X INV CHANGED).
+  lia.
+Qed.
+
+Lemma fsetSaturationCounter_empty
+  (V : fset A) (step : fset A -> fset A)
+  (MONO : forall X : fset A, forall z : A,
+    L.In z X.(FSet.data) -> L.In z (step X).(FSet.data))
+  (CLOSED : forall X : fset A,
+    fsetSaturationInv V X -> fsetSaturationInv V (step X))
+  (X : fset A) (INV : fsetSaturationInv V X)
+  (CHANGED : step X <> X)
+  (COUNTER : fsetSaturationCounter V X [])
+  : False.
+Proof.
+  unfold fsetSaturationCounter in COUNTER. cbn [length] in COUNTER.
+  pose proof
+    (fsetSaturationStep_lt V step MONO CLOSED X INV CHANGED).
+  lia.
+Qed.
+
+Definition fsetSaturationRelAccList
+  (V : fset A) (step : fset A -> fset A)
+  (MONO : forall X : fset A, forall z : A,
+    L.In z X.(FSet.data) -> L.In z (step X).(FSet.data))
+  (CLOSED : forall X : fset A,
+    fsetSaturationInv V X -> fsetSaturationInv V (step X))
+  : forall (X : fset A) (credit : list A),
+      fsetSaturationInv V X ->
+      fsetSaturationCounter V X credit ->
+      Acc LazyList.tail credit ->
+      Acc (fsetSaturationRel step) X.
+Proof.
+  refine (fix go (X : fset A) (credit : list A)
+    (INV : fsetSaturationInv V X)
+    (COUNTER : fsetSaturationCounter V X credit)
+    (H_Acc : Acc LazyList.tail credit) {struct H_Acc}
+    : Acc (fsetSaturationRel step) X := _).
+  constructor. intros Y REL. destruct REL as [X CHANGED].
+  destruct credit as [ | x credit].
+  - exact (False_ind _
+      (fsetSaturationCounter_empty
+        V step MONO CLOSED X INV CHANGED COUNTER)).
+  - exact (go (step X) credit (CLOSED X INV)
+      (fsetSaturationCounter_step
+        V step MONO CLOSED X INV CHANGED x credit COUNTER)
+      (Acc_inv H_Acc (LazyList.tail_step x credit))).
+Defined.
+
+Definition fsetSaturationRun (step : fset A -> fset A)
+  : forall X : fset A, Acc (fsetSaturationRel step) X -> fset A.
+Proof.
+  refine (fix go (X : fset A)
+    (H_Acc : Acc (fsetSaturationRel step) X) {struct H_Acc}
+    : fset A := _).
+  set (Y := step X).
+  destruct (eqb Y X) eqn: SAME.
+  - exact X.
+  - exact (go Y
+      (Acc_inv H_Acc
+        (fsetSaturationRel_step step X
+          (proj1 (eqb_neq Y X) SAME)))).
+Defined.
+
+Definition inter (X : fset A) (Y : fset A) : fset A :=
+  FS.filter (fun z : A => FS.mem z Y) X.
+
+Lemma in_inter_iff (X : fset A) (Y : fset A) (z : A)
+  : L.In z (inter X Y).(FSet.data) <->
+    (L.In z X.(FSet.data) /\ L.In z Y.(FSet.data)).
+Proof.
+  unfold inter. rewrite FS.in_filter_iff.
+  split; intros [H1 H2]; split; trivial.
+  - exact (proj1 (FS.mem_spec z Y true) H2).
+  - exact (proj2 (FS.mem_spec z Y true) H2).
+Qed.
+
+Definition diff (X : fset A) (Y : fset A) : fset A :=
+  FS.filter (fun z : A => negb (FS.mem z Y)) X.
+
+Lemma in_diff_iff (X : fset A) (Y : fset A) (z : A)
+  : L.In z (diff X Y).(FSet.data) <->
+    (L.In z X.(FSet.data) /\ ~ L.In z Y.(FSet.data)).
+Proof.
+  unfold diff. rewrite FS.in_filter_iff.
+  split; intros [H1 H2]; split; trivial.
+  - rewrite negb_true_iff in H2.
+    exact (proj1 (FS.mem_spec z Y false) H2).
+  - rewrite negb_true_iff.
+    exact (proj2 (FS.mem_spec z Y false) H2).
+Qed.
+
+End SET_OPERATIONS.
+
+Lemma compare_nat_Lt_iff (m : nat) (n : nat)
+  : compare m n = Lt <-> m < n.
+Proof.
+  revert n. induction m as [ | m IH]; intros [ | n]; cbn.
+  - split; [intros H; discriminate H | lia].
+  - split; [intros _; lia | reflexivity].
+  - split; [intros H; discriminate H | lia].
+  - rewrite (IH n). lia.
+Qed.
+
+Lemma isSorted_natSeq (len : nat) (start : nat)
+  : isSorted compare (L.seq start len) = true.
+Proof.
+  revert start. induction len as [ | len IH]; intros start;
+    [reflexivity | ].
+  cbn [L.seq].
+  eapply (proj2 (isSorted_cons_iff start (L.seq (S start) len))). split.
+  - intros z z_in. rewrite L.in_seq in z_in.
+    rewrite compare_nat_Lt_iff. lia.
+  - eapply IH.
+Qed.
+
+Definition natRange (start : nat) (len : nat) : fset nat :=
+  FSet.mk (L.seq start len) (isSorted_natSeq len start).
+
+Lemma in_natRange_iff (start : nat) (len : nat) (z : nat)
+  : L.In z (natRange start len).(FSet.data) <->
+    start <= z < start + len.
+Proof.
+  cbn [natRange FSet.data]. exact (L.in_seq len start z).
+Qed.
+
+Section SORTED_BUILD.
+
+Context {A : Type} {A_isPoset : isPoset A}
+  {HsOrd_A : HsOrd A (POSET := A_isPoset)}.
+Context {B : Type} {B_isPoset : isPoset B}
+  {HsOrd_B : HsOrd B (POSET := B_isPoset)}.
+
+Definition prodList (xs : list A) (ys : list B) : list (A * B) :=
+  L.concat (L.map (fun x : A => L.map (fun y : B => (x, y)) ys) xs).
+
+Lemma in_prodList_iff (xs : list A) (ys : list B) (p : A * B)
+  : L.In p (prodList xs ys) <->
+    (L.In (fst p) xs /\ L.In (snd p) ys).
+Proof.
+  unfold prodList. rewrite L.in_concat. split.
+  - intros (l & l_in & p_in). rewrite L.in_map_iff in l_in.
+    destruct l_in as (x & EQ & x_in). subst l.
+    rewrite L.in_map_iff in p_in. destruct p_in as (y & EQ & y_in).
+    subst p. split; assumption.
+  - intros [fst_in snd_in].
+    exists (L.map (fun y : B => (fst p, y)) ys). split.
+    + rewrite L.in_map_iff. exists (fst p). split;
+        [reflexivity | exact fst_in].
+    + rewrite L.in_map_iff. exists (snd p). split;
+        [ | exact snd_in].
+      destruct p as [x y]. reflexivity.
+Qed.
+
+Lemma isSorted_map_pair (x : A) (ys : list B)
+  (Hy : isSorted compare ys = true)
+  : isSorted compare (L.map (fun y : B => (x, y)) ys) = true.
+Proof.
+  revert Hy. induction ys as [ | y ys IH]; intros Hy;
+    [reflexivity | ].
+  pose proof (proj1 (isSorted_cons_iff y ys) Hy) as
+    [y_lt_ys ys_sorted].
+  cbn [L.map].
+  eapply (proj2
+    (isSorted_cons_iff (x, y) (L.map (fun y' : B => (x, y')) ys))).
+  split.
+  - intros z z_in. rewrite L.in_map_iff in z_in.
+    destruct z_in as (y' & EQ & y'_in). subst z.
+    change (compare (x, y) (x, y')) with
+      (pair_compare (x, y) (x, y')).
+    unfold pair_compare. cbn [fst snd]. rewrite compare_refl.
+    exact (y_lt_ys y' y'_in).
+  - exact (IH ys_sorted).
+Qed.
+
+Lemma isSorted_prodList (xs : list A) (ys : list B)
+  (Hx : isSorted compare xs = true)
+  (Hy : isSorted compare ys = true)
+  : isSorted compare (prodList xs ys) = true.
+Proof.
+  revert Hx. induction xs as [ | x xs IH]; intros Hx;
+    [reflexivity | ].
+  pose proof (proj1 (isSorted_cons_iff x xs) Hx) as
+    [x_lt_xs xs_sorted].
+  unfold prodList. cbn [L.map L.concat].
+  eapply isSorted_app.
+  - exact (isSorted_map_pair x ys Hy).
+  - exact (IH xs_sorted).
+  - intros u v u_in v_in. rewrite L.in_map_iff in u_in.
+    destruct u_in as (y & EQ & _). subst u.
+    change (prodList xs ys) with
+      (L.concat
+        (L.map (fun x' : A => L.map (fun y' : B => (x', y')) ys) xs))
+      in v_in.
+    pose proof (proj1 (in_prodList_iff xs ys v) v_in) as [v_fst_in _].
+    change (compare (x, y) v) with (pair_compare (x, y) v).
+    unfold pair_compare. cbn [fst].
+    rewrite (x_lt_xs (fst v) v_fst_in). reflexivity.
+Qed.
+
+Definition fprod (X : fset A) (Y : fset B) : fset (A * B) :=
+  FSet.mk (prodList X.(FSet.data) Y.(FSet.data))
+    (isSorted_prodList X.(FSet.data) Y.(FSet.data)
+      X.(FSet.data_isSorted) Y.(FSet.data_isSorted)).
+
+Lemma in_fprod_iff (X : fset A) (Y : fset B) (p : A * B)
+  : L.In p (fprod X Y).(FSet.data) <->
+    (L.In (fst p) X.(FSet.data) /\ L.In (snd p) Y.(FSet.data)).
+Proof.
+  exact (in_prodList_iff X.(FSet.data) Y.(FSet.data) p).
+Qed.
+
+End SORTED_BUILD.

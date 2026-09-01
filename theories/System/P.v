@@ -97,7 +97,7 @@ Fixpoint print_name1 (n : nat) (H_Acc : Acc lt n) : list Byte.byte :=
 
 Fixpoint print_name1_pirrel (n : nat) (H_Acc : Acc lt n) (H_Acc' : Acc lt n) {struct H_Acc} : print_name1 n H_Acc = print_name1 n H_Acc'.
 Proof.
-  destruct H_Acc, H_Acc'. simpl. destruct (Nat.eq_dec n 0) as [EQ | NE].
+  destruct H_Acc as [H_Acc_inv], H_Acc' as [H_Acc_inv']. simpl. destruct (Nat.eq_dec n 0) as [EQ | NE].
   - reflexivity.
   - f_equal. eapply print_name1_pirrel.
 Qed.

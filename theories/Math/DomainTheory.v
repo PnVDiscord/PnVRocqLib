@@ -39,7 +39,7 @@ Qed.
 Definition Cola_isLattice {D : Type} {PROSET : isProset D} (COLA : isCola D (PROSET := PROSET)) : isLattice D (PROSET := PROSET) :=
   {| Lattice_asUpperSemilattice := Cola_isUpperSemilattice; Lattice_asLowerSemilattice := Cola_isLowerSemilattice; |}.
 
-Definition supremum_of_monotonic_maps {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {COLA : isCola D} {COLA' : isCola D'} (F : ensemble `[D -> D']) :=
+Definition supremum_of_monotonic_maps {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {COLA : isCola D} {COLA' : isCola D'} (F : ensemble `[D -> D']) : { sup_F : D -> D' | forall x : D, is_supremum_of (sup_F x) (E.image (fun f : `[D -> D'] => proj1_sig f x) F) } :=
   reify (fun x => supremum_cola (E.image (fun f : `[D -> D'] => proj1_sig f x) F)).
 
 Lemma supremum_of_monotonic_maps_isMonotonic {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {COLA : isCola D} {COLA' : isCola D'} (F : ensemble `[D -> D'])

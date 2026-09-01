@@ -56,6 +56,7 @@ Require Import PnV.Logic.ClassicalPropositionalLogic.
 Require Import PnV.Logic.HELFER2.
 
 Require Import PnV.Math.ClassicalSetTheory.
+Require Import PnV.Math.ClassicalCardinal.
 Require Import PnV.Math.ClassicalDomainTheory.
 
 Require Import PnV.System.FolFramework.

@@ -142,8 +142,8 @@ Theorem cfg1_completeness s
   (count_L_eq_count_R : count L s = count R s)
   : s \in L_cfg1.
 Proof.
-  revert count_L_eq_count_R. pose proof (relation_on_image_liftsWellFounded lt (@length alphabet) lt_wf s) as H_ACC.
-  unfold binary_relation_on_image in H_ACC. induction H_ACC as [[ | [ | ] s] _ IHs]; simpl in *; i; eauto.
+  revert count_L_eq_count_R. pose proof (relation_on_image_liftsWellFounded lt (@length alphabet) lt_wf s) as H_Acc.
+  unfold binary_relation_on_image in H_Acc. induction H_Acc as [[ | [ | ] s] H_Acc_inv IHs]; simpl in *; i; eauto.
   - assert (count_L_s_lt_count_R_s : count L s < count R s) by lia.
     apply if_count_L_s_lt_count_R_s in count_L_s_lt_count_R_s.
     destruct count_L_s_lt_count_R_s as [[? ? ? ? ?] | H_last_R].
@@ -384,8 +384,8 @@ Theorem cfg2_equiv_WellParen
 Proof.
   change (forall s : string, s \in L_cfg2 <-> WellParen s). intros s. split.
   { intros H_in. induction H_in; eauto. }
-  pose proof (relation_on_image_liftsWellFounded lt (@length alphabet) lt_wf s) as H_ACC.
-  induction H_ACC as [s _ IH]. change (forall s' : string, length s' < length s -> WellParen s' -> s' \in L_cfg2) in IH.
+  pose proof (relation_on_image_liftsWellFounded lt (@length alphabet) lt_wf s) as H_Acc.
+  induction H_Acc as [s H_Acc_inv IH]. change (forall s' : string, length s' < length s -> WellParen s' -> s' \in L_cfg2) in IH.
   intros WELLPAREN. destruct s as [ | [ | ] s]; cycle -1.
   { inv WELLPAREN. exploit (PREFIX [R]); ss!. change ([R] \prefix [R] ++ s). econs. }
   { econs 1. }

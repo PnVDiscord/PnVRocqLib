@@ -1458,7 +1458,7 @@ Proof.
         pose proof (IH (subst1 y (Var_trm z) p)) as claim1. rewrite subst1_preserves_rank in claim1. specialize (claim1 (le_n _)).
         assert (PROVE' : (E.insert (All_frm z (subst1 x t (subst1 y (Var_trm z) p))) (E.insert (Eqn_frm t t') E.empty)) \proves Eqn_frm t t').
         { eapply for_ByHyp. right. left. reflexivity. }
-        specialize claim1 with (lhs := t) (rhs := t'). destruct (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
+        specialize claim1 with (lhs := t) (rhs := t'). pose proof (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
         eapply for_Imp_E. exact PROVE3. eapply cut_one' with (A := All_frm z (subst1 x t (subst1 y (Var_trm z) p))).
         { rewrite <- subst1_id with (x := z) (p := subst1 x t (subst1 y (Var_trm z) p)) at 2. rewrite subst1_nice with (x := z) (t := Var_trm z). eapply for_All_E. eapply for_ByHyp. left. reflexivity. }
         { eapply for_ByHyp. left. reflexivity. }
@@ -1510,7 +1510,7 @@ Proof.
       pose proof (IH (subst1 y (Var_trm z) p)) as claim1. rewrite subst1_preserves_rank in claim1. specialize (claim1 (le_n _)). apply proves_symmetry in PROVE.
       assert (PROVE' : (E.insert (All_frm z (subst1 x t (subst1 y (Var_trm z) p))) (E.insert (Eqn_frm t' t) E.empty)) \proves Eqn_frm t' t).
       { eapply for_ByHyp. right. left. reflexivity. }
-      specialize claim1 with (lhs := t') (rhs := t). destruct (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
+      specialize claim1 with (lhs := t') (rhs := t). pose proof (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
       eapply for_Imp_E. exact PROVE4. eapply cut_one' with (A := All_frm z (subst1 x t (subst1 y (Var_trm z) p))).
       { rewrite <- subst1_id with (x := z) (p := subst1 x t (subst1 y (Var_trm z) p)) at 2. rewrite subst1_nice with (x := z) (t := Var_trm z). eapply for_All_E. eapply for_ByHyp. left. reflexivity. }
       { eapply for_ByHyp. left. reflexivity. }
@@ -1570,7 +1570,7 @@ Proof.
         pose proof (IH (subst1 y (Var_trm z) p)) as claim1. rewrite subst1_preserves_rank in claim1. specialize (claim1 (le_n _)).
         assert (PROVE' : (E.insert (All_frm z (subst1 x t (subst1 y (Var_trm z) p))) (E.insert (Eqn_frm t t') E.empty)) \proves Eqn_frm t t').
         { eapply for_ByHyp. right. left. reflexivity. }
-        specialize claim1 with (lhs := t) (rhs := t'). destruct (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
+        specialize claim1 with (lhs := t) (rhs := t'). pose proof (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
         eapply for_Imp_E. exact PROVE3. eapply cut_one' with (A := All_frm z (subst1 x t (subst1 y (Var_trm z) p))).
         { rewrite <- subst1_id with (x := z) (p := subst1 x t (subst1 y (Var_trm z) p)) at 2. rewrite subst1_nice with (x := z) (t := Var_trm z). eapply for_All_E. eapply for_ByHyp. left. reflexivity. }
         { eapply for_ByHyp. left. reflexivity. }
@@ -1752,7 +1752,7 @@ Proof.
         pose proof (IH (subst1 y (Var_trm z) p)) as claim1. rewrite subst1_preserves_rank in claim1. specialize (claim1 (le_n _)). apply proves_symmetry in PROVE.
         assert (PROVE' : (E.insert (All_frm z (subst1 x t' (subst1 y (Var_trm z) p))) (E.insert (Eqn_frm t t') E.empty)) \proves Eqn_frm t t').
         { eapply for_ByHyp. right. left. reflexivity. }
-        specialize claim1 with (lhs := t) (rhs := t'). destruct (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
+        specialize claim1 with (lhs := t) (rhs := t'). pose proof (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
         eapply for_Imp_E. exact PROVE4. eapply cut_one' with (A := All_frm z (subst1 x t' (subst1 y (Var_trm z) p))).
         { rewrite <- subst1_id with (x := z) (p := subst1 x t' (subst1 y (Var_trm z) p)) at 2. rewrite subst1_nice with (x := z) (t := Var_trm z). eapply for_All_E. eapply for_ByHyp. left. reflexivity. }
         { eapply for_ByHyp. left. reflexivity. }
@@ -1871,7 +1871,7 @@ Proof.
         pose proof (IH (subst1 y (Var_trm z) p)) as claim1. rewrite subst1_preserves_rank in claim1. specialize (claim1 (le_n _)). apply proves_symmetry in PROVE.
         assert (PROVE' : (E.insert (All_frm z (subst1 x t' (subst1 y (Var_trm z) p))) (E.insert (Eqn_frm t t') E.empty)) \proves Eqn_frm t t').
         { eapply for_ByHyp. right. left. reflexivity. }
-        specialize claim1 with (lhs := t) (rhs := t'). destruct (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
+        specialize claim1 with (lhs := t) (rhs := t'). pose proof (claim1 _ x PROVE') as [PROVE3 PROVE4]. clear claim1.
         eapply for_Imp_E. exact PROVE4. eapply cut_one' with (A := All_frm z (subst1 x t' (subst1 y (Var_trm z) p))).
         { rewrite <- subst1_id with (x := z) (p := subst1 x t' (subst1 y (Var_trm z) p)) at 2. rewrite subst1_nice with (x := z) (t := Var_trm z). eapply for_All_E. eapply for_ByHyp. left. reflexivity. }
         { eapply for_ByHyp. left. reflexivity. }

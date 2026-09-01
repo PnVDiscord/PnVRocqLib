@@ -130,7 +130,7 @@ Theorem member_rect (P : Tree -> Type)
   (IND : forall x, (forall y, y \in x -> P y) -> P x)
   : forall x, P x.
 Proof.
-  intros x. induction (member_wf x) as [x _ IH]. exact (IND x IH).
+  intros x. induction (member_wf x) as [x H_Acc_inv IH]. exact (IND x IH).
 Defined.
 
 #[global] Hint Resolve eqTree_Reflexive eqTree_Symmetric eqTree_Transitive : aczel_hints.
@@ -1001,48 +1001,48 @@ Qed.
 
 (** End RANK_COMPARISON. *)
 
-Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (ACC : Acc R x) {struct ACC} : Tree :=
-  match ACC with
-  | Acc_intro _ ACC_INV => mkNode { y : A | R y x } (fun c => @fromAcc A R (proj1_sig c) (ACC_INV (proj1_sig c) (proj2_sig c)))
+Fixpoint fromAcc {A : Type@{Set_u}} {R : A -> A -> Prop} (x : A) (H_Acc : Acc R x) {struct H_Acc} : Tree :=
+  match H_Acc with
+  | Acc_intro _ H_Acc_inv => mkNode { y : A | R y x } (fun c => @fromAcc A R (proj1_sig c) (H_Acc_inv (proj1_sig c) (proj2_sig c)))
   end.
 
-Lemma fromAcc_unfold (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (ACC : Acc R x)
-  : forall z, z \in @fromAcc A R x ACC <-> (exists c : { y : A | R y x }, z == fromAcc (proj1_sig c) (Acc_inv ACC (proj2_sig c))).
+Lemma fromAcc_unfold (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (H_Acc : Acc R x)
+  : forall z, z \in @fromAcc A R x H_Acc <-> (exists c : { y : A | R y x }, z == fromAcc (proj1_sig c) (Acc_inv H_Acc (proj2_sig c))).
 Proof.
-  intros z. destruct ACC as [ACC_INV]; simpl in *. reflexivity.
+  intros z. destruct H_Acc as [H_Acc_inv]; simpl in *. reflexivity.
 Qed.
 
 #[global] Hint Rewrite fromAcc_unfold : simplication_hints.
 
-Fixpoint fromAcc_pirrel (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (ACC : Acc R x) (ACC' : Acc R x) {struct ACC}
-  : fromAcc x ACC == fromAcc x ACC'.
+Fixpoint fromAcc_pirrel (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (H_Acc : Acc R x) (H_Acc' : Acc R x) {struct H_Acc}
+  : fromAcc x H_Acc == fromAcc x H_Acc'.
 Proof.
-  destruct ACC as [ACC_INV], ACC' as [ACC_INV']. eapply eqTree_intro.
+  destruct H_Acc as [H_Acc_inv], H_Acc' as [H_Acc_inv']. eapply eqTree_intro.
   - intros z H_in. rewrite fromAcc_unfold in *. destruct H_in as [c EQ].
-    pose proof (fromAcc_pirrel A R (proj1_sig c) (ACC_INV (proj1_sig c) (proj2_sig c)) (ACC_INV' (proj1_sig c) (proj2_sig c))) as claim.
+    pose proof (fromAcc_pirrel A R (proj1_sig c) (H_Acc_inv (proj1_sig c) (proj2_sig c)) (H_Acc_inv' (proj1_sig c) (proj2_sig c))) as claim.
     exists c. rewrite <- claim. exact EQ.
   - intros z H_in. rewrite fromAcc_unfold in *. destruct H_in as [c EQ].
-    pose proof (fromAcc_pirrel A R (proj1_sig c) (ACC_INV (proj1_sig c) (proj2_sig c)) (ACC_INV' (proj1_sig c) (proj2_sig c))) as claim.
+    pose proof (fromAcc_pirrel A R (proj1_sig c) (H_Acc_inv (proj1_sig c) (proj2_sig c)) (H_Acc_inv' (proj1_sig c) (proj2_sig c))) as claim.
     exists c. rewrite -> claim. exact EQ.
 Qed.
 
-Lemma fromAcc_member_fromAcc_intro (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (x' : A) (ACC : Acc R x) (ACC' : Acc R x')
+Lemma fromAcc_member_fromAcc_intro (A : Type@{Set_u}) (R : A -> A -> Prop) (x : A) (x' : A) (H_Acc : Acc R x) (H_Acc' : Acc R x')
   (R_x_x' : R x x')
-  : fromAcc x ACC \in fromAcc x' ACC'.
+  : fromAcc x H_Acc \in fromAcc x' H_Acc'.
 Proof.
   rewrite fromAcc_unfold. exists (@exist _ _ x R_x_x'). simpl. eapply fromAcc_pirrel.
 Qed.
 
-Fixpoint fromAcc_isMonotonic (A : Type) (R1 : A -> A -> Prop) (R2 : A -> A -> Prop) (x : A) (INCL : forall x : A, forall x' : A, forall LE : R1 x x', R2 x x') (ACC1 : Acc R1 x) (ACC2 : Acc R2 x) {struct ACC1} : fromAcc x ACC1 ≦ᵣ fromAcc x ACC2.
+Fixpoint fromAcc_isMonotonic (A : Type) (R1 : A -> A -> Prop) (R2 : A -> A -> Prop) (x : A) (INCL : forall x : A, forall x' : A, forall LE : R1 x x', R2 x x') (H_Acc : Acc R1 x) (H_Acc' : Acc R2 x) {struct H_Acc} : fromAcc x H_Acc ≦ᵣ fromAcc x H_Acc'.
 Proof.
-  destruct ACC1, ACC2; simpl. econs. simpl. intros [c R1_c_x]; simpl.
+  destruct H_Acc as [H_Acc_inv], H_Acc' as [H_Acc_inv']; simpl. econs. simpl. intros [c R1_c_x]; simpl.
   econs. simpl. exists (@exist _ _ c (INCL c x R1_c_x)). simpl.
   eapply fromAcc_isMonotonic. exact INCL.
 Qed.
 
-Fixpoint fromAcc_eq_intro (A : Type) (R1 : A -> A -> Prop) (R2 : A -> A -> Prop) (x : A) (INCL : forall x : A, forall x' : A, R1 x x' <-> R2 x x') (ACC1 : Acc R1 x) (ACC2 : Acc R2 x) {struct ACC1} : fromAcc x ACC1 == fromAcc x ACC2.
+Fixpoint fromAcc_eq_intro (A : Type) (R1 : A -> A -> Prop) (R2 : A -> A -> Prop) (x : A) (INCL : forall x : A, forall x' : A, R1 x x' <-> R2 x x') (H_Acc : Acc R1 x) (H_Acc' : Acc R2 x) {struct H_Acc} : fromAcc x H_Acc == fromAcc x H_Acc'.
 Proof.
-  destruct ACC1, ACC2; simpl. eapply extensionality; intros z.
+  destruct H_Acc as [H_Acc_inv], H_Acc' as [H_Acc_inv']; simpl. eapply extensionality; intros z.
   split; intros [[c R1_c_x] z_eq]; simpl in *.
   - rewrite z_eq. exists (@exist _ _ c (proj1 (INCL c x) R1_c_x)). simpl.
     eapply fromAcc_eq_intro. exact INCL.
@@ -1086,7 +1086,7 @@ Lemma fromWf_isSupremum {A : Type@{Set_u}} (R : A -> A -> Prop) (R_wf : well_fou
   (LE : forall y : A, R y x -> @fromWf A R R_wf y <ᵣ t)
   : @fromWf A R R_wf x ≦ᵣ t.
 Proof.
-  unfold fromWf. destruct (R_wf x) as [ACC_INV]. simpl.
+  unfold fromWf. destruct (R_wf x) as [H_Acc_inv]. simpl.
   econs. simpl. intros [y R_y_x]; simpl. rewrite fromAcc_pirrel. now eapply LE.
 Qed.
 
@@ -1111,13 +1111,13 @@ Lemma fromWf_cong {A : Type} {B : Type} (RA : A -> A -> Prop) (RB : B -> B -> Pr
   (f_cong : forall x1 : A, forall x2 : A, forall LT : RA x1 x2, RB (f x1) (f x2))
   : forall x : A, @fromWf A RA RA_wf x ≦ᵣ @fromWf B RB RB_wf (f x).
 Proof.
-  intros x. pose proof (RA_wf x) as H_ACC. induction H_ACC as [x _ IH].
+  intros x. pose proof (RA_wf x) as H_Acc. induction H_Acc as [x H_Acc_inv IH].
   eapply rLe_ext. unfold fromWf. intros z LT. destruct LT as [[c LE]]; simpl in *.
-  destruct (RA_wf x) as [H_Acc_inv]; simpl in *. destruct c as [c RA_c_x]; simpl in *.
+  destruct (RA_wf x) as [H_Acc_inv']; simpl in *. destruct c as [c RA_c_x]; simpl in *.
   pose proof (IH _ RA_c_x) as H. unfold fromWf in *. econs.
-  destruct (RB_wf (f x)) as [H_Acc_inv']; simpl. exists (@exist _ _ (f c) (f_cong c x RA_c_x)). simpl.
-  rewrite LE. rewrite fromAcc_pirrel with (ACC' := RA_wf c). rewrite H.
-  now rewrite fromAcc_pirrel with (A := B) (ACC := (H_Acc_inv' (f c) (f_cong c x RA_c_x))) (ACC' := RB_wf (f c)).
+  destruct (RB_wf (f x)) as [H_Acc_inv'']; simpl. exists (@exist _ _ (f c) (f_cong c x RA_c_x)). simpl.
+  rewrite LE. rewrite fromAcc_pirrel with (H_Acc' := RA_wf c). rewrite H.
+  now rewrite fromAcc_pirrel with (A := B) (H_Acc := (H_Acc_inv'' (f c) (f_cong c x RA_c_x))) (H_Acc' := RB_wf (f c)).
 Qed.
 
 Lemma fromWf_eq_fromWf_intro {A : Type} {B : Type} (RA : A -> A -> Prop) (RB : B -> B -> Prop) (f : A -> B)
@@ -1126,7 +1126,7 @@ Lemma fromWf_eq_fromWf_intro {A : Type} {B : Type} (RA : A -> A -> Prop) (RB : B
   (f_sim : forall x' : A, forall y : B, (exists x : A, RA x x' /\ y = f x) <-> (exists y' : B, RB y y' /\ y' = f x'))
   : forall x : A, @fromWf A RA RA_wf x == @fromWf B RB RB_wf (f x).
 Proof.
-  intros x'. eapply extensionality. pose proof (RA_wf x') as H_ACC. induction H_ACC as [x' _ IH].
+  intros x'. eapply extensionality. pose proof (RA_wf x') as H_Acc. induction H_Acc as [x' H_Acc_inv IH].
   intros z; split; intros z_in.
   - rewrite fromWf_unfold in z_in. destruct z_in as (x & H_RA & z_eq). rewrite z_eq. clear z z_eq.
     assert (exists y' : B, RB (f x) y' /\ y' = f x') as (y & H_RB & ->).
@@ -1324,7 +1324,7 @@ Proof.
   econs.
   - intros y y_in. unfold fromWf in y_in. rewrite fromAcc_unfold in y_in.
     destruct y_in as [[c R_c_x] y_eq]. simpl proj1_sig in y_eq.
-    rewrite fromAcc_pirrel with (ACC' := R_wf c) in y_eq. change (y == @fromWf A R R_wf c) in y_eq.
+    rewrite fromAcc_pirrel with (H_Acc' := R_wf c) in y_eq. change (y == @fromWf A R R_wf c) in y_eq.
     intros z z_in. rewrite y_eq in z_in. unfold fromWf in z_in |- *. rewrite fromAcc_unfold in z_in |- *.
     destruct z_in as [[c1 R_c1_c] z_eq]. exists (@exist _ _ c1 (R_trans c1 c x R_c1_c R_c_x)). simpl proj1_sig in z_eq |- *.
     rewrite z_eq. eapply fromAcc_pirrel.
@@ -1501,13 +1501,13 @@ Proof.
   unfold hash_rLt in EXT_EQ.
   split; intros H_rLt.
   - unfold fromWf in H_rLt.
-    destruct (R_wf x) as [ACC_INV]; simpl in H_rLt.
+    destruct (R_wf x) as [H_Acc_inv]; simpl in H_rLt.
     destruct H_rLt as [[[c R_c_x] H_rLe]]; simpl in *.
     pose proof (hash_preserves c x R_c_x) as claim1. red in claim1.
     eapply rLe_rLt_rLt; eauto.
     rewrite -> EXT_EQ in claim1. erewrite fromAcc_pirrel. exact claim1.
   - unfold fromWf in H_rLt.
-    destruct (R_wf y) as [ACC_INV]; simpl in H_rLt.
+    destruct (R_wf y) as [H_Acc_inv]; simpl in H_rLt.
     destruct H_rLt as [[[c R_c_y] H_rLe]]; simpl in *.
     pose proof (hash_preserves c y R_c_y) as claim1. red in claim1.
     eapply rLe_rLt_rLt; eauto.
@@ -1526,7 +1526,7 @@ Lemma fromWf_rEq (x : A)
 Proof.
   enough (WTS : forall t : Tree, forall x : A, @fromWf A R R_wf x <ᵣ t -> @fromWf A R R_wf x =ᵣ @fromWf A wltProp wltProp_well_founded x).
   { eapply WTS with (t := succ (@fromWf A R R_wf x)). eapply rLt_succ_intro. }
-  intros t. rename x into a. pose proof (rLt_wf t) as H_Acc. induction H_Acc as [t _ IH]; intros x H_rLt. split.
+  intros t. rename x into a. pose proof (rLt_wf t) as H_Acc. induction H_Acc as [t H_Acc_inv IH]; intros x H_rLt. split.
   - eapply fromWf_isMonotonic. intros b c H_R. red. red. eapply hash_preserves. exact H_R.
   - eapply fromWf_isSupremum. intros y y_wlt_x. do 2 red in y_wlt_x. rewrite <- IH with (y := @fromWf A R R_wf x); eauto.
 Qed.
@@ -1562,7 +1562,7 @@ Lemma toWellPoset_lt_well_founded {Idx : Type@{Set_u}} {A : Idx -> Type} (lt : f
 Proof.
   enough (WTS : forall i : Idx, forall x' : A i, Acc (toWellPoset_lt lt) (@existT _ _ i (Some x'))).
   { intros [i1 [x1' | ]]; eauto. econs. intros [i2 x2]. unfold toWellPoset_lt at 1. intros (x3 & H_le_insert_top & EQ & NE); simpl in *. rewrite EQ. destruct x3 as [x3' | ]; eauto. congruence. }
-  intros i x. induction (lt_wf i x) as [x _ IH]. i. econs. i. inv H. des; subst. inv H0. destruct LE; eauto. subst x'. simpl in *; congruence.
+  intros i x. induction (lt_wf i x) as [x H_Acc_inv IH]. i. econs. i. inv H. des; subst. inv H0. destruct LE; eauto. subst x'. simpl in *; congruence.
 Qed.
 
 Lemma toWellPoset_lt_Transitive {projT2_eq : forall A : Type, forall B : A -> Type, forall x : A, forall y : B x, forall y' : B x, @existT A B x y = @existT A B x y' -> y = y'} {Idx : Type@{Set_u}} {A : Idx -> Type} (lt : forall i : Idx, A i -> A i -> Prop)
@@ -1587,7 +1587,7 @@ Lemma fromWf_toWoset_lt {projT2_eq : forall A : Type, forall B : A -> Type, fora
   : fromWf (toWellPoset_lt R) (toWellPoset_lt_well_founded R R_wf) (@existT _ _ i (Some x)) == fromWf (R i) (R_wf i) x.
 Proof.
   symmetry. pose proof (R_wf i x) as H_Acc. unfold fromWf.
-  induction H_Acc as [x _ IH]; simpl. eapply extensionality. intros z; split; intros H_IN.
+  induction H_Acc as [x H_Acc_inv IH]; simpl. eapply extensionality. intros z; split; intros H_IN.
   - rewrite fromAcc_unfold in H_IN |- *. destruct H_IN as [[y R_y_x] EQ]; simpl in *.
     assert (toWellPoset_lt R (@existT _ _ i (Some y)) (@existT _ _ i (Some x))) as claim1.
     { exists (Some y); ss!.

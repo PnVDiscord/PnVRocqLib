@@ -206,7 +206,11 @@ Ltac sflib__complaining_inj f H :=
 Ltac sflib__clarify1 :=
   try subst;
   (repeat match goal with
-  | [H : is_true (andb _ _) |- _] => case (sflib__andb_split H); clear H; intros ? H
+  | [H : is_true (andb _ _) |- _] =>
+      let H_and := fresh "H_and" in
+      pose proof (sflib__andb_split H) as H_and;
+      clear H;
+      destruct H_and as [? H]
   | [H : is_true (negb ?x) |- _] => rewrite (sflib__negb_rewrite H) in *
   | [H : is_true ?x        |- _] => rewrite H in *
   | [H : ?x = true         |- _] => rewrite H in *
@@ -351,7 +355,11 @@ Ltac desc :=
       match p with | NW _ => red in x' | _ => idtac end;
       match q with | NW _ => red in y' | _ => idtac end
     | H : is_true (_ && _) |- _ =>
-          let H' := fresh H in case (sflib__andb_split H); clear H; intros H H'
+          let H' := fresh H in
+          let H_and := fresh "H_and" in
+          pose proof (sflib__andb_split H) as H_and;
+          clear H;
+          destruct H_and as [H H']
     | H : ?x = ?x   |- _ => clear H
   end.
 

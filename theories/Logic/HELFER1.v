@@ -326,7 +326,7 @@ with L_infty_to_L_k_trms_bound (n : nat) (ts : trms L_infty n) {struct ts}
 Proof.
   - destruct t as [x | f ts | c]; simpl; intros k Hk.
     + exists (@Var_trm (L_stage k) x). reflexivity.
-    + destruct (L_infty_to_L_k_trms_bound _ ts k Hk) as [ts_k Hts].
+    + pose proof (L_infty_to_L_k_trms_bound _ ts k Hk) as [ts_k Hts].
       exists (@Fun_trm (L_stage k) f ts_k). simpl. subst ts. reflexivity.
     + destruct c as [c | hc]; simpl.
       * exists (@Con_trm (L_stage k) (inl c)). simpl. reflexivity.
@@ -339,7 +339,7 @@ Proof.
     + assert (Ht : max_hc_stage_trm t <= k) by lia.
       assert (Hts : max_hc_stage_trms ts <= k) by lia.
       pose proof (L_infty_to_L_k_trm_bound t k Ht) as [t_k Ht_eq].
-      destruct (L_infty_to_L_k_trms_bound _ ts k Hts) as [ts_k Hts_eq].
+      pose proof (L_infty_to_L_k_trms_bound _ ts k Hts) as [ts_k Hts_eq].
       exists (@S_trms (L_stage k) n t_k ts_k). simpl. congruence.
 Qed.
 
@@ -1639,22 +1639,22 @@ Proof.
   - exact (HC_occurs_in_trms_map_inv c2 _ ts H).
   - rewrite orb_true_iff in H.
     destruct H as [H | H].
-    + destruct (HC_occurs_in_trm_map_inv c2 t1 H) as [c1 [H1 H2]].
+    + pose proof (HC_occurs_in_trm_map_inv c2 t1 H) as [c1 [H1 H2]].
       exists c1. split.
       { rewrite orb_true_iff. now left. }
       exact H2.
-    + destruct (HC_occurs_in_trm_map_inv c2 t2 H) as [c1 [H1 H2]].
+    + pose proof (HC_occurs_in_trm_map_inv c2 t2 H) as [c1 [H1 H2]].
       exists c1. split.
       { rewrite orb_true_iff. now right. }
       exact H2.
   - exact (IH1 H).
   - rewrite orb_true_iff in H.
     destruct H as [H | H].
-    + destruct (IH1 H) as [c1 [H1 H2]].
+    + pose proof (IH1 H) as [c1 [H1 H2]].
       exists c1. split.
       { rewrite orb_true_iff. now left. }
       exact H2.
-    + destruct (IH2 H) as [c1 [H1 H2]].
+    + pose proof (IH2 H) as [c1 [H1 H2]].
       exists c1. split.
       { rewrite orb_true_iff. now right. }
       exact H2.
@@ -2500,7 +2500,7 @@ Proof.
     + intros q Hq. contradiction.
   - assert (INCL_tail : forall q, q \in E.fromList ps -> q \in AddHenkin_stage X (S n)).
     { intros q Hq. eapply INCL. right. exact Hq. }
-    destruct (IH INCL_tail) as [hcs [Hnodup [Hstage Hsub]]].
+    pose proof (IH INCL_tail) as [hcs [Hnodup [Hstage Hsub]]].
     pose proof (INCL p (or_introl eq_refl)) as Hp.
     destruct Hp as [Hp | Hp].
     + destruct Hp as [hc [Hlt ->]].
@@ -2544,7 +2544,7 @@ Proof.
   - intros Hincon.
     rewrite inconsistent_iff in Hincon.
     destruct Hincon as [ps [INCL PF]].
-    destruct (collect_stage_axioms X n ps INCL) as [hcs [Hnodup [Hstage Hsub]]].
+    pose proof (collect_stage_axioms X n ps INCL) as [hcs [Hnodup [Hstage Hsub]]].
     assert (PROVE_ps : E.fromList ps ⊢ Bot_frm).
     { exists ps. split; [done | eauto]. }
     assert (PROVE_hcs : AddHenkin_stage_list X n hcs ⊢ Bot_frm).
@@ -2600,7 +2600,7 @@ Proof.
   - exists O. intros q Hq. contradiction.
   - assert (INCL_ps : forall q, q \in E.fromList ps -> q \in E.union HenkinAxiomSet (E.image embed_frm X)).
     { intros q Hq. eapply INCL. right. exact Hq. }
-    destruct (IH INCL_ps) as [n IHn].
+    pose proof (IH INCL_ps) as [n IHn].
     pose proof (INCL p (or_introl eq_refl)) as Hp.
     destruct Hp as [Hp | Hp].
     + inv Hp. exists (Nat.max n (hc_stage hc + 1)). intros q Hq. s!. destruct Hq as [<- | Hq].
@@ -2619,13 +2619,13 @@ Proof.
   - intros H.
     rewrite inconsistent_iff in H.
     destruct H as [ps [INCL PF]].
-    destruct (collect_AddHenkin_stage X ps INCL) as [n Hn].
+    pose proof (collect_AddHenkin_stage X ps INCL) as [n Hn].
     assert (Hstage : inconsistent (AddHenkin_stage X n)).
     { rewrite inconsistent_iff. exists ps. split.
       - intros p Hp. eapply Hn. exact Hp.
       - exact PF.
     }
-    destruct (AddHenkin_stage_all_equiconsistent X n) as [_ Hback].
+    pose proof (AddHenkin_stage_all_equiconsistent X n) as [_ Hback].
     exact (Hback Hstage).
 Qed.
 

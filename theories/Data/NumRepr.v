@@ -420,7 +420,7 @@ Fixpoint from_num_aux (n : nat) (H_Acc : @Acc nat lt n) {struct H_Acc} : list na
 
 Fixpoint from_num_aux_pirrel1 (n : nat) (H_Acc : Acc lt n) (H_Acc' : Acc lt n) {struct H_Acc} : from_num_aux n H_Acc = from_num_aux n H_Acc'.
 Proof.
-  destruct H_Acc, H_Acc'; simpl. destruct (B.decide (_ = _)); f_equal. destruct (B.decide (_ = _)); f_equal; eapply from_num_aux_pirrel1.
+  destruct H_Acc as [H_Acc_inv], H_Acc' as [H_Acc_inv']; simpl. destruct (B.decide (_ = _)); f_equal. destruct (B.decide (_ = _)); f_equal; eapply from_num_aux_pirrel1.
 Qed.
 
 Lemma from_num_aux_pirrel (n : nat) (m : nat) (EQ : n = m) (H_Acc : Acc lt n) (H_Acc' : Acc lt m) : from_num_aux n H_Acc = from_num_aux m H_Acc'.
@@ -440,7 +440,7 @@ Lemma from_num_aux_unfold (n : nat) (H_Acc : @Acc nat lt n) :
       from_num_aux (n / b) (Acc_inv H_Acc _ (from_num_aux_aux1 _ NE)) ++ [r]
   end.
 Proof.
-  destruct H_Acc. reflexivity.
+  destruct H_Acc as [H_Acc_inv]. reflexivity.
 Qed.
 
 Definition from_num (n : nat) : list nat :=
@@ -472,7 +472,7 @@ Definition to_num (ns : list nat) : nat :=
 Lemma to_num_from_num n
   : to_num (from_num n) = n.
 Proof.
-  induction (lt_wf n) as [n _ IH]. rewrite from_num_unfold.
+  induction (lt_wf n) as [n H_Acc_inv IH]. rewrite from_num_unfold.
   destruct (B.decide (_ = _)) as [EQ1 | NE1]; eauto.
   cbn zeta. destruct (B.decide (_ = _)) as [EQ2 | NE2].
   - unfold to_num in *. rewrite fold_left_app. simpl. rewrite IH; eauto.

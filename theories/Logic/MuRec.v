@@ -243,9 +243,9 @@ Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t Value n -> Value -> 
   | MR_primRec_spec_O n g h xs z
     (g_spec : MuRecSpec n g xs z)
     : MuRecSpec (S n) (MR_primRec g h) (O :: xs) z
-  | MR_primRec_spec_S n g h xs z a acc
-    (ACC : MuRecSpec (S n) (MR_primRec g h) (a :: xs) acc)
-    (h_spec : MuRecSpec (S (S n)) h (a :: acc :: xs) z)
+  | MR_primRec_spec_S n g h xs z a accum
+    (ACC : MuRecSpec (S n) (MR_primRec g h) (a :: xs) accum)
+    (h_spec : MuRecSpec (S (S n)) h (a :: accum :: xs) z)
     : MuRecSpec (S n) (MR_primRec g h) (S a :: xs) z
   | MR_mu_spec n g xs z
     (g_spec : MuRecSpec (S n) g (z :: xs) 0)
@@ -315,7 +315,7 @@ Proof.
       * eapply MuRecsGraph_complete. exact g_spec.
       * eapply MuRecGraph_complete. exact SPEC.
     + eapply MuRecGraph_complete. exact SPEC.
-    + exists acc. unfold V.tail. simpl. split.
+    + exists accum. unfold V.tail. simpl. split.
       * apply MuRecGraph_complete in SPEC1. exact SPEC1.
       * apply MuRecGraph_complete in SPEC2. exact SPEC2.
     + split.
@@ -362,7 +362,7 @@ Proof.
       * eapply SPEC.
       * exact CALL.
     + simpl in CALL. destruct CALL as (y&ACC&CALL). unfold V.tail in ACC, CALL; simpl in ACC, CALL.
-      assert (claim : acc = y).
+      assert (claim : accum = y).
       { eapply MuRec_isPartialFunction_aux.
         - exact SPEC1.
         - exact ACC. 
@@ -444,19 +444,19 @@ Proof.
         rewrite <- MuRecGraph_correct. simpl. unfold V.tail. simpl. rewrite MuRecGraph_correct. exact z_spec.
       * assert (claim1 : exists z : nat, MuRecSpec (S n) (MR_primRec f1 f2) (VCons n a xs) z).
         { destruct EXISTENCE as [z SPEC]. rewrite <- MuRecGraph_correct in SPEC. simpl in SPEC.
-          unfold V.tail, V.head in SPEC. simpl in SPEC. destruct SPEC as [acc [CALL CALL']]. exists acc. rewrite <- MuRecGraph_correct. exact CALL.
+          unfold V.tail, V.head in SPEC. simpl in SPEC. destruct SPEC as [accum [CALL CALL']]. exists accum. rewrite <- MuRecGraph_correct. exact CALL.
         }
-        pose proof (IH xs claim1) as [acc acc_spec].
-        assert (claim2 : exists z : nat, MuRecSpec (S (S n)) f2 (VCons (S n) a (VCons n acc xs)) z).
+        pose proof (IH xs claim1) as [accum acc_spec].
+        assert (claim2 : exists z : nat, MuRecSpec (S (S n)) f2 (VCons (S n) a (VCons n accum xs)) z).
         { destruct EXISTENCE as [z SPEC]. rewrite <- MuRecGraph_correct in SPEC. simpl in SPEC.
-          unfold V.tail, V.head in SPEC. simpl in SPEC. destruct SPEC as [acc' [CALL CALL']].
-          enough (EQ : acc = acc').
-          { subst acc'. exists z. rewrite <- MuRecGraph_correct. exact CALL'. }
+          unfold V.tail, V.head in SPEC. simpl in SPEC. destruct SPEC as [accum' [CALL CALL']].
+          enough (EQ : accum = accum').
+          { subst accum'. exists z. rewrite <- MuRecGraph_correct. exact CALL'. }
           eapply MuRec_isPartialFunction.
           - exact acc_spec.
           - rewrite <- MuRecGraph_correct. exact CALL.
         }
-        pose proof (MuRecInterpreter (S (S n)) f2 (a :: acc :: xs) claim2) as [z z_spec].
+        pose proof (MuRecInterpreter (S (S n)) f2 (a :: accum :: xs) claim2) as [z z_spec].
         exists z. econs 6; [exact acc_spec | exact z_spec].
     + assert (SEARCH : exists z, MuRecSpec n (MR_mu f) xs z).
       { destruct EXISTENCE as [z z_spec]. exists z. exact z_spec. }

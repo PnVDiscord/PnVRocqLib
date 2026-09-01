@@ -81,13 +81,13 @@ Instance itree_isMonadIter : isMonadIter (itree E) :=
   cofix iter (i : I) : itree E R := bind (isMonad := itree_isMonad) (step i) (B.either (fun i' : I => Tau (iter i')) (fun r : R => Ret r)).
 
 Definition itree_interpret {M : Type -> Type} {M_isMonad : isMonad M} {M_isMonadIter : isMonadIter M} (handler : E ~~> M) : itree E ~~> M :=
-  fun R : Type@{U_discourse} => monad_iter (M := M) (fun t0 : itree E R =>
+  fun R : Type@{U_discourse} =>
+  monad_iter (M := M) $ fun t0 : itree E R =>
     match t0.(observe) with
     | RetF r => pure (inr r)
     | TauF t => pure (inl t)
     | VisF X e k => bind (M := M) (handler X e) (fun x : X => pure (inl (k x)))
-    end
-  ).
+    end.
 
 Definition callE_handler {I : Type} {R : Type} : forall callee : I -> itree E R, callE I R ~~> itree E :=
   @callE_rect I R (fun X : Type => fun _ : callE I R X => itree E X).
@@ -133,7 +133,8 @@ Section RECURSION.
 #[local] Abbreviation endo X := (X -> X).
 
 Definition itree_interpret_mrec {E1 : handlerCat.(CAT.ob)} {E2 : handlerCat.(CAT.ob)} (ctx : E1 ~~> itree (E1 +' E2)) : itree (E1 +' E2) ~~> itree E2 :=
-  fun R : Type@{U_discourse} => monad_iter (M := itree E2) (fun t0 : itree (E1 +' E2) R =>
+  fun R : Type@{U_discourse} =>
+  monad_iter (M := itree E2) $ fun t0 : itree (E1 +' E2) R =>
     match t0.(observe) with
     | RetF r => Ret (inr r)
     | TauF t => Ret (inl t)
@@ -142,8 +143,7 @@ Definition itree_interpret_mrec {E1 : handlerCat.(CAT.ob)} {E2 : handlerCat.(CAT
       | B.inl1 e1 => Ret (inl (ctx X e1 >>= k))
       | B.inr1 e2 => Vis X e2 (fun x : X => pure (inl (k x)))
       end
-    end
-  ).
+    end.
 
 Definition itree_mrec {E : handlerCat.(CAT.ob)} {E' : handlerCat.(CAT.ob)} (ctx : E ~~> itree (E +' E')) : E ~~> itree E' :=
   fun R : Type@{U_discourse} => fun e : E R => itree_interpret_mrec (E1 := E) (E2 := E') ctx R (ctx R e).

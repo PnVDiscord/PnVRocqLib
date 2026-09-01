@@ -370,7 +370,7 @@ Fixpoint log1 (b : nat) (n : nat) (b_gt_1 : b > 1) (n_gt_0 : n > 0) (H_Acc : Acc
 
 Fixpoint log1_pirrel b n b_gt_1 n_gt_0 H_Acc H_Acc' {struct H_Acc} : log1 b n b_gt_1 n_gt_0 H_Acc = log1 b n b_gt_1 n_gt_0 H_Acc'.
 Proof.
-  destruct H_Acc, H_Acc'; simpl. destruct (le_lt_dec (n / b) 0); [reflexivity | f_equal; eapply log1_pirrel].
+  destruct H_Acc as [H_Acc_inv], H_Acc' as [H_Acc_inv']; simpl. destruct (le_lt_dec (n / b) 0); [reflexivity | f_equal; eapply log1_pirrel].
 Qed.
 
 Definition log (b : nat) (n : nat) (b_gt_1 : b > 1) (n_gt_0 : n > 0) : nat :=
@@ -410,7 +410,7 @@ Lemma exp_log_upper_bound (b : nat) (x : nat) (b_gt_1 : b > 1) (x_gt_0 : x > 0)
   (y := log b x b_gt_1 x_gt_0)
   : b ^ y <= x.
 Proof.
-  subst y. induction (lt_wf x) as [x _ IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
+  subst y. induction (lt_wf x) as [x H_Acc_inv IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
   - rewrite exp_r_0; lia.
   - simpl. pose proof (IH (x / b) (log_aux1 b x b_gt_1 x_gt_0) NO) as LE. transitivity (b * (x / b)).
     + erewrite <- Nat.mul_le_mono_pos_l; lia.
@@ -421,7 +421,7 @@ Lemma exp_log_lower_bound (b : nat) (x : nat) (b_gt_1 : b > 1) (x_gt_0 : x > 0)
   (y := log b x b_gt_1 x_gt_0)
   : x / b < b ^ y.
 Proof.
-  subst y. induction (lt_wf x) as [x _ IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
+  subst y. induction (lt_wf x) as [x H_Acc_inv IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
   - rewrite exp_r_0; lia.
   - simpl. pose proof (IH (x / b) (log_aux1 b x b_gt_1 x_gt_0) NO) as LE.
     rewrite Nat.div_mod with (x := x / b) (y := b) at 1; try lia. red in LE |- *.
@@ -436,7 +436,7 @@ Theorem exp_log_sandwitch (b : nat) (x : nat) (b_gt_1 : b > 1) (x_gt_0 : x > 0)
   : b ^ y <= x /\ b ^ (1 + y) > x.
 Proof.
   subst y. simpl. split; [eapply exp_log_upper_bound | unfold ">"].
-  induction (lt_wf x) as [x _ IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
+  induction (lt_wf x) as [x H_Acc_inv IH]. rewrite log_unfold. destruct (le_lt_dec (x / b) 0) as [YES | NO].
   - rewrite exp_r_0. pose proof (Nat.div_mod x b) as claim1. replace (x / b) with 0 in claim1 by lia.
     rewrite Nat.mul_comm in claim1. rewrite Nat.mul_comm. simpl in *. pose proof (Nat.mod_bound_pos x b); lia. 
   - simpl. pose proof (IH (x / b) (log_aux1 b x b_gt_1 x_gt_0) NO) as LE.
@@ -502,7 +502,7 @@ Lemma maxs_ind (phi : nat -> Prop) (ns : list nat)
 Proof.
   unfold maxs. induction ns as [ | n1 ns1 IH]; simpl; try now (lia || firstorder; eauto). intros n phi_n.
   destruct (le_gt_dec n n1) as [H_le | H_gt]; try now (lia || firstorder; eauto). enough (claim1 : fold_right max 0 ns1 >= n); try now (lia || firstorder; eauto).
-  destruct (phi_dec n) as [H_yes | H_no]; try now (lia || firstorder; eauto). destruct (phi_in n H_yes); try now (lia || firstorder; eauto).
+  destruct (phi_dec n) as [H_yes | H_no]; try now (lia || firstorder; eauto). pose proof (phi_in n H_yes) as [H_eq | H_in_ns]; try now (lia || firstorder; eauto).
   enough (claim2 : forall ks : list nat, forall k : nat, In k ks -> fold_right max 0 ks >= k); try now (lia || firstorder; eauto).
   induction ks; simpl; try now (lia || firstorder; eauto). intros k [H_eq | H_in]; try now (lia || firstorder; eauto). enough (claim3: fold_right Init.Nat.max 0 ks >= k); try now (lia || firstorder; eauto).
 Qed.
@@ -707,7 +707,7 @@ Theorem nat_strong_recursion (A : nat -> Type) (P : forall n : nat, A n -> Prop)
 Proof.
   enough (WTS : forall x : nat, { y : A x | P x y }).
   { exists (fun n => proj1_sig (WTS n)). exact (fun n => proj2_sig (WTS n)). }
-  intros x. induction (lt_wf x) as [x _ IH]. pose (REC := fun x' => match le_gt_dec x x' with left LE => None | right GT => Some (proj1_sig (IH x' GT)) end).
+  intros x. induction (lt_wf x) as [x H_Acc_inv IH]. pose (REC := fun x' => match le_gt_dec x x' with left LE => None | right GT => Some (proj1_sig (IH x' GT)) end).
   eapply SREC with (REC := REC). intros y LT. exists (IH y LT). unfold REC. destruct (le_gt_dec x y) as [LE | GT].
   - lia.
   - rewrite le_pirrel with (LE1 := LT) (LE2 := GT). reflexivity.
@@ -719,7 +719,7 @@ Theorem nat_strong_recursion' (A : nat -> Type) (P : forall n : nat, A n -> Type
 Proof.
   enough (WTS : forall x : nat, { y : A x & P x y }).
   { exists (fun n => projT1 (WTS n)). exact (fun n => projT2 (WTS n)). }
-  intros x. induction (lt_wf x) as [x _ IH]. pose (REC := fun x' => match le_gt_dec x x' with left LE => None | right GT => Some (projT1 (IH x' GT)) end).
+  intros x. induction (lt_wf x) as [x H_Acc_inv IH]. pose (REC := fun x' => match le_gt_dec x x' with left LE => None | right GT => Some (projT1 (IH x' GT)) end).
   eapply SREC with (REC := REC). intros y LT. exists (IH y LT). unfold REC. destruct (le_gt_dec x y) as [LE | GT].
   - lia.
   - rewrite le_pirrel with (LE1 := LT) (LE2 := GT). reflexivity.
