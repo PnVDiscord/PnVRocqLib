@@ -134,8 +134,9 @@ Export ListNotations.
 
 (* Notation "~ x" := (forall (FH : x), False) : type_scope. *)
 
-(* Function composition *)
+(* Function composition
 Notation "f <*> g" := (compose f g) (at level 49, left associativity).
+*)
 
 (* ************************************************************************** *)
 (** * Coersion of [bool] into [Prop] *)

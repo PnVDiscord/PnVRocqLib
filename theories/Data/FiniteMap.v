@@ -18,11 +18,65 @@ Inductive alist {K : Type} {V : Type} : Type :=
 
 #[global] Arguments alist : clear implicits.
 
+Section ALIST.
+
 #[universes(polymorphic=yes)]
 Definition kvlist@{k v u | k <= u, v <= u} {K : Type@{k}} {V : Type@{v}} (al : alist K V) : fin_ensemble@{u} (K * V) :=
   match al with
   | mk_alist kvlist => kvlist
   end.
+
+Universe U_alist_key.
+
+Universe U_alist_val.
+
+Constraint U_alist_key = alist.u0.
+
+Constraint U_alist_val = alist.u1.
+
+#[global]
+Instance alist_is_similar_to_option_kleisli {K : Type@{U_alist_key}} {V : Type@{U_alist_val}} {V' : Type@{U_alist_val}} (Sim_V_V' : Similarity V V') : Similarity (alist K V) (K -> option V') :=
+  fun m => fun m' => forall k : K, forall v : V, forall v' : V', forall v_sim_v' : v =~= v', (k, v) ∈ kvlist m <-> m' k = Some v'.
+
+#[local]
+Instance alist_isSetoid {K : Type@{U_alist_key}} {V : Type@{U_alist_val}} (K_hasEqDec : hasEqDec K) (V_isSetoid : isSetoid V) : isSetoid (alist K V) :=
+  { eqProp (lhs : alist K V) (rhs : alist K V) := forall k : K, eqProp (isSetoid := option_isSetoid V_isSetoid) (L.lookup k (kvlist lhs)) (L.lookup k (kvlist rhs))
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence (pi_isSetoid (fun _ => option_isSetoid V_isSetoid)).(eqProp_Equivalence) (fun al : alist K V => fun k : K => L.lookup k (kvlist al))
+  }.
+
+Context {K : Type@{U_alist_key}}.
+
+#[global]
+Instance alist_isFunctor : isFunctor (alist K) :=
+  fun V : Type@{U_alist_val} => fun V' : Type@{U_alist_val} => fun v_to_v' : V -> V' => fun al : alist K V => mk_alist (map (fun '(k, v) => (k, v_to_v' v)) (kvlist al)).
+
+Context `(K_hasEqDec : hasEqDec K).
+
+#[global]
+Instance alist_isSetoid1 : isSetoid1 (alist K) :=
+  fun V : Type@{U_alist_val} => alist_isSetoid (V := V) K_hasEqDec.
+
+Lemma lookup_map_kvlist {V : Type@{U_alist_val}} {V' : Type@{U_alist_val}} (v_to_v' : V -> V') (k : K) (kvs : list (K * V))
+  : L.lookup k (map (fun '(k, v) => (k, v_to_v' v)) kvs) = option_map v_to_v' (L.lookup k kvs).
+Proof.
+  induction kvs as [ | [k' v'] kvs' IH]; simpl; eauto.
+  destruct (B.decide (k = k')) as [? | ?]; eauto.
+Qed.
+
+#[global]
+Instance alist_FunctorLaws
+  : FunctorLaws (alist K) (SETOID1 := alist_isSetoid1) (FUNCTOR := alist_isFunctor).
+Proof.
+  assert (SIMP : forall A : Type@{U_alist_val}, forall B : Type@{U_alist_val}, forall f : A -> B, forall al : alist K A, forall k : K, L.lookup k (kvlist (fmap f al)) = option_map f (L.lookup k (kvlist al))).
+  { intros A B f [kvs] k. eapply lookup_map_kvlist. }
+  split; ii; unfold compose, id; rewrite !SIMP; simpl; rewrite option_eqProp_iff_eq.
+  - f_equal. rewrite <- option_eqProp_iff_eq. exact (x_EQ k).
+  - destruct (L.lookup k (kvlist x)) as [v | ]; reflexivity.
+  - destruct (L.lookup k (kvlist x)) as [v | ]; reflexivity.
+  - destruct (L.lookup k (kvlist x)) as [v | ]; simpl; congruence.
+Qed.
+
+End ALIST.
 
 Module FiniteMap.
 

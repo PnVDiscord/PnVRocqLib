@@ -144,11 +144,19 @@ Proof.
   - intros ? ? ? [ | x y x_eq_y] EQ; inv EQ; econs. etransitivity; eauto.
 Qed.
 
-#[global, program]
+#[global]
 Instance option_isSetoid {A : Type} (SETOID : isSetoid A) : isSetoid (option A) :=
   { eqProp := option_eqProp eqProp
   ; eqProp_Equivalence := option_eqProp_Equivalence eqProp eqProp_Equivalence
   }.
+
+Lemma option_eqProp_iff_eq {A : Type} (lhs : option A) (rhs : option A)
+  : option_eqProp (@eq A) lhs rhs <-> lhs = rhs.
+Proof.
+  split.
+  - intros [ | x y x_eq_y]; congruence.
+  - i; subst; reflexivity.
+Qed.
 
 Lemma eqProp_refl {A : Type} `{A_isSetoid : isSetoid A}
   : forall x : A, x == x.
@@ -1904,11 +1912,11 @@ Proof.
     + eapply IH.
 Qed.
 
-#[universes(polymorphic=yes)]
-Fixpoint lookup@{u1 u2} {A : Type@{u1}} {B : Type@{u2}} {EQ_DEC : hasEqDec A} (x : A) (zs : list (A * B)) : option B :=
+Definition lookup {A : Type} {B : Type} {EQ_DEC : hasEqDec A} (x : A) : list (A * B) -> option B :=
+  fix go (zs : list (A * B)) {struct zs} : option B :=
   match zs with
   | [] => None
-  | (x', y) :: zs' => if B.decide (x = x') then Some y else lookup x zs'
+  | (x', y) :: zs' => if B.decide (x = x') then Some y else go zs'
   end.
 
 Abbreviation is_finsubset_of xs X := (forall x, L.In x xs -> x \in X).
