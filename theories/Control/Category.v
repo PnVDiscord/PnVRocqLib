@@ -9,7 +9,7 @@ Module CAT.
 #[local] Obligation Tactic := i.
 
 #[universes(polymorphic=yes), projections(primitive)]
-Class isCategory@{u v} : Type@{max(u + 1, v + 1)} :=
+Class isCategory@{u v | } : Type@{max(u + 1, v + 1)} :=
   { ob : Type@{u}
   ; hom (D : ob) (C : ob) : Type@{v}
   ; compose {A : ob} {B : ob} {C : ob} (g : hom B C) (f : hom A B) : hom A C
@@ -34,7 +34,7 @@ Definition fin (n : nat) : isCategory@{Set Set} :=
   |}.
 
 #[universes(polymorphic=yes), projections(primitive)]
-Class hasCoproduct@{u v} (C : isCategory@{u v}) : Type@{max(u, v)} :=
+Class hasCoproduct@{u v | } (C : isCategory@{u v}) : Type@{max(u, v)} :=
   { sum (X : C.(ob)) (Y : C.(ob)) : C.(ob)
   ; inl {X : C.(ob)} {Y : C.(ob)} : C.(hom) X (sum X Y)
   ; inr {X : C.(ob)} {Y : C.(ob)} : C.(hom) Y (sum X Y)
@@ -42,13 +42,13 @@ Class hasCoproduct@{u v} (C : isCategory@{u v}) : Type@{max(u, v)} :=
   }.
 
 #[universes(polymorphic=yes), projections(primitive)]
-Class hasInitial@{u v} (C : isCategory@{u v}) : Type@{max(u, v)} :=
+Class hasInitial@{u v | } (C : isCategory@{u v}) : Type@{max(u, v)} :=
   { void : C.(ob)
   ; exfalso {X : C.(ob)} : C.(hom) void X
   }.
 
 #[universes(polymorphic=yes), projections(primitive)]
-Class isCovariantFunctor@{u1 v1 u2 v2} (Dom : isCategory@{u1 v1}) (Cod : isCategory@{u2 v2}) : Type@{max(u1, v1, u2, v2)} :=
+Class isCovariantFunctor@{u1 v1 u2 v2 | } (Dom : isCategory@{u1 v1}) (Cod : isCategory@{u2 v2}) : Type@{max(u1, v1, u2, v2)} :=
   { map_ob : Dom.(ob) -> Cod.(ob)
   ; map_hom {A} {B} (f : Dom.(hom) A B) : Cod.(hom) (map_ob A) (map_ob B)
   }.
@@ -65,7 +65,7 @@ Definition FunctorCategory@{u1 v1 u2 v2 u3 v3} (Dom : isCategory@{u1 v1}) (Cod :
 Section LAW.
 
 #[universes(polymorphic=yes)]
-Definition commutes@{d c} {Src : Type@{d}} {Tgt : Type@{c}} (REL_Src : Src -> Src -> Prop) (REL_Tgt : Tgt -> Tgt -> Prop) (MAP : Src -> Tgt -> Prop) : Prop :=
+Definition commutes@{d c | } {Src : Type@{d}} {Tgt : Type@{c}} (REL_Src : Src -> Src -> Prop) (REL_Tgt : Tgt -> Tgt -> Prop) (MAP : Src -> Tgt -> Prop) : Prop :=
   forall x : Src, forall y' : Tgt, (exists x' : Src, REL_Src x x' /\ MAP x' y') <-> (exists y : Tgt, MAP x y /\ REL_Tgt y y').
 
 Universe U_ob.

@@ -8,7 +8,7 @@ Reserved Notation "'do' m" (m custom do_notation at level 10, at level 100, form
 Module DoNotations.
 
 #[universes(polymorphic=yes)]
-Definition monad@{u v | } {M : Type@{u} -> Type@{v}} {MONAD : isMonad@{u v} M} {A : Type@{u}} : Type@{v} :=
+Definition monad@{d c | } (M : Type@{d} -> Type@{c}) {MONAD : isMonad@{d c} M} {A : Type@{d}} : Type@{c} :=
   M A.
 
 #[global] Delimit Scope monad_scope with monad.
@@ -51,14 +51,15 @@ End DoNotations.
 
 #[local] Open Scope program_scope.
 
-Class isMonadIter (M : Type -> Type) {MONAD : isMonad M} : Type :=
-  monad_iter (I : Type) (R : Type) (step : I -> M (I + R)%type) (i0 : I) : M R.
+#[universes(polymorphic=yes)]
+Class isMonadIter@{d c | } `(M : Type@{d} -> Type@{c}) `{MONAD : isMonad@{d c} M} : Type@{max(d + 1, c)} :=
+  monad_iter (I : Type@{d}) (R : Type@{d}) (step : I -> M (I + R)%type) (i0 : I) : M R.
 
 #[global] Arguments monad_iter {M}%_type_scope {MONAD} {isMonadIter} {I}%_type_scope {R}%_type_scope step%_monad_scope i0.
 
-Class MonadIterSpec (M : Type -> Type) {SETOID1 : isSetoid1 M} {MONAD : isMonad M} {MONADITER : isMonadIter M} : Prop :=
+Class MonadIterSpec `(M : Type -> Type) `{SETOID1 : isSetoid1 M} `{MONAD : isMonad M} `{MONADITER : isMonadIter M (MONAD := MONAD)} : Prop :=
   monad_iter_unfold (I : Type) (R : Type) (step : I -> M (I + R)%type)
-  : monad_iter step == step >=> B.either (monad_iter step) pure.
+  : monad_iter step == (step >=> B.either (monad_iter step) pure).
 
 Lemma MonadIterSpec_unfold (M : Type -> Type) (SETOID1 : isSetoid1 M) (MONAD : isMonad M) (MONADITER : isMonadIter M) :
   MonadIterSpec M (SETOID1 := SETOID1) (MONAD := MONAD) (MONADITER := MONADITER) =
