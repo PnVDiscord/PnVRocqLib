@@ -2473,7 +2473,7 @@ Defined.
 End Equipotent_instances.
 
 #[universes(polymorphic=yes)]
-Class equipotent@{u} (A : Type@{u}) (B : Type@{u}) : Prop :=
+Class equipotent@{u v | } (A : Type@{u}) (B : Type@{v}) : Prop :=
   equipotence : inhabited (Equipotent A B).
 
 Module A.
@@ -2513,7 +2513,7 @@ Class hasUnity@{u | } (A : Type@{u}) : Type@{u} :=
 
 Notation "1" := (unity) : math_scope.
 
-Definition nonzero {A : Type@{U_discourse}} {SETOID : isSetoid A} {HAS_ZERO : hasZero A} (a : A) : Prop :=
+Definition nonzero {A : Type@{U_discourse}} {SETOID : isSetoid A} {HAS_ZERO : hasZero@{U_discourse} A} (a : A) : Prop :=
   \( a ≠ 0 \).
 
 #[projections(primitive)]
@@ -2555,9 +2555,8 @@ Class isRing (R : Type@{U_discourse}) {SETOID : isSetoid R} : Type :=
     : \( 1 ≠ 0 \)
   }.
 
-#[universes(polymorphic=yes)]
-Class has_reciprocal@{u} (R : Type@{u}) {SETOID : isSetoid R} {HAS_ZERO : hasZero@{u} R} : Type@{u} :=
-  reciprocal (a : R) (NONZERO : nonzero a) : R.
+Class has_reciprocal (R : Type@{U_discourse}) {SETOID : isSetoid R} {HAS_ZERO : hasZero@{U_discourse} R} : Type@{U_discourse} :=
+  reciprocal (x : R) (NONZERO : nonzero x) : R.
 
 #[projections(primitive)]
 Class isField (K : Type@{U_discourse}) {SETOID : isSetoid K} : Type :=
