@@ -4,6 +4,9 @@ Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.FiniteMap.
 Require Import PnV.Prelude.X.
 
+#[local] Abbreviation In := L.In.
+#[local] Infix "\in" := E.In : type_scope.
+
 Module DIGRAPH.
 
 #[projections(primitive)]
@@ -15,8 +18,7 @@ Class t : Type :=
 
 End DIGRAPH.
 
-#[local] Abbreviation In := L.In.
-#[local] Infix "\in" := E.In : type_scope.
+Module Digraph1.
 
 Section Digraph.
 
@@ -245,7 +247,11 @@ Definition labeledWalk {G : DIGRAPH.t} {G_labeled : Labeled G} : forall v, foral
   | Walk_cons H_edge H_Walk' => liftM2 (@L.cons G_labeled.(labels)) (G_labeled.(labeling) H_edge) (go _ _ H_Walk')
   end.
 
+End Digraph1.
+
 Module DigraphFixedpoint.
+
+Import Digraph1.
 
 #[local] Infix "\in" := E.In.
 #[local] Infix "\subseteq" := E.isSubsetOf.
