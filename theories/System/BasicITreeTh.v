@@ -42,7 +42,7 @@ Section ITREE_BISIMULATION.
 Context {E : Type -> Type}.
 
 Lemma itree_bind_unfold_observed {R1 : Type} {R2 : Type} (t0 : itree E R1) (k0 : R1 -> itree E R2)
-  : (itree_bind' k0 t0).(observe) = (itree_guard k0 t0.(observe) (itree_bind' k0)).(observe).
+  : (itree_bind' k0 t0).(observe) = (itree_guard k0 (itree_bind' k0) t0.(observe)).(observe).
 Proof.
   reflexivity.
 Defined.

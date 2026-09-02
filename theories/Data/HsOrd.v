@@ -12,7 +12,7 @@ Proof.
 Defined.
 
 #[universes(template), projections(primitive)]
-Class HsOrd (A : Type) `{POSET : isPoset A} : Type :=
+Class HsOrd `(A : Type) `{POSET : isPoset A} : Type :=
   { HsOrd_hsOrd : hsOrd A (PROSET := POSET.(Poset_isProset)) }.
 
 #[global] Existing Instance HsOrd_hsOrd.

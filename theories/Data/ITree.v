@@ -59,7 +59,7 @@ Fixpoint burnTau_with_nat {R : Type} (fuel : nat) (t : itree E R) {struct fuel} 
 Definition itree_trigger : E ~~> itree E :=
   fun X : Type@{U_small} => fun e : E X => Vis X e (fun x : X => Ret x).
 
-Definition itree_guard {R1 : Type} {R2 : Type} (k0 : R1 -> itree E R2) (ot0 : itreeF (itree E R1) E R1) (CIH : itree E R1 -> itree E R2) : itree E R2 :=
+Definition itree_guard {R1 : Type} {R2 : Type} (k0 : R1 -> itree E R2) (CIH : itree E R1 -> itree E R2) (ot0 : itreeF (itree E R1) E R1) : itree E R2 :=
   match ot0 with
   | RetF r => k0 r
   | TauF t => Tau (CIH t)
@@ -67,7 +67,7 @@ Definition itree_guard {R1 : Type} {R2 : Type} (k0 : R1 -> itree E R2) (ot0 : it
   end.
 
 Definition itree_bind' {R1 : Type} {R2 : Type} (k : R1 -> itree E R2) : forall t : itree E R1, itree E R2 :=
-  cofix bind' (t : itree E R1) : itree E R2 := itree_guard (R1 := R1) (R2 := R2) k t.(observe) bind'.
+  cofix bind' (t : itree E R1) : itree E R2 := itree_guard (R1 := R1) (R2 := R2) k bind' t.(observe).
 
 #[global]
 Instance itree_isMonad : isMonad@{U_discourse U_discourse} (itree E) :=
