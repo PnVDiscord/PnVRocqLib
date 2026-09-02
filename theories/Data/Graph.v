@@ -10,7 +10,7 @@ Module DIGRAPH.
 Class t : Type :=
   mk
   { vertices : Type
-  ; edges : ensemble (vertices * vertices)
+  ; arcs : ensemble (vertices * vertices)
   } as G.
 
 End DIGRAPH.
@@ -18,15 +18,15 @@ End DIGRAPH.
 #[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 
-Section GraphTheory_basic1.
+Section Digraph.
 
 #[local] Abbreviation vertices := DIGRAPH.vertices.
-#[local] Abbreviation edges := DIGRAPH.edges.
+#[local] Abbreviation arcs := DIGRAPH.arcs.
 
 Context {G : DIGRAPH.t}.
 
 #[local] Abbreviation V := G.(vertices).
-#[local] Abbreviation E := G.(edges).
+#[local] Abbreviation E := G.(arcs).
 
 Inductive walk (v : V) : V -> list V -> Prop :=
   | walk_refl
@@ -222,7 +222,7 @@ Fixpoint Walk_to_walk {v} {v'} (WALK : `[ v -> v' ]) : list V :=
 Definition isAcylic : Prop :=
   forall v : V, forall w : list V, length w > 0 -> ⟪ NOT_A_CYCLE : ~ (v ~~~[ w ]~~> v) ⟫.
 
-End GraphTheory_basic1.
+End Digraph.
 
 #[global] Arguments Walk_nil {G} {v}.
 #[global] Arguments Walk_cons {G} {v} {v0} {v1}.
@@ -233,7 +233,7 @@ End GraphTheory_basic1.
 #[projections(primitive)]
 Record Labeled {G : DIGRAPH.t} : Type :=
   { labels : Type
-  ; labeling {v} {v'} (E_v_v' : (v, v') \in G.(DIGRAPH.edges)) : ensemble labels
+  ; labeling {v} {v'} (E_v_v' : (v, v') \in G.(DIGRAPH.arcs)) : ensemble labels
   }.
 
 #[global] Arguments Labeled : clear implicits.
@@ -298,12 +298,12 @@ Section DIGRAPH_FIXEDPOINT.
 
 #[local] Infix "=~=" := (is_similar_to (Similarity := list_corresponds_to_finite_ensemble)).
 #[local] Abbreviation vertices := DIGRAPH.vertices.
-#[local] Abbreviation edges := DIGRAPH.edges.
+#[local] Abbreviation arcs := DIGRAPH.arcs.
 
 Context {G : DIGRAPH.t}.
 
 #[local] Abbreviation V := G.(vertices).
-#[local] Abbreviation E := G.(edges).
+#[local] Abbreviation E := G.(arcs).
 
 #[local] Notation " src ~~~[ w ]~~> tgt " := (walk tgt src w) : type_scope.
 
@@ -518,7 +518,7 @@ Context {A : Type} {POSET_A : isPoset A} {HsOrd_A : HsOrd A (POSET := POSET_A)}.
 Definition propagate_graph (deps : X -> fset X) : DIGRAPH.t :=
   {|
     DIGRAPH.vertices := X;
-    DIGRAPH.edges := fun '(x, x') => x' ∈ deps x;
+    DIGRAPH.arcs := fun '(x, x') => x' ∈ deps x;
   |}.
 
 Variable seed : X -> fset A.
