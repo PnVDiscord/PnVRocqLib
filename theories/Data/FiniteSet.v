@@ -180,7 +180,7 @@ Instance fset_hsOrd : hsOrd (fset A) (PROSET := Poset_isProset) :=
 Next Obligation.
   intros X X' OBS_Lt. pose proof (compare_Lt X.(FSet.data) X'.(FSet.data) OBS_Lt) as [LE NE]. split.
   - exact LE.
-  - intros X_eq_X'. contradiction NE. do 6 red in X_eq_X' |- *. subst X'. reflexivity.
+  - intros X_eq_X'. contradiction NE. cbn in X_eq_X' |- *. subst X'. reflexivity.
 Qed.
 Next Obligation.
   intros X X' OBS_Eq. pose proof (compare_Eq X.(FSet.data) X'.(FSet.data) OBS_Eq) as H_eq.
@@ -189,7 +189,7 @@ Qed.
 Next Obligation.
   intros X X' OBS_Gt. pose proof (compare_Gt X.(FSet.data) X'.(FSet.data) OBS_Gt) as [LE NE]. split.
   - exact LE.
-  - intros X_eq_X'. contradiction NE. do 6 red in X_eq_X' |- *. subst X'. reflexivity.
+  - intros X_eq_X'. contradiction NE. cbn in X_eq_X' |- *. subst X'. reflexivity.
 Qed.
 
 #[global]

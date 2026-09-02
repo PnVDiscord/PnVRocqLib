@@ -59,8 +59,8 @@ Definition reify_lemma@{u v} {A : Type@{u}} {B : Type@{v}} {P : A -> B -> Prop} 
 
 (** Section SETOID. *)
 
-#[universes(template)]
-Class isSetoid (A : Type) : Type :=
+#[universes(template), projections(primitive)]
+Class isSetoid `(A : Type) : Type :=
   { eqProp (lhs : A) (rhs : A) : Prop
   ; eqProp_Equivalence :: Equivalence eqProp
   }.
@@ -204,7 +204,7 @@ Defined.
 
 (** Section PROSET. *)
 
-#[universes(template)]
+#[universes(template), projections(primitive)]
 Class isProset (A : Type) : Type :=
   { leProp (lhs : A) (rhs : A) : Prop
   ; Proset_isSetoid :: isSetoid A
@@ -691,7 +691,7 @@ Add Parametric Morphism {A : Type} {B : Type}
   : (@image A B) with signature (eqProp (isSetoid := pi_isSetoid (fun _ => mkSetoid_from_eq)) ==> eqProp ==> eqProp)
   as image_compatWith_eqProp.
 Proof.
-  intros f1 f2 f_EQ X1 X2 X_EQ. intros z. do 4 red in f_EQ. do 6 red in X_EQ.
+  intros f1 f2 f_EQ X1 X2 X_EQ. intros z. cbn in *.
   do 2 rewrite in_image_iff in *. now split; i; des; exists x; rewrite f_EQ, X_EQ in *.
 Qed.
 
@@ -716,7 +716,7 @@ Add Parametric Morphism {A : Type} {B : Type}
   : (@preimage A B) with signature (eqProp (isSetoid := pi_isSetoid (fun _ => mkSetoid_from_eq)) ==> eqProp ==> eqProp)
   as preimage_compatWith_eqProp.
 Proof.
-  intros f1 f2 f_EQ Y1 Y2 Y_EQ. intros z. do 4 red in f_EQ. do 6 red in Y_EQ.
+  intros f1 f2 f_EQ Y1 Y2 Y_EQ. intros z. cbn in *.
   do 2 rewrite in_preimage_iff in *. now split; i; des; exists y; rewrite f_EQ, Y_EQ in *.
 Qed.
 
@@ -1740,6 +1740,41 @@ Module L.
 
 Include Stdlib.Lists.List.
 
+Section MonadLaws_list.
+
+#[local]
+Instance list_isSetoid {A : Type} (SETOID : isSetoid A) : isSetoid (list A) :=
+  { eqProp lhs rhs := forall n : nat, eqProp (isSetoid := option_isSetoid SETOID) (nth_error lhs n) (nth_error rhs n)
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence (pi_isSetoid (fun _ => option_isSetoid SETOID)).(eqProp_Equivalence) (@nth_error A)
+  }.
+
+#[local]
+Instance list_isSetoid1 : isSetoid1 list :=
+  @list_isSetoid.
+
+#[global]
+Instance list_MonadLaws
+  : MonadLaws list (SETOID1 := list_isSetoid1) (MONAD := B.list_isMonad).
+Proof.
+  assert (EXT : forall X : Type@{list.u0}, forall l1 : list X, forall l2 : list X, l1 == l2 <-> l1 = l2).
+  { intros X l1 l2. split.
+    - intros EQ. eapply nth_error_ext. intros n. eapply option_eqProp_iff_eq. exact (EQ n).
+    - intros EQ. subst l2. reflexivity.
+  }
+  split; i; rewrite -> EXT.
+  - rewrite EXT in m_EQ. congruence.
+  - simpl. f_equal. eapply map_ext. intros a. now rewrite <- EXT.
+  - simpl. induction m as [ | x xs IH]; simpl.
+    + reflexivity.
+    + rewrite map_app. rewrite concat_app. rewrite IH. reflexivity.
+  - simpl. apply app_nil_r.
+  - simpl. induction m as [ | x xs IH]; simpl.
+    + reflexivity.
+    + rewrite IH. reflexivity.
+Qed.
+
+End MonadLaws_list.
+
 Definition null {A : Type} (l : list A) : bool :=
   match l with
   | L.nil => true
@@ -2373,7 +2408,7 @@ End SUBSPACE_TOPOLOGY.
 
 Module Quot.
 
-#[universes(template)]
+#[universes(template), projections(primitive)]
 Class isQuotientOf (Q : Type) (X : Type) {SETOID : isSetoid X} : Type :=
   { mk : X -> Q
   ; sound (x1 : X) (x2 : X) (EQUIV : x1 == x2) : mk x1 = mk x2

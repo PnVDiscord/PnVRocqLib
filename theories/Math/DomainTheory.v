@@ -240,8 +240,8 @@ Proof.
   pose proof (nu_is_supremum_of_postfixedpointsOf (G_aux f1 x0)) as claim1.
   pose proof (nu_is_supremum_of_postfixedpointsOf (G_aux f2 x0)) as claim2.
   eapply claim1. ii. do 2 red in IN. eapply claim2; eauto with *.
-  do 3 red. revert IN. unfold G_aux, G_aux0. simpl. intros x_le.
-  rewrite -> x_le at 1. eapply f1_le_f2.
+  do 2 red. cbn in IN |- *. revert IN. unfold G_aux, G_aux0. simpl. intros x_le.
+  etransitivity; [exact x_le | eapply f1_le_f2].
 Qed.
 
 Definition G : `[`[D -> D] -> `[D -> D]] :=
@@ -513,7 +513,9 @@ Corollary paco_compositionality (F : D -> D) (r : D) (r1 : D) (r2 : D) (g1 : D) 
   : join_lattice g1 g2 =< paco F r.
 Proof.
   rewrite paco_eq_G with (F := F) (F_monotonic := F_monotonic).
-  eapply G_compositionality; eauto. all: rewrite <- paco_eq_G; eauto.
+  eapply G_compositionality; eauto.
+  - rewrite <- paco_eq_G with (F := F) (X := r1); eauto.
+  - rewrite <- paco_eq_G with (F := F) (X := r2); eauto.
 Qed.
 
 Section PCOFIX.

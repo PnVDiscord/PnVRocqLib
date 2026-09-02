@@ -9,6 +9,7 @@ Require Import PnV.Math.OrderTheory.
 #[local] Hint Resolve eqProp_refl eqProp_sym eqProp_trans leProp_refl leProp_trans leProp_antisymmetry eqProp_implies_leProp : core.
 #[local] Hint Resolve supremum_monotonic supremum_unique supremum_congruence is_supremum_of_compatWith_eqProp : core.
 
+#[universes(template), projections(primitive)]
 Class isBA (B : Type) : Type :=
   { andB : B -> B -> B
   ; orB : B -> B -> B
@@ -295,7 +296,7 @@ Lemma fact2_of_1_2_8 X
 Proof.
   inversion X_isFilter. eapply CLOSED_UPWARD with (x := andsB []).
   - eapply CLOSED_andsB. intros z z_in. inversion z_in.
-  - red. reflexivity.
+  - reflexivity.
 Qed.
 
 Lemma fact3_of_1_2_8 X

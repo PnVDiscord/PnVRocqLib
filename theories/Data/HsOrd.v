@@ -21,13 +21,13 @@ Class HsOrd `(A : Type) `{POSET : isPoset A} : Type :=
 Instance list_isPoset {A : Type} {POSET : isPoset A} (HS_ORD : HsOrd A) : isPoset (list A) :=
   { Poset_isProset := @list_lexicographical_order A POSET.(Poset_isProset) HS_ORD.(HsOrd_hsOrd) }.
 Next Obligation.
-  split.
-  - intros H_eq. red in H_eq. rename x into xs, y into ys. revert xs ys H_eq.
+  rename x into xs, y into ys. change (eqProp (isSetoid := L.list_isSetoid POSET.(Poset_isProset).(Proset_isSetoid)) xs ys <-> xs = ys). split.
+  - rewrite <- lex_eq_iff. intros H_eq. red in H_eq. revert xs ys H_eq.
     induction xs as [ | x xs IH], ys as [ | y ys]; simpl in *; ii; [congruence .. | ].
     destruct (compare x y) as [ | | ] eqn: H_OBS; [f_equal | congruence ..].
     + rewrite <- Poset_eqProp_spec. now eapply compare_Eq.
     + now eapply IH.
-  - intros H_eq. subst y. reflexivity.
+  - intros H_eq. subst ys. reflexivity.
 Qed.
 
 #[global, program]

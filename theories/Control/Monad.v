@@ -84,7 +84,7 @@ Instance stateT_MonadIterSpec {M : Type -> Type} {SETOID1 : isSetoid1 M} {MONAD 
   (MONADITERSPEC : MonadIterSpec M)
   : MonadIterSpec (B.stateT S M).
 Proof.
-  red; i. pose proof (monad_iter_unfold (MONADITER := MONADITER) (I * S) (R * S)) as claim1; do 2 red in claim1.
+  red; i. pose proof (monad_iter_unfold (MONADITER := MONADITER) (I * S) (R * S)) as claim1; cbn in claim1.
   cbn. intros i s. unfold curry, "∘", ">=>". simpl. rewrite claim1 at 1. unfold ">=>". simpl. destruct (step i) as [k].
   cbn. rewrite <- bind_assoc. eapply bind_compatWith_eqProp_r. now intros [[x' | i'] s']; simpl; rewrite bind_pure_l.
 Qed.

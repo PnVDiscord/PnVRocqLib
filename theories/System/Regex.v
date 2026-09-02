@@ -103,7 +103,7 @@ Fixpoint fromString (s : list A) : regex A :=
 Lemma fromString_spec (s : list A)
   : eval_regex (fromString s) == E.singleton s.
 Proof.
-  induction s as [ | c s IH]; simpl; eauto with *. intros xs; (do 3 red in IH); rewrite!; split.
+  induction s as [ | c s IH]; simpl; eauto with *. intros xs; (cbn in IH); rewrite!; split.
   - intros ?; des. subst xs. rewrite!. rewrite IH in H0. rewrite!. subst; eauto with *.
   - intros ->. exists [c]; rewrite!; split; eauto with *. exists s; split; eauto with *. rewrite IH; rewrite!; eauto with *.
 Qed.

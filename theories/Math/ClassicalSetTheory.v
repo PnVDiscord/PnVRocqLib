@@ -92,9 +92,9 @@ Proof.
     + rewrite <- fromWf_wlt_rLt_fromWf_wlt_iff with (x := x') (x' := x) in H_gt. simpl in H_gt.
       contradiction (rLt_StrictOrder.(StrictOrder_Irreflexive) (fromWf wltProp wltProp_well_founded x')). eapply rLt_rLe_rLt; eauto.
   - pose proof (O.wlt_trichotomous (classic := classic) (WOSET := rLt_isWellOrdering) (fromWf wltProp wltProp_well_founded x) (fromWf wltProp wltProp_well_founded x')) as [H | [H | H]].
-    + do 3 red in H. exact (proj1 H).
-    + do 2 red in H. eapply rLt_implies_rLe. exact H.
-    + do 2 red in H. destruct H_LE as [H_LT | H_EQ].
+    + exact (proj1 H).
+    + eapply rLt_implies_rLe. exact H.
+    + destruct H_LE as [H_LT | H_EQ].
       * contradiction (rLt_StrictOrder.(StrictOrder_Irreflexive) (fromWf wltProp wltProp_well_founded x')). transitivity (fromWf wltProp wltProp_well_founded x); eauto.
         rewrite <- fromWf_wlt_rLt_fromWf_wlt_iff with (x := x) (x' := x') in H_LT. exact H_LT.
       * contradiction (rLt_StrictOrder.(StrictOrder_Irreflexive) (fromWf wltProp wltProp_well_founded x')).
@@ -122,8 +122,8 @@ Proof.
   rewrite -> fromWf_subseteq_fromWf_iff. rewrite <- fromWf_rLt_fromWf_iff. split.
   - intros H_rLe H_rLt. contradiction (rLt_StrictOrder.(StrictOrder_Irreflexive) (fromWf wltProp wltProp_well_founded x')). eapply rLt_rLe_rLt; eauto.
   - intros H_not_rLt. pose proof (O.wlt_trichotomous (classic := classic) (WOSET := rLt_isWellOrdering) (fromWf wltProp wltProp_well_founded x) (fromWf wltProp wltProp_well_founded x')) as [H | [H | H]].
-    + do 3 red in H. tauto.
-    + do 2 red in H. eapply rLt_implies_rLe. tauto.
+    + cbn in H. tauto.
+    + cbn in H. eapply rLt_implies_rLe. tauto.
     + tauto.
 Qed.
 
@@ -1106,12 +1106,12 @@ Proof.
     + ii; done!.
     + ii; done!.
     + ii; des; split; done!.
-  - red. red. intros fix_f H_fix_f. do 2 red in H_fix_f.
+  - red. red. intros fix_f H_fix_f. cbn in H_fix_f.
     enough (mu_f =< f mu_f /\ mu_f =< fix_f) as [H1 H2] by now exact H2.
     eapply @rec_good with (D := D) (dle := leProp) (good := fun x : D => x =< f x /\ x =< fix_f) (dbase := ipo_sup Empty_set (Empty_set_rect _)) (djoin := ipo_sup) (next := f).
     + ii; reflexivity.
     + ii; now transitivity d2.
-    + ii. split; eapply ipo_sup_is_supremum; eauto; try done!. do 2 red. ii. destruct IN as [i ->].
+    + ii. split; eapply ipo_sup_is_supremum; eauto; try done!. cbn. ii. destruct IN as [i ->].
       transitivity (f (ds i)); eauto; try done!. eapply f_isMonotonic. eapply ipo_sup_is_supremum; eauto; done!.
     + ii. split.
       * intros H_LE i. eapply ipo_sup_is_supremum; eauto with *.
@@ -2262,8 +2262,8 @@ Proof.
   rewrite @fromWf_toWellPoset_in_fromWf_toWellPoset_iff; cycle 1.
   { now ii; eapply projT2_eq. }
   split; intros (z & H_R & H_EQ); exists z; split; try eassumption.
-  - do 3 red. now rewrite H_EQ.
-  - do 3 red in H_EQ. eapply Ordinal_rEq_Ordinal_elim; try eassumption; eapply fromWf_isOrdinal; eapply toSet_wlt_Transitive.
+  - cbn. now rewrite H_EQ.
+  - cbn in H_EQ. eapply Ordinal_rEq_Ordinal_elim; try eassumption; eapply fromWf_isOrdinal; eapply toSet_wlt_Transitive.
 Qed.
 
 Lemma FromOrderType_toSet_id (alpha : Tree)
@@ -2303,7 +2303,7 @@ Proof.
   - exfalso. revert claim1. change (~ fromWf RB RB_wf (f a1) <ᵣ fromWf RB RB_wf (f a2)).
     eapply @well_founded_implies_Irreflexive' with (SETOID := rEq_asSetoid) (R := rLt).
     + exact rLt_wf.
-    + intros x1 x2 x1_rEq_x2. do 3 red in x1_rEq_x2.
+    + intros x1 x2 x1_rEq_x2. cbn in x1_rEq_x2.
       destruct x1_rEq_x2 as [H1_rLe H2_rLe]. intros x H_rLt. eapply rLe_rLt_rLt; eauto.
     + set (WPOSET := {| wltProp := RB; wltProp_well_founded := RB_wf; wltProp_Transitive := RB_Transitive |}).
       set (WOSET := @O.WellfoundedToset_isWoset classic B B_isSetoid WPOSET RB_eqPropCompatible2 RB_total).
@@ -2342,7 +2342,7 @@ Proof.
     + exfalso. revert claim1. change (~ fromWf RB RB_wf (f a1) <ᵣ fromWf RB RB_wf (f a2)).
       eapply @well_founded_implies_Irreflexive' with (SETOID := rEq_asSetoid) (R := rLt).
       * exact rLt_wf.
-      * intros x1 x2 x1_rEq_x2. do 3 red in x1_rEq_x2.
+      * intros x1 x2 x1_rEq_x2. cbn in x1_rEq_x2.
         destruct x1_rEq_x2 as [H1_rLe H2_rLe]. intros x H_rLt. eapply rLe_rLt_rLt; eauto.
       * set (WPOSET := {| wltProp := RB; wltProp_well_founded := RB_wf; wltProp_Transitive := RB_Transitive |}).
         set (WOSET := @O.WellfoundedToset_isWoset classic B B_isSetoid WPOSET RB_eqPropCompatible2 RB_total).
@@ -2361,7 +2361,7 @@ Proof.
     + exfalso. revert claim1. change (~ fromWf RA RA_wf a1 <ᵣ fromWf RA RA_wf a2).
       eapply @well_founded_implies_Irreflexive' with (SETOID := rEq_asSetoid) (R := rLt).
       * exact rLt_wf.
-      * intros x1 x2 x1_rEq_x2. do 3 red in x1_rEq_x2.
+      * intros x1 x2 x1_rEq_x2. cbn in x1_rEq_x2.
         destruct x1_rEq_x2 as [H1_rLe H2_rLe]. intros x H_rLt. eapply rLe_rLt_rLt; eauto.
       * set (WPOSET := {| wltProp := RA; wltProp_well_founded := RA_wf; wltProp_Transitive := RA_Transitive |}).
         set (WOSET := @O.WellfoundedToset_isWoset classic A A_isSetoid WPOSET RA_eqPropCompatible2 RA_total).
@@ -2448,7 +2448,7 @@ Proof.
     + rewrite -> NO_INSERTION; simpl; eauto. split.
       * intros [i' H_R]. pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION0; eauto.
       * intros H_R. exists i. eauto.
-  - intros u_in. do 2 red in u_in. econs; simpl; i; des.
+  - intros u_in. cbn in u_in. econs; simpl; i; des.
     + hexploit (u_in (chain i)).
       { exists i. reflexivity. }
       intros [? ? ?]; eauto.
@@ -2489,10 +2489,10 @@ Proof.
     assert (LT : (chain i).(R) y x0).
     { pose proof (H_chain i i') as [[? ? ?] | [? ? ?]]; eauto. rewrite <- NO_INSERTION; eauto. }
     eapply IH; eauto. pose proof (SOUND _ _ LT) as [? ?]; tauto.
-  - ii. do 2 red. unfold pair_sup. simpl. split; intros [i H]; pose proof (chain_good i) as [? ? ? ?]; exists i.
+  - ii. cbn. unfold pair_sup. simpl. split; intros [i H]; pose proof (chain_good i) as [? ? ? ?]; exists i.
     + rewrite <- x_EQ, <- y_EQ; eauto.
     + rewrite -> x_EQ, -> y_EQ; eauto.
-  - ii. do 2 red. unfold pair_sup. simpl. split; intros [i H]; pose proof (chain_good i) as [? ? ? ?]; exists i.
+  - ii. cbn. unfold pair_sup. simpl. split; intros [i H]; pose proof (chain_good i) as [? ? ? ?]; exists i.
     + rewrite <- x_EQ; eauto.
     + rewrite -> x_EQ; eauto.
 Qed.
@@ -2503,7 +2503,7 @@ Proof.
   econs; ss.
   i. subst.
   - left. now rewrite <- IN.
-  - do 3 red. ii. now rewrite <- x_EQ.
+  - cbn. ii. now rewrite <- x_EQ.
 Qed.
 
 Lemma pair_sup_isSupremum' (I : Type) (ds : I -> pair) (d : pair)
@@ -2577,7 +2577,7 @@ Proof.
   - eapply B.transitiveClosure_lifts_well_founded; eauto.
   - intros x1 x2. unshelve epose proof (COMPLETE x1 x2 _ _) as [H_EQ | [H_LT | H_GT]]; eauto; right; [left | right]; econs 1; eauto.
   - ii; econs 2; eauto.
-  - ii. do 2 red. split; intros TC.
+  - ii. cbn. split; intros TC.
     + revert x2 y2 x_EQ y_EQ. induction TC; ii.
       * econs 1. now rewrite <- x_EQ, <- y_EQ.
       * econs 2; [eapply IHTC1 | eapply IHTC2]; eauto; reflexivity.
@@ -2619,8 +2619,8 @@ Proof.
               { eapply WELL_FOUNDED. }
               { eapply SOUND in H1. des; eauto. }
             * eapply H0; eauto.
-          + ii. do 2 red. now rewrite <- x_EQ, <- y_EQ.
-          + ii. do 2 red. now rewrite <- x_EQ.
+          + ii. cbn. now rewrite <- x_EQ, <- y_EQ.
+          + ii. cbn. now rewrite <- x_EQ.
         - econs; ss; eauto. i. split; i; eauto. des; clarify. now rewrite <- H1 in H.
         - i. right. ss. exists x0. split; eauto. now right.
       }
@@ -3366,7 +3366,7 @@ Qed.
 Instance Cardinality_toTree_isMonotonic1 `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
   : isMonotonic1 (A_isProset := Cardinality.t_isProset) (B_isProset := Ord_isProset) Cardinality.toTree.
 Proof.
-  intros kappa kappa' kappa_LE. do 2 red.
+  intros kappa kappa' kappa_LE. cbn.
   now rewrite <- Cardinality_le_iff.
 Qed.
 
@@ -4162,11 +4162,14 @@ Proof.
   - destruct HH1 as (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & HH1).
     exists R, R_wf. splits; eauto.
     + ii. change (x == x') with (x = x'). simpl in x, x'. erewrite <- Fin.Fin_eqProp_iff with (i := x) (i' := x'). eauto.
-    + ii. change (x1 = x2) in x_EQ. change (y1 = y2) in y_EQ. do 2 red. subst x2 y2. reflexivity.
+    + ii. change (x1 = x2) in x_EQ. change (y1 = y2) in y_EQ. cbn. subst x2 y2. reflexivity.
   - intros alpha Halpha. destruct Halpha as (R & R_wf & R_total & R_Transitive & R_eqPropCompatible2 & Halpha).
     eapply HH2. exists R, R_wf. splits; eauto.
     + ii. simpl in x, x'. erewrite -> Fin.Fin_eqProp_iff with (i := x) (i' := x'). eauto.
-    + ii. erewrite -> Fin.Fin_eqProp_iff in x_EQ, y_EQ. do 2 red. rewrite x_EQ, y_EQ. reflexivity.
+    + ii.
+      change (eqProp (isSetoid := Fin.t_isSetoid) x1 x2) in x_EQ.
+      change (eqProp (isSetoid := Fin.t_isSetoid) y1 y2) in y_EQ.
+      erewrite -> Fin.Fin_eqProp_iff in x_EQ, y_EQ. cbn. rewrite x_EQ, y_EQ. reflexivity.
 Qed.
 
 Corollary Fin_toTree_eq `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} (n : nat)

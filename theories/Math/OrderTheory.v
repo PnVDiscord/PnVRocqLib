@@ -120,7 +120,7 @@ Next Obligation.
   intros x y. cbn. unfold flip. split; firstorder try congruence. contradiction (StrictOrder_Irreflexive x). firstorder.
 Qed.
 
-#[universes(template)]
+#[universes(template), projections(primitive)]
 Class isPoset (A : Type) : Type :=
   { Poset_isProset :: isProset A
   ; Poset_eqProp_spec (x : A) (y : A)
@@ -147,7 +147,7 @@ Class has_ltProp@{u} (A : Type@{u}) : Type@{u} :=
 
 Infix "≨" := ltProp : type_scope.
 
-#[universes(template)]
+#[universes(template), projections(primitive)]
 Class hasStrictOrder (A : Type) : Type :=
   { lt :: has_ltProp A
   ; lt_StrictOrder :: StrictOrder lt
@@ -175,7 +175,7 @@ Proof.
   reflexivity.
 Qed.
 
-#[projections(primitive)]
+#[universes(template), projections(primitive)]
 Class isWellPoset (A : Type) : Type :=
   { wltProp :: has_ltProp A
   ; wltProp_Transitive :: Transitive wltProp
@@ -551,7 +551,7 @@ Qed.
 
 End BASIC1.
 
-#[projections(primitive), universes(template)]
+#[universes(template), projections(primitive)]
 Class isWoset (A : Type) {SETOID : isSetoid A} : Type :=
   { Woset_isWellPoset :: isWellPoset A
   ; Woset_eqPropCompatible2 :: eqPropCompatible2 wltProp
@@ -886,7 +886,7 @@ End O.
 
 Infix "≼" := O.wle : type_scope.
 
-#[universes(template)]
+#[universes(template), projections(primitive)]
 Class isUpperSemilattice (D : Type) {PROSET : isProset D} : Type :=
   { join_lattice (x : D) (y : D) : D
   ; bot_lattice : D
@@ -938,7 +938,7 @@ Qed.
 
 End UPPER_SEMILATTICE.
 
-#[universes(template)]
+#[universes(template), projections(primitive)]
 Class isLowerSemilattice (D : Type) {PROSET : isProset D} : Type :=
   { meet_lattice (x : D) (y : D) : D
   ; top_lattice : D
@@ -962,7 +962,7 @@ Qed.
 
 End LOWER_SEMILATTICE.
 
-#[universes(template)]
+#[universes(template), projections(primitive)]
 Class isLattice (D : Type) {PROSET : isProset D} : Type :=
   { Lattice_asUpperSemilattice :: isUpperSemilattice D (PROSET := PROSET)
   ; Lattice_asLowerSemilattice :: isLowerSemilattice D (PROSET := PROSET)
@@ -1018,7 +1018,7 @@ Import ListNotations.
 
 Notation "`[ A -> B ]" := { f : A -> B | isMonotonic1 f }.
 
-Class isCola (D : Type) {PROSET : isProset D} : Type :=
+Class isCola `(D : Type) `{PROSET : isProset D} : Type :=
   supremum_cola (X : ensemble D) : { sup_X : D | is_supremum_of sup_X X }.
 
 #[program]
@@ -1093,7 +1093,8 @@ Proof.
     pose proof (DIRECTED' x1 x2 x1_in x2_in) as [x3 [x3_in [x1_le_x3 x2_le_x3]]]. exists (f x3); done!.
 Qed.
 
-Class isCpo (D : Type) {PROSET : isProset D} : Type :=
+#[universes(template), projections(primitive)]
+Class isCpo `(D : Type) `{PROSET : isProset D} : Type :=
   { bottom_cpo : D
   ; supremum_cpo (X : ensemble D) (DIRECTED : isDirected X) : D
   ; bottom_cpo_spec : forall x : D, bottom_cpo =< x
@@ -1164,7 +1165,7 @@ End MAKE_CPO_FROM_COLA.
 
 End CpoDef.
 
-#[universes(template)]
+#[universes(template), projections(primitive)]
 Class hsOrd (A : Type) `{PROSET : isProset A} : Type :=
   { compare (x : A) (y : A) : comparison
   ; compare_Lt x y
@@ -1231,12 +1232,6 @@ Proof.
     destruct (compare x1 x2) eqn: H_OBS1; destruct (compare x2 x3) eqn: H_OBS2; destruct (compare x1 x3) eqn: H_OBS3; discriminate || eauto with *.
     all: contradiction (proj2 claim3); discriminate || eauto with *.
 Qed.
-
-#[local]
-Instance list_isSetoid_of_elementwise_comparison : isSetoid (list A) :=
-  { eqProp := lex_eq
-  ; eqProp_Equivalence := lex_eq_Equivalence
-  }.
 
 #[local]
 Instance lex_le_PreOrder
@@ -1316,7 +1311,7 @@ Proof.
     destruct OBS eqn: H_OBS; now rewrite H_eq in claim1.
 Qed.
 
-#[local]
+#[global]
 Instance lex_le_PartialOrder
   : PartialOrder lex_eq lex_le.
 Proof.
@@ -1329,27 +1324,64 @@ Proof.
   - split; discriminate || eauto with *. intros [[? | ?] ?]; discriminate || eauto with *.
 Qed.
 
-#[global]
+#[local] Existing Instance L.list_isSetoid.
+
+Lemma lex_eq_iff xs ys
+  : lex_eq xs ys <-> xs == ys.
+Proof.
+  unfold lex_eq; revert ys. induction xs as [ | x xs IH], ys as [ | y ys]; simpl.
+  - split; i; reflexivity.
+  - split; intros H.
+    + congruence.
+    + pose proof (H 0) as H_contra.
+      simpl in H_contra. inv H_contra.
+  - split; intros H.
+    + congruence.
+    + pose proof (H 0) as H_contra.
+      simpl in H_contra. inv H_contra.
+  - pose proof (compare_spec x y) as claim.
+    destruct (compare x y) eqn: H_OBS.
+    + rewrite IH. split.
+      * intros H_eq [ | n]; simpl; [econs; exact claim | exact (H_eq n)].
+      * intros H_eq n. exact (H_eq (S n)).
+    + split; intros H.
+      * congruence.
+      * pose proof (H 0) as H_contra.
+        simpl in H_contra. inv H_contra. tauto.
+    + split; intros H.
+      * congruence.
+      * pose proof (H 0) as H_contra.
+        simpl in H_contra. inv H_contra. tauto.
+Qed.
+
+#[global, program]
 Instance list_lexicographical_order : isProset (list A) :=
   { leProp := lex_le
-  ; Proset_isSetoid := list_isSetoid_of_elementwise_comparison
+  ; Proset_isSetoid := L.list_isSetoid PROSET.(Proset_isSetoid)
   ; leProp_PreOrder := lex_le_PreOrder
-  ; leProp_PartialOrder := lex_le_PartialOrder
+  ; leProp_PartialOrder := _
   }.
-
-#[local] Obligation Tactic := cbn; unfold lex_le, lex_eq; ii.
+Next Obligation.
+  intros xs ys.
+  change (xs == ys <-> (lex_le xs ys /\ lex_le ys xs)). 
+  rewrite <- lex_eq_iff. exact (lex_le_PartialOrder xs ys).
+Qed.
 
 #[local, program]
 Instance list_hsOrd : hsOrd (list A) (PROSET := list_lexicographical_order) :=
   { compare := lex_compare }.
 Next Obligation.
+  rewrite <- lex_eq_iff; cbn; unfold lex_le, lex_eq; ii.
   rewrite OBS_Lt. split; [now left | congruence].
 Qed.
 Next Obligation.
+  rewrite <- lex_eq_iff; cbn; unfold lex_le, lex_eq; ii.
   exact OBS_Eq.
 Qed.
 Next Obligation.
-  pose proof (lex_le_flip_spec x y) as H; revert H; rewrite OBS_Gt; intros H_lt. rewrite H_lt. split; [now left | congruence].
+  rewrite <- lex_eq_iff; cbn; unfold lex_le, lex_eq; ii.
+  pose proof (lex_le_flip_spec x y) as H; revert H; rewrite OBS_Gt; intros H_lt. rewrite H_lt.
+  split; [now left | congruence].
 Qed.
 
 End list_hsOrd.

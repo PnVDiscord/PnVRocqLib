@@ -780,7 +780,7 @@ Proof.
   assert (scottLam3_isMonotonic : isMonotonic1 scottLam3).
   { ii. eapply x_LE. }
   assert (scottLam3_preserves_eqProp : eqPropCompatible1 scottLam3).
-  { ii. eapply x_EQ. }
+  { intros f f' f_eq d d'. simpl. cbn in f_eq. eapply f_eq with (x := (d, d')). }
   eapply the_main_reason_for_introducing_ScottTopology; trivial.
   intros F F_isDirected. set (Y := E.image scottLam3 F). set (sup_F := supremum_cpo F F_isDirected).
   assert (sup_F_is_supremum_of_F : is_supremum_of sup_F F) by exact (supremum_cpo_spec F F_isDirected).
