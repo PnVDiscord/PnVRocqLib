@@ -19,7 +19,7 @@ Open Scope monad_scope.
 Notation "'do' m" := m : monad_scope.
 
 Notation "'let' x ':=' t ';' m" := (let x := t in m) (in custom do_notation at level 1, x pattern, t constr, m custom do_notation at level 10, format "'let'  x  ':='  t ';' '//' m").
-Notation "''' x '<-' m1 ';' m2" := (bind m1 (fun 'x => m2)) (in custom do_notation at level 1, x pattern, m1 constr, m2 custom do_notation at level 10, format "''' x  '<-'  m1 ';' '//' m2").
+Notation "''' x '<-' m1 ';' m2" := (bind m1 (fun x => m2)) (in custom do_notation at level 1, x pattern, m1 constr, m2 custom do_notation at level 10, format "''' x  '<-'  m1 ';' '//' m2").
 Notation "'ret' t" := (pure t) (in custom do_notation at level 10, t constr at level 0, format "'ret'  t").
 Notation "t" := t (in custom do_notation at level 0, t constr).
 
@@ -27,10 +27,10 @@ Section EXAMPLE.
 
 Let do_notation_example1 : option nat := do
   '_ <- Some 1;
-  'x <- Some 2;
-  '_ <- Some 3;
-  let y := 4;
-  '_ <- Some 5;
+  '(x, _) <- Some (2, 3);
+  '_ <- Some 4;
+  let y := 5;
+  '_ <- Some 6;
   ret (x + y).
 
 Let do_notation_example2 (a : nat) : option nat := do
