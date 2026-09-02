@@ -519,17 +519,17 @@ Fixpoint add' (n : nat) (m : nat) {struct n} : nat :=
   end.
 
 Theorem add'_spec n m
-  : add' n m = n + m.
+  : add' n m = m + n.
 Proof.
   revert m; induction n as [ | n IH]; simpl; i.
-  - reflexivity.
+  - lia.
   - rewrite IH. lia.
 Qed.
 
 Corollary add'_zero_r n
   : add' n 0 = n.
 Proof.
-  rewrite add'_spec. now rewrite Nat.add_0_r.
+  rewrite add'_spec. reflexivity.
 Qed.
 
 Context {State : Type} (isDone : nat -> State -> Prop) {isDone_dec : forall n : nat, forall s : State, B.Decision (isDone n s)}.
@@ -555,41 +555,48 @@ Inductive search (n : nat) : nat -> Prop :=
     (NOT_P : ~ (P n))
     : search n (S n).
 
-Fixpoint strong_search_go (n : nat) (s : State) (Hs : s = trace n) (sn_n : sn search n) {struct sn_n} : nat * State.
+Lemma mk_NOT_P {n : nat} {s : State}
+  (Hs : s = trace n)
+  (H_NO : ~ (isDone n s))
+  : ~ (P n).
 Proof.
-  destruct (B.decide (isDone n s)) as [H_YES | H_NO].
-  - exact (n, s).
-  - set (s' := step n s).
-    assert (NOT_P : ~ (P n)).
-    { unfold P. rewrite <- Hs. exact H_NO. }
-    assert (Hs' : s' = trace (S n)).
-    { unfold s'. simpl. unfold advance.
-      destruct (B.decide _) as [H_YES' | H_NO'].
-      - contradiction H_NO. congruence.
-      - congruence.
-    }
-    exact (strong_search_go (S n) s' Hs' (sn_inv n sn_n (S n) (search_next n NOT_P))).
-Defined.
-
-Lemma sn_search n k
-  (WITNESS : P (add' n k))
-  : sn search n.
-Proof.
-  revert n WITNESS. induction k as [ | k IH]; intros n WITNESS.
-  - constructor. intros n' SEARCH. destruct SEARCH as [NOT_P].
-    contradiction NOT_P. rewrite <- add'_zero_r. exact WITNESS.
-  - constructor. intros n' SEARCH. destruct SEARCH as [NOT_P].
-    eapply IH. simpl. exact WITNESS.
+  unfold P. rewrite <- Hs. exact H_NO.
 Qed.
+
+Lemma preserves_eq {n : nat} {s : State}
+  (Hs : s = trace n)
+  (H_NO : ~ (isDone n s))
+  : step n s = trace (S n).
+Proof.
+  simpl. unfold advance.
+  destruct (B.decide _) as [H_YES' | H_NO'].
+  - contradiction H_NO. congruence.
+  - congruence.
+Qed.
+
+Fixpoint strong_search_go (n : nat) (s : State) (Hs : s = trace n) (sn_n : sn search n) {struct sn_n} : nat * State :=
+  match B.decide (isDone n s) with
+  | left H_YES => (n, s)
+  | right H_NO =>
+    let s' := step n s in
+    strong_search_go (S n) s' (preserves_eq Hs H_NO) (sn_inv n sn_n (S n) (search_next n (mk_NOT_P Hs H_NO)))
+  end.
+
+Fixpoint sn_search (k : nat) {struct k} : forall n : nat, P (add' n k) -> sn search n.
+Proof.
+  destruct k as [ | k']; simpl; intros n WITNESS; econs; intros n' SEARCH; destruct SEARCH as [NOT_P].
+  - contradiction NOT_P. rewrite <- add'_zero_r. exact WITNESS.
+  - eapply sn_search with (k := k'). simpl. exact WITNESS.
+Defined.
 
 Hypothesis eventually_stops : exists k : nat, P k.
 
 Corollary sn_search_0
   : sn search 0.
 Proof.
-  destruct eventually_stops as [k WITNESS].
-  exact (sn_search O k WITNESS).
-Qed.
+  destruct eventually_stops as [k P_k].
+  exact (sn_search k O P_k).
+Defined.
 
 Definition strong_search : nat * State :=
   strong_search_go 0 s0 eq_refl sn_search_0.
@@ -602,7 +609,7 @@ Proof.
   - eapply strong_search_go_pirrel.
 Qed.
 
-Lemma strong_search_go_correct_from n s n' s'
+Lemma strong_search_go_correct n s n' s'
   (Hs : s = trace n)
   (sn_n : sn search n)
   (RESULT : (n', s') = strong_search_go n s Hs sn_n)
@@ -624,7 +631,7 @@ Theorem strong_search_correct n s
   (H_strong_search : (n, s) = strong_search)
   : trace n = s /\ isDone n s /\ (forall m : nat, m < n -> ~ (isDone m (trace m))).
 Proof.
-  find* (TRACE & DONE & FIRST) by strong_search_go_correct_from.
+  find* (TRACE & DONE & FIRST) by strong_search_go_correct.
   split; [exact TRACE | split; [exact DONE | intros m LT]].
   eapply FIRST; lia.
 Qed.
