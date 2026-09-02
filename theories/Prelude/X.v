@@ -392,17 +392,24 @@ Fixpoint sn_guard {x : A} (n : nat) (H_sn : sn R x) {struct n} : sn R x :=
   | S n' => sn_intro R x (fun x' : A => fun H_R : R x x' => sn_guard n' (sn_inv x H_sn x' H_R))
   end.
 
-Definition sn_of_wf
-  (H_wf : well_founded R)
-  : forall x0 : A, sn (fun x => fun x' => R x' x) x0.
+Definition Acc_to_sn {x0 : A}
+  (H_Acc : Acc (fun x' => fun x => R x x') x0)
+  : sn R x0.
 Proof.
-  intros x. induction (H_wf x) as [x _ IH].
+  induction H_Acc as [x _ IH].
   econs. exact IH.
 Defined.
 
 End Strong_Normalisation.
 
 #[global] Strategy 100 [sn_guard].
+
+Definition sn_of_wf {A : Type} {R : A -> A -> Prop}
+  (H_wf : well_founded R)
+  : forall x0 : A, @sn A (fun x : A => fun x' : A => R x' x) x0.
+Proof.
+  exact (fun x0 => Acc_to_sn (H_wf x0)).
+Defined.
 
 Section Strict_Progress_on_Prosets.
 
@@ -411,7 +418,9 @@ Context {A : Type} {PROSET : isProset A}.
 Inductive betaProgressive (x : A) (x' : A) : Prop :=
   | betaProgressive_intro
     (LE : x =< x')
-    (NE : ~ (x == x')).
+    (NE : ~ (x == x'))
+    : x ~>β x'
+  where "x ~>β x'" := (betaProgressive x x').
 
 Theorem finite_upper_cone_implies_sn (x0 : A)
   (finite_upper_cone : exists cone : list A, forall x : A, x0 =< x -> L.In x cone)
@@ -424,15 +433,15 @@ Proof.
   - destruct cone' as [ | a cone']; simpl in LENGTH.
     + exfalso. eapply UPPER. reflexivity.
     + lia.
-  - pose proof (UPPER x (leProp_refl x)) as IN_X.
-    apply L.in_split in IN_X. destruct IN_X as (prefix & suffix & CONE_EQ).
+  - pose proof (UPPER x (leProp_refl x)) as IN'.
+    apply L.in_split in IN'. destruct IN' as (prefix & suffix & CONE_EQ).
     subst cone'. econs. intros x' [LE NE].
     eapply IH with (cone := prefix ++ suffix).
     + rewrite !length_app in LENGTH |- *. simpl in LENGTH. lia.
     + intros y LE'.
-      pose proof (UPPER y (leProp_trans x x' y LE LE')) as IN_Y.
-      rewrite L.in_app_iff in IN_Y. simpl in IN_Y.
-      rewrite L.in_app_iff. destruct IN_Y as [IN_Y | [Y_EQ | IN_Y]]; eauto.
+      pose proof (UPPER y (leProp_trans x x' y LE LE')) as IN'.
+      rewrite L.in_app_iff in IN'. simpl in IN'.
+      rewrite L.in_app_iff. destruct IN' as [IN' | [EQ' | IN']]; eauto.
       subst y. contradiction NE. eapply leProp_antisymmetry; eauto.
 Qed.
 
@@ -509,6 +518,20 @@ Fixpoint add' (n : nat) (m : nat) {struct n} : nat :=
   | S n' => add' n' (S m)
   end.
 
+Theorem add'_spec n m
+  : add' n m = n + m.
+Proof.
+  revert m; induction n as [ | n IH]; simpl; i.
+  - reflexivity.
+  - rewrite IH. lia.
+Qed.
+
+Corollary add'_zero_r n
+  : add' n 0 = n.
+Proof.
+  rewrite add'_spec. now rewrite Nat.add_0_r.
+Qed.
+
 Context {State : Type} (isDone : nat -> State -> Prop) {isDone_dec : forall n : nat, forall s : State, B.Decision (isDone n s)}.
 
 Variable step : nat -> State -> State.
@@ -548,16 +571,6 @@ Proof.
     exact (strong_search_go (S n) s' Hs' (sn_inv n sn_n (S n) (search_next n NOT_P))).
 Defined.
 
-Lemma add'_zero_r n
-  : add' n 0 = n.
-Proof.
-  enough (AUX : forall p, forall q, add' p q = p + q).
-  { rewrite AUX. lia. }
-  intros p. induction p as [ | p IH]; intros q; simpl.
-  - reflexivity.
-  - rewrite IH. lia.
-Qed.
-
 Lemma sn_search n k
   (WITNESS : P (add' n k))
   : sn search n.
@@ -589,7 +602,7 @@ Proof.
   - eapply strong_search_go_pirrel.
 Qed.
 
-Lemma strong_search_go_correct_from (n : nat) (s : State) (n' : nat) (s' : State)
+Lemma strong_search_go_correct_from n s n' s'
   (Hs : s = trace n)
   (sn_n : sn search n)
   (RESULT : (n', s') = strong_search_go n s Hs sn_n)
@@ -607,7 +620,7 @@ Proof.
     + eapply FIRST; lia.
 Qed.
 
-Theorem strong_search_correct (n : nat) (s : State)
+Theorem strong_search_correct n s
   (H_strong_search : (n, s) = strong_search)
   : trace n = s /\ isDone n s /\ (forall m : nat, m < n -> ~ (isDone m (trace m))).
 Proof.

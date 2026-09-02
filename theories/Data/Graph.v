@@ -4,7 +4,7 @@ Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.FiniteMap.
 Require Import PnV.Prelude.X.
 
-Module GRAPH.
+Module DIGRAPH.
 
 #[projections(primitive)]
 Class t : Type :=
@@ -13,17 +13,17 @@ Class t : Type :=
   ; edges : ensemble (vertices * vertices)
   } as G.
 
-End GRAPH.
+End DIGRAPH.
 
 #[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 
 Section GraphTheory_basic1.
 
-#[local] Abbreviation vertices := GRAPH.vertices.
-#[local] Abbreviation edges := GRAPH.edges.
+#[local] Abbreviation vertices := DIGRAPH.vertices.
+#[local] Abbreviation edges := DIGRAPH.edges.
 
-Context {G : GRAPH.t}.
+Context {G : DIGRAPH.t}.
 
 #[local] Abbreviation V := G.(vertices).
 #[local] Abbreviation E := G.(edges).
@@ -207,7 +207,7 @@ Fixpoint Walk_app {v0 : V} {v1 : V} {v2 : V} (H_walk_1 : `[ v0 -> v1 ]) : `[ v1 
 
 #[global]
 Instance Walk_cat : CAT.isCategory :=
-  { ob := G.(GRAPH.vertices)
+  { ob := G.(DIGRAPH.vertices)
   ; hom v v' := `[ v -> v' ]
   ; compose {v0} {v1} {V2} WALK WALK' := Walk_app WALK' WALK
   ; id {v0} := Walk_nil
@@ -231,15 +231,15 @@ End GraphTheory_basic1.
 #[local] Notation " `[ v -> v' ] " := (Walk v' v) : type_scope.
 
 #[projections(primitive)]
-Record Labeled {G : GRAPH.t} : Type :=
+Record Labeled {G : DIGRAPH.t} : Type :=
   { labels : Type
-  ; labeling {v} {v'} (E_v_v' : (v, v') \in G.(GRAPH.edges)) : ensemble labels
+  ; labeling {v} {v'} (E_v_v' : (v, v') \in G.(DIGRAPH.edges)) : ensemble labels
   }.
 
 #[global] Arguments Labeled : clear implicits.
 
-Definition labeledWalk {G : GRAPH.t} {G_labeled : Labeled G} : forall v, forall v', `[ v -> v' ] -> ensemble (list G_labeled.(labels)) :=
-  fix go (v : G.(GRAPH.vertices)) (v' : G.(GRAPH.vertices)) (H_Walk : `[ v -> v' ]) :=
+Definition labeledWalk {G : DIGRAPH.t} {G_labeled : Labeled G} : forall v, forall v', `[ v -> v' ] -> ensemble (list G_labeled.(labels)) :=
+  fix go (v : G.(DIGRAPH.vertices)) (v' : G.(DIGRAPH.vertices)) (H_Walk : `[ v -> v' ]) :=
   match H_Walk with
   | Walk_nil => pure (@L.nil G_labeled.(labels))
   | Walk_cons H_edge H_Walk' => liftM2 (@L.cons G_labeled.(labels)) (G_labeled.(labeling) H_edge) (go _ _ H_Walk')
@@ -297,10 +297,10 @@ Section DIGRAPH_FIXEDPOINT.
 #[local] Notation " src '===[' t ']==>*('  G  ')' tgt " := (@trail G tgt src t).
 
 #[local] Infix "=~=" := (is_similar_to (Similarity := list_corresponds_to_finite_ensemble)).
-#[local] Abbreviation vertices := GRAPH.vertices.
-#[local] Abbreviation edges := GRAPH.edges.
+#[local] Abbreviation vertices := DIGRAPH.vertices.
+#[local] Abbreviation edges := DIGRAPH.edges.
 
-Context {G : GRAPH.t}.
+Context {G : DIGRAPH.t}.
 
 #[local] Abbreviation V := G.(vertices).
 #[local] Abbreviation E := G.(edges).
@@ -515,10 +515,10 @@ Section DIGRAPH.
 Context {X : Type} {POSET_X : isPoset X} {HsOrd_X : HsOrd X (POSET := POSET_X)}.
 Context {A : Type} {POSET_A : isPoset A} {HsOrd_A : HsOrd A (POSET := POSET_A)}.
 
-Definition propagate_graph (deps : X -> fset X) : GRAPH.t :=
+Definition propagate_graph (deps : X -> fset X) : DIGRAPH.t :=
   {|
-    GRAPH.vertices := X;
-    GRAPH.edges := fun '(x, x') => x' ∈ deps x;
+    DIGRAPH.vertices := X;
+    DIGRAPH.edges := fun '(x, x') => x' ∈ deps x;
   |}.
 
 Variable seed : X -> fset A.
@@ -590,7 +590,7 @@ Lemma propagate_trace_simple (x : X) (a : A) (tr : list X)
 Proof.
   pose proof (propagate_trace_walk x a tr TRACE) as WALK.
   pose proof (propagate_trace_seed_at_last x a tr TRACE) as SEED.
-  assert (exists simple : list GRAPH.vertices, x ---[ simple ]-->*( propagate_graph deps ) last tr x) as [simple PATH].
+  assert (exists simple : list DIGRAPH.vertices, x ---[ simple ]-->*( propagate_graph deps ) last tr x) as [simple PATH].
   { eapply walk_finds_path with (w := tr); auto. intros v vs.
     now pose proof (@L.in_dec X (HsOrd_implies_EqDec HsOrd_X) v vs) as [YES | NO]; [left | right].
   }
