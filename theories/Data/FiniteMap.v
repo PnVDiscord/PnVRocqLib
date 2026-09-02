@@ -78,7 +78,7 @@ Qed.
 
 End ALIST.
 
-Module FiniteMap.
+Module FinitePartialMap.
 
 #[universes(template), projections(primitive)]
 Record t {K : Type} {isSorted : list K -> bool} {V : Type} : Type :=
@@ -90,7 +90,7 @@ Record t {K : Type} {isSorted : list K -> bool} {V : Type} : Type :=
 #[global] Arguments t : clear implicits.
 #[global] Arguments mk {K} {isSorted} {V}.
 
-Lemma t_eq_iff {K : Type} {V : Type} {isSorted : list K -> bool} (m : FiniteMap.t K isSorted V) (m' : FiniteMap.t K isSorted V)
+Lemma t_eq_iff {K : Type} {V : Type} {isSorted : list K -> bool} (m : FinitePartialMap.t K isSorted V) (m' : FinitePartialMap.t K isSorted V)
   : m = m' <-> m.(data) = m'.(data).
 Proof.
   split.
@@ -101,9 +101,9 @@ Proof.
     intros X X' H_eq. exact (claim X.(data) X'.(data) X.(data_isSorted) X'.(data_isSorted) H_eq).
 Qed.
 
-End FiniteMap.
+End FinitePartialMap.
 
-Abbreviation fpmap K := (FiniteMap.t K (isSorted compare)).
+Abbreviation fpmap K := (FinitePartialMap.t K (isSorted compare)).
 
 Section BASICS.
 
@@ -122,7 +122,7 @@ Definition lookup' (k0 : K) : list (K * V) -> option V :=
   end.
 
 Definition lookup (k : K) (m : fpmap K V) : option V :=
-  lookup' k m.(FiniteMap.data).
+  lookup' k m.(FinitePartialMap.data).
 
 Lemma lookup'_nil (k0 : K)
   : lookup' k0 [] = None.
@@ -164,14 +164,14 @@ Qed.
 Theorem fpmap_eq_spec (m : fpmap K V) (m' : fpmap K V)
   : m = m' <-> (forall k, lookup k m = lookup k m').
 Proof.
-  rewrite FiniteMap.t_eq_iff. unfold lookup. split.
+  rewrite FinitePartialMap.t_eq_iff. unfold lookup. split.
   - intros H_eq k. rewrite H_eq. reflexivity.
   - intros EXT.
     pose proof (fun p : K * V => fun ps : list (K * V) => proj1 (isSorted_map_fst_cons_iff p ps)) as HD_TL.
     pose proof lookup'_lt_None as LT_None.
-    pose proof (m.(FiniteMap.data_isSorted)) as kvs_isSorted.
-    pose proof (m'.(FiniteMap.data_isSorted)) as kvs'_isSorted.
-    set (kvs := m.(FiniteMap.data)) in *. set (kvs' := m'.(FiniteMap.data)) in *.
+    pose proof (m.(FinitePartialMap.data_isSorted)) as kvs_isSorted.
+    pose proof (m'.(FinitePartialMap.data_isSorted)) as kvs'_isSorted.
+    set (kvs := m.(FinitePartialMap.data)) in *. set (kvs' := m'.(FinitePartialMap.data)) in *.
     clearbody kvs kvs'. clear m m'. revert kvs_isSorted kvs' kvs'_isSorted EXT.
     induction kvs as [ | [k v] kvs IH]; intros kvs_isSorted [ | [k' v'] kvs'] kvs'_isSorted EXT.
     + reflexivity.
@@ -229,13 +229,13 @@ Proof.
 Qed.
 
 Theorem lookup_spec (m : fpmap K V) (k : K) (v : V)
-  : lookup k m = Some v <-> (k, v) ∈ m.(FiniteMap.data).
+  : lookup k m = Some v <-> (k, v) ∈ m.(FinitePartialMap.data).
 Proof.
-  exact (lookup'_spec m.(FiniteMap.data) m.(FiniteMap.data_isSorted) k v).
+  exact (lookup'_spec m.(FinitePartialMap.data) m.(FinitePartialMap.data_isSorted) k v).
 Qed.
 
 Definition empty : fpmap K V :=
-  FiniteMap.mk [] eq_refl.
+  FinitePartialMap.mk [] eq_refl.
 
 Theorem lookup_empty (k : K)
   : lookup k empty = None.
@@ -275,10 +275,8 @@ Qed.
 Lemma map_fst_insert' (k0 : K) (v0 : V) (kvs : list (K * V))
   : map fst (insert' k0 v0 kvs) = FS.insert k0 (map fst kvs).
 Proof.
-  induction kvs as [ | [k v] kvs IH]; trivial.
-  rewrite insert'_cons.
-  change (FS.insert k0 (map fst ((k, v) :: kvs)))
-    with (match compare k0 k with Lt => k0 :: k :: map fst kvs | Eq => k :: map fst kvs | Gt => k :: FS.insert k0 (map fst kvs) end).
+  induction kvs as [ | [k v] kvs IH]; trivial. rewrite insert'_cons.
+  change (FS.insert k0 (map fst ((k, v) :: kvs))) with (match compare k0 k with Lt => k0 :: k :: map fst kvs | Eq => k :: map fst kvs | Gt => k :: FS.insert k0 (map fst kvs) end).
   destruct (compare k0 k) as [ | | ] eqn: H_OBS.
   - cbn [map fst]. f_equal. exact (proj1 (compare_eq_iff k0 k) H_OBS).
   - reflexivity.
@@ -293,13 +291,13 @@ Proof.
 Qed.
 
 Definition insert (k : K) (v : V) (m : fpmap K V) : fpmap K V :=
-  FiniteMap.mk (insert' k v m.(FiniteMap.data)) (isSorted_insert' k v m.(FiniteMap.data) m.(FiniteMap.data_isSorted)).
+  FinitePartialMap.mk (insert' k v m.(FinitePartialMap.data)) (isSorted_insert' k v m.(FinitePartialMap.data) m.(FinitePartialMap.data_isSorted)).
 
 Theorem lookup_insert_eq (k : K) (v : V) (m : fpmap K V)
   : lookup k (insert k v m) = Some v.
 Proof.
-  unfold lookup, insert. cbn [FiniteMap.data].
-  generalize m.(FiniteMap.data) as kvs. clear m.
+  unfold lookup, insert. cbn [FinitePartialMap.data].
+  generalize m.(FinitePartialMap.data) as kvs. clear m.
   induction kvs as [ | [k1 v1] kvs IH].
   - rewrite insert'_nil, lookup'_cons, compare_refl. reflexivity.
   - rewrite insert'_cons. destruct (compare k k1) as [ | | ] eqn: H_OBS.
@@ -312,8 +310,8 @@ Theorem lookup_insert_ne (k : K) (v : V) (m : fpmap K V) (k0 : K)
   (NE : k0 ≠ k)
   : lookup k0 (insert k v m) = lookup k0 m.
 Proof.
-  unfold lookup, insert. cbn [FiniteMap.data].
-  generalize m.(FiniteMap.data) as kvs. clear m.
+  unfold lookup, insert. cbn [FinitePartialMap.data].
+  generalize m.(FinitePartialMap.data) as kvs. clear m.
   induction kvs as [ | [k1 v1] kvs IH].
   - rewrite insert'_nil, !lookup'_cons, lookup'_nil.
     destruct (compare k0 k) as [ | | ] eqn: H_OBS; trivial.
@@ -382,14 +380,14 @@ Proof.
 Qed.
 
 Definition remove (k : K) (m : fpmap K V) : fpmap K V :=
-  FiniteMap.mk (remove' k m.(FiniteMap.data)) (isSorted_remove' k m.(FiniteMap.data) m.(FiniteMap.data_isSorted)).
+  FinitePartialMap.mk (remove' k m.(FinitePartialMap.data)) (isSorted_remove' k m.(FinitePartialMap.data) m.(FinitePartialMap.data_isSorted)).
 
 Theorem lookup_remove_eq (k : K) (m : fpmap K V)
   : lookup k (remove k m) = None.
 Proof.
-  unfold lookup, remove. cbn [FiniteMap.data].
-  pose proof (m.(FiniteMap.data_isSorted)) as kvs_isSorted.
-  generalize dependent m.(FiniteMap.data). intros kvs. clear m.
+  unfold lookup, remove. cbn [FinitePartialMap.data].
+  pose proof (m.(FinitePartialMap.data_isSorted)) as kvs_isSorted.
+  generalize dependent m.(FinitePartialMap.data). intros kvs. clear m.
   induction kvs as [ | [k1 v1] kvs IH]; intros kvs_isSorted; trivial.
   pose proof (proj1 (isSorted_map_fst_cons_iff (k1, v1) kvs) kvs_isSorted) as [k1_lt_kvs kvs_isSorted'].
   simpl in k1_lt_kvs. rewrite remove'_cons. destruct (compare k k1) as [ | | ] eqn: H_OBS.
@@ -403,9 +401,9 @@ Theorem lookup_remove_ne (k : K) (m : fpmap K V) (k0 : K)
   (NE : k0 ≠ k)
   : lookup k0 (remove k m) = lookup k0 m.
 Proof.
-  unfold lookup, remove. cbn [FiniteMap.data].
-  pose proof (m.(FiniteMap.data_isSorted)) as kvs_isSorted.
-  generalize dependent m.(FiniteMap.data). intros kvs. clear m.
+  unfold lookup, remove. cbn [FinitePartialMap.data].
+  pose proof (m.(FinitePartialMap.data_isSorted)) as kvs_isSorted.
+  generalize dependent m.(FinitePartialMap.data). intros kvs. clear m.
   induction kvs as [ | [k1 v1] kvs IH]; intros kvs_isSorted; trivial.
   pose proof (proj1 (isSorted_map_fst_cons_iff (k1, v1) kvs) kvs_isSorted) as [k1_lt_kvs kvs_isSorted'].
   simpl in k1_lt_kvs. rewrite remove'_cons. destruct (compare k k1) as [ | | ] eqn: H_OBS1.
@@ -421,7 +419,7 @@ Proof.
 Qed.
 
 Definition keys (m : fpmap K V) : fset K :=
-  FSet.mk (map fst m.(FiniteMap.data)) m.(FiniteMap.data_isSorted).
+  FSet.mk (map fst m.(FinitePartialMap.data)) m.(FinitePartialMap.data_isSorted).
 
 Theorem in_keys_iff (m : fpmap K V) (k : K)
   : k ∈ (keys m).(FSet.data) <-> (exists v : V, lookup k m = Some v).
@@ -467,19 +465,19 @@ Context {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET :=
 
 #[local, program]
 Instance fpmap_isProset : isProset (fpmap K V) :=
-  { leProp (m : fpmap K V) (m' : fpmap K V) := m.(FiniteMap.data) =< m'.(FiniteMap.data)
+  { leProp (m : fpmap K V) (m' : fpmap K V) := m.(FinitePartialMap.data) =< m'.(FinitePartialMap.data)
   ; Proset_isSetoid := mkSetoid_from_eq
   }.
 Next Obligation.
   split.
   - intros m. reflexivity.
-  - intros m m' m'' m_le_m' m'_le_m''. now transitivity m'.(FiniteMap.data).
+  - intros m m' m'' m_le_m' m'_le_m''. now transitivity m'.(FinitePartialMap.data).
 Qed.
 Next Obligation.
   intros m m'. unfold flip. split.
   - intros m_eq_m'. change (m = m') in m_eq_m'. subst m'. split; reflexivity.
-  - intros [m_le_m' m'_le_m]. change (m = m'). rewrite FiniteMap.t_eq_iff. rewrite <- Poset_eqProp_spec.
-    exact (leProp_antisymmetry m.(FiniteMap.data) m'.(FiniteMap.data) m_le_m' m'_le_m).
+  - intros [m_le_m' m'_le_m]. change (m = m'). rewrite FinitePartialMap.t_eq_iff. rewrite <- Poset_eqProp_spec.
+    exact (leProp_antisymmetry m.(FinitePartialMap.data) m'.(FinitePartialMap.data) m_le_m' m'_le_m).
 Qed.
 
 #[global]
@@ -490,22 +488,22 @@ Instance fpmap_isPoset : isPoset (fpmap K V) :=
 
 #[local, program]
 Instance fpmap_hsOrd : hsOrd (fpmap K V) (PROSET := Poset_isProset) :=
-  { compare (m : fpmap K V) (m' : fpmap K V) := compare m.(FiniteMap.data) m'.(FiniteMap.data) }.
+  { compare (m : fpmap K V) (m' : fpmap K V) := compare m.(FinitePartialMap.data) m'.(FinitePartialMap.data) }.
 Next Obligation.
-  intros m m' OBS_Lt. pose proof (compare_Lt m.(FiniteMap.data) m'.(FiniteMap.data) OBS_Lt) as [LE NE]. split.
+  intros m m' OBS_Lt. pose proof (compare_Lt m.(FinitePartialMap.data) m'.(FinitePartialMap.data) OBS_Lt) as [LE NE]. split.
   - exact LE.
   - intros m_eq_m'. contradiction NE. do 6 red in m_eq_m' |- *.
-    rewrite -> FiniteMap.t_eq_iff in m_eq_m'. rewrite m_eq_m'. reflexivity.
+    rewrite -> FinitePartialMap.t_eq_iff in m_eq_m'. rewrite m_eq_m'. reflexivity.
 Qed.
 Next Obligation.
-  intros m m' OBS_Eq. pose proof (compare_Eq m.(FiniteMap.data) m'.(FiniteMap.data) OBS_Eq) as H_eq.
-  rewrite Poset_eqProp_spec in H_eq. exact (proj2 (FiniteMap.t_eq_iff m m') H_eq).
+  intros m m' OBS_Eq. pose proof (compare_Eq m.(FinitePartialMap.data) m'.(FinitePartialMap.data) OBS_Eq) as H_eq.
+  rewrite Poset_eqProp_spec in H_eq. exact (proj2 (FinitePartialMap.t_eq_iff m m') H_eq).
 Qed.
 Next Obligation.
-  intros m m' OBS_Gt. pose proof (compare_Gt m.(FiniteMap.data) m'.(FiniteMap.data) OBS_Gt) as [LE NE]. split.
+  intros m m' OBS_Gt. pose proof (compare_Gt m.(FinitePartialMap.data) m'.(FinitePartialMap.data) OBS_Gt) as [LE NE]. split.
   - exact LE.
   - intros m_eq_m'. contradiction NE. do 6 red in m_eq_m' |- *.
-    rewrite -> FiniteMap.t_eq_iff in m_eq_m'. rewrite m_eq_m'. reflexivity.
+    rewrite -> FinitePartialMap.t_eq_iff in m_eq_m'. rewrite m_eq_m'. reflexivity.
 Qed.
 
 #[global]
@@ -516,9 +514,9 @@ End HsOrd_fpmap.
 
 #[global, refine]
 Instance fpmap_isFunctor {K : Type} {POSET_K : isPoset K} (HsOrd_K : HsOrd K (POSET := POSET_K)) : isFunctor (fpmap K) :=
-  fun V : Type => fun V' : Type => fun v_to_v' : V -> V' => fun m : fpmap K V => {| FiniteMap.data := map (fun '(k, v) => (k, v_to_v' v)) m.(FiniteMap.data); FiniteMap.data_isSorted := _ |}.
+  fun V : Type => fun V' : Type => fun v_to_v' : V -> V' => fun m : fpmap K V => {| FinitePartialMap.data := map (fun '(k, v) => (k, v_to_v' v)) m.(FinitePartialMap.data); FinitePartialMap.data_isSorted := _ |}.
 Proof.
-  replace (map fst (map (fun '(k, v) => (k, v_to_v' v)) m.(FiniteMap.data))) with (map fst m.(FiniteMap.data)).
-  - exact m.(FiniteMap.data_isSorted).
-  - generalize (FiniteMap.data m) as xs; clear. induction xs as [ | [k v] xs IH]; simpl; f_equal; auto.
+  replace (map fst (map (fun '(k, v) => (k, v_to_v' v)) m.(FinitePartialMap.data))) with (map fst m.(FinitePartialMap.data)).
+  - exact m.(FinitePartialMap.data_isSorted).
+  - generalize (FinitePartialMap.data m) as xs; clear. induction xs as [ | [k v] xs IH]; simpl; f_equal; auto.
 Defined.
