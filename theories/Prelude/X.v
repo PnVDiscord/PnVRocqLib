@@ -358,8 +358,8 @@ Proof.
   pose (
     fix go (n : nat) (x : A) (Acc_R_x : Acc R x) {struct n} : Acc R x :=
     match n with
-    | O => R_wf x
-    | S n' => Acc_intro x (fun x' : A => fun _ : R x' x => go n' x' (go n' x' (R_wf x')))
+    | O => Acc_R_x
+    | S n' => Acc_intro x (fun x' : A => fun H_R : R x' x => go n' x' (go n' x' (Acc_inv Acc_R_x H_R)))
     end
   ) as go.
   exact (fun n : nat => fun x : A => go n x (R_wf x)).
@@ -404,8 +404,8 @@ Proof.
   set (
     fix go (n : nat) (x : A) (sn_x : sn R x) {struct n} : sn R x :=
     match n with
-    | O => R_hasSN x
-    | S n' => sn_intro R x (fun x' : A => fun _ : R x x' => go n' x' (go n' x' (R_hasSN x')))
+    | O => sn_x
+    | S n' => sn_intro R x (fun x' : A => fun R_x_x' : R x x' => go n' x' (go n' x' (sn_inv x sn_x x' R_x_x')))
     end
   ) as go.
   exact (go log_depth x0 (R_hasSN x0)).
