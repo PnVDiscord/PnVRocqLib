@@ -7,13 +7,15 @@ Require Import PnV.Prelude.X.
 #[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
 
+Universe U_vertices.
+
 Module DIGRAPH.
 
 #[projections(primitive)]
 Class t : Type :=
   mk
-  { vertices : Type
-  ; arcs : ensemble (vertices * vertices)
+  { vertices : Type@{U_vertices}
+  ; arcs : ensemble@{U_vertices} (vertices * vertices)
   } as G.
 
 End DIGRAPH.
