@@ -383,19 +383,21 @@ Fixpoint sn_intro_generator (log_depth : nat) (R_hasSN : hasSN R) {struct log_de
   | S n => fun x : A => sn_intro R x (fun x' : A => fun _ : R x x' => sn_intro_generator n (sn_intro_generator n R_hasSN) x')
   end.
 
+#[local] Abbreviation flip_R := (fun x' : A => fun x : A => R x x').
+
 Definition Acc_to_sn {x0 : A}
-  (H_Acc : Acc (fun x' : A => fun x : A => R x x') x0)
+  (H_Acc : Acc flip_R x0)
   : sn R x0.
 Proof.
-  induction H_Acc as [x0 _ IH]. econs. exact IH.
+  induction H_Acc as [x0 _ IH]. exact (sn_intro R x0 IH).
 Defined.
 
 #[global]
 Instance well_founded_to_sn
-  (R_wf : B.well_founded (fun x' : A => fun x : A => R x x'))
+  (H_wf : B.well_founded flip_R)
   : hasSN R.
 Proof.
-  exact (fun x0 : A => Acc_to_sn (x0 := x0) (R_wf x0)).
+  exact (fun x0 : A => Acc_to_sn (x0 := x0) (H_wf x0)).
 Defined.
 
 End Strong_Normalisation.
