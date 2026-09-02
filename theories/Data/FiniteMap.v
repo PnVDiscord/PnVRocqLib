@@ -13,7 +13,7 @@ Require Import PnV.Data.FiniteSet.
 #[local] Hint Resolve S_lt_S_intro : core.
 
 #[universes(template)]
-Inductive alist {K : Type} {V : Type} : Type :=
+Variant alist {K : Type} {V : Type} : Type :=
   | mk_alist (kvlist : list (K * V)).
 
 #[global] Arguments alist : clear implicits.
