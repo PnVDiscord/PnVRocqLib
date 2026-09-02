@@ -12,6 +12,18 @@ Require Import PnV.Data.FiniteSet.
 
 #[local] Hint Resolve S_lt_S_intro : core.
 
+#[universes(template)]
+Inductive alist {K : Type} {V : Type} : Type :=
+  | mk_alist (kvlist : list (K * V)).
+
+#[global] Arguments alist : clear implicits.
+
+#[universes(polymorphic=yes)]
+Definition kvlist@{k v u | k <= u, v <= u} {K : Type@{k}} {V : Type@{v}} (al : alist K V) : fin_ensemble@{u} (K * V) :=
+  match al with
+  | mk_alist kvlist => kvlist
+  end.
+
 Module FiniteMap.
 
 #[universes(template), projections(primitive)]

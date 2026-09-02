@@ -11,6 +11,65 @@ Require Export PnV.Data.HsOrd.
 
 #[local] Hint Resolve S_lt_S_intro : core.
 
+#[universes(polymorphic=yes)]
+Definition fin_ensemble@{u | } (A : Type@{u}) : Type@{u} :=
+  list A.
+
+#[global] Typeclasses Opaque fin_ensemble.
+
+#[global]
+Instance fin_ensemble_isMonad : isMonad fin_ensemble :=
+  { pure {A} (x : A) := [x]
+  ; bind {A} {B} (xs : list A) (k : A -> list B) := flat_map k xs
+  }.
+
+#[global]
+Instance fin_ensemble_is_similar_to_ensemble {A : Type} {A' : Type} (Sim_A_A' : Similarity A A') : Similarity (fin_ensemble A) (ensemble A') :=
+  fun X => fun X' => forall x : A, forall x' : A', forall x_sim_x' : x =~= x', x ∈ X <-> x' \in X'.
+
+#[global, refine]
+Instance fin_ensemble_isSetoid {A : Type} (A_isSetoid : isSetoid A) : isSetoid (fin_ensemble A) :=
+  { eqProp (lhs : list A) (rhs : list A) := ⟪ SUBSET : forall a : A, a ∈ lhs -> exists a' : A, a == a' /\ a' ∈ rhs ⟫ /\ ⟪ SUPSET : forall a : A, a ∈ rhs -> exists a' : A, a == a' /\ a' ∈ lhs ⟫ }.
+Proof.
+  split; ii; split; ii; des.
+  - exists a; eauto with *.
+  - exists a; eauto with *.
+  - find* (a' & Ha' & H_in) by SUPSET. exists a'; eauto with *.
+  - find* (a' & Ha' & H_in) by SUBSET. exists a'; eauto with *.
+  - find* (a' & Ha' & H_in) by SUBSET0. find* (a'' & Ha'' & IN) by SUBSET. exists a''; split; auto. etransitivity; eauto.
+  - find* (a' & Ha' & H_in) by SUPSET. find* (a'' & Ha'' & IN) by SUPSET0. exists a''; split; auto. etransitivity; eauto.
+Defined.
+
+#[global]
+Instance fin_ensemble_isSetoid1 : isSetoid1 fin_ensemble :=
+  @fin_ensemble_isSetoid.
+
+#[global]
+Instance fin_ensemble_MonadLaws@{u}
+  : MonadLaws fin_ensemble@{u} (SETOID1 := fin_ensemble_isSetoid1) (MONAD := fin_ensemble_isMonad).
+Proof.
+  assert (SIMP : forall A : Type@{u}, forall X : fin_ensemble@{u} A, forall X' : fin_ensemble@{u} A, X == X' <-> (forall z : A, z ∈ X <-> z ∈ X')).
+  { ii. split; intros H_EQ; simpl in *.
+    - des; firstorder congruence.
+    - unnw; split; firstorder congruence.
+  }
+  split; ii; rewrite SIMP.
+  - intros z. simpl. do 2 rewrite in_flat_map. rewrite SIMP in m_EQ. firstorder.
+  - intros z. simpl. do 2 rewrite in_flat_map.
+    assert (H_EQ : forall x : A, forall y : B, y ∈ k1 x <-> y ∈ k2 x).
+    { intros x. rewrite <- SIMP. eapply k_EQ. }
+    firstorder.
+  - intros z. simpl. do 2 rewrite in_flat_map. split.
+    + intros (x & Hx & Hz). rewrite in_flat_map in Hz.
+      destruct Hz as (y & Hy & Hz). exists y; split; auto.
+      rewrite in_flat_map. exists x; auto.
+    + intros (y & Hy & Hz). rewrite in_flat_map in Hy.
+      destruct Hy as (x & Hx & Hy). exists x; split; auto.
+      rewrite in_flat_map. exists y; auto.
+  - intros z. simpl. now rewrite app_nil_r.
+  - intros z. simpl. rewrite in_flat_map. firstorder congruence.
+Qed.
+
 Module FSet.
 
 #[universes(template), projections(primitive)]
