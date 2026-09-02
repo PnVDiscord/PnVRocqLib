@@ -96,8 +96,8 @@ Proof.
       contradiction u'_ne_v'. now eapply leProp_antisymmetry.
   }
   destruct (compare x y) as [ | | ] eqn: H_OBS; symmetry.
-  - eapply compare_Eq_iff. transitivity x; [now symmetry | ].
-    transitivity y; [eapply compare_Eq_iff; exact H_OBS | exact y_EQ].
+  - rewrite compare_Eq_iff. transitivity x; [now symmetry | ].
+    transitivity y; [now rewrite <- compare_Eq_iff | exact y_EQ].
   - exact (LEMMA x x' y y' x_EQ y_EQ H_OBS).
   - eapply compare_Lt_flip. exact (LEMMA y y' x x' y_EQ x_EQ (compare_Gt_flip x y H_OBS)).
 Qed.
@@ -172,7 +172,7 @@ Hypothesis LAWS : hsOrdLaws cmp.
 Lemma cmp_refl (x : A)
   : cmp x x = Eq.
 Proof.
-  eapply LAWS.(cmp_Eq_iff). reflexivity.
+  now rewrite cmp_Eq_iff.
 Qed.
 
 Definition leProp_of_compare (x : A) (y : A) : Prop :=
@@ -192,14 +192,10 @@ Proof.
   split.
   - intros x. right. exact (cmp_refl x).
   - intros x y z [LT1 | EQ1] [LT2 | EQ2].
-    + left. exact (LAWS.(cmp_Lt_trans) x y z LT1 LT2).
-    + left. rewrite <- LT1. eapply LAWS.(cmp_compatWith_eqProp).
-      * reflexivity.
-      * symmetry. eapply LAWS.(cmp_Eq_iff). exact EQ2.
-    + left. rewrite <- LT2. eapply LAWS.(cmp_compatWith_eqProp).
-      * eapply LAWS.(cmp_Eq_iff). exact EQ1.
-      * reflexivity.
-    + right. eapply LAWS.(cmp_Eq_iff). transitivity y; eapply LAWS.(cmp_Eq_iff); assumption.
+    + left. exact (cmp_Lt_trans x y z LT1 LT2).
+    + left. rewrite <- LT1. eapply cmp_compatWith_eqProp; [reflexivity | symmetry; now rewrite <- cmp_Eq_iff].
+    + left. rewrite <- LT2. eapply cmp_compatWith_eqProp; [now rewrite <- cmp_Eq_iff | reflexivity].
+    + right. rewrite cmp_Eq_iff. transitivity y; now rewrite <- cmp_Eq_iff.
 Qed.
 
 #[local]
@@ -207,15 +203,12 @@ Instance leProp_of_compare_PartialOrder
   : PartialOrder eqProp leProp_of_compare.
 Proof.
   intros x y. cbn. unfold flip. split.
-  - intros x_eq_y. split.
-    + right. eapply LAWS.(cmp_Eq_iff). exact x_eq_y.
-    + right. eapply LAWS.(cmp_Eq_iff). now symmetry.
+  - intros x_eq_y. split; right; rewrite cmp_Eq_iff; [exact x_eq_y | now symmetry].
   - intros [[LT1 | EQ1] [LT2 | EQ2]].
-    + pose proof (LAWS.(cmp_Lt_trans) x y x LT1 LT2) as LT.
-      rewrite cmp_refl in LT. discriminate LT.
-    + symmetry. eapply LAWS.(cmp_Eq_iff). exact EQ2.
-    + eapply LAWS.(cmp_Eq_iff). exact EQ1.
-    + eapply LAWS.(cmp_Eq_iff). exact EQ1.
+    + pose proof (cmp_Lt_trans x y x LT1 LT2) as LT. rewrite cmp_refl in LT. congruence.
+    + symmetry. now rewrite <- cmp_Eq_iff.
+    + now rewrite <- cmp_Eq_iff.
+    + now rewrite <- cmp_Eq_iff.
 Qed.
 
 Definition mkProsetFrom_compare : isProset A :=
@@ -234,15 +227,15 @@ Instance mkHsOrdFrom_compare : hsOrd A (PROSET := mkProsetFrom_compare) :=
 Next Obligation.
   intros x y OBS_Lt. split.
   - exact (leProp_of_compare_intro_Lt x y OBS_Lt).
-  - intros CONTRA. rewrite (proj2 (LAWS.(cmp_Eq_iff) x y) CONTRA) in OBS_Lt. discriminate OBS_Lt.
+  - intros CONTRA. rewrite <- cmp_Eq_iff in CONTRA. congruence.
 Qed.
 Next Obligation.
-  intros x y OBS_Eq. exact (proj1 (LAWS.(cmp_Eq_iff) x y) OBS_Eq).
+  intros x y OBS_Eq. now rewrite <- cmp_Eq_iff.
 Qed.
 Next Obligation.
   intros x y OBS_Gt. split.
-  - exact (leProp_of_compare_intro_Lt y x (LAWS.(cmp_Gt_flip) x y OBS_Gt)).
-  - intros CONTRA. rewrite (proj2 (LAWS.(cmp_Eq_iff) x y) CONTRA) in OBS_Gt. discriminate OBS_Gt.
+  - exact (leProp_of_compare_intro_Lt y x (cmp_Gt_flip x y OBS_Gt)).
+  - intros CONTRA. rewrite <- cmp_Eq_iff in CONTRA. congruence.
 Qed.
 
 End MAKE_hsOrd.
@@ -397,7 +390,8 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma unit_compare_good
+#[local]
+Instance unit_compare_good
   : hsOrdLaws (SETOID := unit_isSetoid) unit_compare.
 Proof.
   split.
@@ -409,11 +403,11 @@ Qed.
 
 #[local]
 Instance unit_isProset : isProset unit :=
-  @mkProsetFrom_compare unit unit_isSetoid unit_compare unit_compare_good.
+  mkProsetFrom_compare unit_compare.
 
 #[local]
 Instance unit_hsOrd : hsOrd unit (PROSET := unit_isProset) :=
-  @mkHsOrdFrom_compare unit unit_isSetoid unit_compare unit_compare_good.
+  mkHsOrdFrom_compare unit_compare.
 
 End hsOrd_unit.
 
@@ -436,11 +430,11 @@ End HsOrd_unit.
 
 Section hsOrd_pair.
 
-Context {A : Type} {B : Type} {A_isProset : isProset A} {B_isProset : isProset B}.
-
-Context {A_hsOrd : hsOrd A (PROSET := A_isProset)} {B_hsOrd : hsOrd B (PROSET := B_isProset)}.
+Context {A : Type} {B : Type}.
 
 #[local] Existing Instance directProduct_of_two_Setoids.
+
+Context {A_isProset : isProset A} {B_isProset : isProset B} {A_hsOrd : hsOrd A (PROSET := A_isProset)} {B_hsOrd : hsOrd B (PROSET := B_isProset)}.
 
 Definition pair_compare (p : A * B) (p' : A * B) : comparison :=
   match compare (fst p) (fst p') with
@@ -465,7 +459,7 @@ Proof.
   destruct p as [x1 y1], p' as [x2 y2]. unfold pair_compare in *. simpl in *.
   destruct (compare x1 x2) as [ | | ] eqn: H_OBS; try congruence.
   - assert (H_OBS' : compare x2 x1 = Eq).
-    { eapply compare_Eq_iff. symmetry. eapply compare_Eq_iff. exact H_OBS. }
+    { rewrite compare_Eq_iff. symmetry. now rewrite <- compare_Eq_iff. }
     rewrite H_OBS'. exact (compare_Gt_flip y1 y2 OBS_Gt).
   - rewrite compare_Gt_flip by exact H_OBS. reflexivity.
 Qed.
@@ -478,7 +472,7 @@ Proof.
   destruct p as [x1 y1], p' as [x2 y2], p'' as [x3 y3]. unfold pair_compare in *. simpl in *.
   destruct (compare x1 x2) as [ | | ] eqn: H_OBS1; destruct (compare x2 x3) as [ | | ] eqn: H_OBS2; try congruence.
   - assert (H_OBS : compare x1 x3 = Eq).
-    { eapply compare_Eq_iff. transitivity x2; eapply compare_Eq_iff; assumption. }
+    { rewrite compare_Eq_iff. transitivity x2; now rewrite <- compare_Eq_iff. }
     rewrite H_OBS. exact (compare_Lt_trans y1 y2 y3 OBS_Lt1 OBS_Lt2).
   - assert (H_OBS : compare x1 x3 = Lt).
     { rewrite (compare_compatWith_eqProp x1 x2 x3 x3 (compare_Eq x1 x2 H_OBS1) (reflexivity x3)). exact H_OBS2. }
@@ -486,21 +480,22 @@ Proof.
   - assert (H_OBS : compare x1 x3 = Lt).
     { rewrite <- (compare_compatWith_eqProp x1 x1 x2 x3 (reflexivity x1) (compare_Eq x2 x3 H_OBS2)). exact H_OBS1. }
     rewrite H_OBS. reflexivity.
-  - rewrite (compare_Lt_trans x1 x2 x3 H_OBS1 H_OBS2). reflexivity.
+  - rewrite compare_Lt_trans with (y := x2) by assumption. reflexivity.
 Qed.
 
-Lemma pair_compare_compatWith_eqProp (z : A * B) (p1 : A * B) (p' : A * B) (p1' : A * B)
-  (p_EQ : p == p1)
-  (p'_EQ : p' == p1')
-  : pair_compare p p' = pair_compare p1 p1'.
+Lemma pair_compare_compatWith_eqProp (p1 : A * B) (p1' : A * B) (p2 : A * B) (p2' : A * B)
+  (p1_EQ : p1 == p1')
+  (p2_EQ : p2 == p2')
+  : pair_compare p1 p2 = pair_compare p1' p2'.
 Proof.
-  destruct p as [x1 y1], p1 as [x2 y2], p' as [x3 y3], p1' as [x4 y4].
-  destruct p_EQ as [x1_EQ y1_EQ], p'_EQ as [x3_EQ y3_EQ]. unfold pair_compare. simpl in *.
-  rewrite (compare_compatWith_eqProp x1 x2 x3 x4 x1_EQ x3_EQ).
-  rewrite (compare_compatWith_eqProp y1 y2 y3 y4 y1_EQ y3_EQ). reflexivity.
+  destruct p1 as [x1 y1], p1' as [x1' y1'], p2 as [x2 y2], p2' as [x2' y2'].
+  destruct p1_EQ as [x1_EQ y1_EQ], p2_EQ as [x2_EQ y2_EQ]. unfold pair_compare. simpl in *.
+  rewrite compare_compatWith_eqProp with (x' := x1') (y' := x2') by assumption.
+  now rewrite compare_compatWith_eqProp with (x' := y1') (y' := y2') by assumption.
 Qed.
 
-Lemma pair_compare_good
+#[local]
+Instance pair_compare_good
   : hsOrdLaws (SETOID := directProduct_of_two_Setoids A_isProset.(Proset_isSetoid) B_isProset.(Proset_isSetoid)) pair_compare.
 Proof.
   split.
@@ -512,11 +507,11 @@ Qed.
 
 #[local]
 Instance pair_isProset : isProset (A * B) :=
-  @mkProsetFrom_compare (A * B) (directProduct_of_two_Setoids A_isProset.(Proset_isSetoid) B_isProset.(Proset_isSetoid)) pair_compare pair_compare_good.
+  mkProsetFrom_compare pair_compare.
 
 #[local]
 Instance pair_hsOrd : hsOrd (A * B) (PROSET := pair_isProset) :=
-  @mkHsOrdFrom_compare (A * B) (directProduct_of_two_Setoids A_isProset.(Proset_isSetoid) B_isProset.(Proset_isSetoid)) pair_compare pair_compare_good.
+  mkHsOrdFrom_compare pair_compare.
 
 End hsOrd_pair.
 
@@ -535,7 +530,7 @@ Next Obligation.
   intros p p'. destruct p as [x1 y1], p' as [x2 y2]. split.
   - intros [x_EQ y_EQ]. simpl in *.
     rewrite Poset_eqProp_spec in x_EQ. rewrite Poset_eqProp_spec in y_EQ. congruence.
-  - intros H_eq. inversion H_eq; subst x2 y2. split; reflexivity.
+  - intros H_eq. inv H_eq. split; reflexivity.
 Qed.
 
 #[global]
@@ -616,7 +611,8 @@ Proof.
   - now eapply compare_compatWith_eqProp.
 Qed.
 
-Lemma sum_compare_good
+#[local]
+Instance sum_compare_good
   : hsOrdLaws (SETOID := sum_isSetoid A_isProset.(Proset_isSetoid) B_isProset.(Proset_isSetoid)) sum_compare.
 Proof.
   split.
@@ -628,11 +624,11 @@ Qed.
 
 #[local]
 Instance sum_isProset : isProset (A + B) :=
-  @mkProsetFrom_compare (A + B) (sum_isSetoid A_isProset.(Proset_isSetoid) B_isProset.(Proset_isSetoid)) sum_compare sum_compare_good.
+  mkProsetFrom_compare sum_compare.
 
 #[local]
 Instance sum_hsOrd : hsOrd (A + B) (PROSET := sum_isProset) :=
-  @mkHsOrdFrom_compare (A + B) (sum_isSetoid A_isProset.(Proset_isSetoid) B_isProset.(Proset_isSetoid)) sum_compare sum_compare_good.
+  mkHsOrdFrom_compare sum_compare.
 
 End hsOrd_sum.
 
@@ -656,7 +652,7 @@ Next Obligation.
   - split; firstorder congruence.
   - split.
     + intros y_EQ. f_equal. now rewrite <- Poset_eqProp_spec.
-    + intros H_eq. inversion H_eq; subst y'. reflexivity.
+    + intros H_eq. inv H_eq. reflexivity.
 Qed.
 
 #[global]
@@ -711,7 +707,8 @@ Proof.
   exact (compare_compatWith_eqProp (code x) (code x') (code y) (code y') x_EQ y_EQ).
 Qed.
 
-Lemma inj_compare_good
+#[local]
+Instance inj_compare_good
   : hsOrdLaws (SETOID := inj_isSetoid) inj_compare.
 Proof.
   split.
@@ -723,11 +720,11 @@ Qed.
 
 #[local]
 Instance inj_isProset : isProset A :=
-  @mkProsetFrom_compare A inj_isSetoid inj_compare inj_compare_good.
+  mkProsetFrom_compare inj_compare.
 
 #[local]
 Instance inj_hsOrd : hsOrd A (PROSET := inj_isProset) :=
-  @mkHsOrdFrom_compare A inj_isSetoid inj_compare inj_compare_good.
+  mkHsOrdFrom_compare inj_compare.
 
 End hsOrd_of_injection.
 
