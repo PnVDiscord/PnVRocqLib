@@ -453,10 +453,9 @@ Lemma pair_compare_Eq_iff (p : A * B) (p' : A * B)
   : pair_compare p p' = Eq <-> p == p'.
 Proof.
   destruct p as [x1 y1], p' as [x2 y2]. unfold pair_compare. simpl. split.
-  - intros OBS_Eq. destruct (compare x1 x2) as [ | | ] eqn: H_OBS; try discriminate OBS_Eq.
-    split; [eapply compare_Eq_iff; exact H_OBS | eapply compare_Eq_iff; exact OBS_Eq].
-  - intros [EQ1 EQ2]. rewrite (proj2 (compare_Eq_iff x1 x2) EQ1). simpl.
-    eapply compare_Eq_iff. exact EQ2.
+  - intros OBS_Eq. destruct (compare x1 x2) as [ | | ] eqn: H_OBS; try congruence.
+    split; [rewrite <- compare_Eq_iff; exact H_OBS | rewrite <- compare_Eq_iff; exact OBS_Eq].
+  - intros [EQ1 EQ2]. rewrite <- compare_Eq_iff in EQ1. rewrite EQ1. now rewrite compare_Eq_iff.
 Qed.
 
 Lemma pair_compare_Gt_flip (p : A * B) (p' : A * B)
@@ -468,7 +467,7 @@ Proof.
   - assert (H_OBS' : compare x2 x1 = Eq).
     { eapply compare_Eq_iff. symmetry. eapply compare_Eq_iff. exact H_OBS. }
     rewrite H_OBS'. exact (compare_Gt_flip y1 y2 OBS_Gt).
-  - rewrite (compare_Gt_flip x1 x2 H_OBS). reflexivity.
+  - rewrite compare_Gt_flip by exact H_OBS. reflexivity.
 Qed.
 
 Lemma pair_compare_Lt_trans (p : A * B) (p' : A * B) (p'' : A * B)
@@ -490,7 +489,7 @@ Proof.
   - rewrite (compare_Lt_trans x1 x2 x3 H_OBS1 H_OBS2). reflexivity.
 Qed.
 
-Lemma pair_compare_compatWith_eqProp (p : A * B) (p1 : A * B) (p' : A * B) (p1' : A * B)
+Lemma pair_compare_compatWith_eqProp (z : A * B) (p1 : A * B) (p' : A * B) (p1' : A * B)
   (p_EQ : p == p1)
   (p'_EQ : p' == p1')
   : pair_compare p p' = pair_compare p1 p1'.
@@ -553,8 +552,8 @@ Context {A : Type} {B : Type}.
 
 #[global, program]
 Instance sum_isSetoid (A_isSetoid : isSetoid A) (B_isSetoid : isSetoid B) : isSetoid (A + B) :=
-  { eqProp s s' :=
-    match s, s' with
+  { eqProp (z : A + B) (z' : A + B) :=
+    match z, z' with
     | inl x, inl x' => x == x'
     | inl _, inr _ => False
     | inr _, inl _ => False
@@ -568,55 +567,53 @@ Next Obligation.
   - intros [x | y] [x' | y'] [x'' | y''] EQ EQ'; try contradiction; now transitivity x' || now transitivity y'.
 Qed.
 
-Context {A_isProset : isProset A} {B_isProset : isProset B}.
+Context {A_isProset : isProset A} {B_isProset : isProset B} {A_hsOrd : hsOrd A (PROSET := A_isProset)} {B_hsOrd : hsOrd B (PROSET := B_isProset)}.
 
-Context {A_hsOrd : hsOrd A (PROSET := A_isProset)} {B_hsOrd : hsOrd B (PROSET := B_isProset)}.
-
-Definition sum_compare (s : A + B) (s' : A + B) : comparison :=
-  match s, s' with
+Definition sum_compare (z : A + B) (z' : A + B) : comparison :=
+  match z, z' with
   | inl x, inl x' => compare x x'
   | inl _, inr _ => Lt
   | inr _, inl _ => Gt
   | inr y, inr y' => compare y y'
   end.
 
-Lemma sum_compare_Eq_iff (s : A + B) (s' : A + B)
-  : sum_compare s s' = Eq <-> s == s'.
+Lemma sum_compare_Eq_iff (z : A + B) (z' : A + B)
+  : sum_compare z z' = Eq <-> z == z'.
 Proof.
-  destruct s as [x | y], s' as [x' | y']; simpl.
+  destruct z as [x | y], z' as [x' | y']; simpl.
   - exact (compare_Eq_iff x x').
   - split; [discriminate | contradiction].
   - split; [discriminate | contradiction].
   - exact (compare_Eq_iff y y').
 Qed.
 
-Lemma sum_compare_Gt_flip (s : A + B) (s' : A + B)
-  (OBS_Gt : sum_compare s s' = Gt)
-  : sum_compare s' s = Lt.
+Lemma sum_compare_Gt_flip (z : A + B) (z' : A + B)
+  (OBS_Gt : sum_compare z z' = Gt)
+  : sum_compare z' z = Lt.
 Proof.
-  destruct s as [x | y], s' as [x' | y']; simpl in *; try congruence.
+  destruct z as [x | y], z' as [x' | y']; simpl in *; try congruence.
   - exact (compare_Gt_flip x x' OBS_Gt).
   - exact (compare_Gt_flip y y' OBS_Gt).
 Qed.
 
-Lemma sum_compare_Lt_trans (s : A + B) (s' : A + B) (s'' : A + B)
-  (OBS_Lt1 : sum_compare s s' = Lt)
-  (OBS_Lt2 : sum_compare s' s'' = Lt)
-  : sum_compare s s'' = Lt.
+Lemma sum_compare_Lt_trans (z : A + B) (z' : A + B) (z'' : A + B)
+  (OBS_Lt1 : sum_compare z z' = Lt)
+  (OBS_Lt2 : sum_compare z' z'' = Lt)
+  : sum_compare z z'' = Lt.
 Proof.
-  destruct s as [x | y], s' as [x' | y'], s'' as [x'' | y'']; simpl in *; try congruence.
+  destruct z as [x | y], z' as [x' | y'], z'' as [x'' | y'']; simpl in *; try congruence.
   - exact (compare_Lt_trans x x' x'' OBS_Lt1 OBS_Lt2).
   - exact (compare_Lt_trans y y' y'' OBS_Lt1 OBS_Lt2).
 Qed.
 
-Lemma sum_compare_compatWith_eqProp (s : A + B) (s1 : A + B) (s' : A + B) (s1' : A + B)
-  (s_EQ : s == s1)
-  (s'_EQ : s' == s1')
-  : sum_compare s s' = sum_compare s1 s1'.
+Lemma sum_compare_compatWith_eqProp (z1 : A + B) (z1' : A + B) (z2 : A + B) (z2' : A + B)
+  (z1_EQ : z1 == z1')
+  (z2_EQ : z2 == z2')
+  : sum_compare z1 z2 = sum_compare z1' z2'.
 Proof.
-  destruct s as [x | y], s1 as [x1 | y1], s' as [x' | y'], s1' as [x1' | y1']; simpl in *; try contradiction; try reflexivity.
-  - exact (compare_compatWith_eqProp x x1 x' x1' s_EQ s'_EQ).
-  - exact (compare_compatWith_eqProp y y1 y' y1' s_EQ s'_EQ).
+  repeat match goal with [ z : A + B |- _ ] => destruct z end; simpl in *; try contradiction; try reflexivity.
+  - now eapply compare_compatWith_eqProp.
+  - now eapply compare_compatWith_eqProp.
 Qed.
 
 Lemma sum_compare_good
@@ -651,12 +648,12 @@ Context {HsOrd_A : HsOrd A (POSET := A_isPoset)} {HsOrd_B : HsOrd B (POSET := B_
 Instance sum_isPoset : isPoset (A + B) :=
   { Poset_isProset := @sum_isProset A B A_isPoset.(Poset_isProset) B_isPoset.(Poset_isProset) HsOrd_A.(HsOrd_hsOrd) HsOrd_B.(HsOrd_hsOrd) }.
 Next Obligation.
-  intros s s'. destruct s as [x | y], s' as [x' | y']; simpl.
+  intros z z'. destruct z as [x | y], z' as [x' | y']; simpl.
   - split.
     + intros x_EQ. f_equal. now rewrite <- Poset_eqProp_spec.
-    + intros H_eq. inversion H_eq; subst x'. reflexivity.
-  - split; [contradiction | discriminate].
-  - split; [contradiction | discriminate].
+    + intros H_eq. inv H_eq. reflexivity.
+  - split; firstorder congruence.
+  - split; firstorder congruence.
   - split.
     + intros y_EQ. f_equal. now rewrite <- Poset_eqProp_spec.
     + intros H_eq. inversion H_eq; subst y'. reflexivity.
