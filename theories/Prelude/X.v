@@ -431,8 +431,8 @@ Proof.
   { eapply INV with (bound := length cone) (cone := cone); eauto. }
   induction bound as [ | bound IH]; intros cone' x LENGTH UPPER.
   - destruct cone' as [ | a cone']; simpl in LENGTH.
-    + exfalso. eapply UPPER. reflexivity.
-    + lia.
+    + exfalso. eapply UPPER with (y := x). reflexivity.
+    + exfalso. lia.
   - pose proof (UPPER x (leProp_refl x)) as IN'.
     apply L.in_split in IN'. destruct IN' as (prefix & suffix & CONE_EQ).
     subst cone'. econs. intros x' [LE NE].
@@ -500,10 +500,10 @@ Proof.
   destruct (B.decide _) as [H_EQ | H_NE].
   - exact LE.
   - eapply prog_iter_le.
-    + exact FIXEDPOINT.
-    + etransitivity.
-      * eapply step_isMonotonic. exact LE.
-      * eapply eqProp_implies_leProp. exact FIXEDPOINT.
+    { exact FIXEDPOINT. }
+    etransitivity.
+    { eapply step_isMonotonic. exact LE. }
+    { eapply eqProp_implies_leProp. exact FIXEDPOINT. }
 Qed.
 
 End Progressive_Fixed_Point_Iteration.
