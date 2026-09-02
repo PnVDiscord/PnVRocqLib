@@ -3,7 +3,7 @@ Require Import PnV.Control.Category.
 
 Declare Scope monad_scope.
 Declare Custom Entry do_notation.
-Reserved Notation "'do' m" (m custom do_notation at level 10, at level 100, format "'do' '//' '[hv' m ']'  '//'").
+Reserved Notation "'do' m" (m custom do_notation at level 10, at level 100, format "'do'  '//' '[hv' m ']'").
 
 Module DoNotations.
 
