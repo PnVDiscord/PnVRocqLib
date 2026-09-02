@@ -15,7 +15,7 @@ Tactic Notation "find" simple_intropattern( p ) "by" uconstr( H ) :=
 Tactic Notation "find*" simple_intropattern( p ) "by" uconstr( H ) :=
   hexploit H; [eauto .. | intros p].
 
-Module Tac_obtaion_private.
+Module Tac_obtain_private.
 
 Definition _Tag (cnt : nat) : Set :=
   unit.
@@ -112,7 +112,7 @@ Ltac fire func :=
   let _RET_ := fresh "_RET_" in
   epose proof func as _RET_;
   xapply constr:(0) _RET_;
-  try clear _RET_;
+  (try clear _RET_);
   free_all.
 
 Ltac last :=
@@ -124,292 +124,64 @@ Ltac last :=
   | eauto
   ].
 
-End Tac_obtaion_private.
+End Tac_obtain_private.
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" "*" "by" uconstr( func ) :=
   find* ret by func.
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) uconstr( arg11 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.load arg11;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.load arg11; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) uconstr( arg11 ) uconstr( arg12 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.load arg11;
-  Tac_obtaion_private.load arg12;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.load arg11; Tac_obtain_private.load arg12; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) uconstr( arg11 ) uconstr( arg12 ) uconstr( arg13 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.load arg11;
-  Tac_obtaion_private.load arg12;
-  Tac_obtaion_private.load arg13;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.load arg11; Tac_obtain_private.load arg12; Tac_obtain_private.load arg13; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) uconstr( arg11 ) uconstr( arg12 ) uconstr( arg13 ) uconstr( arg14 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.load arg11;
-  Tac_obtaion_private.load arg12;
-  Tac_obtaion_private.load arg13;
-  Tac_obtaion_private.load arg14;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.load arg11; Tac_obtain_private.load arg12; Tac_obtain_private.load arg13; Tac_obtain_private.load arg14; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) uconstr( arg11 ) uconstr( arg12 ) uconstr( arg13 ) uconstr( arg14 ) uconstr( arg15 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.load arg11;
-  Tac_obtaion_private.load arg12;
-  Tac_obtaion_private.load arg13;
-  Tac_obtaion_private.load arg14;
-  Tac_obtaion_private.load arg15;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.load arg11; Tac_obtain_private.load arg12; Tac_obtain_private.load arg13; Tac_obtain_private.load arg14; Tac_obtain_private.load arg15; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) uconstr( arg11 ) uconstr( arg12 ) uconstr( arg13 ) uconstr( arg14 ) uconstr( arg15 ) uconstr( arg16 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.load arg11;
-  Tac_obtaion_private.load arg12;
-  Tac_obtaion_private.load arg13;
-  Tac_obtaion_private.load arg14;
-  Tac_obtaion_private.load arg15;
-  Tac_obtaion_private.load arg16;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.load arg11; Tac_obtain_private.load arg12; Tac_obtain_private.load arg13; Tac_obtain_private.load arg14; Tac_obtain_private.load arg15; Tac_obtain_private.load arg16; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) uconstr( arg11 ) uconstr( arg12 ) uconstr( arg13 ) uconstr( arg14 ) uconstr( arg15 ) uconstr( arg16 ) uconstr( arg17 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.load arg11;
-  Tac_obtaion_private.load arg12;
-  Tac_obtaion_private.load arg13;
-  Tac_obtaion_private.load arg14;
-  Tac_obtaion_private.load arg15;
-  Tac_obtaion_private.load arg16;
-  Tac_obtaion_private.load arg17;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.load arg11; Tac_obtain_private.load arg12; Tac_obtain_private.load arg13; Tac_obtain_private.load arg14; Tac_obtain_private.load arg15; Tac_obtain_private.load arg16; Tac_obtain_private.load arg17; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) uconstr( arg11 ) uconstr( arg12 ) uconstr( arg13 ) uconstr( arg14 ) uconstr( arg15 ) uconstr( arg16 ) uconstr( arg17 ) uconstr( arg18 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.load arg11;
-  Tac_obtaion_private.load arg12;
-  Tac_obtaion_private.load arg13;
-  Tac_obtaion_private.load arg14;
-  Tac_obtaion_private.load arg15;
-  Tac_obtaion_private.load arg16;
-  Tac_obtaion_private.load arg17;
-  Tac_obtaion_private.load arg18;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.load arg11; Tac_obtain_private.load arg12; Tac_obtain_private.load arg13; Tac_obtain_private.load arg14; Tac_obtain_private.load arg15; Tac_obtain_private.load arg16; Tac_obtain_private.load arg17; Tac_obtain_private.load arg18; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
 
 Tactic Notation "obtain" simple_intropattern( ret ) "with" uconstr( arg1 ) uconstr( arg2 ) uconstr( arg3 ) uconstr( arg4 ) uconstr( arg5 ) uconstr( arg6 ) uconstr( arg7 ) uconstr( arg8 ) uconstr( arg9 ) uconstr( arg10 ) uconstr( arg11 ) uconstr( arg12 ) uconstr( arg13 ) uconstr( arg14 ) uconstr( arg15 ) uconstr( arg16 ) uconstr( arg17 ) uconstr( arg18 ) uconstr( arg19 ) "by" uconstr( func ) :=
-  Tac_obtaion_private.new_tag_cnt;
-  Tac_obtaion_private.load arg1;
-  Tac_obtaion_private.load arg2;
-  Tac_obtaion_private.load arg3;
-  Tac_obtaion_private.load arg4;
-  Tac_obtaion_private.load arg5;
-  Tac_obtaion_private.load arg6;
-  Tac_obtaion_private.load arg7;
-  Tac_obtaion_private.load arg8;
-  Tac_obtaion_private.load arg9;
-  Tac_obtaion_private.load arg10;
-  Tac_obtaion_private.load arg11;
-  Tac_obtaion_private.load arg12;
-  Tac_obtaion_private.load arg13;
-  Tac_obtaion_private.load arg14;
-  Tac_obtaion_private.load arg15;
-  Tac_obtaion_private.load arg16;
-  Tac_obtaion_private.load arg17;
-  Tac_obtaion_private.load arg18;
-  Tac_obtaion_private.load arg19;
-  Tac_obtaion_private.fire func;
-  [Tac_obtaion_private.last.. | intros ret].
+  Tac_obtain_private.new_tag_cnt; Tac_obtain_private.load arg1; Tac_obtain_private.load arg2; Tac_obtain_private.load arg3; Tac_obtain_private.load arg4; Tac_obtain_private.load arg5; Tac_obtain_private.load arg6; Tac_obtain_private.load arg7; Tac_obtain_private.load arg8; Tac_obtain_private.load arg9; Tac_obtain_private.load arg10; Tac_obtain_private.load arg11; Tac_obtain_private.load arg12; Tac_obtain_private.load arg13; Tac_obtain_private.load arg14; Tac_obtain_private.load arg15; Tac_obtain_private.load arg16; Tac_obtain_private.load arg17; Tac_obtain_private.load arg18; Tac_obtain_private.load arg19; Tac_obtain_private.fire func; [Tac_obtain_private.last.. | intros ret].
