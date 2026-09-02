@@ -403,11 +403,11 @@ Qed.
 
 #[local]
 Instance unit_isProset : isProset unit :=
-  mkProsetFrom_compare unit_compare.
+  mkProsetFrom_compare unit_compare unit_compare_good.
 
 #[local]
 Instance unit_hsOrd : hsOrd unit (PROSET := unit_isProset) :=
-  mkHsOrdFrom_compare unit_compare.
+  mkHsOrdFrom_compare unit_compare unit_compare_good.
 
 End hsOrd_unit.
 
@@ -507,11 +507,11 @@ Qed.
 
 #[local]
 Instance pair_isProset : isProset (A * B) :=
-  mkProsetFrom_compare pair_compare.
+  mkProsetFrom_compare pair_compare pair_compare_good.
 
 #[local]
 Instance pair_hsOrd : hsOrd (A * B) (PROSET := pair_isProset) :=
-  mkHsOrdFrom_compare pair_compare.
+  mkHsOrdFrom_compare pair_compare pair_compare_good.
 
 End hsOrd_pair.
 
@@ -624,11 +624,11 @@ Qed.
 
 #[local]
 Instance sum_isProset : isProset (A + B) :=
-  mkProsetFrom_compare sum_compare.
+  mkProsetFrom_compare sum_compare sum_compare_good.
 
 #[local]
 Instance sum_hsOrd : hsOrd (A + B) (PROSET := sum_isProset) :=
-  mkHsOrdFrom_compare sum_compare.
+  mkHsOrdFrom_compare sum_compare sum_compare_good.
 
 End hsOrd_sum.
 
@@ -720,11 +720,11 @@ Qed.
 
 #[local]
 Instance inj_isProset : isProset A :=
-  mkProsetFrom_compare inj_compare.
+  mkProsetFrom_compare inj_compare inj_compare_good.
 
 #[local]
 Instance inj_hsOrd : hsOrd A (PROSET := inj_isProset) :=
-  mkHsOrdFrom_compare inj_compare.
+  mkHsOrdFrom_compare inj_compare inj_compare_good.
 
 End hsOrd_of_injection.
 
