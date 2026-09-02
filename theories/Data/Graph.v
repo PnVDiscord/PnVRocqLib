@@ -217,12 +217,6 @@ Instance Walk_cat : CAT.isCategory :=
   ; id {v0} := Walk_nil
   }.
 
-Fixpoint Walk_to_walk {v} {v'} (WALK : `[ v -> v' ]) : list V :=
-  match WALK with
-  | Walk_nil => []
-  | Walk_cons H_edge WALK' => v :: Walk_to_walk WALK'
-  end.
-
 Definition isAcylic : Prop :=
   forall v : V, forall w : list V, length w > 0 -> ⟪ NOT_A_CYCLE : ~ (v ~~~[ w ]~~> v) ⟫.
 
@@ -233,21 +227,6 @@ End Digraph.
 #[global] Arguments isAcylic : clear implicits.
 
 #[local] Notation " `[ v -> v' ] " := (Walk v' v) : type_scope.
-
-#[projections(primitive)]
-Record Labeled {G : DIGRAPH.t} : Type :=
-  { labels : Type
-  ; labeling {v} {v'} (E_v_v' : (v, v') \in G.(DIGRAPH.arcs)) : ensemble labels
-  }.
-
-#[global] Arguments Labeled : clear implicits.
-
-Definition labeledWalk {G : DIGRAPH.t} {G_labeled : Labeled G} : forall v, forall v', `[ v -> v' ] -> ensemble (list G_labeled.(labels)) :=
-  fix go (v : G.(DIGRAPH.vertices)) (v' : G.(DIGRAPH.vertices)) (H_Walk : `[ v -> v' ]) :=
-  match H_Walk with
-  | Walk_nil => pure (@L.nil G_labeled.(labels))
-  | Walk_cons H_edge H_Walk' => liftM2 (@L.cons G_labeled.(labels)) (G_labeled.(labeling) H_edge) (go _ _ H_Walk')
-  end.
 
 End Digraph1.
 

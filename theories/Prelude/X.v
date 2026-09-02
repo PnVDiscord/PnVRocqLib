@@ -351,20 +351,6 @@ Proof.
   inversion LT; [lia | split; assumption].
 Qed.
 
-Definition Acc_intro_gen {A : Type} {R : A -> A -> Prop}
-  (R_wf : well_founded R)
-  : forall log_depth : nat, forall x : A, Acc R x.
-Proof.
-  pose (
-    fix go (n : nat) (x : A) (Acc_R_x : Acc R x) {struct n} : Acc R x :=
-    match n with
-    | O => Acc_R_x
-    | S n' => Acc_intro x (fun x' : A => fun H_R : R x' x => go n' x' (go n' x' (Acc_inv Acc_R_x H_R)))
-    end
-  ) as go.
-  exact (fun n : nat => fun x : A => go n x (R_wf x)).
-Defined.
-
 Module SN.
 
 Section Strong_Normalisation.
@@ -399,17 +385,11 @@ Proof.
   econs. exact IH.
 Defined.
 
-Definition sn_gen {x0 : A} (R_hasSN : hasSN R) (log_depth : nat) : sn R x0.
-Proof.
-  set (
-    fix go (n : nat) (x : A) (sn_x : sn R x) {struct n} : sn R x :=
-    match n with
-    | O => sn_x
-    | S n' => sn_intro R x (fun x' : A => fun R_x_x' : R x x' => go n' x' (go n' x' (sn_inv x sn_x x' R_x_x')))
-    end
-  ) as go.
-  exact (go log_depth x0 (R_hasSN x0)).
-Defined.
+Fixpoint sn_gen (log_depth : nat) (R_hasSN : hasSN R) (x : A) {struct log_depth} : sn R x :=
+  match log_depth with
+  | O => R_hasSN x
+  | S n => sn_intro R x (fun x' : A => fun _ : R x x' => sn_gen n (sn_gen n R_hasSN) x')
+  end.
 
 End Strong_Normalisation.
 
