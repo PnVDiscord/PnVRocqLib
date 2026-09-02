@@ -395,7 +395,7 @@ Instance well_founded_to_sn
   (R_wf : B.well_founded (fun x' : A => fun x : A => R x x'))
   : hasSN R.
 Proof.
-  exact (fun x0 : A => Acc_to_sn (R_wf x0)).
+  exact (fun x0 : A => Acc_to_sn (x0 := x0) (R_wf x0)).
 Defined.
 
 End Strong_Normalisation.
@@ -406,7 +406,7 @@ Definition sn_of_wf {A : Type} {R : A -> A -> Prop}
   (R_wf : well_founded R)
   : hasSN (fun x : A => fun x' : A => R x' x).
 Proof.
-  exact (fun x0 : A => Acc_to_sn (R_wf x0)).
+  exact (fun x0 : A => Acc_to_sn (x0 := x0) (R_wf x0)).
 Defined.
 
 Section Strict_Progress_on_Prosets.
