@@ -95,7 +95,7 @@ Qed.
 
 End FSet.
 
-Abbreviation fset A := (FSet.t A (isSorted compare)).
+#[global] Abbreviation fset A := (FSet.t A (isSorted compare)).
 
 Theorem fset_eq_spec (A : Type) (POSET : isPoset A) (HS_ORD : HsOrd A (POSET := POSET)) (X : fset A) (X' : fset A)
   : X = X' <-> (forall z : A, L.In z X.(FSet.data) <-> L.In z X'.(FSet.data)).

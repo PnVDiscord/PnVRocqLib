@@ -99,7 +99,7 @@ Qed.
 
 End FinitePartialMap.
 
-Abbreviation fpmap K := (FinitePartialMap.t K (isSorted compare)).
+#[global] Abbreviation fpmap K := (FinitePartialMap.t K (isSorted compare)).
 
 Section BASICS.
 
@@ -488,7 +488,7 @@ Instance fpmap_hsOrd : hsOrd (fpmap K V) (PROSET := Poset_isProset) :=
 Next Obligation.
   intros m m' OBS_Lt. pose proof (compare_Lt m.(FinitePartialMap.data) m'.(FinitePartialMap.data) OBS_Lt) as [LE NE]. split.
   - exact LE.
-  - intros m_eq_m'. contradiction NE. cbn in m_eq_m' |- *.
+  - intros m_eq_m'. contradiction NE. cbn in m_eq_m'.
     rewrite -> FinitePartialMap.t_eq_iff in m_eq_m'. rewrite m_eq_m'. reflexivity.
 Qed.
 Next Obligation.
@@ -498,7 +498,7 @@ Qed.
 Next Obligation.
   intros m m' OBS_Gt. pose proof (compare_Gt m.(FinitePartialMap.data) m'.(FinitePartialMap.data) OBS_Gt) as [LE NE]. split.
   - exact LE.
-  - intros m_eq_m'. contradiction NE. cbn in m_eq_m' |- *.
+  - intros m_eq_m'. contradiction NE. cbn in m_eq_m'.
     rewrite -> FinitePartialMap.t_eq_iff in m_eq_m'. rewrite m_eq_m'. reflexivity.
 Qed.
 
