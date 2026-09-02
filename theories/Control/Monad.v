@@ -18,9 +18,9 @@ Open Scope monad_scope.
 
 Notation "'do' m" := m : monad_scope.
 
+Notation "'ret' t" := (pure t) (at level 10, t constr at level 0, format "'ret'  t") : monad_scope.
 Notation "'let' x ':=' t ';' m" := (let x := t in m) (in custom do_notation at level 1, x pattern, t constr, m custom do_notation at level 10, format "'let'  x  ':='  t ';' '//' m").
 Notation "''' x '<-' m1 ';' m2" := (bind m1 (fun x => m2)) (in custom do_notation at level 1, x pattern, m1 constr, m2 custom do_notation at level 10, format "''' x  '<-'  m1 ';' '//' m2").
-Notation "'ret' t" := (pure t) (in custom do_notation at level 10, t constr at level 0, format "'ret'  t").
 Notation "t" := t (in custom do_notation at level 0, t constr).
 
 Section EXAMPLE.
