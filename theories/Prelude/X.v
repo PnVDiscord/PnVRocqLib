@@ -351,23 +351,19 @@ Proof.
   inversion LT; [lia | split; assumption].
 Qed.
 
-Fixpoint accLtGen (n : nat) (m : nat) {struct n} : Acc Nat.lt m :=
-  match n with
-  | O => lt_wf m
-  | S n' => Acc_intro m (fun p : nat => fun _ : (p < m)%nat => accLtGen n' p)
-  end.
-
-Fixpoint accNGen (n : nat) (m : N) {struct n} : Acc N.lt m :=
-  match n with
-  | O => N.lt_wf_0 m
-  | S n' => Acc_intro m (fun p : N => fun _ : (p < m)%N => accNGen n' p)
-  end.
-
-Definition accLt (m : nat) : Acc Nat.lt m :=
-  accLtGen (S m) m.
-
-Definition accNlt (m : N) : Acc N.lt m :=
-  accNGen (S (N.to_nat m)) m.
+Definition Acc_intro_gen {A : Type} {R : A -> A -> Prop}
+  (R_wf : well_founded R)
+  : forall log_depth : nat, forall x : A, Acc R x.
+Proof.
+  pose (
+    fix go (n : nat) (x : A) (Acc_R_x : Acc R x) {struct n} : Acc R x :=
+    match n with
+    | O => R_wf x
+    | S n' => Acc_intro x (fun x' : A => fun _ : R x' x => go n' x' (go n' x' (R_wf x')))
+    end
+  ) as go.
+  exact (fun n : nat => fun x : A => go n x (R_wf x)).
+Defined.
 
 Module SN.
 
@@ -378,6 +374,9 @@ Context {A : Type}.
 Inductive sn (R : A -> A -> Prop) (x : A) : Prop :=
   | sn_intro
     (sn_inv : forall x' : A, R x x' -> sn R x').
+
+Class hasSN (R : A -> A -> Prop) : Prop :=
+  mk_sn (x0 : A) : sn R x0.
 
 Context {R : A -> A -> Prop}.
 
@@ -393,11 +392,23 @@ Fixpoint sn_guard {x : A} (n : nat) (H_sn : sn R x) {struct n} : sn R x :=
   end.
 
 Definition Acc_to_sn {x0 : A}
-  (H_Acc : Acc (fun x' => fun x => R x x') x0)
+  (H_Acc : Acc (fun x' : A => fun x : A => R x x') x0)
   : sn R x0.
 Proof.
   induction H_Acc as [x _ IH].
   econs. exact IH.
+Defined.
+
+Definition sn_gen {x0 : A} (R_hasSN : hasSN R) (log_depth : nat) : sn R x0.
+Proof.
+  set (
+    fix go (n : nat) (x : A) (sn_x : sn R x) {struct n} : sn R x :=
+    match n with
+    | O => R_hasSN x
+    | S n' => sn_intro R x (fun x' : A => fun _ : R x x' => go n' x' (go n' x' (R_hasSN x')))
+    end
+  ) as go.
+  exact (go log_depth x0 (R_hasSN x0)).
 Defined.
 
 End Strong_Normalisation.
@@ -406,9 +417,9 @@ End Strong_Normalisation.
 
 Definition sn_of_wf {A : Type} {R : A -> A -> Prop}
   (H_wf : well_founded R)
-  : forall x0 : A, @sn A (fun x : A => fun x' : A => R x' x) x0.
+  : hasSN (fun x : A => fun x' : A => R x' x).
 Proof.
-  exact (fun x0 => Acc_to_sn (H_wf x0)).
+  exact (fun x0 : A => Acc_to_sn (H_wf x0)).
 Defined.
 
 Section Strict_Progress_on_Prosets.
@@ -447,9 +458,9 @@ Qed.
 
 Corollary finite_domain_guarantees_sn
   (FINITE : exists enum : list A, forall x : A, L.In x enum)
-  : forall x0 : A, sn betaProgressive x0.
+  : hasSN betaProgressive.
 Proof.
-  destruct FINITE as [enum IN]. i.
+  destruct FINITE as [enum IN]. intros x0.
   eapply finite_upper_cone_implies_sn; ss!.
 Qed.
 
