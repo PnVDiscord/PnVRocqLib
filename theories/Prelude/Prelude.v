@@ -2484,41 +2484,40 @@ Notation "x = y" := (eqProp x y) : math_scope.
 Notation "x ≠ y" := (~ eqProp x y) : math_scope. 
 
 #[universes(polymorphic=yes)]
-Class hasPlus@{u} (A : Type@{u}) : Type@{u} :=
+Class hasPlus@{u | } (A : Type@{u}) : Type@{u} :=
   plus (x : A) (y : A) : A.
 
 Notation "x + y" := (plus x y) : math_scope.
 
 #[universes(polymorphic=yes)]
-Class hasZero@{u} (A : Type@{u}) : Type@{u} :=
+Class hasZero@{u | } (A : Type@{u}) : Type@{u} :=
   zero : A.
 
 Notation "0" := (zero) : math_scope.
 
 #[universes(polymorphic=yes)]
-Class hasNegate@{u} (A : Type@{u}) : Type@{u} :=
+Class hasNegate@{u | } (A : Type@{u}) : Type@{u} :=
   neg (x : A) : A.
 
 Notation "- x" := (neg x) : math_scope.
 
 #[universes(polymorphic=yes)]
-Class hasMult@{u} (A : Type@{u}) : Type@{u} :=
+Class hasMult@{u | } (A : Type@{u}) : Type@{u} :=
   mult (x : A) (y : A) : A.
 
 Notation "x * y" := (mult x y) : math_scope.
 
 #[universes(polymorphic=yes)]
-Class hasUnity@{u} (A : Type@{u}) : Type@{u} :=
+Class hasUnity@{u | } (A : Type@{u}) : Type@{u} :=
   unity : A.
 
 Notation "1" := (unity) : math_scope.
 
-#[universes(polymorphic=yes)]
-Definition nonzero@{u} {A : Type@{u}} {SETOID : isSetoid A} {HAS_ZERO : hasZero@{u} A} (a : A) : Prop :=
+Definition nonzero {A : Type@{U_discourse}} {SETOID : isSetoid A} {HAS_ZERO : hasZero A} (a : A) : Prop :=
   \( a ≠ 0 \).
 
 #[projections(primitive)]
-Class isMonoid (M : Type) {SETOID : isSetoid M} : Type :=
+Class isMonoid (M : Type@{U_discourse}) {SETOID : isSetoid M} : Type :=
   { Monoid_hasAddition :: hasPlus M
   ; Monoid_hasZero :: hasZero M
   ; plus_eqCompatible2 :: eqPropCompatible2 plus
@@ -2527,18 +2526,18 @@ Class isMonoid (M : Type) {SETOID : isSetoid M} : Type :=
   }.
 
 #[projections(primitive)]
-Class isGroup (G : Type) {SETOID : isSetoid G} : Type :=
+Class isGroup (G : Type@{U_discourse}) {SETOID : isSetoid G} : Type :=
   { Group_isMonoid :: isMonoid G
   ; Group_hasNegate :: hasNegate G
   ; neg_eqCompatible1 :: eqPropCompatible1 neg
   ; neg_plus_inv :: isInverseOperatorOf neg plus
   }.
 
-Definition isAbelianGroup {G : Type} {SETOID : isSetoid G} (GROUP : isGroup G) : Prop :=
+Definition isAbelianGroup {G : Type@{U_discourse}} {SETOID : isSetoid G} (GROUP : isGroup G) : Prop :=
   isCommutative plus.
 
 #[projections(primitive)]
-Class isRng (R : Type) {SETOID : isSetoid R} : Type :=
+Class isRng (R : Type@{U_discourse}) {SETOID : isSetoid R} : Type :=
   { Rng_hasAdditiveGroup :: isGroup R
   ; Rng_hasAdditiveAbelianGroup : isAbelianGroup Rng_hasAdditiveGroup
   ; Rng_hasMultiplication :: hasMult R
@@ -2548,11 +2547,12 @@ Class isRng (R : Type) {SETOID : isSetoid R} : Type :=
   }.
 
 #[projections(primitive)]
-Class isRing (R : Type) {SETOID : isSetoid R} : Type :=
+Class isRing (R : Type@{U_discourse}) {SETOID : isSetoid R} : Type :=
   { Ring_isRng :: isRng R
   ; Ring_hasUnity :: hasUnity R
   ; one_mult_id :: isIdentityElementOf unity mult
-  ; one_ne_zero : \( 1 ≠ 0 \)
+  ; one_ne_zero
+    : \( 1 ≠ 0 \)
   }.
 
 #[universes(polymorphic=yes)]
@@ -2560,7 +2560,7 @@ Class has_reciprocal@{u} (R : Type@{u}) {SETOID : isSetoid R} {HAS_ZERO : hasZer
   reciprocal (a : R) (NONZERO : nonzero a) : R.
 
 #[projections(primitive)]
-Class isField (K : Type) {SETOID : isSetoid K} : Type :=
+Class isField (K : Type@{U_discourse}) {SETOID : isSetoid K} : Type :=
   { Field_isRing :: isRing K
   ; Field_isCommutativeRing :: isCommutative mult
   ; Field_has_reciprocal :: has_reciprocal K
@@ -2575,8 +2575,8 @@ Class isField (K : Type) {SETOID : isSetoid K} : Type :=
 
 End A.
 
-#[projections(primitive)]
-Class isFinite@{u} (A : Type@{u}) : Type@{u} :=
+#[universes(template), projections(primitive)]
+Class isFinite (A : Type) : Type :=
   { finite_hasEqDec : hasEqDec A
   ; finite_enumeration : list A
   ; finite_enumeration_complete
