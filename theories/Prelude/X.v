@@ -368,7 +368,7 @@ Context {R : A -> A -> Prop}.
 
 Definition sn_inv (x : A) (H_sn : sn R x) : forall x' : A, R x x' -> sn R x' :=
   match H_sn with
-  | @sn_intro _ _ sn_inv => sn_inv
+  | sn_intro _ _ sn_inv => sn_inv
   end.
 
 Fixpoint sn_guard {x : A} (n : nat) (H_sn : sn R x) {struct n} : sn R x :=
@@ -377,29 +377,36 @@ Fixpoint sn_guard {x : A} (n : nat) (H_sn : sn R x) {struct n} : sn R x :=
   | S n' => sn_intro R x (fun x' : A => fun H_R : R x x' => sn_guard n' (sn_inv x H_sn x' H_R))
   end.
 
-Definition Acc_to_sn {x0 : A}
-  (H_Acc : Acc (fun x' : A => fun x : A => R x x') x0)
-  : sn R x0.
-Proof.
-  induction H_Acc as [x _ IH].
-  econs. exact IH.
-Defined.
-
 Fixpoint sn_intro_generator (log_depth : nat) (R_hasSN : hasSN R) {struct log_depth} : forall x0 : A, sn R x0 :=
   match log_depth with
   | O => R_hasSN
   | S n => fun x : A => sn_intro R x (fun x' : A => fun _ : R x x' => sn_intro_generator n (sn_intro_generator n R_hasSN) x')
   end.
 
+Definition Acc_to_sn {x0 : A}
+  (H_Acc : Acc (fun x' : A => fun x : A => R x x') x0)
+  : sn R x0.
+Proof.
+  induction H_Acc as [x0 _ IH]. econs. exact IH.
+Defined.
+
+#[global]
+Instance well_founded_to_sn
+  (R_wf : B.well_founded (fun x' : A => fun x : A => R x x'))
+  : hasSN R.
+Proof.
+  exact (fun x0 : A => Acc_to_sn (R_wf x0)).
+Defined.
+
 End Strong_Normalisation.
 
 #[global] Strategy 100 [sn_guard].
 
 Definition sn_of_wf {A : Type} {R : A -> A -> Prop}
-  (H_wf : well_founded R)
+  (R_wf : well_founded R)
   : hasSN (fun x : A => fun x' : A => R x' x).
 Proof.
-  exact (fun x0 : A => Acc_to_sn (H_wf x0)).
+  exact (fun x0 : A => Acc_to_sn (R_wf x0)).
 Defined.
 
 Section Strict_Progress_on_Prosets.
