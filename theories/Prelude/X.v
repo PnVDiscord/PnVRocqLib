@@ -385,10 +385,10 @@ Proof.
   econs. exact IH.
 Defined.
 
-Fixpoint sn_gen (log_depth : nat) (R_hasSN : hasSN R) (x : A) {struct log_depth} : sn R x :=
+Fixpoint sn_intro_generator (log_depth : nat) (R_hasSN : hasSN R) {struct log_depth} : forall x0 : A, sn R x0 :=
   match log_depth with
-  | O => R_hasSN x
-  | S n => sn_intro R x (fun x' : A => fun _ : R x x' => sn_gen n (sn_gen n R_hasSN) x')
+  | O => R_hasSN
+  | S n => fun x : A => sn_intro R x (fun x' : A => fun _ : R x x' => sn_intro_generator n (sn_intro_generator n R_hasSN) x')
   end.
 
 End Strong_Normalisation.
