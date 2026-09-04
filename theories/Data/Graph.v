@@ -229,31 +229,32 @@ Let beta (v : V) (v' : V) : Prop :=
 
 #[local] Infix "~>β" := beta.
 
-Variable endpt : V.
-
-Hypothesis H_next : forall v : V, forall v' : V, v ~>β v' -> (next v = v' /\ v ≠ endpt).
-
-Lemma finite_path_sn (v : V) (p : list V)
-  (PATH : v ---[ p ]--> endpt)
-  : SN.sn beta v.
+Lemma finite_path_sn (v_s : V) (v_t : V)
+  (H_beta : forall v : V, forall v' : V, v ~>β v' -> next v = v' /\ v' ≠ v_s)
+  (CLOSED : next v_t = v_s)
+  : forall v : V, forall p : list V, v ---[ p ]--> v_t -> SN.sn beta v.
 Proof.
-  induction PATH as [ | v0 v1 p EDGE PATH IH NOT_IN].
+  intros v p PATH. induction PATH as [ | v0 v1 p EDGE PATH IH NOT_IN].
   - econs. intros v' EDGE.
-    find* [_ NOT_ENDPOINT] by H_next.
-    contradiction.
+    find* [NEXT NOT_START] by H_beta.
+    congruence.
   - econs. intros v' EDGE'.
-    obtain [Hv1 _] with EDGE by H_next.
-    obtain [Hv' _] with EDGE' by H_next.
+    obtain [Hv1 _] with EDGE by H_beta.
+    obtain [Hv' _] with EDGE' by H_beta.
     congruence.
 Defined.
 
-Theorem finite_nodup_path_sn (v : V) (w : list V)
-  (NO_DUP : NoDup (v :: w))
-  (WALK : v ~~~[ w ]~~> endpt)
-  : SN.sn beta v.
+Theorem finite_nodup_path_sn (v_s : V) (v_t : V) (w : list V)
+  (H_beta : forall v : V, forall v' : V, v ~>β v' -> next v = v' /\ v' ≠ v_s)
+  (NO_DUP : NoDup (v_s :: w))
+  (w_WALK : v_s ~~~[ w ]~~> v_t)
+  (CLOSED : next v_t = v_s)
+  : SN.sn beta v_s.
 Proof.
   eapply finite_path_sn with (p := w).
-  eapply no_dup_walk_is_path; eauto.
+  - exact H_beta.
+  - exact CLOSED.
+  - eapply no_dup_walk_is_path; eauto.
 Defined.
 
 End Finite_NoDup_Path.
