@@ -117,4 +117,22 @@ Definition get {M : Type -> Type} {MONAD : isMonad M} : B.stateT S M S :=
 Definition put {M : Type -> Type} {MONAD : isMonad M} : S -> B.stateT S M unit :=
   fun s => B.StateT $ fun _ => pure (tt, s).
 
+#[global]
+Instance stateT_isMonadTrans : isMonadTrans (B.stateT S) :=
+  fun M : Type -> Type => fun M_isMonad : isMonad M => fun A : Type => fun m : M A => {| B.runStateT := fun s : S => m >>= fun x : A => pure (x, s) |}.
+
+#[global]
+Instance stateT_MonadTransSpec
+  : MonadTransSpec (B.stateT S).
+Proof.
+  split; i.
+  - eapply B.stateT_satisfiesMonadLaws; auto.
+  - simpl. i. rewrite m_eq_m'. reflexivity.
+  - simpl. i. unfold curry. rewrite bind_pure_l. reflexivity.
+  - simpl. i. unfold B.kcompose, compose, uncurry.
+    rewrite m_eq_m'. do 2 rewrite <- bind_assoc. eapply bind_compatWith_eqProp_r.
+    intros x. simpl. rewrite bind_pure_l. rewrite k_eq_k'. eapply bind_compatWith_eqProp_r.
+    intros y. reflexivity.
+Qed.
+
 End STATE_MONAD.
