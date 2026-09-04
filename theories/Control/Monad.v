@@ -75,15 +75,13 @@ Class isMonadTrans@{d c | } `(T : (Type@{d} -> Type@{c}) -> (Type@{d} -> Type@{c
 #[global] Arguments lift {T} {T_liftsMonad} {isMonadTrans} {M} {M_isMonad} {A} m.
 
 Class MonadTransSpec `(T : (Type -> Type) -> (Type -> Type)) `{T_liftsSetoid1 : forall M : Type -> Type, isSetoid1 M -> isSetoid1 (T M)} `{T_liftsMonad : forall M : Type -> Type, isMonad M -> isMonad (T M)} `{T_isMonadTrans : isMonadTrans T (T_liftsMonad := T_liftsMonad)} : Prop :=
-  { MonadTrans_satisfiesMonadLaws (M : Type -> Type) (M_isSetoid1 : isSetoid1 M) (M_isMonad : isMonad M)
-    (M_satisfiesMonadLaws : @MonadLaws M M_isSetoid1 M_isMonad)
-    : @MonadLaws (T M) (T_liftsSetoid1 M M_isSetoid1) (T_liftsMonad M M_isMonad)
-  ; lift_cong (M : Type -> Type) `(M_satisfiesMonadLaws : MonadLaws M) (A : Type) (m : M A) (m' : M A)
+  { MonadTrans_satisfiesMonadLaws (M : Type -> Type) `(M_satisfiesMonadLaws : MonadLaws M) :: MonadLaws (T M)
+  ; lift_cong {M : Type -> Type} {A : Type} `{M_satisfiesMonadLaws : MonadLaws M} (m : M A) (m' : M A)
     (m_eq_m' : m == m')
     : lift (T := T) m == lift (T := T) m'
-  ; lift_pure (M : Type -> Type) `(M_satisfiesMonadLaws : MonadLaws M) (A : Type) (x : A)
+  ; lift_pure {M : Type -> Type} {A : Type} `{M_satisfiesMonadLaws : MonadLaws M} (x : A)
     : lift (T := T) (pure x) == pure x
-  ; lift_bind (M : Type -> Type) `(M_satisfiesMonadLaws : MonadLaws M) (A : Type) (B : Type) (m : M A) (m' : M A) (k : A -> M B) (k' : A -> M B)
+  ; lift_bind {M : Type -> Type} {A : Type} {B : Type} `{M_satisfiesMonadLaws : MonadLaws M} (m : M A) (m' : M A) (k : A -> M B) (k' : A -> M B)
     (m_eq_m' : m == m')
     (k_eq_k' : forall x : A, k x == k' x)
     : lift (T := T) (m >>= k) == (lift m' >>= fun x' : A => lift (k' x')) 
