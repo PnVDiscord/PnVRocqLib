@@ -220,6 +220,44 @@ Instance Walk_cat : CAT.isCategory :=
 Definition isAcylic : Prop :=
   forall v : V, forall w : list V, length w > 0 -> ⟪ NOT_A_CYCLE : ~ (v ~~~[ w ]~~> v) ⟫.
 
+Section Finite_NoDup_Path.
+
+Variable next : V -> V.
+
+Let beta (v : V) (v' : V) : Prop :=
+  (v, v') \in E.
+
+#[local] Infix "~>β" := beta.
+
+Variable endpt : V.
+
+Hypothesis H_next : forall v : V, forall v' : V, v ~>β v' -> (next v = v' /\ v ≠ endpt).
+
+Lemma finite_path_sn (v : V) (p : list V)
+  (PATH : v ---[ p ]--> endpt)
+  : SN.sn beta v.
+Proof.
+  induction PATH as [ | v0 v1 p EDGE PATH IH NOT_IN].
+  - econs. intros v' EDGE.
+    find* [_ NOT_ENDPOINT] by H_next.
+    contradiction.
+  - econs. intros v' EDGE'.
+    obtain [Hv1 _] with EDGE by H_next.
+    obtain [Hv' _] with EDGE' by H_next.
+    congruence.
+Defined.
+
+Theorem finite_nodup_path_sn (v : V) (w : list V)
+  (NO_DUP : NoDup (v :: w))
+  (WALK : v ~~~[ w ]~~> endpt)
+  : SN.sn beta v.
+Proof.
+  eapply finite_path_sn with (p := w).
+  eapply no_dup_walk_is_path; eauto.
+Defined.
+
+End Finite_NoDup_Path.
+
 End Digraph.
 
 #[global] Arguments Walk_nil {G} {v}.
