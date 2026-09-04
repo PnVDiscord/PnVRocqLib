@@ -206,12 +206,10 @@ Lemma finite_path_sn (v_s : V) (v_t : V) (v : V) (p : list V)
   (H_path : v ---[ p ]--> v_t)
   : SN.sn beta v.
 Proof.
-  induction H_path as [ | v0 v1 p EDGE H_path IH NOT_IN].
-  - econs; intros v' EDGE.
-    find* [NEXT NOT_START] by H_beta.
+  induction H_path as [ | v0 v1 p EDGE H_path IH NOT_IN]; econs; intros v' EDGE'.
+  - find* [NEXT NOT_START] by H_beta.
     congruence.
-  - econs; intros v' EDGE'.
-    obtain [Hv1 _] with EDGE by H_beta.
+  - obtain [Hv1 _] with EDGE by H_beta.
     obtain [Hv' _] with EDGE' by H_beta.
     congruence.
 Defined.

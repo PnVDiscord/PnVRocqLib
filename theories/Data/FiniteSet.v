@@ -29,7 +29,7 @@ Instance fin_ensemble_is_similar_to_ensemble {A : Type} {A' : Type} (Sim_A_A' : 
 
 #[global, refine]
 Instance fin_ensemble_isSetoid {A : Type} (A_isSetoid : isSetoid A) : isSetoid (fin_ensemble A) :=
-  { eqProp (lhs : list A) (rhs : list A) := ⟪ SUBSET : forall a : A, a ∈ lhs -> exists a' : A, a == a' /\ a' ∈ rhs ⟫ /\ ⟪ SUPSET : forall a : A, a ∈ rhs -> exists a' : A, a == a' /\ a' ∈ lhs ⟫ }.
+  { eqProp (lhs : list A) (rhs : list A) := ⟪ SUBSET : forall a : A, a ∈ lhs -> (exists a' : A, a == a' /\ a' ∈ rhs) ⟫ /\ ⟪ SUPSET : forall a : A, a ∈ rhs -> (exists a' : A, a == a' /\ a' ∈ lhs) ⟫ }.
 Proof.
   split; ii; split; ii; des.
   - exists a; eauto with *.
