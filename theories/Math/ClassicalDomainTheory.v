@@ -1543,14 +1543,15 @@ Lemma chain_sup_from_lfp_exists
 Proof.
   obtain (R & R_wf & R_total & _ & _) with (@mkSetoid_from_eq I) by well_ordering_thm.
   assert (MIN : forall P : I -> Prop, (exists i, P i) -> exists i, P i /\ forall j, R j i -> ~ P j).
-  { intros P [i P_i]. revert P_i. induction (R_wf i) as [i H_Acc_inv IH]. intros P_i.
+  { intros P [i P_i]. induction (R_wf i) as [i H_Acc_inv IH].
     pose proof (classic (exists j, R j i /\ P j)) as [YES | NO].
     - des. eapply IH; eauto.
     - exists i. split; trivial. ii. contradiction NO. eauto.
   }
-  pose (step := fun x : D => fun y : D => ((forall i, ds i =< x) /\ y = x) \/ (exists i, y = ds i /\ ~ ds i =< x /\ (forall j, R j i -> ds j =< x))).
+  pose (step := fun x : D => fun y : D => ((forall i, ds i =< x) /\ y = x) \/ (exists i, y = ds i /\ (~ ds i =< x) /\ (forall j, R j i -> ds j =< x))).
   assert (STEP_EXISTS : forall x : D, exists y : D, step x y).
-  { intros x. pose proof (classic (forall i, ds i =< x)) as [UB | NUB].
+  { intros x.
+    pose proof (classic (forall i, ds i =< x)) as [UB | NUB].
     - exists x. left. done!.
     - assert (FAIL : exists i, ~ ds i =< x).
       { eapply NNPP. intros H_false. contradiction NUB. ii. eapply NNPP. intros NOT_LE. contradiction H_false. eauto. }
@@ -1562,19 +1563,21 @@ Proof.
   assert (MONOTONIC : isMonotonic1 f).
   { intros x y LE.
     pose proof (STEP x) as [[UBx EQx] | (i & EQx & Ni & Mi)]; pose proof (STEP y) as [[UBy EQy] | (j & EQy & Nj & Mj)]; rewrite EQx, EQy; eauto.
-    - contradiction Nj. transitivity x; eauto.
+    - contradiction Nj. transitivity x; auto.
     - pose proof (R_total i j) as [EQ | [Rij | Rji]].
       + change (i = j) in EQ. subst j. reflexivity.
       + pose proof (CHAIN i j) as [LEij | LEji]; trivial.
-        contradiction Nj. transitivity (ds i); eauto.
-      + contradiction Nj. transitivity x; eauto.
+        contradiction Nj. transitivity (ds i); auto.
+      + contradiction Nj. transitivity x; auto.
   }
   assert (FIXED : forall x, x \in fixedpointsOf f <-> (forall i, ds i =< x)).
   { intros x. split.
-    - intros FIX. pose proof (STEP x) as [[UB EQ] | (i & EQ & Ni & Mi)].
+    - intros FIX.
+      pose proof (STEP x) as [[UB EQ] | (i & EQ & Ni & Mi)].
       + exact UB.
       + contradiction Ni. rewrite <- EQ. eapply eqProp_implies_leProp; done!.
-    - intros UB. pose proof (STEP x) as [[_ EQ] | (i & EQ & Ni & Mi)].
+    - intros UB.
+      pose proof (STEP x) as [[_ EQ] | (i & EQ & Ni & Mi)].
       + cbv. rewrite EQ. reflexivity.
       + contradiction Ni. eapply UB.
   }
@@ -1592,7 +1595,8 @@ Proof.
     rewrite <- ipo_iff_dcpo in CPO. destruct CPO as [IPO].
     obtain [bot _] with IPO by ipo_bottom_from_empty_chain.
     exploit (Axiom_of_Choice (ensemble D) (fun _ => D) (fun X => fun s => isChain X -> is_supremum_of s X)).
-    { intros X. pose proof (classic (isChain X)) as [CHAIN | NOT_CHAIN].
+    { intros X.
+      pose proof (classic (isChain X)) as [CHAIN | NOT_CHAIN].
       - obtain (s & SUP) with CHAIN by chain_ensemble_has_sup_from_ipo.
         exists s. done!.
       - exists bot. done!.
