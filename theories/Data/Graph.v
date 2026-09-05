@@ -43,6 +43,36 @@ Inductive walk (v : V) : V -> list V -> Prop :=
 
 #[local] Hint Constructors walk : core.
 
+Inductive path (v : V) : V -> list V -> Prop :=
+  | path_refl
+    : v ---[ [] ]--> v
+  | path_step (v0 : V) (v1 : V) (p : list V)
+    (H_edge : (v0, v1) \in E)
+    (H_path : v1 ---[ p ]--> v)
+    (NOT_IN : ~ In v0 (v1 :: p))
+    : v0 ---[ v1 :: p ]--> v
+  where " src ---[ p ]--> tgt " := (path tgt src p) : type_scope.
+
+#[local] Hint Constructors path : core.
+
+Definition trail (v' : V) (v : V) (vs : list V) : Prop :=
+  v ~~~[ vs ]~~> v' /\ NoDup (L.mk_edge_seq v vs).
+
+#[local] Notation " src ===[ t ]==> tgt " := (trail tgt src t) : type_scope.
+
+Variant Walks (v_s : V) (v_t : V) : ensemble (list V) :=
+  | inWalks (w : list V)
+    (H_walk : v_s ~~~[ w ]~~> v_t)
+    : v_s :: w \in Walks v_s v_t.
+
+Variant Paths (v_s : V) (v_t : V) : ensemble (list V) :=
+  | inPaths (p : list V)
+    (H_path : v_s ---[ p ]--> v_t)
+    : v_s :: p \in Paths v_s v_t.
+
+Definition isAcyclic : Prop :=
+  forall v : V, forall w : list V, v ~~~[ w ]~~> v -> w = [].
+
 Lemma walk_last (v0 : V) (v : V) (w : list V)
   (WALK : v0 ~~~[ w ]~~> v)
   : v = last w v0.
@@ -82,18 +112,6 @@ Proof.
     inv WALK. apply IH in H_walk. des; eauto.
   - intros VIA. des. eapply walk_app; eauto.
 Qed.
-
-Inductive path (v : V) : V -> list V -> Prop :=
-  | path_refl
-    : v ---[ [] ]--> v
-  | path_step (v0 : V) (v1 : V) (p : list V)
-    (H_edge : (v0, v1) \in E)
-    (H_path : v1 ---[ p ]--> v)
-    (NOT_IN : ~ In v0 (v1 :: p))
-    : v0 ---[ v1 :: p ]--> v
-  where " src ---[ p ]--> tgt " := (path tgt src p) : type_scope.
-
-#[local] Hint Constructors path : core.
 
 Lemma path_vertices_no_dup (v0 : V) (v : V) (p : list V)
   (H_path : v0 ---[ p ]--> v)
@@ -176,11 +194,6 @@ Qed.
 
 End Walk_finds_Path.
 
-Definition trail (v' : V) (v : V) (vs : list V) : Prop :=
-  v ~~~[ vs ]~~> v' /\ NoDup (L.mk_edge_seq v vs).
-
-#[local] Notation " src ===[ t ]==> tgt " := (trail tgt src t) : type_scope.
-
 Lemma path_implies_trail (v0 : V) (v : V) (p : list V)
   (PATH : v0 ---[ p ]--> v)
   : v0 ===[ p ]==> v.
@@ -221,26 +234,11 @@ Theorem finite_nodup_path_sn (v_s : V) (v_t : V) (w : list V)
   (CLOSED : next v_t = v_s)
   : SN.sn beta v_s.
 Proof.
-  eapply finite_path_sn with (p := w).
-  - exact H_beta.
-  - exact CLOSED.
-  - eapply no_dup_walk_is_path; eauto.
+  eapply finite_path_sn with (p := w); eauto.
+  eapply no_dup_walk_is_path; eauto.
 Defined.
 
 End Finite_NoDup_Path.
-
-Variant Walk (v_s : V) (v_t : V) : ensemble (list V) :=
-  | Walk_intro (w : list V)
-    (H_walk : v_s ~~~[ w ]~~> v_t)
-    : v_s :: w \in Walk v_s v_t.
-
-Variant Path (v_s : V) (v_t : V) : ensemble (list V) :=
-  | Path_intro (p : list V)
-    (H_path : v_s ---[ p ]--> v_t)
-    : v_s :: p \in Path v_s v_t.
-
-Definition isAcyclic : Prop :=
-  forall v : V, forall w : list V, v ~~~[ w ]~~> v -> w = [].
 
 End Digraph.
 
