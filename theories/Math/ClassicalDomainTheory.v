@@ -1535,10 +1535,9 @@ Import CpoDef.
 
 Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {D : Type@{U_small}} {PROSET : isProset D}.
 
-Lemma chain_sup_from_lfp_exists
+Lemma chain_sup_from_lfp_exists (I : Type@{U_small}) (ds : I -> D)
   (LFP : forall f : D -> D, isMonotonic1 f -> exists mu : D, is_lfpOf mu f)
-  (I : Type@{U_small}) (ds : I -> D)
-  (CHAIN : forall i j, ds i =< ds j \/ ds j =< ds i)
+  (CHAIN : forall i1 : I, forall i2 : I, ds i1 =< ds i2 \/ ds i2 =< ds i1)
   : exists s : D, is_supremum_of s (fun d => exists i, d = ds i).
 Proof.
   obtain (R & R_wf & R_total & _ & _) with (@mkSetoid_from_eq I) by well_ordering_thm.
@@ -1551,7 +1550,7 @@ Proof.
   pose (step := fun x : D => fun y : D => ((forall i, ds i =< x) /\ y = x) \/ (exists i, y = ds i /\ (~ ds i =< x) /\ (forall j, R j i -> ds j =< x))).
   assert (STEP_EXISTS : forall x : D, exists y : D, step x y).
   { intros x.
-    pose proof (classic (forall i, ds i =< x)) as [UB | NUB].
+    pose proof (classic (forall i : I, ds i =< x)) as [UB | NUB].
     - exists x. left. done!.
     - assert (FAIL : exists i, ~ ds i =< x).
       { eapply NNPP. intros H_false. contradiction NUB. ii. eapply NNPP. intros NOT_LE. contradiction H_false. eauto. }
@@ -1570,7 +1569,7 @@ Proof.
         contradiction Nj. transitivity (ds i); auto.
       + contradiction Nj. transitivity x; auto.
   }
-  assert (FIXED : forall x, x \in fixedpointsOf f <-> (forall i, ds i =< x)).
+  assert (FIXED : forall x : D, x \in fixedpointsOf f <-> (forall i, ds i =< x)).
   { intros x. split.
     - intros FIX.
       pose proof (STEP x) as [[UB EQ] | (i & EQ & Ni & Mi)].
@@ -1594,7 +1593,7 @@ Proof.
   - intros CPO f MONOTONIC.
     rewrite <- ipo_iff_dcpo in CPO. destruct CPO as [IPO].
     obtain [bot _] with IPO by ipo_bottom_from_empty_chain.
-    exploit (Axiom_of_Choice (ensemble D) (fun _ => D) (fun X => fun s => isChain X -> is_supremum_of s X)).
+    exploit (Axiom_of_Choice (ensemble D) (fun _ => D) (fun X : ensemble D => fun s : D => isChain X -> is_supremum_of s X)).
     { intros X.
       pose proof (classic (isChain X)) as [CHAIN | NOT_CHAIN].
       - obtain (s & SUP) with CHAIN by chain_ensemble_has_sup_from_ipo.
@@ -1608,16 +1607,15 @@ Proof.
     pose (P := { X : ensemble D | isChain X }%type).
     exploit (Axiom_of_Choice P (fun _ => D) (fun p => fun s => is_supremum_of s (proj1_sig p))).
     { intros [X CHAIN].
-      exploit (chain_sup_from_lfp_exists LFP { x : D | x \in X } (@proj1_sig D X)).
+      exploit (chain_sup_from_lfp_exists { x : D | x \in X } (@proj1_sig D X) LFP).
       { intros [x INx] [y INy]. exact (CHAIN x y INx INy). }
       intros (s & SUP). exists s. eapply supremum_congruence; [exact SUP | reflexivity | intros x; split].
       - intros [[y IN] ?]; subst x. exact IN.
       - intros IN. exists (@exist D X x IN). reflexivity.
     }
     intros [sup SUP]. econs. intros I ds CHAIN.
-    pose (X := fun d : D => exists i : I, d = ds i).
-    assert (TOTAL : isChain X) by now ii; done!.
-    now exists (sup (@exist (ensemble D) isChain X TOTAL)).
+    assert (TOTAL : isChain { d : D | exists i : I, d = ds i }) by now ii; done!.
+    now exists (sup (@exist (ensemble D) isChain { d : D | exists i : I, d = ds i }%function TOTAL)).
 Qed.
 
 End _2_1_16.
