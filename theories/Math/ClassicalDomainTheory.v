@@ -1538,21 +1538,21 @@ Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext 
 Lemma chain_sup_from_lfp_exists (I : Type@{U_small}) (ds : I -> D)
   (LFP : forall f : D -> D, isMonotonic1 f -> exists mu : D, is_lfpOf mu f)
   (CHAIN : forall i1 : I, forall i2 : I, ds i1 =< ds i2 \/ ds i2 =< ds i1)
-  : exists s : D, is_supremum_of s (fun d => exists i, d = ds i).
+  : exists s : D, is_supremum_of s { d : D | exists i : I, d = ds i }.
 Proof.
   obtain (R & R_wf & R_total & _ & _) with (@mkSetoid_from_eq I) by well_ordering_thm.
-  assert (MIN : forall P : I -> Prop, (exists i, P i) -> exists i, P i /\ forall j, R j i -> ~ P j).
+  assert (MIN : forall P : I -> Prop, (exists i : I, P i) -> (exists i : I, P i /\ (forall j : I, R j i -> ~ P j))).
   { intros P [i P_i]. induction (R_wf i) as [i H_Acc_inv IH].
-    pose proof (classic (exists j, R j i /\ P j)) as [YES | NO].
+    pose proof (classic (exists j : I, R j i /\ P j)) as [YES | NO].
     - des. eapply IH; eauto.
     - exists i. split; trivial. ii. contradiction NO. eauto.
   }
-  pose (step := fun x : D => fun y : D => ((forall i, ds i =< x) /\ y = x) \/ (exists i, y = ds i /\ (~ ds i =< x) /\ (forall j, R j i -> ds j =< x))).
+  pose (step := fun x : D => fun y : D => ((forall i : I, ds i =< x) /\ y = x) \/ (exists i : I, y = ds i /\ (~ ds i =< x) /\ (forall j : I, R j i -> ds j =< x))).
   assert (STEP_EXISTS : forall x : D, exists y : D, step x y).
   { intros x.
     pose proof (classic (forall i : I, ds i =< x)) as [UB | NUB].
     - exists x. left. done!.
-    - assert (FAIL : exists i, ~ ds i =< x).
+    - assert (FAIL : exists i : I, ~ ds i =< x).
       { eapply NNPP. intros H_false. contradiction NUB. ii. eapply NNPP. intros NOT_LE. contradiction H_false. eauto. }
       obtain (i & NOT_LE & MINIMAL) with FAIL by MIN.
       exists (ds i). right. exists i. splits; trivial.
@@ -1569,7 +1569,7 @@ Proof.
         contradiction Nj. transitivity (ds i); auto.
       + contradiction Nj. transitivity x; auto.
   }
-  assert (FIXED : forall x : D, x \in fixedpointsOf f <-> (forall i, ds i =< x)).
+  assert (FIXED : forall x : D, x \in fixedpointsOf f <-> (forall i : I, ds i =< x)).
   { intros x. split.
     - intros FIX.
       pose proof (STEP x) as [[UB EQ] | (i & EQ & Ni & Mi)].
