@@ -214,7 +214,7 @@ Let beta (v : V) (v' : V) : Prop :=
 Variable next : V -> V.
 
 Lemma deterministic_walk_to_sink_guarantees_sn (v_s : V) (v_t : V) (v : V) (w : list V)
-  (H_beta : forall v : V, forall v' : V, v ~>β v' -> (next v = v' /\ v' ≠ v_s))
+  (H_beta : forall v : V, forall v' : V, forall E_v_v' : v ~>β v', next v = v' /\ v' ≠ v_s)
   (CLOSED : next v_t = v_s)
   (H_walk : v ~~~[ w ]~~> v_t)
   : SN.sn beta v.
