@@ -204,7 +204,7 @@ Proof.
   - eapply L.no_dup_mk_edge_seq. now inv NO_DUP.
 Qed.
 
-Section Finite_NoDup_Path.
+Section deterministic_walk_to_sink_guarantees_sn.
 
 Let beta (v : V) (v' : V) : Prop :=
   (v, v') \in E.
@@ -213,32 +213,21 @@ Let beta (v : V) (v' : V) : Prop :=
 
 Variable next : V -> V.
 
-Lemma finite_path_sn (v_s : V) (v_t : V) (v : V) (p : list V)
+Lemma deterministic_walk_to_sink_guarantees_sn (v_s : V) (v_t : V) (v : V) (w : list V)
   (H_beta : forall v : V, forall v' : V, v ~>β v' -> (next v = v' /\ v' ≠ v_s))
   (CLOSED : next v_t = v_s)
-  (H_path : v ---[ p ]--> v_t)
+  (H_walk : v ~~~[ w ]~~> v_t)
   : SN.sn beta v.
 Proof.
-  induction H_path as [ | v0 v1 p EDGE H_path IH NOT_IN]; econs; intros v' EDGE'.
-  - find* [NEXT NOT_START] by H_beta.
+  induction H_walk as [ | v0 v1 w EDGE H_walk IH]; econs; intros v' EDGE'.
+  - find* [Hv' H_ne] by H_beta.
     congruence.
   - obtain [Hv1 _] with EDGE by H_beta.
     obtain [Hv' _] with EDGE' by H_beta.
     congruence.
 Defined.
 
-Theorem finite_nodup_path_sn (v_s : V) (v_t : V) (w : list V)
-  (H_beta : forall v : V, forall v' : V, v ~>β v' -> (next v = v' /\ v' ≠ v_s))
-  (NO_DUP : NoDup (v_s :: w))
-  (H_walk : v_s ~~~[ w ]~~> v_t)
-  (CLOSED : next v_t = v_s)
-  : SN.sn beta v_s.
-Proof.
-  eapply finite_path_sn with (p := w); eauto.
-  eapply no_dup_walk_is_path; eauto.
-Defined.
-
-End Finite_NoDup_Path.
+End deterministic_walk_to_sink_guarantees_sn.
 
 End Digraph.
 
