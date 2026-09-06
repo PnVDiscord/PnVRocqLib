@@ -32,18 +32,18 @@ Context {G : DIGRAPH.t}.
 #[local] Abbreviation V := G.(vertices).
 #[local] Abbreviation E := G.(arcs).
 
-Inductive walk (v : V) : V -> list V -> Prop :=
+Inductive walk (v : V) : V -> ensemble (list V) :=
   | walk_refl
     : v ~~~[ [] ]~~> v
   | walk_step (v0 : V) (v1 : V) (w : list V)
     (H_edge : (v0, v1) \in E)
     (H_walk : v1 ~~~[ w ]~~> v)
     : v0 ~~~[ v1 :: w ]~~> v
-  where " src ~~~[ w ]~~> tgt " := (walk tgt src w) : type_scope.
+  where " src ~~~[ w ]~~> tgt " := (w \in walk tgt src) : type_scope.
 
 #[local] Hint Constructors walk : core.
 
-Inductive path (v : V) : V -> list V -> Prop :=
+Inductive path (v : V) : V -> ensemble (list V) :=
   | path_refl
     : v ---[ [] ]--> v
   | path_step (v0 : V) (v1 : V) (p : list V)
@@ -51,14 +51,14 @@ Inductive path (v : V) : V -> list V -> Prop :=
     (H_path : v1 ---[ p ]--> v)
     (NOT_IN : ~ In v0 (v1 :: p))
     : v0 ---[ v1 :: p ]--> v
-  where " src ---[ p ]--> tgt " := (path tgt src p) : type_scope.
+  where " src ---[ p ]--> tgt " := (p \in path tgt src) : type_scope.
 
 #[local] Hint Constructors path : core.
 
-Definition trail (v' : V) (v : V) (vs : list V) : Prop :=
-  v ~~~[ vs ]~~> v' /\ NoDup (L.mk_edge_seq v vs).
+Definition trail (v : V) : V -> ensemble (list V) :=
+  fun v0 : V => fun t : list V => v0 ~~~[ t ]~~> v /\ NoDup (L.mk_edge_seq v0 t).
 
-#[local] Notation " src ===[ t ]==> tgt " := (trail tgt src t) : type_scope.
+#[local] Notation " src ===[ t ]==> tgt " := (t \in trail tgt src) : type_scope.
 
 Variant Walks (v_s : V) (v_t : V) : ensemble (list V) :=
   | inWalks (w : list V)
@@ -175,17 +175,17 @@ Theorem walk_finds_path (v0 : V) (v : V) (w : list V)
 Proof.
   revert v0 v WALK. induction w as [ | v' w IH] using List.rev_ind; i.
   - inv WALK. exists []. econstructor 1.
-  - rewrite -> walk_app_iff in WALK. destruct WALK as (v1&WALK1&WALK2).
-    inv WALK2. inv H_walk. pose proof (IH v0 v1 WALK1) as [p PATH].
+  - rewrite -> walk_app_iff in WALK. destruct WALK as (v1 & WALK1 & WALK2).
+    inv WALK2. inv H_walk. obtain [p PATH] with WALK1 by IH.
     pose proof (In_dec v' (v0 :: p)) as [ELEM | NOT_IN].
     + inv ELEM.
       * exists []. econstructor 1.
-      * find* (p'&PATH'&_) by (mk_subpath _ _ _ _ PATH). ss!.
+      * find* (p' & PATH' & _) by mk_subpath. ss!.
     + exists (p ++ [v']). rewrite -> path_iff_no_dup_walk. split.
       * rewrite -> walk_app_iff. exists v1. split.
         { now eapply path_iff_no_dup_walk. }
         { econstructor 2; eauto. }
-      * change (NoDup ((v0 :: p) ++ [v'])).
+      * change (NoDup ((v0 :: p ) ++ [v'])).
         rewrite <- rev_involutive. eapply NoDup_rev.
         rewrite -> rev_unit. econstructor 2.
         { now rewrite <- In_rev. }
