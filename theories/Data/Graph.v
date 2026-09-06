@@ -161,9 +161,9 @@ Lemma mk_subpath (v0 : V) (v1 : V) (v : V) (p : list V)
 Proof.
   revert v1 ELEM. induction PATH as [ | v0 v1 p H_edge PATH IH NOT_IN]; i; inv ELEM.
   - exists [v2]. split; eauto. econstructor 2; eauto. ii. contradiction NOT_IN. ss!.
-  - find* (p'&PATH1&p''&PATH2&EQ) by IH.
+  - find* (p' & PATH1 & p'' & PATH2 & EQ) by IH.
     exists (v1 :: p'). split.
-    + econstructor 2; eauto. subst p. ii. apply NOT_IN. ss!.
+    + econstructor 2; eauto. subst p. ii. contradiction NOT_IN. ss!.
     + exists p''. split; [exact PATH2 | now rewrite EQ].
 Qed.
 
@@ -176,7 +176,7 @@ Proof.
   revert v0 v WALK. induction w as [ | v' w IH] using List.rev_ind; i.
   - inv WALK. exists []. econstructor 1.
   - rewrite -> walk_app_iff in WALK. destruct WALK as (v1 & WALK1 & WALK2).
-    inv WALK2. inv H_walk. obtain [p PATH] with WALK1 by IH.
+    inv WALK2. inv H_walk. find* [p PATH] by IH.
     pose proof (In_dec v' (v0 :: p)) as [ELEM | NOT_IN].
     + inv ELEM.
       * exists []. econstructor 1.
