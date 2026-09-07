@@ -185,7 +185,7 @@ Proof.
       * rewrite -> walk_app_iff. exists v1. split.
         { now eapply path_iff_no_dup_walk. }
         { econstructor 2; eauto. }
-      * change (NoDup ((v0 :: p ) ++ [v'])).
+      * change (NoDup ((v0 :: p) ++ [v'])).
         rewrite <- rev_involutive. eapply NoDup_rev.
         rewrite -> rev_unit. econstructor 2.
         { now rewrite <- In_rev. }
