@@ -213,14 +213,13 @@ Let beta (v : V) (v' : V) : Prop :=
 
 Variable next : V -> V.
 
-Lemma deterministic_walk_to_sink_guarantees_sn (v_s : V) (v_t : V) (v : V) (w : list V)
+Lemma deterministic_walk_to_sink_guarantees_sn (v_s : V) (v_t : V)
   (H_beta : forall v : V, forall v' : V, forall E_v_v' : v ~>β v', next v = v' /\ v' ≠ v_s)
   (CLOSED : next v_t = v_s)
-  (H_walk : v ~~~[ w ]~~> v_t)
-  : SN.sn beta v.
+  : forall v : V, ⟪ walk_to_sink : exists w, v ~~~[ w ]~~> v_t ⟫ -> SN.sn beta v.
 Proof.
-  induction H_walk as [ | v0 v1 w EDGE H_walk IH]; econs; intros v' EDGE'.
-  - find* [Hv' H_ne] by H_beta.
+  intros v [w H_walk]. induction H_walk as [ | v0 v1 w EDGE H_walk IH]; econs; intros v' EDGE'.
+  - obtain [Hv' H_ne] with EDGE' by H_beta.
     congruence.
   - obtain [Hv1 _] with EDGE by H_beta.
     obtain [Hv' _] with EDGE' by H_beta.
