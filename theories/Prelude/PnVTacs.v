@@ -74,7 +74,9 @@ Ltac xapply idx prf :=
     first
     [ lazymatch goal with
       | [ Shelf := @_mkTaggedLock _ ?A' ?arg : _TaggedLock idx _ |- _ ] =>
-        unify_arg_type A A';
+        (* Infer an unknown binder type from later premises before consuming
+           an argument that could otherwise unify with any type. *)
+        tryif is_evar A then fail else unify_arg_type A A';
         xapply constr:(S idx) (prf arg)
       end
     | isSort A;
@@ -88,6 +90,11 @@ Ltac xapply idx prf :=
       | xapply idx _RET_;
         clear _RET_
       ]
+    | lazymatch goal with
+      | [ Shelf := @_mkTaggedLock _ ?A' ?arg : _TaggedLock idx _ |- _ ] =>
+        unify_arg_type A A';
+        xapply constr:(S idx) (prf arg)
+      end
     ]
   | let _ := _ in _ =>
     let _RET_ := fresh "_RET_" in
@@ -109,10 +116,16 @@ Ltac xapply idx prf :=
   end.
 
 Ltac fire func :=
-  let _RET_ := fresh "_RET_" in
-  epose proof func as _RET_;
-  xapply constr:(0) _RET_;
-  (try clear _RET_);
+  unshelve (
+    let _RET_ := fresh "_RET_" in
+    (* Defer typeclass search until the supplied arguments determine types. *)
+    let func := open_constr:(func) in
+    epose proof func as _RET_;
+    xapply constr:(0) _RET_;
+    (try clear _RET_);
+    (* Expose the remaining obligations before the result continuation. *)
+    shelve
+  );
   free_all.
 
 Ltac last :=

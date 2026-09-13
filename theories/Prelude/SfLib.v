@@ -668,14 +668,16 @@ Tactic Notation "exploit" uconstr(t) :=
 
 (* When 'exploit x' generates too many sub goals, try 'hexploit x' *)
 
-Lemma mp : forall P Q : Type, P -> (P -> Q) -> Q.
-Proof. intuition. Defined.
+#[universes(polymorphic=yes)]
+Definition mp'@{u1 u2 | } (P : Type@{u1}) (Q : Type@{u2}) : P -> (P -> Q) -> Q :=
+  fun HP : P => fun P2Q : P -> Q => P2Q HP.
 
-Lemma mp' : forall P Q : Type, (P -> Q) -> P -> Q.
-Proof. intuition. Qed.
+#[universes(polymorphic=yes)]
+Definition mp@{u1 u2 | } (P : Type@{u1}) (Q : Type@{u2}) : (P -> Q) -> P -> Q :=
+  fun P2Q : P -> Q => fun HP : P => P2Q HP.
 
-Ltac hexploit x := eapply mp; [eapply x|].
-Ltac hexploit' x := let H := fresh in set (H := x); clear H; eapply mp; [eapply x|].
+Ltac hexploit x := eapply mp'; [eapply x | ].
+Ltac hexploit' x := let H := fresh in set (H := x); clear H; eapply mp'; [eapply x | ].
 
 (* set_prop N T A performs 'assert (A : P); [|set (N := T A)]' when T is a term of type (P -> _) *)
 

@@ -101,6 +101,8 @@ End FinitePartialMap.
 
 #[global] Abbreviation fpmap K := (FinitePartialMap.t K (isSorted compare)).
 
+Module FPM.
+
 Section BASICS.
 
 Context {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET := POSET_K)}.
@@ -516,3 +518,5 @@ Proof.
   - exact m.(FinitePartialMap.data_isSorted).
   - generalize (FinitePartialMap.data m) as xs; clear. induction xs as [ | [k v] xs IH]; simpl; f_equal; auto.
 Defined.
+
+End FPM.

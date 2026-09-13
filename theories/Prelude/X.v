@@ -3,12 +3,17 @@ Require Export PnV.Prelude.Prelude.
 Require Export PnV.Prelude.PnVTacs.
 
 #[universes(polymorphic=yes)]
-Definition mp@{u v | } {A : Type@{u}} {B : Type@{v}} (x : A) (f : A -> B) : B :=
+Definition MP@{u v | } {A : Type@{u}} {B : Type@{v}} (x : A) (f : A -> B) : B :=
   f x.
 
-#[global] Arguments mp {A} {B} /.
+#[global] Arguments MP {A} {B} /.
 
-Infix "&" := mp (at level 90, left associativity).
+Infix "&" := MP (at level 90, left associativity).
+
+Definition decideb (P : Prop) {P_dec : B.Decision P} : bool :=
+  if B.decide P then true else false.
+
+#[global] Arguments decideb P%_type_scope {P_dec} /.
 
 Notation "lhs ≠ rhs" := (~ (lhs = rhs)) : type_scope.
 
@@ -426,30 +431,30 @@ Theorem finite_upper_cone_implies_sn (x0 : A)
   (finite_upper_cone : exists cone : list A, forall x : A, x0 =< x -> L.In x cone)
   : sn betaProgressive x0.
 Proof.
-  destruct finite_upper_cone as [cone IN].
-  enough (INV : forall bound : nat, forall cone : list A, forall x : A, length cone <= bound -> (forall y : A, x =< y -> L.In y cone) -> sn betaProgressive x).
-  { eapply INV with (bound := length cone) (cone := cone); eauto. }
-  induction bound as [ | bound IH]; intros cone' x LENGTH UPPER.
-  - destruct cone' as [ | a cone']; simpl in LENGTH.
-    + exfalso. eapply UPPER with (y := x). reflexivity.
+  destruct finite_upper_cone as [cone H_cone].
+  assert (exists bound : nat, length cone <= bound) as [bound LENGTH] by now exists (length cone).
+  revert cone x0 LENGTH H_cone; induction bound as [ | bound IH]; intros ys x0 LENGTH UPPER.
+  - destruct ys as [ | y ys]; simpl in LENGTH.
+    + exfalso. eapply UPPER with (x := x0). reflexivity.
     + exfalso. lia.
-  - pose proof (UPPER x (leProp_refl x)) as IN'.
-    apply L.in_split in IN'. destruct IN' as (prefix & suffix & CONE_EQ).
-    subst cone'. econs. intros x' [LE NE].
-    eapply IH with (cone := prefix ++ suffix).
-    + rewrite !length_app in LENGTH |- *. simpl in LENGTH. lia.
+  - assert (x0_le_x0 : x0 =< x0) by reflexivity.
+    obtain IN with x0_le_x0 by UPPER.
+    apply L.in_split in IN. destruct IN as (prefix & suffix & ?); subst ys.
+    econs. intros x [LE NE]. eapply IH with (cone := prefix ++ suffix).
+    + rewrite length_app in LENGTH |- *. simpl in LENGTH. lia.
     + intros y LE'.
-      pose proof (UPPER y (leProp_trans x x' y LE LE')) as IN'.
-      rewrite L.in_app_iff in IN'. simpl in IN'.
-      rewrite L.in_app_iff. destruct IN' as [IN' | [EQ' | IN']]; eauto.
-      subst y. contradiction NE. eapply leProp_antisymmetry; eauto.
+      assert (x0_le_y : x0 =< y) by now transitivity x.
+      obtain IN with x0_le_y by UPPER.
+      rewrite L.in_app_iff in IN |- *. simpl in IN.
+      destruct IN as [IN | [EQ | IN]]; auto.
+      subst y. contradiction NE. eapply leProp_antisymmetry; auto.
 Qed.
 
 Corollary finite_domain_guarantees_sn
   (FINITE : exists enum : list A, forall x : A, L.In x enum)
   : hasSN betaProgressive.
 Proof.
-  destruct FINITE as [enum IN]. intros x0.
+  destruct FINITE as [enum H_enum]. ii.
   eapply finite_upper_cone_implies_sn; ss!.
 Qed.
 
@@ -470,26 +475,21 @@ Fixpoint prog_iter (x : A) (sn_x : sn betaProgressive x) {struct sn_x} : A :=
 
 Fixpoint prog_iter_pirrel (x : A) (H_sn : sn betaProgressive x) (H_sn' : sn betaProgressive x) {struct H_sn} : prog_iter x H_sn = prog_iter x H_sn'.
 Proof.
-  destruct H_sn as [H_sn_inv], H_sn' as [H_sn_inv']; simpl.
-  destruct (B.decide _) as [H_EQ | H_NE]; [reflexivity | eapply prog_iter_pirrel].
+  destruct H_sn as [H_sn_inv], H_sn' as [H_sn_inv']; simpl; des_ifs.
 Qed.
 
 Fixpoint prog_iter_isProgressive (x : A) (sn_x : sn betaProgressive x) {struct sn_x} : x =< prog_iter x sn_x.
 Proof.
-  destruct sn_x as [H_sn_inv]. simpl.
-  destruct (B.decide _) as [H_EQ | H_NE].
+  destruct sn_x as [H_sn_inv]; simpl; des_ifs.
   - reflexivity.
   - etransitivity.
     + eapply step_isProgressive.
     + eapply prog_iter_isProgressive.
 Qed.
 
-Fixpoint prog_iter_isFixedpoint (x : A) (sn_x : sn betaProgressive x) {struct sn_x} : step (prog_iter x sn_x) == prog_iter x sn_x.
+Fixpoint prog_iter_isFixedpoint (x : A) (sn_x : sn betaProgressive x) {struct sn_x} : prog_iter x sn_x == step (prog_iter x sn_x).
 Proof.
- destruct sn_x as [H_sn_inv]. simpl.
-  destruct (B.decide _) as [H_EQ | H_NE].
-  - symmetry. exact H_EQ.
-  - eapply prog_iter_isFixedpoint.
+ destruct sn_x as [H_sn_inv]; simpl; des_ifs.
 Qed.
 
 Hypothesis step_isMonotonic : isMonotonic1 step.
@@ -560,7 +560,7 @@ Lemma mk_NOT_P {n : nat} {s : State}
   (H_NO : ~ (isDone n s))
   : ~ (P n).
 Proof.
-  unfold P. rewrite <- Hs. exact H_NO.
+  unfold P. congruence.
 Qed.
 
 Lemma preserves_eq {n : nat} {s : State}
@@ -568,17 +568,14 @@ Lemma preserves_eq {n : nat} {s : State}
   (H_NO : ~ (isDone n s))
   : step n s = trace (S n).
 Proof.
-  simpl. unfold advance.
-  destruct (B.decide _) as [H_YES' | H_NO'].
-  - contradiction H_NO. congruence.
-  - congruence.
+  simpl. unfold advance. des_ifs.
 Qed.
 
 Fixpoint strong_search_go (n : nat) (s : State) (Hs : s = trace n) (sn_n : sn search n) {struct sn_n} : nat * State :=
   match B.decide (isDone n s) with
   | left H_YES => (n, s)
   | right H_NO =>
-    let s' := step n s in
+    let s' : State := step n s in
     strong_search_go (S n) s' (preserves_eq Hs H_NO) (sn_inv n sn_n (S n) (search_next n (mk_NOT_P Hs H_NO)))
   end.
 
@@ -598,48 +595,39 @@ Proof.
   exact (sn_search k O P_k).
 Defined.
 
-Definition strong_search : nat * State :=
-  strong_search_go 0 s0 eq_refl sn_search_0.
-
 Fixpoint strong_search_go_pirrel (n : nat) (s : State) (Hs : s = trace n) (Hs' : s = trace n) (sn_n : sn search n) (sn_n' : sn search n) {struct sn_n} : strong_search_go n s Hs sn_n = strong_search_go n s Hs' sn_n'.
 Proof.
-  destruct sn_n as [H_sn_inv], sn_n' as [H_sn_inv']; simpl.
-  destruct (B.decide _) as [H_YES | H_NO].
-  - reflexivity.
-  - eapply strong_search_go_pirrel.
+  destruct sn_n as [H_sn_inv], sn_n' as [H_sn_inv']; simpl; des_ifs.
 Qed.
 
-Lemma strong_search_go_correct n s n' s'
-  (Hs : s = trace n)
-  (sn_n : sn search n)
-  (RESULT : (n', s') = strong_search_go n s Hs sn_n)
-  : trace n' = s' /\ isDone n' s' /\ (forall m : nat, n <= m -> m < n' -> ~ (isDone m (trace m))).
+Fixpoint strong_search_go_spec (n : nat) (s : State) (Hs : s = trace n) (sn_n : sn search n) {struct sn_n} : forall n' : nat, forall s' : State, forall H_OBS : strong_search_go n s Hs sn_n = (n', s'), trace n' = s' /\ isDone n' s' /\ ⟪ FIRST : forall m : nat, forall m_ge : n <= m, forall m_lt : m < n', ~ (isDone m (trace m)) ⟫.
 Proof.
-  revert n s Hs sn_n n' s' RESULT. fix IH 4. intros n s Hs [H_sn_inv] n' s' RESULT. simpl in RESULT.
-  destruct (B.decide (isDone n s)) as [H_YES | H_NO].
-  - inversion RESULT; subst n' s'. split.
-    + symmetry. exact Hs.
-    + split; [exact H_YES | lia].
-  - find* (TRACE & DONE & FIRST) by IH.
-    split; [exact TRACE | split; [exact DONE | intros m N_LE_M M_LT]].
+  unnw. destruct sn_n as [H_sn_inv]; simpl; i; des_ifs.
+  - clear strong_search_go_spec. splits; ss!.
+  - find* (TRACE & DONE & FIRST) by strong_search_go_spec.
+    clear strong_search_go_spec. splits; auto. i.
     pose proof (Nat.eq_dec m n) as [EQ | NE].
-    + subst m. unfold P. rewrite <- Hs. exact H_NO.
+    + congruence.
     + eapply FIRST; lia.
 Qed.
 
-Theorem strong_search_correct n s
-  (H_strong_search : (n, s) = strong_search)
-  : trace n = s /\ isDone n s /\ (forall m : nat, m < n -> ~ (isDone m (trace m))).
+Definition strong_search : nat * State :=
+  strong_search_go 0 s0 eq_refl sn_search_0.
+
+Theorem strong_search_spec n s
+  (H_OBS : strong_search = (n, s))
+  : trace n = s /\ isDone n s /\ ⟪ FIRST : forall n' : nat, isDone n' (trace n') -> n <= n' ⟫.
 Proof.
-  find* (TRACE & DONE & FIRST) by strong_search_go_correct.
-  split; [exact TRACE | split; [exact DONE | intros m LT]].
-  eapply FIRST; lia.
+  find* (TRACE & DONE & FIRST) by strong_search_go_spec.
+  unnw. splits; auto. ii.
+  enough (~ (n' < n)) by lia.
+  ii. eapply FIRST with (m := n'); auto. lia.
 Qed.
 
 Definition strong_search_with_budget (budget : nat) : nat * State :=
   strong_search_go 0 s0 eq_refl (sn_guard (S budget) sn_search_0).
 
-Theorem strong_search_with_budget_eq (budget : nat)
+Theorem strong_search_with_budget_eq budget
   : strong_search_with_budget budget = strong_search.
 Proof.
   eapply strong_search_go_pirrel.
