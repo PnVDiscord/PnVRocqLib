@@ -1483,6 +1483,11 @@ End __.
 
 #[global] Arguments decide P {Decision}.
 
+Definition decideb (P : Prop) {P_dec : B.Decision P} : bool :=
+  if B.decide P then true else false.
+
+#[global] Arguments decideb P%_type_scope {P_dec} /.
+
 End B.
 
 Abbreviation StateT k := {| B.runStateT := k |}.

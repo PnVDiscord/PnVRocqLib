@@ -10,11 +10,6 @@ Definition MP@{u v | } {A : Type@{u}} {B : Type@{v}} (x : A) (f : A -> B) : B :=
 
 Infix "&" := MP (at level 90, left associativity).
 
-Definition decideb (P : Prop) {P_dec : B.Decision P} : bool :=
-  if B.decide P then true else false.
-
-#[global] Arguments decideb P%_type_scope {P_dec} /.
-
 Notation "lhs ≠ rhs" := (~ (lhs = rhs)) : type_scope.
 
 Ltac done :=

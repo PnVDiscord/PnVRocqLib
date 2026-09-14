@@ -1,4 +1,5 @@
 Require Import Stdlib.NArith.BinNat.
+Require Export Stdlib.Sorting.SetoidList.
 Require Import PnV.Prelude.Prelude.
 Require Import PnV.Prelude.X.
 Require Export PnV.Math.ThN.
@@ -17,7 +18,7 @@ Class HsOrd `(A : Type) `{POSET : isPoset A} : Type :=
 
 #[global] Existing Instance HsOrd_hsOrd.
 
-Definition isSorted {A : Type} (compare : A -> A -> comparison) : list A -> bool :=
+Definition isSorted {A : Type} (compare : A -> (A -> comparison)) : list A -> bool :=
   fix go (xs : list A) {struct xs} : bool :=
   match xs with
   | [] => true
@@ -79,7 +80,7 @@ Lemma compare_compatWith_eqProp (x : A) (x' : A) (y : A) (y' : A)
   (y_EQ : y == y')
   : compare x y = compare x' y'.
 Proof.
-  assert (LEMMA : forall u : A, forall u' : A, forall v : A, forall v' : A, u == u' -> v == v' -> compare u v = Lt -> compare u' v' = Lt).
+  assert (LEMMA : forall u : A, forall u' : A, forall v : A, forall v' : A, u == u' -> (v == v' -> (compare u v = Lt -> compare u' v' = Lt))).
   { intros u u' v v' u_EQ v_EQ OBS_Lt.
     pose proof (compare_Lt u v OBS_Lt) as [u_le_v u_ne_v].
     assert (u'_le_v' : u' =< v').
@@ -131,7 +132,7 @@ Qed.
 Lemma isSorted_app (l1 : list A) (l2 : list A)
   (H1_isSorted : isSorted compare l1 = true)
   (H2_isSorted : isSorted compare l2 = true)
-  (CROSS : forall x : A, forall y : A, L.In x l1 -> L.In y l2 -> compare x y = Lt)
+  (CROSS : forall x : A, forall y : A, L.In x l1 -> (L.In y l2 -> compare x y = Lt))
   : isSorted compare (l1 ++ l2) = true.
 Proof.
   revert H1_isSorted CROSS. induction l1 as [ | x l1 IH]; intros H1_isSorted CROSS; [exact H2_isSorted | simpl app].
@@ -145,7 +146,7 @@ Qed.
 
 End PROSET_FACTS.
 
-Class hsOrdLaws {A : Type} {SETOID : isSetoid A} (cmp : A -> A -> comparison) : Prop :=
+Class hsOrdLaws {A : Type} {SETOID : isSetoid A} (cmp : A -> (A -> comparison)) : Prop :=
   { cmp_Eq_iff (x : A) (y : A)
     : cmp x y = Eq <-> x == y
   ; cmp_Gt_flip (x : A) (y : A)
@@ -165,7 +166,7 @@ Section MAKE_hsOrd.
 
 Context {A : Type} {SETOID : isSetoid A}.
 
-Variable cmp : A -> A -> comparison.
+Variable cmp : A -> (A -> comparison).
 
 Hypothesis LAWS : hsOrdLaws cmp.
 
@@ -761,3 +762,300 @@ End HsOrd_of_injection.
 
 #[global] Arguments mkPoset_inj {A} {B} {B_isPoset} HsOrd_B code code_inj.
 #[global] Arguments mkHsOrd_inj {A} {B} {B_isPoset} HsOrd_B code code_inj.
+
+Module OrderedList.
+
+Section ORDERED_LIST.
+
+Context {A : Type} {K : Type} {PROSET : isProset K} {ORD : hsOrd K}.
+
+Variable key : A -> K.
+
+Fixpoint lookup (k : K) (xs : list A) : option A :=
+  match xs with
+  | [] => None
+  | x :: xs =>
+    match compare k (key x) with
+    | Eq => Some x
+    | Lt => None
+    | Gt => lookup k xs
+    end
+  end.
+
+Lemma lookup_compat_key (k : K) (k' : K) (xs : list A)
+  (EQ : k == k')
+  : lookup k xs = lookup k' xs.
+Proof.
+  induction xs as [ | x xs IH]; simpl; auto.
+  rewrite compare_compatWith_eqProp with (x' := k') (y' := key x) by (assumption || reflexivity).
+  destruct (compare k' (key x)); auto.
+Qed.
+
+Lemma sorted_cons_iff (x : A) (xs : list A)
+  : isSorted compare (map key (x :: xs)) = true <-> ((forall y : A, L.In y xs -> compare (key x) (key y) = Lt) /\ isSorted compare (map key xs) = true).
+Proof.
+  cbn [map]. rewrite isSorted_cons_iff. split.
+  - intros [HEAD TAIL]. split; auto. intros y IN. apply HEAD. now apply L.in_map.
+  - intros [HEAD TAIL]. split; auto. intros y IN.
+    rewrite L.in_map_iff in IN. find* [x' [EQ IN']] by IN. subst y. now apply HEAD.
+Qed.
+
+Lemma lookup_lt_None (k : K) (xs : list A)
+  (LT : forall x : A, L.In x xs -> compare k (key x) = Lt)
+  : lookup k xs = None.
+Proof.
+  destruct xs as [ | x xs]; simpl; auto.
+  rewrite LT by (left; reflexivity). reflexivity.
+Qed.
+
+Lemma lookup_spec (k : K) (xs : list A)
+  (SORTED : isSorted compare (map key xs) = true)
+  (p : A)
+  : lookup k xs = Some p <-> (L.In p xs /\ k == key p).
+Proof.
+  revert SORTED. induction xs as [ | x xs IH]; intros SORTED; simpl.
+  - split; [discriminate | firstorder].
+  - rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
+    destruct (compare k (key x)) eqn: OBS.
+    + split.
+      * intros EQ. inv EQ. split; auto. now apply compare_Eq_iff.
+      * intros [[EQ | IN] EQ']; [congruence | ].
+        obtain LT with p IN by HEAD.
+        assert (key x == key p) as EQ.
+        { transitivity k; [symmetry; now apply compare_Eq_iff | exact EQ']. }
+        rewrite <- compare_Eq_iff in EQ. rewrite EQ in LT. discriminate.
+    + split; [discriminate | intros [[EQ | IN] EQ']].
+      * subst p. rewrite <- compare_Eq_iff in EQ'. rewrite EQ' in OBS. discriminate.
+      * obtain LT with OBS (HEAD p IN) by compare_Lt_trans.
+        rewrite <- compare_Eq_iff in EQ'. rewrite EQ' in LT. discriminate.
+    + rewrite IH by exact TAIL. split.
+      * intros [IN EQ]. auto.
+      * intros [[EQ | IN] EQ']; [subst p | auto].
+        rewrite <- compare_Eq_iff in EQ'. rewrite EQ' in OBS. discriminate.
+Qed.
+
+Fixpoint insert (x : A) (xs : list A) : list A :=
+  match xs with
+  | [] => [x]
+  | y :: xs =>
+    match compare (key x) (key y) with
+    | Eq => x :: xs
+    | Lt => x :: y :: xs
+    | Gt => y :: insert x xs
+    end
+  end.
+
+Lemma in_insert_incl (x : A) (xs : list A) (p : A)
+  : L.In p (insert x xs) -> (p = x \/ L.In p xs).
+Proof.
+  induction xs as [ | y xs IH]; simpl.
+  - intuition congruence.
+  - destruct (compare (key x) (key y)); simpl; intuition congruence.
+Qed.
+
+Lemma insert_sorted (x : A) (xs : list A)
+  (SORTED : isSorted compare (map key xs) = true)
+  : isSorted compare (map key (insert x xs)) = true.
+Proof.
+  revert SORTED. induction xs as [ | y xs IH]; intros SORTED; simpl; auto.
+  rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
+  destruct (compare (key x) (key y)) eqn: OBS.
+  - rewrite sorted_cons_iff. split; auto. intros p IN.
+    rewrite compare_compatWith_eqProp with (x' := key y) (y' := key p) by (try reflexivity; now apply compare_Eq_iff).
+    now apply HEAD.
+  - rewrite sorted_cons_iff. split.
+    + intros p [EQ | IN]; [subst p; exact OBS | ].
+      eapply compare_Lt_trans; [exact OBS | apply HEAD; exact IN].
+    + rewrite sorted_cons_iff. auto.
+  - rewrite sorted_cons_iff. split; auto. intros p IN.
+    find* [EQ | IN'] by (in_insert_incl x xs p IN).
+    + subst p. now apply compare_Gt_flip.
+    + now apply HEAD.
+Qed.
+
+Lemma lookup_insert_eq (x : A) (xs : list A)
+  : lookup (key x) (insert x xs) = Some x.
+Proof.
+  induction xs as [ | y xs IH]; simpl.
+  - now rewrite compare_refl.
+  - destruct (compare (key x) (key y)) eqn: OBS; simpl; rewrite ?compare_refl, ?OBS; auto.
+Qed.
+
+Lemma lookup_insert_ne (x : A) (xs : list A) (k : K)
+  (NE : ~ k == key x)
+  : lookup k (insert x xs) = lookup k xs.
+Proof.
+  induction xs as [ | y xs IH]; simpl.
+  - destruct (compare k (key x)) eqn: OBS; auto.
+    exfalso. apply NE. now apply compare_Eq_iff.
+  - destruct (compare (key x) (key y)) eqn: OBS; simpl.
+    + rewrite <- compare_compatWith_eqProp with (x := k) (x' := k) (y := key x) (y' := key y) by (reflexivity || now apply compare_Eq_iff).
+      destruct (compare k (key x)) eqn: OBS'; auto.
+      exfalso. apply NE. now apply compare_Eq_iff.
+    + destruct (compare k (key x)) eqn: OBS'; auto.
+      * exfalso. apply NE. now apply compare_Eq_iff.
+      * now rewrite compare_Lt_trans with (y := key x) by assumption.
+    + destruct (compare k (key y)); auto.
+Qed.
+
+Lemma length_insert (x : A) (xs : list A)
+  (ABSENT : lookup (key x) xs = None)
+  : length (insert x xs) = S (length xs).
+Proof.
+  induction xs as [ | y xs IH]; simpl in *; auto.
+  destruct (compare (key x) (key y)); simpl in *; try discriminate; auto.
+Qed.
+
+Fixpoint remove (k : K) (xs : list A) : list A :=
+  match xs with
+  | [] => []
+  | x :: xs =>
+    match compare k (key x) with
+    | Eq => xs
+    | Lt => x :: xs
+    | Gt => x :: remove k xs
+    end
+  end.
+
+Lemma in_remove_incl (k : K) (xs : list A) (p : A)
+  : L.In p (remove k xs) -> L.In p xs.
+Proof.
+  induction xs as [ | x xs IH]; simpl; auto.
+  destruct (compare k (key x)); simpl; intuition.
+Qed.
+
+Lemma remove_sorted (k : K) (xs : list A)
+  (SORTED : isSorted compare (map key xs) = true)
+  : isSorted compare (map key (remove k xs)) = true.
+Proof.
+  revert SORTED. induction xs as [ | x xs IH]; intros SORTED; simpl; auto.
+  rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
+  destruct (compare k (key x)); auto; rewrite sorted_cons_iff; split; auto.
+  intros p IN. apply HEAD. now apply in_remove_incl in IN.
+Qed.
+
+Lemma lookup_remove_eq (k : K) (xs : list A)
+  (SORTED : isSorted compare (map key xs) = true)
+  : lookup k (remove k xs) = None.
+Proof.
+  revert SORTED. induction xs as [ | x xs IH]; intros SORTED; simpl; auto.
+  rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
+  destruct (compare k (key x)) eqn: OBS; simpl; rewrite ?OBS; auto.
+  apply lookup_lt_None. intros p IN.
+  rewrite compare_compatWith_eqProp with (x' := key x) (y' := key p) by (try reflexivity; now apply compare_Eq_iff).
+  now apply HEAD.
+Qed.
+
+Lemma lookup_remove_ne (k : K) (xs : list A) (k0 : K)
+  (SORTED : isSorted compare (map key xs) = true)
+  (NE : ~ k0 == k)
+  : lookup k0 (remove k xs) = lookup k0 xs.
+Proof.
+  revert SORTED. induction xs as [ | x xs IH]; intros SORTED; simpl; auto.
+  rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
+  destruct (compare k (key x)) eqn: OBS; simpl; auto.
+  - destruct (compare k0 (key x)) eqn: OBS'; auto.
+    + exfalso. apply NE. transitivity (key x).
+      * now apply compare_Eq_iff.
+      * symmetry. now apply compare_Eq_iff.
+    + apply lookup_lt_None. intros p IN.
+      eapply compare_Lt_trans; [exact OBS' | apply HEAD; exact IN].
+  - destruct (compare k0 (key x)); auto.
+Qed.
+
+End ORDERED_LIST.
+
+End OrderedList.
+
+Section SETOID_LIST_BRIDGE.
+
+Context {A : Type} {SETOID : isSetoid A}.
+
+Lemma list_eqProp_eqlistA (xs : list A) (ys : list A)
+  : @eqProp (list A) (L.list_isSetoid SETOID) xs ys <-> eqlistA eqProp xs ys.
+Proof.
+  split.
+  - revert ys. induction xs as [ | x xs IH]; intros [ | y ys] EQ.
+    + econs.
+    + find* CONTRA by (EQ 0). inv CONTRA.
+    + find* CONTRA by (EQ 0). inv CONTRA.
+    + find* HEAD by (EQ 0). inv HEAD. econs; eauto.
+      eapply IH. intros n. exact (EQ (S n)).
+  - intros EQ. induction EQ as [ | x y xs ys EQ_xy EQ_xs IH]; intros [ | n]; cbn.
+    + constructor.
+    + constructor.
+    + constructor. exact EQ_xy.
+    + apply IH.
+Qed.
+
+Lemma InA_list_compat (xs : list A) (ys : list A)
+  (EQ : @eqProp (list A) (L.list_isSetoid SETOID) xs ys)
+  : equivlistA eqProp xs ys.
+Proof.
+  apply list_eqProp_eqlistA in EQ. eapply eqlistA_equivlistA; eauto with typeclass_instances.
+Qed.
+
+End SETOID_LIST_BRIDGE.
+
+Lemma InA_eqProp_iff {A : Type} {POSET : isPoset A} (x : A) (xs : list A)
+  : InA eqProp x xs <-> L.In x xs.
+Proof.
+  rewrite InA_alt. split.
+  - intros (y & EQ & IN). rewrite Poset_eqProp_spec in EQ. now subst y.
+  - intros IN. exists x. split; [reflexivity | exact IN].
+Qed.
+
+Section SORTED_LIST_BRIDGE.
+
+Context {A : Type} {PROSET : isProset A} {ORD : hsOrd A}.
+
+#[local]
+Instance compare_lt_StrictOrder
+  : StrictOrder (fun x : A => fun y : A => compare x y = Lt).
+Proof.
+  split.
+  - intros x LT. rewrite compare_refl in LT. congruence.
+  - intros x y z. apply compare_Lt_trans.
+Qed.
+
+#[local]
+Instance compare_lt_eqPropCompatible2
+  : eqPropCompatible2 (fun x : A => fun y : A => compare x y = Lt).
+Proof.
+  intros x x' y y' EQ_x EQ_y.
+  now rewrite compare_compatWith_eqProp with (x' := x') (y' := y') by assumption.
+Qed.
+
+Lemma isSorted_iff_Sorted (xs : list A)
+  : isSorted compare xs = true <-> Sorted (fun x : A => fun y : A => compare x y = Lt) xs.
+Proof.
+  assert (STRONG : forall ys : list A, isSorted compare ys = true <-> StronglySorted (fun x : A => fun y : A => compare x y = Lt) ys).
+  { intros ys. induction ys as [ | y ys IH].
+    - split; intros; [econs | reflexivity].
+    - rewrite isSorted_cons_iff. split.
+      + intros [HEAD TAIL]. econs; [now apply IH | now rewrite Forall_forall].
+      + intros SORTED. inv SORTED. rewrite Forall_forall in *. split; eauto. now apply IH.
+  }
+  rewrite STRONG. split; [apply StronglySorted_Sorted | ].
+  apply Sorted_StronglySorted. intros x y z. apply compare_Lt_trans.
+Qed.
+
+Theorem sorted_NoDupA (xs : list A)
+  (SORTED : isSorted compare xs = true)
+  : NoDupA eqProp xs.
+Proof.
+  eapply SortA_NoDupA with (ltA := fun x : A => fun y : A => compare x y = Lt) (ltA_compat := @compatibleWith_eqProp_2' A A Prop _ _ _ _ compare_lt_eqPropCompatible2); eauto with typeclass_instances.
+  now apply isSorted_iff_Sorted.
+Qed.
+
+Theorem sorted_eqProp_iff (xs : list A) (ys : list A)
+  (SORTED_XS : isSorted compare xs = true)
+  (SORTED_YS : isSorted compare ys = true)
+  : @eqProp (list A) (L.list_isSetoid PROSET.(Proset_isSetoid)) xs ys <-> equivlistA eqProp xs ys.
+Proof.
+  rewrite list_eqProp_eqlistA. split.
+  - eapply eqlistA_equivlistA; eauto with typeclass_instances.
+  - intros EXT. eapply SortA_equivlistA_eqlistA with (ltA := fun x : A => fun y : A => compare x y = Lt) (ltA_compat := @compatibleWith_eqProp_2' A A Prop _ _ _ _ compare_lt_eqPropCompatible2); eauto with typeclass_instances; now apply isSorted_iff_Sorted.
+Qed.
+
+End SORTED_LIST_BRIDGE.

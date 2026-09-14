@@ -115,7 +115,7 @@ Ltac xapply idx prf :=
     revert _RET_
   end.
 
-Ltac fire func :=
+Ltac prepare func :=
   unshelve (
     let _RET_ := fresh "_RET_" in
     (* Defer typeclass search until the supplied arguments determine types. *)
@@ -136,6 +136,25 @@ Ltac last :=
   | lia
   | eauto
   ].
+
+Ltac infer_premise :=
+  lazymatch goal with
+  | |- ?T =>
+    let S := type of T in
+    lazymatch S with
+    | Prop => last
+    | _ => shelve
+    end
+  end.
+
+Ltac fire func :=
+  (* Let premises determine missing data arguments before trying to construct
+     inhabitants of their types. Keep the result continuation last when any
+     remaining data or typeclass obligations are exposed again. *)
+  unshelve (
+    prepare func;
+    [ infer_premise.. | shelve ]
+  ).
 
 End Tac_obtain_private.
 

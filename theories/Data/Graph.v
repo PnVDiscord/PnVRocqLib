@@ -1,8 +1,8 @@
 Require Import PnV.Prelude.Prelude.
-Require Import PnV.Control.Category.
+Require Import PnV.Prelude.X.
 Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.FiniteMap.
-Require Import PnV.Prelude.X.
+Require Import PnV.Control.Worklist.
 
 #[local] Abbreviation In := L.In.
 #[local] Infix "\in" := E.In : type_scope.
@@ -183,7 +183,7 @@ Proof.
   - inv WALK. exists []. econstructor 1.
   - rewrite -> walk_app_iff in WALK. destruct WALK as (v1 & WALK1 & WALK2).
     inv WALK2. inv H_walk. find* [p PATH] by IH.
-    pose proof (In_dec v' (v0 :: p)) as [ELEM | NOT_IN].
+    find* [ELEM | NOT_IN] by (In_dec v' (v0 :: p)).
     + inv ELEM.
       * exists []. econstructor 1.
       * find* (p' & PATH' & _) by mk_subpath. ss!.
@@ -236,104 +236,66 @@ End deterministic_walk_to_sink_guarantees_sn.
 
 Section REACHABILITY.
 
-#[local] Notation "x ∈ xs" := (L.In x xs.(FSet.data)).
+#[local] Notation "x ∈ xs" := (L.In x (FSet.data xs)).
 
 Context {V_isPoset : isPoset V} {HsOrd_V : HsOrd V}.
 
 Variable nodes : fset V.
 
-Hypothesis arc_dec : forall v : V, forall v' : V, B.Decision ((v, v') \in E).
+Variable adjacency : V -> fin_ensemble V.
 
-Definition successors (v : V) : list V :=
-  filter (fun v' => decideb ((v, v') \in E)) nodes.(FSet.data).
-
-Lemma in_successors_iff (v : V) (v' : V)
-  : In v' (successors v) <-> v' ∈ nodes /\ (v, v') \in E.
-Proof.
-  unfold successors. rewrite filter_In. simpl; des_ifs; intuition congruence.
-Qed.
-
-Fixpoint reachables_worklist (fuel : nat) (seen : fset V) {struct fuel} : list V -> fset V :=
-  match fuel with
-  | O => fun _ => seen
-  | S fuel' =>
-    fix go (todo : list V) {struct todo} : fset V :=
-    match todo with
-    | [] => seen
-    | v :: todo' => if FS.mem v seen then go todo' else reachables_worklist fuel' (FS.add v seen) (successors v ++ todo')
-    end
-  end.
-
-Definition reachables (v : V) : fset V :=
-  reachables_worklist (length nodes.(FSet.data)) FS.empty [v].
-
-Lemma reachables_worklist_sound (P : V -> Prop) (fuel : nat) (seen : fset V) (todo : list V)
-  (CLOSED : forall v, forall v', P v -> (v, v') \in E -> P v')
-  (H_seen : forall v, v ∈ seen -> P v)
-  (H_todo : forall v, L.In v todo -> P v)
-  : forall v : V, forall IN : v ∈ reachables_worklist fuel seen todo, P v.
-Proof.
-  revert_until fuel. induction fuel as [ | fuel IH]; ii; auto.
-  revert_until todo. induction todo as [ | v todo IH_todo]; simpl; ii; auto. des_ifs.
-  - eapply IH_todo; auto.
-  - eapply IH with (seen := FS.add v seen) (todo := successors v ++ todo); auto.
-    + intros y H_y. rewrite FS.in_add_iff in H_y. des; ss; eauto.
-    + intros y H_y. rewrite in_app_iff in H_y. des; ss; auto.
-      eapply CLOSED with (v := v); ss; auto. now rewrite in_successors_iff in H_y.
-Qed.
+Hypothesis adjacency_correct : forall v, forall v', In v' (adjacency v) <-> (v, v') \in E.
 
 Hypothesis nodes_closed : forall v, v ∈ nodes -> forall v', (v, v') \in E -> v' ∈ nodes.
 
+Lemma reachables_domain_closed (x : V)
+  (IN : x ∈ nodes)
+  : forall y, In y (adjacency x) -> y ∈ nodes.
+Proof.
+  intros y EDGE. rewrite adjacency_correct in EDGE. eauto.
+Qed.
+
+Lemma reachables_domain_finite
+  : exists bound, forall xs : fset V, (forall x, x ∈ xs -> x ∈ nodes) -> length (FSet.data xs) <= bound.
+Proof.
+  exists (length (FSet.data nodes)). intros xs SUBSET.
+  eapply NoDup_incl_length; [apply fset_NoDup | exact SUBSET].
+Qed.
+
+Lemma reachables_initial_in_domain (v : V)
+  (IN : FS.mem v nodes = true)
+  : forall x, x ∈ FS.add v FS.empty -> x ∈ nodes.
+Proof.
+  rewrite FS.mem_eq_spec in IN. intros x H_x.
+  rewrite FS.in_add_eq_iff, FS.in_empty_eq_iff in H_x.
+  find* [EQ | []] by H_x. subst x. exact IN.
+Qed.
+
+Definition reachables (v : V) : fset V.
+Proof.
+  destruct (Bool.bool_dec (FS.mem v nodes) true) as [IN | OUT].
+  - exact (Worklist.closure adjacency (fun x => x ∈ nodes) reachables_domain_closed reachables_domain_finite (FS.add v FS.empty) (reachables_initial_in_domain v IN)).
+  - exact (FS.add v FS.empty).
+Defined.
+
 Lemma walk_in_nodes (v : V) (v' : V) (w : list V)
-  (WALK : v ~~~[ w ]~~> v')
+  (H_walk : v ~~~[ w ]~~> v')
   (IN : v ∈ nodes)
   : v' ∈ nodes.
 Proof.
-  induction WALK; eauto.
+  induction H_walk; eauto.
 Qed.
 
-Lemma reachables_worklist_complete (fuel : nat) (seen : fset V) (todo : list V) (remaining : list V)
-  (H_seen : forall v, v ∈ seen -> v ∈ nodes)
-  (H_todo : forall v, L.In v todo -> v ∈ nodes)
-  (CLOSED : forall v, forall v', v ∈ seen -> (v, v') \in E -> (v' ∈ seen \/ In v' todo))
-  (COVER : forall v, v ∈ nodes -> (v ∈ seen \/ L.In v remaining))
-  (BOUND : length remaining <= fuel)
-  : forall v : V, forall v' : V, forall w : list V, forall FRONT : v ∈ seen \/ In v todo, forall H_walk : v ~~~[ w ]~~> v', v' ∈ reachables_worklist fuel seen todo.
+Lemma reachables_closed (v : V)
+  (IN : v ∈ nodes)
+  : v ∈ reachables v /\ (forall x, x ∈ reachables v -> forall y, (x, y) \in E -> y ∈ reachables v).
 Proof.
-  revert_until fuel; induction fuel as [ | fuel IH]; simpl; i.
-  - assert (IN : v' ∈ nodes).
-    { eapply walk_in_nodes with (v := v) (w := w); auto. des; auto. }
-    obtain [YES | NO] with IN by COVER; auto.
-    destruct remaining; ss; lia.
-  - revert_until todo; induction todo as [ | v todo IH_todo]; simpl; i.
-    { des; [induction H_walk as [ | v0 v1 w EDGE WALK IH_walk] | tauto]; [auto | eapply IH_walk].
-      now find* [YES | []] by CLOSED.
-    }
-    { des_ifs.
-      - rewrite FS.mem_spec in Heq. eapply IH_todo with (remaining := remaining) (v := v0) (w := w); eauto.
-        + intros x y H_x H_edge. find* [YES | [EQ | YES]] by CLOSED; done.
-        + des; auto. left; congruence.
-      - rewrite FS.mem_spec in Heq.
-        assert (v_in_nodes : v ∈ nodes) by now eapply H_todo; left.
-        assert (v_in_remaining : L.In v remaining).
-        { find* [? | ?] by COVER; tauto. }
-        eapply IH with (remaining := remove (fun x => fun y => B.decide (x = y)) v remaining) (v := v0) (w := w); eauto.
-        + intros x x_in. rewrite FS.in_add_iff in x_in. destruct x_in; eauto.
-        + intros x x_in. rewrite L.in_app_iff in x_in. destruct x_in as [x_in | x_in].
-          * now rewrite in_successors_iff in x_in.
-          * eapply H_todo. now right.
-        + intros x y x_in H_edge. rewrite FS.in_add_iff in x_in. destruct x_in as [EQ | IN].
-          * subst x. right. rewrite in_app_iff. left. rewrite in_successors_iff; eauto.
-          * rewrite FS.in_add_iff. rewrite L.in_app_iff.
-            find* [YES | [EQ | YES]] by CLOSED; tauto.
-        + intros x x_in. destruct (FS.mem x (FS.add v seen)) eqn: H_OBS.
-          * left. now rewrite FS.mem_spec in H_OBS.
-          * right. rewrite FS.mem_spec in H_OBS. rewrite FS.in_add_iff in H_OBS. rewrite L.in_remove_iff.
-            find* ? by COVER; split; intuition congruence.
-        + obtain ? with v_in_remaining by (remove_length_lt (EQ_DEC := fun x => fun y => B.decide (x = y))).
-          lia.
-        + rewrite FS.in_add_iff. rewrite L.in_app_iff. done.
-    }
+  assert (MEM : FS.mem v nodes = true) by now rewrite FS.mem_eq_spec.
+  unfold reachables. destruct (Bool.bool_dec (FS.mem v nodes) true) as [OBS | OBS]; [ | contradiction].
+  find* [INIT STEP] by (Worklist.closure_complete adjacency (fun x => x ∈ nodes) reachables_domain_closed reachables_domain_finite (FS.add v FS.empty) (reachables_initial_in_domain v OBS)).
+  split.
+  - eapply INIT. rewrite FS.in_add_eq_iff. auto.
+  - i. eapply STEP; eauto. now rewrite adjacency_correct.
 Qed.
 
 Theorem reachables_correct (v : V)
@@ -342,21 +304,25 @@ Theorem reachables_correct (v : V)
 Proof.
   split.
   - intros REACHABLE. unfold reachables in REACHABLE.
+    destruct (Bool.bool_dec (FS.mem v nodes) true) as [OBS | OBS].
+    2: { contradiction OBS. now rewrite FS.mem_eq_spec. }
     enough (exists w, v ~~~[ w ]~~> v') as [w H_walk] by now exists (v :: w); econs.
-    eapply reachables_worklist_sound with (P := fun x => exists w, v ~~~[ w ]~~> x) (fuel := length nodes.(FSet.data)) (seen := FS.empty) (todo := [v]).
-    + intros x y [w WALK] EDGE. exists (w ++ [y]). eapply walk_app; eauto.
-    + intros x. rewrite FS.in_empty_iff. tauto.
-    + simpl. intros x [EQ | []]. subst x. exists []. econs 1.
-    + exact REACHABLE.
-  - intros [w WALK]. inversion WALK as [w' H_walk]; subst; clear WALK.
-    eapply reachables_worklist_complete with (remaining := nodes.(FSet.data)) (v := v) (w := w'); simpl; done.
+    eapply Worklist.closure_sound with (P := fun x => exists w, v ~~~[ w ]~~> x); [ | | exact REACHABLE].
+    + intros x y [w WALK] EDGE. rewrite adjacency_correct in EDGE.
+      exists (w ++ [y]). eapply walk_app; eauto.
+    + intros x H_x. rewrite FS.in_add_eq_iff, FS.in_empty_eq_iff in H_x.
+      find* [EQ | []] by H_x. subst x. exists []. econs.
+  - intros [w WALK]. inv WALK.
+    obtain [INIT STEP] with IN by reachables_closed.
+    set (reached := reachables v) in *. clearbody reached. clear IN.
+    revert INIT. induction H_walk; i; eauto.
 Qed.
 
 End REACHABILITY.
 
 Section PROPAGATION.
 
-#[local] Notation "x ∈ xs" := (L.In x xs.(FSet.data)).
+#[local] Notation "x ∈ xs" := (L.In x (FSet.data xs)).
 
 Context {X : Type} {V_isPoset : isPoset V} {X_isPoset : isPoset X} {HsOrd_V : HsOrd V} {HsOrd_X : HsOrd X}.
 
@@ -392,29 +358,146 @@ Variable nodes : fset V.
 Definition recursive_equation (F : V -> ensemble X) : Prop :=
   forall v : V, forall IN : v ∈ nodes, forall x : X, x \in F v <-> ⟪ UNFOLD : x ∈ lookup_seed v \/ (exists v', x \in F v' /\ (v, v') \in E) ⟫.
 
-Hypothesis arc_dec : forall v : V, forall v' : V, B.Decision ((v, v') \in E).
+Variable adjacency : V -> fin_ensemble V.
 
-Definition least_solution (v : V) : fset X :=
-  FS.bind (reachables nodes arc_dec v) lookup_seed.
+Definition reverse_adjacency : fpmap V (fset V) :=
+  FS.fold (fun table => fun v => fold_left (fun table => fun v' => FPM.add v' v table) (adjacency v) table) nodes FPM.empty.
+
+Lemma lookup_reverse_edges (v : V) (vs : list V) (table : fpmap V (fset V)) (x : V) (y : V)
+  : FS.In x (FPM.lookup_set (fold_left (fun table => fun v' => FPM.add v' v table) vs table) y) <-> FS.In x (FPM.lookup_set table y) \/ (x = v /\ L.In y vs).
+Proof.
+  revert table. induction vs as [ | v' vs IH]; cbn [fold_left]; i.
+  - simpl. tauto.
+  - rewrite IH, FPM.in_add_iff, !Poset_eqProp_spec. simpl. intuition congruence.
+Qed.
+
+Lemma lookup_reverse_nodes (vs : list V) (table : fpmap V (fset V)) (x : V) (y : V)
+  : FS.In x (FPM.lookup_set (fold_left (fun table => fun v => fold_left (fun table => fun v' => FPM.add v' v table) (adjacency v) table) vs table) y) <-> FS.In x (FPM.lookup_set table y) \/ (L.In x vs /\ L.In y (adjacency x)).
+Proof.
+  revert table. induction vs as [ | v vs IH]; cbn [fold_left]; i.
+  - simpl. tauto.
+  - rewrite IH, lookup_reverse_edges. simpl. intuition congruence.
+Qed.
+
+Lemma lookup_reverse_correct (v : V) (v' : V)
+  : v ∈ FPM.lookup_set reverse_adjacency v' <-> v ∈ nodes /\ L.In v' (adjacency v).
+Proof.
+  unfold reverse_adjacency. rewrite FS.fold_spec, <- FS.In_eq_iff, lookup_reverse_nodes.
+  unfold FPM.lookup_set. rewrite FPM.lookup_empty, FS.in_empty_iff. tauto.
+Qed.
+
+Definition propagation_initial : fset (V * X) :=
+  FPM.initial_facts nodes seed.
+
+Lemma in_propagation_initial_iff (v : V) (x : X)
+  : (v, x) ∈ propagation_initial <-> v ∈ nodes /\ x ∈ lookup_seed v.
+Proof.
+  apply FPM.in_initial_facts_eq_iff.
+Qed.
+
+Definition propagation_values : fset X :=
+  FS.map (@snd V X) propagation_initial.
+
+Definition propagation_next (reversed : fpmap V (fset V)) (p : V * X) : fin_ensemble (V * X) :=
+  FS.fold (fun next => fun v => (v, snd p) :: next) (FPM.lookup_set reversed (fst p)) [].
+
+Lemma in_propagation_next_iff (v : V) (v' : V) (x : X) (x' : X)
+  : L.In (v, x) (propagation_next reverse_adjacency (v', x')) <-> v ∈ nodes /\ L.In v' (adjacency v) /\ x' = x.
+Proof.
+  unfold propagation_next. rewrite FS.fold_spec, <- fold_left_rev_right.
+  change (L.In (v, x) (map (fun u => (u, x')) (rev (FSet.data (FPM.lookup_set reverse_adjacency v')))) <-> v ∈ nodes /\ L.In v' (adjacency v) /\ x' = x).
+  rewrite in_map_iff. split.
+  - intros (u & EQ & H_u). inv EQ. rewrite <- In_rev, lookup_reverse_correct in H_u. tauto.
+  - intros (H_v & H_edge & EQ). subst x'. exists v. split; auto.
+    rewrite <- In_rev, lookup_reverse_correct; auto.
+Qed.
+
+Definition propagation_domain (p : V * X) : Prop :=
+  fst p ∈ nodes /\ snd p ∈ propagation_values.
+
+Lemma propagation_domain_closed
+  : forall p, propagation_domain p -> forall q, L.In q (propagation_next reverse_adjacency p) -> propagation_domain q.
+Proof.
+  intros [v' x'] H_domain [v x] H_next. rewrite in_propagation_next_iff in H_next.
+  unfold propagation_domain in *. simpl in *. des; subst; auto.
+Qed.
+
+Lemma propagation_domain_finite
+  : exists bound, forall facts : fset (V * X), (forall p, p ∈ facts -> propagation_domain p) -> length (FSet.data facts) <= bound.
+Proof.
+  exists (length (FSet.data nodes) * length (FSet.data propagation_values)).
+  intros facts H_facts. rewrite <- length_prod.
+  eapply NoDup_incl_length; [apply fset_NoDup | ].
+  intros [v x] H_in. rewrite in_prod_iff. exact (H_facts (v, x) H_in).
+Qed.
+
+Lemma propagation_initial_in_domain
+  : forall p, p ∈ propagation_initial -> propagation_domain p.
+Proof.
+  intros [v x] H_in. change (v ∈ nodes /\ x ∈ propagation_values). split.
+  - rewrite in_propagation_initial_iff in H_in. tauto.
+  - unfold propagation_values. rewrite FS.in_map_eq_iff. exists (v, x); auto.
+Qed.
+
+Definition propagation_facts : fset (V * X) :=
+  let initial := propagation_initial in
+  if FS.is_empty initial then
+    initial
+  else
+    let reversed := reverse_adjacency in
+    Worklist.closure (propagation_next reversed) propagation_domain propagation_domain_closed propagation_domain_finite initial propagation_initial_in_domain.
+
+Definition propagation : fpmap V (fset X) :=
+  FPM.fromFSet propagation_facts.
+
+Definition least_solution : V -> fset X :=
+  let solution := propagation in
+  FPM.lookup_set solution.
+
+Lemma propagation_facts_complete
+  : (forall v, forall x, v ∈ nodes -> x ∈ lookup_seed v -> (v, x) ∈ propagation_facts) /\ (forall v, forall v', forall x, v ∈ nodes -> L.In v' (adjacency v) -> (v', x) ∈ propagation_facts -> (v, x) ∈ propagation_facts).
+Proof.
+  assert (SPEC : (forall p, p ∈ propagation_initial -> p ∈ propagation_facts) /\ (forall p, forall q, p ∈ propagation_facts -> L.In q (propagation_next reverse_adjacency p) -> q ∈ propagation_facts)).
+  { unfold propagation_facts. destruct (FS.is_empty propagation_initial) eqn: EMPTY.
+    - rewrite FS.is_empty_spec in EMPTY. rewrite EMPTY. simpl. tauto.
+    - apply Worklist.closure_complete.
+  }
+  find* [INITIAL CLOSED] by SPEC. split; i.
+  - eapply INITIAL. rewrite in_propagation_initial_iff; auto.
+  - eapply CLOSED; eauto. rewrite in_propagation_next_iff; auto.
+Qed.
+
+Hypothesis adjacency_correct : forall v, forall v', L.In v' (adjacency v) <-> (v, v') \in E.
+
+Lemma propagation_facts_sound (v : V) (x : X)
+  (H_fact : (v, x) ∈ propagation_facts)
+  : v ∈ nodes /\ (exists w, w \in propagate_trace v x).
+Proof.
+  unfold propagation_facts in H_fact.
+  destruct (FS.is_empty propagation_initial) eqn: EMPTY.
+  { rewrite FS.is_empty_spec in EMPTY. rewrite EMPTY in H_fact. contradiction. }
+  eapply Worklist.closure_sound with (P := fun p : V * X => fst p ∈ nodes /\ (exists w, w \in propagate_trace (fst p) (snd p))) in H_fact.
+  - exact H_fact.
+  - intros [v' x'] [v0 x0] H_trace H_next. rewrite in_propagation_next_iff in H_next.
+    simpl in *. find* [H_v' [w H_trace']] by H_trace. find* (H_v0 & H_edge & EQ) by H_next.
+    subst x0. split; auto. exists (v' :: w). econs; eauto. now rewrite <- adjacency_correct.
+  - intros [v0 x0] H_in. rewrite in_propagation_initial_iff in H_in. simpl. des; split; eauto.
+Qed.
 
 Hypothesis nodes_closed : forall v, v ∈ nodes -> forall v', (v, v') \in E -> v' ∈ nodes.
 
-Theorem least_solution_correct (v : V)
+Lemma least_solution_correct (v : V)
   (IN : v ∈ nodes)
   : forall x : X, x ∈ least_solution v <-> (exists w, w \in propagate_trace v x).
 Proof.
-  intros x. unfold least_solution. rewrite FS.in_bind_iff. split.
-  - intros (v' & H_reachable & H_in_seed).
-    rewrite reachables_correct in H_reachable by eauto.
-    destruct H_reachable as [w H_walks]. inv H_walks.
-    eexists. rewrite propagate_trace_iff. eauto.
-  - intros [w H_trace]. rewrite propagate_trace_iff in H_trace.
-    destruct H_trace as (v' & H_walk & H_in_seed). exists v'. split; auto.
-    rewrite reachables_correct by eauto. exists (v :: w). econs; eauto.
+  intros x. unfold least_solution, propagation. rewrite FPM.fromFSet_correct_eq. split.
+  - intros H_fact. obtain [_ H_trace] with H_fact by propagation_facts_sound. exact H_trace.
+  - intros [w H_trace]. find* [INITIAL CLOSED] by propagation_facts_complete.
+    induction H_trace; eauto. eapply CLOSED; eauto. now rewrite adjacency_correct.
 Qed.
 
 Theorem least_solution_of_recursive_equation
-  : recursive_equation (fun v : V => { x : X | x ∈ least_solution v }%function) /\ ⟪ LEAST : forall F, recursive_equation F -> forall v, v ∈ nodes -> E.fromList (least_solution v).(FSet.data) \subseteq F v ⟫.
+  : recursive_equation (fun v : V => { x : X | x ∈ least_solution v }%function) /\ ⟪ LEAST : forall F, recursive_equation F -> forall v, v ∈ nodes -> E.fromList (FSet.data (least_solution v)) \subseteq F v ⟫.
 Proof.
   split.
   - intros v IN x. unnw. unfold E.In at 1 2. rewrite least_solution_correct by eauto. split.

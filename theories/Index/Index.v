@@ -11,9 +11,11 @@ Require Import PnV.Prelude.X.
 
 Require Import PnV.Control.Category.
 Require Import PnV.Control.Monad.
+Require Import PnV.Control.Worklist.
 
 Require Import PnV.Data.Aczel.
 Require Import PnV.Data.HsOrd.
+Require Import PnV.Data.BalancedTree.
 Require Import PnV.Data.FiniteSet.
 Require Import PnV.Data.FiniteMap.
 Require Import PnV.Data.Graph.

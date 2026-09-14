@@ -5,6 +5,7 @@ Require Export PnV.Math.ThN.
 Require Export PnV.Math.OrderTheory.
 Require Export PnV.Data.HsOrd.
 Require Import PnV.Data.FiniteSet.
+Require Import PnV.Data.BalancedTree.
 
 #[local] Infix "=~=" := is_similar_to : type_scope.
 #[local] Infix "\in" := E.In.
@@ -78,23 +79,27 @@ Module FinitePartialMap.
 
 #[universes(template), projections(primitive)]
 Record t {K : Type} {isSorted : list K -> bool} {V : Type} : Type :=
-  mk
-  { data : list (K * V)
-  ; data_isSorted : isSorted (map fst data) = true
-  }.
+  { tree : BalancedTree.t (K * V)
+  ; data_isSorted : isSorted (map fst (BalancedTree.data tree)) = true
+  } as m.
 
 #[global] Arguments t : clear implicits.
-#[global] Arguments mk {K} {isSorted} {V}.
 
-Lemma t_eq_iff {K : Type} {V : Type} {isSorted : list K -> bool} (m : FinitePartialMap.t K isSorted V) (m' : FinitePartialMap.t K isSorted V)
-  : m = m' <-> m.(data) = m'.(data).
+Definition data {K : Type} {V : Type} {isSorted : list K -> bool} (m : t K isSorted V) : list (K * V) :=
+  BalancedTree.data m.(tree).
+
+#[refine]
+Definition mk {K : Type} {V : Type} {isSorted : list K -> bool} (xs : list (K * V)) (SORTED : isSorted (map fst xs) = true) : FinitePartialMap.t K isSorted V :=
+  {| tree := BalancedTree.of_list xs; data_isSorted := _ |}.
 Proof.
-  split.
-  - intros H_eq. subst m'. reflexivity.
-  - revert m m'.
-    assert (claim : forall data1 : list (K * V), forall data2 : list (K * V), forall data1_isSorted : isSorted (map fst data1) = true, forall data2_isSorted : isSorted (map fst data2) = true, data1 = data2 -> {| data := data1; data_isSorted := data1_isSorted |} = {| data := data2; data_isSorted := data2_isSorted |}).
-    { ii. subst data2. enough (HH : data1_isSorted = data2_isSorted) by now rewrite HH. eapply eq_pirrel_fromEqDec. }
-    intros X X' H_eq. exact (claim X.(data) X'.(data) X.(data_isSorted) X'.(data_isSorted) H_eq).
+  rewrite BalancedTree.data_of_list. exact SORTED.
+Defined.
+
+Lemma data_mk {K : Type} {V : Type} {isSorted : list K -> bool} (xs : list (K * V))
+  (SORTED : isSorted (map fst xs) = true)
+  : data (FinitePartialMap.mk xs SORTED) = xs.
+Proof.
+  unfold data, mk. cbn. eapply BalancedTree.data_of_list.
 Qed.
 
 End FinitePartialMap.
@@ -105,131 +110,45 @@ Module FPM.
 
 Section BASICS.
 
-Context {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET := POSET_K)}.
+Context {K : Type} {V : Type} {PROSET : isProset K} {ORD : hsOrd K}.
 
-Definition lookup' (k0 : K) : list (K * V) -> option V :=
-  fix go (kvs : list (K * V)) {struct kvs} : option V :=
-  match kvs with
-  | [] => None
-  | (k, v) :: kvs =>
-    match compare k0 k with
-    | Lt => None
-    | Eq => Some v
-    | Gt => go kvs
-    end
-  end.
+Definition lookup' (k : K) (xs : list (K * V)) : option V :=
+  option_map snd (OrderedList.lookup fst k xs).
 
 Definition lookup (k : K) (m : fpmap K V) : option V :=
-  lookup' k m.(FinitePartialMap.data).
+  option_map snd (BalancedTree.lookup (fun p => compare k (fst p)) m.(FinitePartialMap.tree)).
 
-Lemma lookup'_nil (k0 : K)
-  : lookup' k0 [] = None.
+Lemma lookup_data (k : K) (m : fpmap K V)
+  : lookup k m = lookup' k (FinitePartialMap.data m).
 Proof.
-  reflexivity.
+  unfold lookup, lookup', FinitePartialMap.data.
+  now rewrite BalancedTree.lookup_data by eapply FinitePartialMap.data_isSorted.
 Qed.
 
-Lemma lookup'_cons (k0 : K) (k : K) (v : V) (kvs : list (K * V)) :
-  lookup' k0 ((k, v) :: kvs) =
-  match compare k0 k with
-  | Lt => None
-  | Eq => Some v
-  | Gt => lookup' k0 kvs
-  end.
+Lemma lookup_compat_key (k : K) (k' : K) (m : fpmap K V)
+  (EQ : k == k')
+  : lookup k m = lookup k' m.
 Proof.
-  reflexivity.
-Qed.
-
-Lemma lookup'_lt_None (k0 : K) (kvs : list (K * V))
-  (LT : forall q : K * V, q ∈ kvs -> compare k0 (fst q) = Lt)
-  : lookup' k0 kvs = None.
-Proof.
-  destruct kvs as [ | [k1 v1] kvs]; trivial.
-  pose proof (LT (k1, v1) (or_introl eq_refl)) as LT1. simpl in LT1.
-  rewrite lookup'_cons, LT1. reflexivity.
-Qed.
-
-Lemma isSorted_map_fst_cons_iff (p : K * V) (ps : list (K * V))
-  : isSorted compare (map fst (p :: ps)) = true <-> ((forall q : K * V, q ∈ ps -> compare (fst p) (fst q) = Lt) /\ isSorted compare (map fst ps) = true).
-Proof.
-  cbn [map]. rewrite isSorted_cons_iff. split.
-  - intros [SORTED_hd SORTED_tl]. split; trivial.
-    intros q q_in. eapply SORTED_hd. eapply L.in_map. exact q_in.
-  - intros [SORTED_hd SORTED_tl]. split; trivial.
-    intros z z_in. rewrite L.in_map_iff in z_in.
-    destruct z_in as (q & fst_q_eq_z & q_in). subst z. exact (SORTED_hd q q_in).
-Qed.
-
-Theorem fpmap_eq_spec (m : fpmap K V) (m' : fpmap K V)
-  : m = m' <-> (forall k, lookup k m = lookup k m').
-Proof.
-  rewrite FinitePartialMap.t_eq_iff. unfold lookup. split.
-  - intros H_eq k. rewrite H_eq. reflexivity.
-  - intros EXT.
-    pose proof (fun p : K * V => fun ps : list (K * V) => proj1 (isSorted_map_fst_cons_iff p ps)) as HD_TL.
-    pose proof lookup'_lt_None as LT_None.
-    pose proof (m.(FinitePartialMap.data_isSorted)) as kvs_isSorted.
-    pose proof (m'.(FinitePartialMap.data_isSorted)) as kvs'_isSorted.
-    set (kvs := m.(FinitePartialMap.data)) in *. set (kvs' := m'.(FinitePartialMap.data)) in *.
-    clearbody kvs kvs'. clear m m'. revert kvs_isSorted kvs' kvs'_isSorted EXT.
-    induction kvs as [ | [k v] kvs IH]; intros kvs_isSorted [ | [k' v'] kvs'] kvs'_isSorted EXT.
-    + reflexivity.
-    + pose proof (EXT k') as H. cbn [lookup'] in H. rewrite compare_refl in H. discriminate H.
-    + pose proof (EXT k) as H. cbn [lookup'] in H. rewrite compare_refl in H. discriminate H.
-    + pose proof (HD_TL (k, v) kvs kvs_isSorted) as [k_lt_kvs kvs_isSorted'].
-      pose proof (HD_TL (k', v') kvs' kvs'_isSorted) as [k'_lt_kvs' kvs'_isSorted'].
-      simpl in k_lt_kvs, k'_lt_kvs'.
-      assert (k_eq_k' : k = k').
-      { destruct (compare k k') as [ | | ] eqn: H_OBS.
-        - exact (proj1 (compare_eq_iff k k') H_OBS).
-        - exfalso. pose proof (EXT k) as H. cbn [lookup'] in H.
-          rewrite compare_refl, H_OBS in H. discriminate H.
-        - exfalso. pose proof (EXT k') as H. cbn [lookup'] in H.
-          rewrite compare_refl, (compare_Gt_flip k k' H_OBS) in H. discriminate H.
-      }
-      subst k'.
-      assert (v_eq_v' : v = v').
-      { pose proof (EXT k) as H. cbn [lookup'] in H. rewrite compare_refl in H. now inversion H. }
-      subst v'. f_equal. eapply IH; trivial. intros k0.
-      destruct (compare k0 k) as [ | | ] eqn: H_OBS.
-      * rewrite compare_eq_iff in H_OBS. subst k0.
-        rewrite (LT_None k kvs k_lt_kvs), (LT_None k kvs' k'_lt_kvs'). reflexivity.
-      * assert (H1 : lookup' k0 kvs = None).
-        { eapply LT_None. intros q q_in. exact (compare_Lt_trans k0 k (fst q) H_OBS (k_lt_kvs q q_in)). }
-        assert (H2 : lookup' k0 kvs' = None).
-        { eapply LT_None. intros q q_in. exact (compare_Lt_trans k0 k (fst q) H_OBS (k'_lt_kvs' q q_in)). }
-        rewrite H1, H2. reflexivity.
-      * pose proof (EXT k0) as H. cbn [lookup'] in H. rewrite H_OBS in H. exact H.
-Qed.
-
-Lemma lookup'_spec (kvs : list (K * V))
-  (kvs_isSorted : isSorted compare (map fst kvs) = true)
-  : forall k : K, forall v : V, lookup' k kvs = Some v <-> (k, v) ∈ kvs.
-Proof.
-  revert kvs_isSorted. induction kvs as [ | [k1 v1] kvs IH]; intros kvs_isSorted k v.
-  - rewrite lookup'_nil. simpl. split; [intros H_eq; discriminate H_eq | tauto].
-  - rewrite isSorted_map_fst_cons_iff in kvs_isSorted.
-    destruct kvs_isSorted as [k1_lt_kvs kvs_isSorted]. simpl in k1_lt_kvs.
-    pose proof (IH kvs_isSorted k v) as IH'. rewrite lookup'_cons. simpl.
-    destruct (compare k k1) as [ | | ] eqn: H_OBS.
-    + rewrite compare_eq_iff in H_OBS. subst k1. split.
-      * intros H_eq. left. congruence.
-      * intros [H_eq | H_in]; [congruence | ].
-        exfalso. pose proof (k1_lt_kvs (k, v) H_in) as LT. simpl in LT.
-        rewrite compare_refl in LT. discriminate LT.
-    + split; [intros H_eq; discriminate H_eq | ]. intros [H_eq | H_in].
-      * exfalso. inversion H_eq; subst k1 v1. rewrite compare_refl in H_OBS. discriminate H_OBS.
-      * exfalso. pose proof (k1_lt_kvs (k, v) H_in) as LT. simpl in LT.
-        pose proof (compare_Lt_trans k k1 k H_OBS LT) as LT'.
-        rewrite compare_refl in LT'. discriminate LT'.
-    + rewrite IH'. split; [intros H_in; right; exact H_in | ].
-      intros [H_eq | H_in]; trivial.
-      exfalso. inversion H_eq; subst k1 v1. rewrite compare_refl in H_OBS. discriminate H_OBS.
+  rewrite !lookup_data. unfold lookup'. now rewrite OrderedList.lookup_compat_key with (k' := k') by exact EQ.
 Qed.
 
 Theorem lookup_spec (m : fpmap K V) (k : K) (v : V)
-  : lookup k m = Some v <-> (k, v) ∈ m.(FinitePartialMap.data).
+  : lookup k m = Some v <-> (exists k', k == k' /\ L.In (k', v) (FinitePartialMap.data m)).
 Proof.
-  exact (lookup'_spec m.(FinitePartialMap.data) m.(FinitePartialMap.data_isSorted) k v).
+  rewrite lookup_data. unfold lookup'. destruct (OrderedList.lookup _ _ _) as [[k' v'] | ] eqn: OBS; simpl.
+  - rewrite OrderedList.lookup_spec in OBS by eapply FinitePartialMap.data_isSorted.
+    find* [IN EQ] by OBS. simpl fst in EQ. split.
+    + intros EQ'. inv EQ'. now exists k'.
+    + intros (q & EQ' & IN').
+      assert (LOOK : OrderedList.lookup fst k (FinitePartialMap.data m) = Some (q, v)).
+      { eapply OrderedList.lookup_spec; [eapply FinitePartialMap.data_isSorted | auto]. }
+      assert (LOOK' : OrderedList.lookup fst k (FinitePartialMap.data m) = Some (k', v')).
+      { eapply OrderedList.lookup_spec; [eapply FinitePartialMap.data_isSorted | auto]. }
+      congruence.
+  - split; [congruence | intros (q & EQ & IN)].
+    assert (LOOK : OrderedList.lookup fst k (FinitePartialMap.data m) = Some (q, v)).
+    { eapply OrderedList.lookup_spec; [eapply FinitePartialMap.data_isSorted | auto]. }
+    congruence.
 Qed.
 
 Definition empty : fpmap K V :=
@@ -238,285 +157,664 @@ Definition empty : fpmap K V :=
 Theorem lookup_empty (k : K)
   : lookup k empty = None.
 Proof.
-  reflexivity.
+  rewrite lookup_data. unfold empty. rewrite FinitePartialMap.data_mk. reflexivity.
 Qed.
 
-Definition insert' (k0 : K) (v0 : V) : list (K * V) -> list (K * V) :=
-  fix go (kvs : list (K * V)) {struct kvs} : list (K * V) :=
-  match kvs with
-  | [] => [(k0, v0)]
-  | (k, v) :: kvs =>
-    match compare k0 k with
-    | Lt => (k0, v0) :: (k, v) :: kvs
-    | Eq => (k0, v0) :: kvs
-    | Gt => (k, v) :: go kvs
-    end
-  end.
-
-Lemma insert'_nil (k0 : K) (v0 : V)
-  : insert' k0 v0 [] = [(k0, v0)].
-Proof.
-  reflexivity.
-Qed.
-
-Lemma insert'_cons (k0 : K) (v0 : V) (k : K) (v : V) (kvs : list (K * V)) :
-  insert' k0 v0 ((k, v) :: kvs) =
-  match compare k0 k with
-  | Lt => (k0, v0) :: (k, v) :: kvs
-  | Eq => (k0, v0) :: kvs
-  | Gt => (k, v) :: insert' k0 v0 kvs
-  end.
-Proof.
-  reflexivity.
-Qed.
-
-Lemma map_fst_insert' (k0 : K) (v0 : V) (kvs : list (K * V))
-  : map fst (insert' k0 v0 kvs) = FS.insert k0 (map fst kvs).
-Proof.
-  induction kvs as [ | [k v] kvs IH]; trivial. rewrite insert'_cons.
-  change (FS.insert k0 (map fst ((k, v) :: kvs))) with (match compare k0 k with Lt => k0 :: k :: map fst kvs | Eq => k :: map fst kvs | Gt => k :: FS.insert k0 (map fst kvs) end).
-  destruct (compare k0 k) as [ | | ] eqn: H_OBS.
-  - cbn [map fst]. f_equal. exact (proj1 (compare_eq_iff k0 k) H_OBS).
-  - reflexivity.
-  - cbn [map fst]. f_equal. exact IH.
-Qed.
-
-Lemma isSorted_insert' (k0 : K) (v0 : V) (kvs : list (K * V))
-  (kvs_isSorted : isSorted compare (map fst kvs) = true)
-  : isSorted compare (map fst (insert' k0 v0 kvs)) = true.
-Proof.
-  rewrite map_fst_insert'. exact (FS.isSorted_insert k0 (map fst kvs) kvs_isSorted).
-Qed.
-
+#[refine]
 Definition insert (k : K) (v : V) (m : fpmap K V) : fpmap K V :=
-  FinitePartialMap.mk (insert' k v m.(FinitePartialMap.data)) (isSorted_insert' k v m.(FinitePartialMap.data) m.(FinitePartialMap.data_isSorted)).
+  {| FinitePartialMap.tree := BalancedTree.add (fun p => fun q => compare (fst p) (fst q)) (k, v) m.(FinitePartialMap.tree); FinitePartialMap.data_isSorted := _ |}.
+Proof.
+  rewrite BalancedTree.data_add by eapply FinitePartialMap.data_isSorted.
+  eapply OrderedList.insert_sorted. eapply FinitePartialMap.data_isSorted.
+Defined.
+
+Lemma data_insert (k : K) (v : V) (m : fpmap K V)
+  : FinitePartialMap.data (insert k v m) = OrderedList.insert fst (k, v) (FinitePartialMap.data m).
+Proof.
+  unfold insert, FinitePartialMap.data. simpl. eapply BalancedTree.data_add. eapply FinitePartialMap.data_isSorted.
+Qed.
 
 Theorem lookup_insert_eq (k : K) (v : V) (m : fpmap K V)
   : lookup k (insert k v m) = Some v.
 Proof.
-  unfold lookup, insert. cbn [FinitePartialMap.data].
-  generalize m.(FinitePartialMap.data) as kvs. clear m.
-  induction kvs as [ | [k1 v1] kvs IH].
-  - rewrite insert'_nil, lookup'_cons, compare_refl. reflexivity.
-  - rewrite insert'_cons. destruct (compare k k1) as [ | | ] eqn: H_OBS.
-    + rewrite lookup'_cons, compare_refl. reflexivity.
-    + rewrite lookup'_cons, compare_refl. reflexivity.
-    + rewrite lookup'_cons, H_OBS. exact IH.
+  rewrite lookup_data, data_insert. unfold lookup'.
+  now rewrite OrderedList.lookup_insert_eq with (key := fst) (x := (k, v)).
 Qed.
 
 Theorem lookup_insert_ne (k : K) (v : V) (m : fpmap K V) (k0 : K)
-  (NE : k0 ≠ k)
+  (NE : ~ k0 == k)
   : lookup k0 (insert k v m) = lookup k0 m.
 Proof.
-  unfold lookup, insert. cbn [FinitePartialMap.data].
-  generalize m.(FinitePartialMap.data) as kvs. clear m.
-  induction kvs as [ | [k1 v1] kvs IH].
-  - rewrite insert'_nil, !lookup'_cons, lookup'_nil.
-    destruct (compare k0 k) as [ | | ] eqn: H_OBS; trivial.
-    exfalso. rewrite compare_eq_iff in H_OBS. contradiction.
-  - rewrite insert'_cons. destruct (compare k k1) as [ | | ] eqn: H_OBS1.
-    + rewrite compare_eq_iff in H_OBS1. subst k1. rewrite !lookup'_cons.
-      destruct (compare k0 k) as [ | | ] eqn: H_OBS2; trivial.
-      exfalso. rewrite compare_eq_iff in H_OBS2. contradiction.
-    + rewrite lookup'_cons. destruct (compare k0 k) as [ | | ] eqn: H_OBS2.
-      * exfalso. rewrite compare_eq_iff in H_OBS2. contradiction.
-      * rewrite lookup'_cons, (compare_Lt_trans k0 k k1 H_OBS2 H_OBS1). reflexivity.
-      * reflexivity.
-    + rewrite !lookup'_cons. destruct (compare k0 k1) as [ | | ]; trivial.
+  rewrite !lookup_data, data_insert. unfold lookup'.
+  now rewrite OrderedList.lookup_insert_ne.
 Qed.
 
-Definition remove' (k0 : K) : list (K * V) -> list (K * V) :=
-  fix go (kvs : list (K * V)) {struct kvs} : list (K * V) :=
-  match kvs with
-  | [] => []
-  | (k, v) :: kvs =>
-    match compare k0 k with
-    | Lt => (k, v) :: kvs
-    | Eq => kvs
-    | Gt => (k, v) :: go kvs
-    end
-  end.
-
-Lemma remove'_nil (k0 : K)
-  : remove' k0 [] = [].
-Proof.
-  reflexivity.
-Qed.
-
-Lemma remove'_cons (k0 : K) (k : K) (v : V) (kvs : list (K * V)) :
-  remove' k0 ((k, v) :: kvs) =
-  match compare k0 k with
-  | Lt => (k, v) :: kvs
-  | Eq => kvs
-  | Gt => (k, v) :: remove' k0 kvs
-  end.
-Proof.
-  reflexivity.
-Qed.
-
-Lemma in_remove'_incl (k0 : K) (kvs : list (K * V))
-  : forall q : K * V, q ∈ remove' k0 kvs -> q ∈ kvs.
-Proof.
-  induction kvs as [ | [k v] kvs IH]; trivial.
-  intros q. rewrite remove'_cons. destruct (compare k0 k) as [ | | ].
-  - intros H_in. right. exact H_in.
-  - intros H_in. exact H_in.
-  - intros [H_eq | H_in]; [left; exact H_eq | right; exact (IH q H_in)].
-Qed.
-
-Lemma isSorted_remove' (k0 : K) (kvs : list (K * V))
-  (kvs_isSorted : isSorted compare (map fst kvs) = true)
-  : isSorted compare (map fst (remove' k0 kvs)) = true.
-Proof.
-  revert kvs_isSorted. induction kvs as [ | [k v] kvs IH]; intros kvs_isSorted; trivial.
-  pose proof (proj1 (isSorted_map_fst_cons_iff (k, v) kvs) kvs_isSorted) as [k_lt_kvs kvs_isSorted'].
-  simpl in k_lt_kvs. rewrite remove'_cons. destruct (compare k0 k) as [ | | ].
-  - exact kvs_isSorted'.
-  - exact kvs_isSorted.
-  - rewrite isSorted_map_fst_cons_iff. simpl. split; [ | exact (IH kvs_isSorted')].
-    intros q q_in. exact (k_lt_kvs q (in_remove'_incl k0 kvs q q_in)).
-Qed.
-
+#[refine]
 Definition remove (k : K) (m : fpmap K V) : fpmap K V :=
-  FinitePartialMap.mk (remove' k m.(FinitePartialMap.data)) (isSorted_remove' k m.(FinitePartialMap.data) m.(FinitePartialMap.data_isSorted)).
+  {| FinitePartialMap.tree := BalancedTree.remove (fun p => compare k (fst p)) m.(FinitePartialMap.tree); FinitePartialMap.data_isSorted := _ |}.
+Proof.
+  rewrite BalancedTree.data_remove by eapply FinitePartialMap.data_isSorted.
+  eapply OrderedList.remove_sorted. eapply FinitePartialMap.data_isSorted.
+Defined.
+
+Lemma data_remove (k : K) (m : fpmap K V)
+  : FinitePartialMap.data (remove k m) = OrderedList.remove fst k (FinitePartialMap.data m).
+Proof.
+  unfold remove, FinitePartialMap.data. cbn [FinitePartialMap.tree].
+  eapply BalancedTree.data_remove. eapply FinitePartialMap.data_isSorted.
+Qed.
 
 Theorem lookup_remove_eq (k : K) (m : fpmap K V)
   : lookup k (remove k m) = None.
 Proof.
-  unfold lookup, remove. cbn [FinitePartialMap.data].
-  pose proof (m.(FinitePartialMap.data_isSorted)) as kvs_isSorted.
-  generalize dependent m.(FinitePartialMap.data). intros kvs. clear m.
-  induction kvs as [ | [k1 v1] kvs IH]; intros kvs_isSorted; trivial.
-  pose proof (proj1 (isSorted_map_fst_cons_iff (k1, v1) kvs) kvs_isSorted) as [k1_lt_kvs kvs_isSorted'].
-  simpl in k1_lt_kvs. rewrite remove'_cons. destruct (compare k k1) as [ | | ] eqn: H_OBS.
-  - eapply lookup'_lt_None. intros q q_in.
-    rewrite compare_eq_iff in H_OBS. subst k1. exact (k1_lt_kvs q q_in).
-  - rewrite lookup'_cons, H_OBS. reflexivity.
-  - rewrite lookup'_cons, H_OBS. exact (IH kvs_isSorted').
+  rewrite lookup_data, data_remove. unfold lookup'.
+  now rewrite OrderedList.lookup_remove_eq by eapply FinitePartialMap.data_isSorted.
 Qed.
 
 Theorem lookup_remove_ne (k : K) (m : fpmap K V) (k0 : K)
-  (NE : k0 ≠ k)
+  (NE : ~ k0 == k)
   : lookup k0 (remove k m) = lookup k0 m.
 Proof.
-  unfold lookup, remove. cbn [FinitePartialMap.data].
-  pose proof (m.(FinitePartialMap.data_isSorted)) as kvs_isSorted.
-  generalize dependent m.(FinitePartialMap.data). intros kvs. clear m.
-  induction kvs as [ | [k1 v1] kvs IH]; intros kvs_isSorted; trivial.
-  pose proof (proj1 (isSorted_map_fst_cons_iff (k1, v1) kvs) kvs_isSorted) as [k1_lt_kvs kvs_isSorted'].
-  simpl in k1_lt_kvs. rewrite remove'_cons. destruct (compare k k1) as [ | | ] eqn: H_OBS1.
-  - rewrite compare_eq_iff in H_OBS1. subst k1.
-    rewrite lookup'_cons. destruct (compare k0 k) as [ | | ] eqn: H_OBS2.
-    + exfalso. rewrite compare_eq_iff in H_OBS2. contradiction.
-    + eapply lookup'_lt_None. intros q q_in.
-      exact (compare_Lt_trans k0 k (fst q) H_OBS2 (k1_lt_kvs q q_in)).
-    + reflexivity.
-  - reflexivity.
-  - rewrite !lookup'_cons. destruct (compare k0 k1) as [ | | ]; trivial.
-    exact (IH kvs_isSorted').
+  rewrite !lookup_data, data_remove. unfold lookup'.
+  now rewrite OrderedList.lookup_remove_ne by (try exact NE; apply FinitePartialMap.data_isSorted).
 Qed.
 
+#[refine]
 Definition keys (m : fpmap K V) : fset K :=
-  FSet.mk (map fst m.(FinitePartialMap.data)) m.(FinitePartialMap.data_isSorted).
+  {| FSet.tree := BalancedTree.map (@fst K V) m.(FinitePartialMap.tree); FSet.data_isSorted := _ |}.
+Proof.
+  rewrite BalancedTree.data_map. apply FinitePartialMap.data_isSorted.
+Defined.
+
+Lemma data_keys (m : fpmap K V)
+  : FSet.data (keys m) = L.map fst (FinitePartialMap.data m).
+Proof.
+  unfold keys, FSet.data, FinitePartialMap.data. cbn [FSet.tree]. apply BalancedTree.data_map.
+Qed.
 
 Theorem in_keys_iff (m : fpmap K V) (k : K)
-  : k ∈ (keys m).(FSet.data) <-> (exists v : V, lookup k m = Some v).
+  : FS.In k (keys m) <-> exists v, lookup k m = Some v.
 Proof.
-  cbv [keys]; simpl. rewrite L.in_map_iff. split.
-  - intros ([k1 v1] & fst_eq & p_in). simpl in fst_eq. subst k1.
-    exists v1. rewrite lookup_spec. exact p_in.
-  - intros [v H_eq]. rewrite lookup_spec in H_eq. exists (k, v). split; auto.
+  unfold FS.In. rewrite data_keys, InA_alt. split.
+  - intros (q & EQ & IN). rewrite L.in_map_iff in IN. find* ([q' v] & EQ' & IN') by IN.
+    cbn [fst] in EQ'. subst q'. exists v. apply lookup_spec. exists q. auto.
+  - intros [v LOOK]. rewrite lookup_spec in LOOK. find* [q [EQ IN]] by LOOK. exists q. split; auto.
+    apply L.in_map_iff. exists (q, v). auto.
 Qed.
 
 End BASICS.
+
+Section SETOID.
+
+Context {K : Type} {V : Type} {PROSET : isProset K} {ORD : hsOrd K} {SETOID : isSetoid V}.
+Let pair_setoid := @prod_isSetoid K V PROSET.(Proset_isSetoid) SETOID.
+Let list_setoid := L.list_isSetoid pair_setoid.
+Let option_setoid := option_isSetoid SETOID.
+#[local] Existing Instance option_setoid.
+
+#[global]
+Instance fpmap_isSetoid : isSetoid (fpmap K V) | 0 :=
+  { eqProp (m : fpmap K V) (m' : fpmap K V) := forall k : K, lookup k m == lookup k m'
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence (pi_isSetoid (fun _ : K => option_setoid)).(eqProp_Equivalence) (fun m : fpmap K V => fun k : K => lookup k m)
+  }.
+
+Theorem fpmap_eq_spec (m : fpmap K V) (m' : fpmap K V)
+  : m == m' <-> forall k, lookup k m == lookup k m'.
+Proof.
+  reflexivity.
+Qed.
+
+Theorem extensionality (m : fpmap K V) (m' : fpmap K V)
+  (EXT : forall k, lookup k m == lookup k m')
+  : m == m'.
+Proof.
+  exact EXT.
+Qed.
+
+#[global]
+Instance lookup_eqPropCompatible2
+  : eqPropCompatible2 (@lookup K V PROSET ORD).
+Proof.
+  intros k k' m m' EQ EXT. rewrite lookup_compat_key with (k' := k') by exact EQ. exact (EXT k').
+Qed.
+
+Definition In (p : K * V) (m : fpmap K V) : Prop :=
+  InA (@eqProp (K * V) pair_setoid) p (FinitePartialMap.data m).
+
+Theorem lookup_setoid_spec (m : fpmap K V) (k : K) (v : V)
+  : lookup k m == Some v <-> In (k, v) m.
+Proof.
+  split.
+  - intros LOOK. inversion LOOK as [ | v' v'' EQ]; subst.
+    symmetry in H. rewrite lookup_spec in H. find* [q [KEY IN]] by H. apply InA_alt. exists (q, v'). split; auto.
+    split; [exact KEY | symmetry; exact EQ].
+  - intros IN. apply InA_alt in IN. find* ([q v'] & [KEY VALUE] & IN') by IN. cbn [fst snd] in KEY, VALUE.
+    assert (LOOK : lookup k m = Some v').
+    { apply lookup_spec. exists q. auto. }
+    rewrite LOOK. constructor. symmetry. exact VALUE.
+Qed.
+
+#[global]
+Instance insert_compat
+  : Proper (eqProp ==> eqProp ==> eqProp ==> eqProp) (@insert K V PROSET ORD).
+Proof.
+  intros k k' KEY v v' VALUE m m' EXT q.
+  destruct (compare q k) eqn: OBS.
+  - assert (QK : q == k) by now apply compare_Eq_iff.
+    assert (QK' : q == k') by (transitivity k; assumption).
+    rewrite lookup_compat_key with (m := insert k v m) (k' := k) by exact QK.
+    rewrite lookup_compat_key with (m := insert k' v' m') (k' := k') by exact QK'.
+    rewrite !lookup_insert_eq. constructor. exact VALUE.
+  - assert (NE : ~ q == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
+    assert (NE' : ~ q == k') by (intros EQ; apply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
+    rewrite !lookup_insert_ne by assumption. exact (EXT q).
+  - assert (NE : ~ q == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
+    assert (NE' : ~ q == k') by (intros EQ; apply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
+    rewrite !lookup_insert_ne by assumption. exact (EXT q).
+Qed.
+
+#[global]
+Instance remove_eqPropCompatible2
+  : eqPropCompatible2 (@remove K V PROSET ORD).
+Proof.
+  intros k k' m m' KEY EXT q.
+  destruct (compare q k) eqn: OBS.
+  - assert (QK : q == k) by now apply compare_Eq_iff.
+    assert (QK' : q == k') by (transitivity k; assumption).
+    rewrite lookup_compat_key with (m := remove k m) (k' := k) by exact QK.
+    rewrite lookup_compat_key with (m := remove k' m') (k' := k') by exact QK'.
+    rewrite !lookup_remove_eq. reflexivity.
+  - assert (NE : ~ q == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
+    assert (NE' : ~ q == k') by (intros EQ; apply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
+    rewrite !lookup_remove_ne by assumption. exact (EXT q).
+  - assert (NE : ~ q == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
+    assert (NE' : ~ q == k') by (intros EQ; apply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
+    rewrite !lookup_remove_ne by assumption. exact (EXT q).
+Qed.
+
+Lemma lookup'_compat (xs : list (K * V)) (ys : list (K * V))
+  (EQ : @eqProp _ list_setoid xs ys)
+  : forall k, lookup' k xs == lookup' k ys.
+Proof.
+  revert ys EQ. induction xs as [ | [q v] xs IH]; intros [ | [q' v'] ys] EQ k.
+  - reflexivity.
+  - specialize (EQ 0). inv EQ.
+  - specialize (EQ 0). inv EQ.
+  - find* HEAD by (EQ 0). inversion HEAD as [ | p p' [KEY VALUE]]; subst.
+    change (q == q') in KEY. change (v == v') in VALUE.
+    assert (TAIL : @eqProp _ list_setoid xs ys) by exact (fun n => EQ (S n)).
+    unfold lookup'. cbn [OrderedList.lookup fst].
+    rewrite compare_compatWith_eqProp with (x' := k) (y' := q') by (assumption || reflexivity).
+    destruct (compare k q'); simpl; [constructor; exact VALUE | reflexivity | ].
+    apply IH. exact TAIL.
+Qed.
+
+Lemma lookup'_extensionality (xs : list (K * V)) (ys : list (K * V))
+  (SORTED_XS : isSorted compare (map fst xs) = true)
+  (SORTED_YS : isSorted compare (map fst ys) = true)
+  (EXT : forall k, lookup' k xs == lookup' k ys)
+  : @eqProp _ list_setoid xs ys.
+Proof.
+  revert ys SORTED_XS SORTED_YS EXT. induction xs as [ | [q v] xs IH]; intros [ | [q' v'] ys] SX SY EXT.
+  - reflexivity.
+  - specialize (EXT q'). unfold lookup' in EXT. cbn [OrderedList.lookup fst] in EXT.
+    rewrite compare_refl in EXT. inv EXT.
+  - specialize (EXT q). unfold lookup' in EXT. cbn [OrderedList.lookup fst] in EXT.
+    rewrite compare_refl in EXT. inv EXT.
+  - rewrite OrderedList.sorted_cons_iff in SX, SY.
+    find* [HX TX] by SX. find* [HY TY] by SY. cbn [fst] in HX, HY.
+    assert (KEY : q == q').
+    { destruct (compare q q') eqn: OBS; [now apply compare_Eq_iff | | ].
+      - specialize (EXT q). unfold lookup' in EXT. cbn [OrderedList.lookup fst] in EXT.
+        rewrite compare_refl, OBS in EXT. inv EXT.
+      - specialize (EXT q'). unfold lookup' in EXT. cbn [OrderedList.lookup fst] in EXT.
+        rewrite compare_refl in EXT. rewrite compare_Gt_flip in EXT by exact OBS. inv EXT.
+    }
+    assert (VALUE : v == v').
+    { specialize (EXT q). unfold lookup' in EXT. cbn [OrderedList.lookup fst] in EXT.
+      rewrite <- compare_Eq_iff in KEY. rewrite compare_refl, KEY in EXT. inv EXT. assumption.
+    }
+    assert (TAIL : forall k, lookup' k xs == lookup' k ys).
+    { intros k. destruct (compare k q) eqn: OBS.
+      - assert (LX : OrderedList.lookup (@fst K V) k xs = None).
+        { apply OrderedList.lookup_lt_None. intros p IN.
+          rewrite compare_compatWith_eqProp with (x' := q) (y' := fst p) by (reflexivity || now apply compare_Eq_iff).
+          now apply HX.
+        }
+        assert (LY : OrderedList.lookup (@fst K V) k ys = None).
+        { apply OrderedList.lookup_lt_None. intros p IN.
+          assert (KQ : k == q') by (transitivity q; [now apply compare_Eq_iff | exact KEY]).
+          rewrite compare_compatWith_eqProp with (x' := q') (y' := fst p) by (assumption || reflexivity).
+          now apply HY.
+        }
+        unfold lookup'. rewrite LX, LY. reflexivity.
+      - assert (LX : OrderedList.lookup (@fst K V) k xs = None).
+        { apply OrderedList.lookup_lt_None. intros p IN. eapply compare_Lt_trans; [exact OBS | now apply HX]. }
+        assert (LY : OrderedList.lookup (@fst K V) k ys = None).
+        { apply OrderedList.lookup_lt_None. i. eapply compare_Lt_trans; [ | now apply HY].
+          rewrite <- compare_compatWith_eqProp with (x := k) (x' := k) (y := q) (y' := q') by (assumption || reflexivity). exact OBS.
+        }
+        unfold lookup'. rewrite LX, LY. reflexivity.
+      - specialize (EXT k). unfold lookup' in EXT. cbn [OrderedList.lookup fst] in EXT.
+        rewrite <- compare_compatWith_eqProp with (x := k) (x' := k) (y := q) (y' := q') in EXT by (assumption || reflexivity).
+        rewrite OBS in EXT. exact EXT.
+    }
+    obtain REST with ys TX TY TAIL by IH.
+    intros [ | n]; simpl; [constructor; split; assumption | exact (REST n)].
+Qed.
+
+Theorem data_eq_spec (m : fpmap K V) (m' : fpmap K V)
+  : m == m' <-> @eqProp _ list_setoid (FinitePartialMap.data m) (FinitePartialMap.data m').
+Proof.
+  split.
+  - intros EXT. apply lookup'_extensionality; try apply FinitePartialMap.data_isSorted.
+    intros k. rewrite <- !lookup_data. exact (EXT k).
+  - intros EQ k. rewrite !lookup_data. now apply lookup'_compat.
+Qed.
+
+End SETOID.
+
+Section ORDERED_MAP.
+
+Context {K : Type} {V : Type} {PK : isProset K} {OK : hsOrd K} {PV : isProset V} {OV : hsOrd V}.
+
+#[local] Existing Instances pair_isProset pair_hsOrd.
+
+Let entries_proset := @list_lexicographical_order (K * V) (@pair_isProset K V PK PV OK OV) (@pair_hsOrd K V PK PV OK OV).
+
+Let entries_ord := @list_hsOrd (K * V) (@pair_isProset K V PK PV OK OV) (@pair_hsOrd K V PK PV OK OV).
+
+#[global, refine]
+Instance fpmap_isProset : isProset (fpmap K V) :=
+  { leProp (m : fpmap K V) (m' : fpmap K V) := lex_le (FinitePartialMap.data m) (FinitePartialMap.data m')
+  ; Proset_isSetoid := fpmap_isSetoid
+  }.
+Proof.
+  - exact (relation_on_image_liftsPreOrder (@lex_le_PreOrder (K * V) (@pair_isProset K V PK PV OK OV) (@pair_hsOrd K V PK PV OK OV)) (@FinitePartialMap.data K V _)).
+  - intros m m'. change (m == m' <-> lex_le (FinitePartialMap.data m) (FinitePartialMap.data m') /\ lex_le (FinitePartialMap.data m') (FinitePartialMap.data m)).
+    rewrite data_eq_spec. rewrite <- @lex_eq_iff with (PROSET := @pair_isProset K V PK PV OK OV) (ORD := @pair_hsOrd K V PK PV OK OV).
+    apply lex_le_PartialOrder.
+Defined.
+
+#[global, refine]
+Instance fpmap_hsOrd : hsOrd (fpmap K V) (PROSET := fpmap_isProset) :=
+  { compare (m : fpmap K V) (m' : fpmap K V) := lex_compare (FinitePartialMap.data m) (FinitePartialMap.data m') }.
+Proof.
+  - intros m m' OBS. find* [LE NE] by (@compare_Lt _ entries_proset entries_ord (FinitePartialMap.data m) (FinitePartialMap.data m') OBS).
+    split; [exact LE | intros EQ; apply NE]. now apply data_eq_spec.
+  - intros m m' OBS. apply data_eq_spec.
+    exact (@compare_Eq _ entries_proset entries_ord (FinitePartialMap.data m) (FinitePartialMap.data m') OBS).
+  - intros m m' OBS. find* [LE NE] by (@compare_Gt _ entries_proset entries_ord (FinitePartialMap.data m) (FinitePartialMap.data m') OBS).
+    split; [exact LE | intros EQ; apply NE]. now apply data_eq_spec.
+Defined.
+
+End ORDERED_MAP.
+
+Section MAP.
+
+Context {K : Type} {V : Type} {W : Type} {PROSET : isProset K} {ORD : hsOrd K}.
+
+#[refine]
+Definition map (f : V -> W) (m : fpmap K V) : fpmap K W :=
+  {| FinitePartialMap.tree := BalancedTree.map (fun p => (fst p, f (snd p))) m.(FinitePartialMap.tree); FinitePartialMap.data_isSorted := _ |}.
+Proof.
+  rewrite BalancedTree.data_map, L.map_map. cbn [fst]. apply FinitePartialMap.data_isSorted.
+Defined.
+
+Lemma data_map (f : V -> W) (m : fpmap K V)
+  : FinitePartialMap.data (map f m) = L.map (fun p => (fst p, f (snd p))) (FinitePartialMap.data m).
+Proof.
+  unfold map, FinitePartialMap.data. cbn [FinitePartialMap.tree]. apply BalancedTree.data_map.
+Qed.
+
+Lemma lookup_map (f : V -> W) (m : fpmap K V) (k : K)
+  : lookup k (map f m) = option_map f (lookup k m).
+Proof.
+  rewrite !lookup_data, data_map. unfold lookup'.
+  generalize (FinitePartialMap.data m) as xs. intros xs.
+  induction xs as [ | [q v] xs IH]; simpl; auto.
+  destruct (compare k q); simpl; auto.
+Qed.
+
+End MAP.
+
+Section MAP_SETOID.
+
+Context {K : Type} {V : Type} {W : Type} {PROSET : isProset K} {ORD : hsOrd K} {SV : isSetoid V} {SW : isSetoid W}.
+
+#[global]
+Instance map_compat
+  : Proper ((eqProp ==> eqProp) ==> eqProp ==> eqProp) (@map K V W PROSET ORD).
+Proof.
+  intros f g FG m m' EXT k. rewrite !lookup_map.
+  specialize (EXT k). destruct (lookup k m), (lookup k m'); inv EXT; simpl; constructor.
+  now apply FG.
+Qed.
+
+End MAP_SETOID.
+
+#[global]
+Instance fpmap_isFunctor {K : Type} {PROSET : isProset K} {ORD : hsOrd K} : isFunctor (fpmap K) :=
+  fun V => fun W => @map K V W PROSET ORD.
+
+#[global]
+Instance fpmap_isSetoid1 {K : Type} {PROSET : isProset K} {ORD : hsOrd K} : isSetoid1 (fpmap K) :=
+  fun V => @fpmap_isSetoid K V PROSET ORD.
+
+#[global]
+Instance fpmap_FunctorLaws {K : Type} {PROSET : isProset K} {ORD : hsOrd K}
+  : FunctorLaws (fpmap K) (SETOID1 := fpmap_isSetoid1) (FUNCTOR := fpmap_isFunctor).
+Proof.
+  split.
+  - intros A B f m m' EQ k. change (option_eqProp eq (lookup k (map f m)) (lookup k (map f m'))).
+    rewrite !lookup_map. specialize (EQ k). apply option_eqProp_iff_eq in EQ.
+    rewrite EQ. reflexivity.
+  - intros A B C f g m k. change (option_eqProp eq (lookup k (map (compose g f) m)) (lookup k (map g (map f m)))).
+    rewrite !lookup_map. destruct (lookup k m); reflexivity.
+  - intros A m k. change (option_eqProp eq (lookup k (map id m)) (lookup k m)).
+    rewrite lookup_map. destruct (lookup k m); reflexivity.
+  - intros A B f g EQ m k. change (option_eqProp eq (lookup k (map f m)) (lookup k (map g m))).
+    rewrite !lookup_map. destruct (lookup k m); simpl; constructor. apply EQ.
+Qed.
 
 Section SIMILARITY.
 
 #[local] Existing Instance Similarity_option_option.
 
-Definition Similarity_fpmap_partial_map {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET := POSET_K)} {K' : Type} {V' : Type} (Similarity_K_K' : Similarity K K') (Similarity_V_V' : Similarity V V') : Similarity (fpmap K V) (K' -> option V') :=
-  fun m : fpmap K V => fun m' : K' -> option V' => forall k : K, forall k' : K', k =~= k' -> lookup k m =~= m' k'.
+Definition Similarity_fpmap_partial_map {K : Type} {V : Type} {PROSET : isProset K} {ORD : hsOrd K} {K' : Type} {V' : Type} (KEYS : Similarity K K') (VALUES : Similarity V V') : Similarity (fpmap K V) (K' -> option V') :=
+  fun m => fun f => forall k, forall k', k =~= k' -> lookup k m =~= f k'.
 
-Context {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET := POSET_K)}.
+Context {K : Type} {V : Type} {PROSET : isProset K} {ORD : hsOrd K} {SETOID : isSetoid V}.
 
 #[global]
 Instance fpmap_corresponds_to_partial_map : Similarity (fpmap K V) (K -> option V) :=
-  Similarity_fpmap_partial_map eq eq.
+  fun m => fun f => forall k, option_eqProp eqProp (lookup k m) (f k).
 
-Theorem fpmap_corresponds_to_partial_map_iff (m : fpmap K V) (m' : K -> option V)
-  : m =~= m' <-> (forall x : K, lookup x m = m' x).
+Theorem fpmap_corresponds_to_partial_map_iff (m : fpmap K V) (f : K -> option V)
+  : m =~= f <-> forall k, option_eqProp eqProp (lookup k m) (f k).
 Proof.
-  split.
-  - intros H_sim. do 4 red in H_sim. intros x. pose proof (H_sim x x eq_refl) as H. destruct H; f_equal; auto.
-  - intros H_eq. do 4 red. intros x x' x_eq_x'. change (x = x') in x_eq_x'. subst x'.
-    pose proof (H_eq x) as H. revert H. generalize (lookup x m) as o. generalize (m' x) as o'. clear.
-    intros [x' | ] [x | ] H; try congruence; econs; red; congruence.
+  reflexivity.
 Qed.
 
 End SIMILARITY.
 
-Section HsOrd_fpmap.
+Section DISCRETE.
 
-#[local] Obligation Tactic := idtac.
+Context {K : Type} {V : Type} {POSET : isPoset K} {ORD : HsOrd K}.
 
-Context {K : Type} {V : Type} {POSET_K : isPoset K} {HsOrd_K : HsOrd K (POSET := POSET_K)} {POSET_V : isPoset V} {HsOrd_V : HsOrd V (POSET := POSET_V)}.
-
-#[local, program]
-Instance fpmap_isProset : isProset (fpmap K V) :=
-  { leProp (m : fpmap K V) (m' : fpmap K V) := m.(FinitePartialMap.data) =< m'.(FinitePartialMap.data)
-  ; Proset_isSetoid := mkSetoid_from_eq
-  }.
-Next Obligation.
-  split.
-  - intros m. reflexivity.
-  - intros m m' m'' m_le_m' m'_le_m''. now transitivity m'.(FinitePartialMap.data).
-Qed.
-Next Obligation.
-  intros m m'. unfold flip. split.
-  - intros m_eq_m'. change (m = m') in m_eq_m'. subst m'. split; reflexivity.
-  - intros [m_le_m' m'_le_m]. change (m = m'). rewrite FinitePartialMap.t_eq_iff. rewrite <- Poset_eqProp_spec.
-    exact (leProp_antisymmetry m.(FinitePartialMap.data) m'.(FinitePartialMap.data) m_le_m' m'_le_m).
-Qed.
-
-#[global]
-Instance fpmap_isPoset : isPoset (fpmap K V) :=
-  { Poset_isProset := fpmap_isProset
-  ; Poset_eqProp_spec (m : fpmap K V) (m' : fpmap K V) := conj (fun H : m = m' => H) (fun H : m = m' => H)
-  }.
-
-#[local, program]
-Instance fpmap_hsOrd : hsOrd (fpmap K V) (PROSET := Poset_isProset) :=
-  { compare (m : fpmap K V) (m' : fpmap K V) := compare m.(FinitePartialMap.data) m'.(FinitePartialMap.data) }.
-Next Obligation.
-  intros m m' OBS_Lt. pose proof (compare_Lt m.(FinitePartialMap.data) m'.(FinitePartialMap.data) OBS_Lt) as [LE NE]. split.
-  - exact LE.
-  - intros m_eq_m'. contradiction NE. cbn in m_eq_m'.
-    rewrite -> FinitePartialMap.t_eq_iff in m_eq_m'. rewrite m_eq_m'. reflexivity.
-Qed.
-Next Obligation.
-  intros m m' OBS_Eq. pose proof (compare_Eq m.(FinitePartialMap.data) m'.(FinitePartialMap.data) OBS_Eq) as H_eq.
-  rewrite Poset_eqProp_spec in H_eq. exact (proj2 (FinitePartialMap.t_eq_iff m m') H_eq).
-Qed.
-Next Obligation.
-  intros m m' OBS_Gt. pose proof (compare_Gt m.(FinitePartialMap.data) m'.(FinitePartialMap.data) OBS_Gt) as [LE NE]. split.
-  - exact LE.
-  - intros m_eq_m'. contradiction NE. cbn in m_eq_m'.
-    rewrite -> FinitePartialMap.t_eq_iff in m_eq_m'. rewrite m_eq_m'. reflexivity.
-Qed.
-
-#[global]
-Instance HsOrd_fpmap : HsOrd (fpmap K V) (POSET := fpmap_isPoset) :=
-  { HsOrd_hsOrd := fpmap_hsOrd }.
-
-End HsOrd_fpmap.
-
-#[global, refine]
-Instance fpmap_isFunctor {K : Type} {POSET_K : isPoset K} (HsOrd_K : HsOrd K (POSET := POSET_K)) : isFunctor (fpmap K) :=
-  fun V : Type => fun V' : Type => fun v_to_v' : V -> V' => fun m : fpmap K V => {| FinitePartialMap.data := map (fun '(k, v) => (k, v_to_v' v)) m.(FinitePartialMap.data); FinitePartialMap.data_isSorted := _ |}.
+Theorem lookup_spec_eq (m : fpmap K V) (k : K) (v : V)
+  : lookup k m = Some v <-> L.In (k, v) (FinitePartialMap.data m).
 Proof.
-  replace (map fst (map (fun '(k, v) => (k, v_to_v' v)) m.(FinitePartialMap.data))) with (map fst m.(FinitePartialMap.data)).
-  - exact m.(FinitePartialMap.data_isSorted).
-  - generalize (FinitePartialMap.data m) as xs; clear. induction xs as [ | [k v] xs IH]; simpl; f_equal; auto.
-Defined.
+  rewrite lookup_spec. split.
+  - intros [k' [EQ IN]]. rewrite Poset_eqProp_spec in EQ. now subst k'.
+  - intros IN. exists k. split; [reflexivity | exact IN].
+Qed.
+
+Theorem lookup_insert_ne_eq (k : K) (v : V) (m : fpmap K V) (k0 : K)
+  (NE : k0 <> k)
+  : lookup k0 (insert k v m) = lookup k0 m.
+Proof.
+  apply lookup_insert_ne. now rewrite Poset_eqProp_spec.
+Qed.
+
+Theorem lookup_remove_ne_eq (k : K) (m : fpmap K V) (k0 : K)
+  (NE : k0 <> k)
+  : lookup k0 (remove k m) = lookup k0 m.
+Proof.
+  apply lookup_remove_ne. now rewrite Poset_eqProp_spec.
+Qed.
+
+End DISCRETE.
+
+Section FSET_MAP.
+
+Context {K : Type} {Y : Type} {PK : isProset K} {OK : hsOrd K} {PY : isProset Y} {OY : hsOrd Y}.
+
+#[local] Existing Instances pair_isProset pair_hsOrd.
+
+Let table_setoid := @fpmap_isSetoid K (fset Y) PK OK (@fset_isSetoid Y PY OY).
+
+#[local] Existing Instance table_setoid.
+
+Definition lookup_set (table : fpmap K (fset Y)) (k : K) : fset Y :=
+  match lookup k table with
+  | None => FS.empty
+  | Some ys => ys
+  end.
+
+Lemma lookup_set_compat_key (table : fpmap K (fset Y)) (k : K) (k' : K)
+  (EQ : k == k')
+  : lookup_set table k = lookup_set table k'.
+Proof.
+  unfold lookup_set. now rewrite lookup_compat_key with (k' := k') by exact EQ.
+Qed.
+
+#[global]
+Instance lookup_set_eqPropCompatible2
+  : eqPropCompatible2 (@lookup_set).
+Proof.
+  intros table table' k k' EXT EQ. rewrite lookup_set_compat_key with (k' := k') by exact EQ.
+  specialize (EXT k'). unfold lookup_set.
+  destruct (lookup k' table), (lookup k' table'); inv EXT; reflexivity || assumption.
+Qed.
+
+Definition add (k : K) (y : Y) (table : fpmap K (fset Y)) : fpmap K (fset Y) :=
+  insert k (FS.add y (lookup_set table k)) table.
+
+#[global]
+Instance add_compat
+  : Proper (eqProp ==> eqProp ==> eqProp ==> eqProp) (@add).
+Proof.
+  intros k k' KEY y y' VALUE table table' EXT. unfold add.
+  apply insert_compat; auto. apply FS.add_eqPropCompatible2; auto.
+  now apply lookup_set_eqPropCompatible2.
+Qed.
+
+Lemma in_add_iff (k : K) (y : Y) (table : fpmap K (fset Y)) (k' : K) (y' : Y)
+  : FS.In y' (lookup_set (add k y table) k') <-> (k' == k /\ y' == y) \/ FS.In y' (lookup_set table k').
+Proof.
+  unfold add. destruct (compare k' k) eqn: OBS.
+  - assert (EQ : k' == k) by now apply compare_Eq_iff.
+    unfold lookup_set at 1. rewrite lookup_compat_key with (k' := k) by exact EQ. rewrite lookup_insert_eq.
+    rewrite FS.in_add_iff. rewrite lookup_set_compat_key with (k := k') (k' := k) by exact EQ. tauto.
+  - assert (NE : ~ k' == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
+    unfold lookup_set at 1. rewrite lookup_insert_ne by exact NE.
+    fold (lookup_set table k'). tauto.
+  - assert (NE : ~ k' == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
+    unfold lookup_set at 1. rewrite lookup_insert_ne by exact NE.
+    fold (lookup_set table k'). tauto.
+Qed.
+
+Definition fromList (facts : list (K * Y)) : fpmap K (fset Y) :=
+  fold_left (fun table => fun p => add (fst p) (snd p) table) (rev_append facts []) empty.
+
+Lemma fromList_spec (facts : list (K * Y))
+  : fromList facts = fold_right (fun p => add (fst p) (snd p)) empty facts.
+Proof.
+  unfold fromList. rewrite rev_append_rev, app_nil_r.
+  rewrite <- fold_left_rev_right, rev_involutive. reflexivity.
+Qed.
+
+Theorem fromList_correct (facts : list (K * Y)) (k : K) (y : Y)
+  : FS.In y (lookup_set (fromList facts) k) <-> InA eqProp (k, y) facts.
+Proof.
+  rewrite fromList_spec. induction facts as [ | [k' y'] facts IH]; cbn [fold_right fst snd].
+  - unfold lookup_set. rewrite lookup_empty, FS.in_empty_iff, InA_nil. reflexivity.
+  - rewrite in_add_iff, IH, InA_cons. reflexivity.
+Qed.
+
+Lemma fromList_nonempty (facts : list (K * Y)) (k : K) (ys : fset Y)
+  (LOOK : lookup k (fromList facts) = Some ys)
+  : exists y, FS.In y ys.
+Proof.
+  rewrite fromList_spec in LOOK. revert LOOK.
+  induction facts as [ | [q y] facts IH]; cbn [fold_right fst snd]; intros LOOK.
+  - rewrite lookup_empty in LOOK. discriminate.
+  - unfold add in LOOK. destruct (compare k q) eqn: OBS.
+    + rewrite lookup_compat_key with (k' := q) in LOOK by now apply compare_Eq_iff.
+      rewrite lookup_insert_eq in LOOK.
+      inv LOOK. exists y. apply FS.in_add_iff. left. reflexivity.
+    + rewrite lookup_insert_ne in LOOK by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
+      now apply IH.
+    + rewrite lookup_insert_ne in LOOK by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
+      now apply IH.
+Qed.
+
+#[global]
+Instance fromList_compat
+  : Proper (equivlistA eqProp ==> eqProp) (@fromList).
+Proof.
+  intros facts facts' EXT k.
+  assert (MEM : forall y, FS.In y (lookup_set (fromList facts) k) <-> FS.In y (lookup_set (fromList facts') k)).
+  { intros y. rewrite !fromList_correct. apply EXT. }
+  destruct (lookup k (fromList facts)) as [ys | ] eqn: LOOK; destruct (lookup k (fromList facts')) as [ys' | ] eqn: LOOK'; constructor || idtac.
+  - apply FS.eq_spec. intros y. specialize (MEM y). unfold lookup_set in MEM.
+    now rewrite LOOK, LOOK' in MEM.
+  - obtain (y & IN) with LOOK by fromList_nonempty.
+    specialize (MEM y). unfold lookup_set in MEM. rewrite LOOK, LOOK', FS.in_empty_iff in MEM. tauto.
+  - obtain (y & IN) with LOOK' by fromList_nonempty.
+    specialize (MEM y). unfold lookup_set in MEM. rewrite LOOK, LOOK', FS.in_empty_iff in MEM. tauto.
+Qed.
+
+Definition fromFSet (facts : fset (K * Y)) : fpmap K (fset Y) :=
+  FS.fold (fun table => fun p => add (fst p) (snd p) table) facts empty.
+
+Lemma fromFSet_spec (facts : fset (K * Y))
+  : fromFSet facts = fromList (rev (FSet.data facts)).
+Proof.
+  unfold fromFSet. rewrite FS.fold_spec, fromList_spec.
+  symmetry. apply fold_left_rev_right.
+Qed.
+
+Theorem fromFSet_correct (facts : fset (K * Y)) (k : K) (y : Y)
+  : FS.In y (lookup_set (fromFSet facts) k) <-> FS.In (k, y) facts.
+Proof.
+  rewrite fromFSet_spec, fromList_correct, InA_rev. reflexivity.
+Qed.
+
+#[global]
+Instance fromFSet_compat
+  : Proper (eqProp ==> eqProp) (@fromFSet).
+Proof.
+  intros facts facts' EXT. rewrite !fromFSet_spec. apply fromList_compat. intros p.
+  rewrite !InA_rev.
+  exact (proj1 (@FS.eq_spec (K * Y) (@pair_isProset K Y PK PY OK OY) (@pair_hsOrd K Y PK PY OK OY) facts facts') EXT p).
+Qed.
+
+Variable nodes : fset K.
+
+Variable seed : fpmap K (fset Y).
+
+Lemma fold_values_rev (q : K) (ys : list Y) (acc : list (K * Y))
+  : fold_left (fun acc => fun y => (q, y) :: acc) ys acc = rev_append (L.map (pair q) ys) acc.
+Proof.
+  revert acc. induction ys as [ | y ys IH]; intros acc; cbn [fold_left L.map rev_append]; auto.
+Qed.
+
+Lemma fold_nodes_rev (ks : list K) (acc : list (K * Y))
+  : fold_left (fun acc => fun k => FS.fold (fun acc => fun y => (k, y) :: acc) (lookup_set seed k) acc) ks acc = rev_append (flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) ks) acc.
+Proof.
+  revert acc. induction ks as [ | k ks IH]; intros acc; cbn [fold_left flat_map rev_append]; auto.
+  rewrite IH, FS.fold_spec, fold_values_rev.
+  rewrite !rev_append_rev, rev_app_distr, app_assoc. reflexivity.
+Qed.
+
+Definition seed_facts : list (K * Y) :=
+  rev_append (FS.fold (fun acc => fun k => FS.fold (fun acc => fun y => (k, y) :: acc) (lookup_set seed k) acc) nodes []) [].
+
+Lemma seed_facts_spec
+  : seed_facts = flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) (FSet.data nodes).
+Proof.
+  unfold seed_facts. rewrite FS.fold_spec, fold_nodes_rev.
+  rewrite !rev_append_rev, !app_nil_r, rev_involutive. reflexivity.
+Qed.
+
+Lemma in_seed_facts_iff (k : K) (y : Y)
+  : InA eqProp (k, y) seed_facts <-> FS.In k nodes /\ FS.In y (lookup_set seed k).
+Proof.
+  rewrite seed_facts_spec. unfold FS.In. rewrite !InA_alt. split.
+  - intros ([q w] & [KEY VALUE] & IN). cbn [fst snd] in KEY, VALUE.
+    rewrite in_flat_map in IN. find* (q' & IN_Q & IN') by IN.
+    rewrite L.in_map_iff in IN'. find* (w' & EQ & IN_W) by IN'. inv EQ.
+    split.
+    + exists q. auto.
+    + rewrite lookup_set_compat_key with (k' := q) by exact KEY. exists w. auto.
+  - intros [(q & KEY & IN_Q) IN_Y].
+    rewrite lookup_set_compat_key with (k' := q) in IN_Y by exact KEY.
+    find* (w & VALUE & IN_W) by IN_Y.
+    exists (q, w). split; [split; assumption | ].
+    apply in_flat_map. exists q. split; auto. apply L.in_map_iff. exists w. auto.
+Qed.
+
+Lemma in_fold_values (q : K) (ys : list Y) (acc : fset (K * Y)) (p : K * Y)
+  : FS.In p (fold_left (fun facts => fun y => FS.add (q, y) facts) ys acc) <-> FS.In p acc \/ InA eqProp p (L.map (pair q) ys).
+Proof.
+  revert acc. induction ys as [ | y ys IH]; intros acc; cbn [fold_left L.map].
+  - rewrite InA_nil. tauto.
+  - rewrite IH, FS.in_add_iff, InA_cons. tauto.
+Qed.
+
+Lemma in_fold_nodes (ks : list K) (acc : fset (K * Y)) (p : K * Y)
+  : FS.In p (fold_left (fun facts => fun k => FS.fold (fun facts => fun y => FS.add (k, y) facts) (lookup_set seed k) facts) ks acc) <-> FS.In p acc \/ InA eqProp p (flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) ks).
+Proof.
+  revert acc. induction ks as [ | q ks IH]; intros acc; cbn [fold_left flat_map].
+  - rewrite InA_nil. tauto.
+  - rewrite IH, FS.fold_spec, in_fold_values, InA_app_iff. tauto.
+Qed.
+
+Definition initial_facts : fset (K * Y) :=
+  FS.fold (fun facts => fun k => FS.fold (fun facts => fun y => FS.add (k, y) facts) (lookup_set seed k) facts) nodes FS.empty.
+
+Lemma in_initial_facts_iff (k : K) (y : Y)
+  : FS.In (k, y) initial_facts <-> FS.In k nodes /\ FS.In y (lookup_set seed k).
+Proof.
+  unfold initial_facts. rewrite FS.fold_spec, in_fold_nodes, FS.in_empty_iff.
+  rewrite <- seed_facts_spec, in_seed_facts_iff. tauto.
+Qed.
+
+End FSET_MAP.
+
+Section INITIAL_COMPAT.
+
+Context {K : Type} {Y : Type} {PK : isProset K} {OK : hsOrd K} {PY : isProset Y} {OY : hsOrd Y}.
+
+#[local] Existing Instances pair_isProset pair_hsOrd.
+
+#[global]
+Instance initial_facts_eqPropCompatible2
+  : eqPropCompatible2 (@initial_facts K Y PK OK PY OY).
+Proof.
+  intros nodes nodes' seed seed' EQ_N EQ_S. apply FS.eq_spec. intros [k y].
+  rewrite !in_initial_facts_iff.
+  rewrite FS.In_compat with (x := k) (y := k) (X := nodes) (Y := nodes') by (reflexivity || exact EQ_N).
+  rewrite FS.In_compat with (x := y) (y := y) (X := lookup_set seed k) (Y := lookup_set seed' k) by (reflexivity || now apply lookup_set_eqPropCompatible2).
+  reflexivity.
+Qed.
+
+End INITIAL_COMPAT.
+
+Section FSET_MAP_DISCRETE.
+
+Context {K : Type} {Y : Type} {PK : isPoset K} {OK : HsOrd K} {PY : isPoset Y} {OY : HsOrd Y}.
+
+Theorem fromList_correct_eq (facts : list (K * Y)) (k : K) (y : Y)
+  : L.In y (FSet.data (lookup_set (fromList facts) k)) <-> L.In (k, y) facts.
+Proof.
+  rewrite <- !InA_eqProp_iff. apply fromList_correct.
+Qed.
+
+Theorem fromFSet_correct_eq (facts : fset (K * Y)) (k : K) (y : Y)
+  : L.In y (FSet.data (lookup_set (fromFSet facts) k)) <-> L.In (k, y) (FSet.data facts).
+Proof.
+  rewrite <- !InA_eqProp_iff. apply fromFSet_correct.
+Qed.
+
+Theorem in_initial_facts_eq_iff (nodes : fset K) (seed : fpmap K (fset Y)) (k : K) (y : Y)
+  : L.In (k, y) (FSet.data (initial_facts nodes seed)) <-> L.In k (FSet.data nodes) /\ L.In y (FSet.data (lookup_set seed k)).
+Proof.
+  rewrite <- !InA_eqProp_iff. apply in_initial_facts_iff.
+Qed.
+
+End FSET_MAP_DISCRETE.
 
 End FPM.

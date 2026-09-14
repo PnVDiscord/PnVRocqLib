@@ -4,6 +4,7 @@ Require Import PnV.Prelude.X.
 Require Export PnV.Math.ThN.
 Require Export PnV.Math.OrderTheory.
 Require Export PnV.Data.HsOrd.
+Require Import PnV.Data.BalancedTree.
 
 #[local] Infix "=~=" := is_similar_to : type_scope.
 #[local] Infix "\in" := E.In.
@@ -74,579 +75,865 @@ Module FSet.
 
 #[universes(template), projections(primitive)]
 Record t {A : Type} {isSorted : list A -> bool} : Type :=
-  mk
-  { data : list A
-  ; data_isSorted : isSorted data = true
-  }.
+  { tree : BalancedTree.t A
+  ; data_isSorted : isSorted (BalancedTree.data tree) = true
+  } as X.
 
 #[global] Arguments t : clear implicits.
-#[global] Arguments mk {A} {isSorted}.
 
-Lemma t_eq_iff {A : Type} {isSorted : list A -> bool} (X : FSet.t A isSorted) (X' : FSet.t A isSorted)
-  : X = X' <-> X.(data) = X'.(data).
+Definition data {A : Type} {isSorted : list A -> bool} (X : t A isSorted) : list A :=
+  BalancedTree.data X.(tree).
+
+#[refine]
+Definition mk {A : Type} {isSorted : list A -> bool} (xs : list A) (SORTED : isSorted xs = true) : FSet.t A isSorted :=
+  {| tree := BalancedTree.of_list xs; data_isSorted := _ |}.
 Proof.
-  split.
-  - intros H_eq. subst X'. reflexivity.
-  - revert X X'.
-    assert (claim : forall data1 : list A, forall data2 : list A, forall data1_isSorted : isSorted data1 = true, forall data2_isSorted : isSorted data2 = true, data1 = data2 -> {| data := data1; data_isSorted := data1_isSorted |} = {| data := data2; data_isSorted := data2_isSorted |}).
-    { ii. subst data2. enough (HH : data1_isSorted = data2_isSorted) by now rewrite HH. eapply eq_pirrel_fromEqDec. }
-    intros X X' H_eq. exact (claim X.(data) X'.(data) X.(data_isSorted) X'.(data_isSorted) H_eq).
+  rewrite BalancedTree.data_of_list. exact SORTED.
+Defined.
+
+Lemma data_mk {A : Type} {isSorted : list A -> bool} (xs : list A)
+  (SORTED : isSorted xs = true)
+  : data (mk xs SORTED) = xs.
+Proof.
+  unfold data, mk. cbn. eapply BalancedTree.data_of_list.
 Qed.
 
 End FSet.
 
 #[global] Abbreviation fset A := (FSet.t A (isSorted compare)).
 
-Theorem fset_eq_spec (A : Type) (POSET : isPoset A) (HS_ORD : HsOrd A (POSET := POSET)) (X : fset A) (X' : fset A)
-  : X = X' <-> (forall z : A, L.In z X.(FSet.data) <-> L.In z X'.(FSet.data)).
+Section ORDERED_FSET.
+
+Context {A : Type} {PROSET : isProset A} {ORD : hsOrd A}.
+
+#[global]
+Instance fset_isSetoid : isSetoid (fset A) :=
+  { eqProp (X : fset A) (X' : fset A) := @eqProp (list A) (L.list_isSetoid PROSET.(Proset_isSetoid)) (FSet.data X) (FSet.data X')
+  ; eqProp_Equivalence := relation_on_image_liftsEquivalence (L.list_isSetoid PROSET.(Proset_isSetoid)).(eqProp_Equivalence) (@FSet.data A (isSorted compare))
+  }.
+
+Theorem fset_eq_spec (X : fset A) (X' : fset A)
+  : X == X' <-> (forall x : A, InA eqProp x (FSet.data X) <-> InA eqProp x (FSet.data X')).
 Proof.
-  rewrite FSet.t_eq_iff. split.
-  - ii. rewrite H. reflexivity.
-  - intros EXT.
-    assert (LT_asym : forall x1 : A, forall x2 : A, compare x1 x2 = Lt -> compare x2 x1 = Lt -> False).
-    { intros x1 x2 LT1 LT2.
-      pose proof (compare_Lt x1 x2 LT1) as [x1_le_x2 x1_ne_x2].
-      pose proof (compare_Lt x2 x1 LT2) as [x2_le_x1 _].
-      contradiction x1_ne_x2. eapply leProp_antisymmetry; assumption.
-    }
-    assert (LT_neq : forall x1 : A, forall x2 : A, compare x1 x2 = Lt -> x1 ≠ x2).
-    { intros x1 x2 LT x1_eq_x2. subst x2.
-      pose proof (compare_Lt x1 x1 LT) as [_ x1_ne_x1].
-      contradiction x1_ne_x1. reflexivity.
-    }
-    assert (HD_TL : forall x : A, forall zs : list A, isSorted compare (x :: zs) = true -> ((forall z : A, z ∈ zs -> compare x z = Lt) /\ isSorted compare zs = true)).
-    { intros x zs SORTED. simpl in SORTED. rewrite andb_true_iff in SORTED.
-      destruct SORTED as [SORTED_hd SORTED_tl]. rewrite forallb_forall in SORTED_hd.
-      split; trivial. intros z z_in. rewrite <- eqb_eq. exact (SORTED_hd z z_in).
-    }
-    pose proof (X.(FSet.data_isSorted)) as xs_isSorted.
-    pose proof (X'.(FSet.data_isSorted)) as ys_isSorted.
-    set (xs := X.(FSet.data)) in *. set (ys := X'.(FSet.data)) in *.
-    clearbody xs ys. clear X X'. revert xs_isSorted ys ys_isSorted EXT.
-    induction xs as [ | x xs IH]; intros xs_isSorted [ | y ys] ys_isSorted EXT.
-    + reflexivity.
-    + exfalso. exact (proj2 (EXT y) (or_introl eq_refl)).
-    + exfalso. exact (proj1 (EXT x) (or_introl eq_refl)).
-    + pose proof (HD_TL x xs xs_isSorted) as [x_lt_xs xs_isSorted'].
-      pose proof (HD_TL y ys ys_isSorted) as [y_lt_ys ys_isSorted'].
-      assert (x_eq_y : x = y).
-      { pose proof (proj1 (EXT x) (or_introl eq_refl)) as [y_eq_x | x_in_ys].
-        - symmetry. exact y_eq_x.
-        - pose proof (proj2 (EXT y) (or_introl eq_refl)) as [x_eq_y | y_in_xs].
-          + exact x_eq_y.
-          + exfalso. exact (LT_asym x y (x_lt_xs y y_in_xs) (y_lt_ys x x_in_ys)).
-      }
-      subst y. f_equal. eapply IH; trivial. intros z. split.
-      * intros z_in_xs. pose proof (proj1 (EXT z) (or_intror z_in_xs)) as [x_eq_z | z_in_ys].
-        { exfalso. exact (LT_neq x z (x_lt_xs z z_in_xs) x_eq_z). }
-        { exact z_in_ys. }
-      * intros z_in_ys. pose proof (proj2 (EXT z) (or_intror z_in_ys)) as [x_eq_z | z_in_xs].
-        { exfalso. exact (LT_neq x z (y_lt_ys z z_in_ys) x_eq_z). }
-        { exact z_in_xs. }
+  eapply sorted_eqProp_iff; eapply FSet.data_isSorted.
 Qed.
 
-Section HsOrd_fset.
-
-#[local] Obligation Tactic := idtac.
-
-Context {A : Type} {POSET : isPoset A} {HS_ORD : HsOrd A (POSET := POSET)}.
-
-#[local, program]
+#[global, refine]
 Instance fset_isProset : isProset (fset A) :=
-  { leProp (X : fset A) (X' : fset A) := X.(FSet.data) =< X'.(FSet.data)
-  ; Proset_isSetoid := mkSetoid_from_eq
+  { leProp (X : fset A) (X' : fset A) := lex_le (FSet.data X) (FSet.data X')
+  ; Proset_isSetoid := fset_isSetoid
   }.
-Next Obligation.
-  split.
-  - intros X. reflexivity.
-  - intros X X' X'' X_le_X' X'_le_X''. transitivity X'.(FSet.data); assumption.
-Qed.
-Next Obligation.
-  intros X X'. unfold flip. split.
-  - intros X_eq_X'. change (X = X') in X_eq_X'. subst X'. split; reflexivity.
-  - intros [X_le_X' X'_le_X]. change (X = X'). rewrite FSet.t_eq_iff. rewrite <- Poset_eqProp_spec.
-    exact (leProp_antisymmetry X.(FSet.data) X'.(FSet.data) X_le_X' X'_le_X).
-Qed.
+Proof.
+  - split.
+    + intros X. eapply lex_le_PreOrder.
+    + intros X Y Z XY YZ. eapply lex_le_PreOrder; eauto.
+  - intros X Y. change (@eqProp (list A) (L.list_isSetoid PROSET.(Proset_isSetoid)) (FSet.data X) (FSet.data Y) <-> (lex_le (FSet.data X) (FSet.data Y) /\ lex_le (FSet.data Y) (FSet.data X))).
+    rewrite <- lex_eq_iff. eapply lex_le_PartialOrder.
+Defined.
 
-#[global]
-Instance fset_isPoset : isPoset (fset A) :=
-  { Poset_isProset := fset_isProset
-  ; Poset_eqProp_spec (X : fset A) (X' : fset A) := conj (fun H : X = X' => H) (fun H : X = X' => H)
-  }.
+#[global, refine]
+Instance fset_hsOrd : hsOrd (fset A) (PROSET := fset_isProset) :=
+  { compare (X : fset A) (X' : fset A) := lex_compare (FSet.data X) (FSet.data X') }.
+Proof.
+  - intros X Y XY. exact (@compare_Lt (list A) (@list_lexicographical_order A PROSET ORD) (@list_hsOrd A PROSET ORD) (FSet.data X) (FSet.data Y) XY).
+  - intros X Y XY. exact (@compare_Eq (list A) (@list_lexicographical_order A PROSET ORD) (@list_hsOrd A PROSET ORD) (FSet.data X) (FSet.data Y) XY).
+  - intros X Y XY. exact (@compare_Gt (list A) (@list_lexicographical_order A PROSET ORD) (@list_hsOrd A PROSET ORD) (FSet.data X) (FSet.data Y) XY).
+Defined.
 
-#[local, program]
-Instance fset_hsOrd : hsOrd (fset A) (PROSET := Poset_isProset) :=
-  { compare (X : fset A) (X' : fset A) := compare X.(FSet.data) X'.(FSet.data) }.
-Next Obligation.
-  intros X X' OBS_Lt. pose proof (compare_Lt X.(FSet.data) X'.(FSet.data) OBS_Lt) as [LE NE]. split.
-  - exact LE.
-  - intros X_eq_X'. contradiction NE. cbn in X_eq_X' |- *. subst X'. reflexivity.
-Qed.
-Next Obligation.
-  intros X X' OBS_Eq. pose proof (compare_Eq X.(FSet.data) X'.(FSet.data) OBS_Eq) as H_eq.
-  rewrite Poset_eqProp_spec in H_eq. exact (proj2 (FSet.t_eq_iff X X') H_eq).
-Qed.
-Next Obligation.
-  intros X X' OBS_Gt. pose proof (compare_Gt X.(FSet.data) X'.(FSet.data) OBS_Gt) as [LE NE]. split.
-  - exact LE.
-  - intros X_eq_X'. contradiction NE. cbn in X_eq_X' |- *. subst X'. reflexivity.
-Qed.
-
-#[global]
-Instance HsOrd_fset : HsOrd (fset A) (POSET := fset_isPoset) :=
-  { HsOrd_hsOrd := fset_hsOrd }.
-
-End HsOrd_fset.
+End ORDERED_FSET.
 
 Module FS.
 
-Section SIMILARITY.
-
-Definition Similarity_fset_ensemble {A : Type} {A' : Type} {POSET : isPoset A} {HS_ORD : HsOrd A (POSET := POSET)} (Sim_A_A' : Similarity A A') : Similarity (fset A) (ensemble A') :=
-  fun X : fset A => fun X' : ensemble A' => forall x : A, forall x' : A', x =~= x' -> (x ∈ X.(FSet.data) <-> x' \in X').
-
-Context {A : Type} {POSET : isPoset A} {HS_ORD : HsOrd A (POSET := POSET)}.
-
-#[global]
-Instance fset_corresponds_to_ensemble : Similarity (fset A) (ensemble A) :=
-  Similarity_fset_ensemble eq.
-
-Theorem fset_corresponds_to_ensemble_iff (X : fset A) (X' : ensemble A)
-  : X =~= X' <-> (forall z : A, z ∈ X.(FSet.data) <-> z \in X').
-Proof.
-  done.
-Qed.
-
-End SIMILARITY.
-
 Section BASICS.
 
-Context {A : Type} {POSET : isPoset A} {HS_ORD : HsOrd A (POSET := POSET)}.
+Context {A : Type} {PROSET : isProset A} {ORD : hsOrd A}.
 
-Definition insert (x : A) : list A -> list A :=
-  fix go (xs : list A) {struct xs} : list A :=
-  match xs with
-  | [] => [x]
-  | y :: ys =>
-    match compare x y with
-    | Lt => x :: y :: ys
-    | Eq => y :: ys
-    | Gt => y :: go ys
-    end
+Section fold.
+
+Context {B : Type} (f : B -> A -> B).
+
+Definition fold (X : fset A) : B -> B :=
+  BalancedTree.fold f X.(FSet.tree).
+
+Lemma fold_spec (X : fset A) (acc : B)
+  : fold X acc = L.fold_left f (FSet.data X) acc.
+Proof.
+  eapply BalancedTree.fold_spec.
+Qed.
+
+End fold.
+
+Definition is_empty (X : fset A) : bool :=
+  match BalancedTree.root X.(FSet.tree) with
+  | BalancedTree.Leaf => true
+  | BalancedTree.Node _ _ _ _ => false
   end.
 
-Lemma in_insert_iff (x : A) (xs : list A)
-  : forall z : A, z ∈ insert x xs <-> (x = z \/ z ∈ xs).
+Lemma is_empty_spec (X : fset A)
+  : is_empty X = true <-> FSet.data X = [].
 Proof.
-  induction xs as [ | y ys IH]; intros z; simpl.
+  unfold is_empty, FSet.data. rewrite BalancedTree.data_elements.
+  destruct (BalancedTree.root _); cbn [BalancedTree.elements].
   - tauto.
-  - destruct (compare x y) as [ | | ] eqn: H_OBS.
-    + rewrite compare_eq_iff in H_OBS. subst y. simpl. tauto.
-    + simpl. tauto.
-    + simpl. rewrite IH. tauto.
+  - split; [ss | intros EQ].
+    apply app_eq_nil in EQ. des; ss.
 Qed.
 
-Lemma isSorted_insert (x : A) (xs : list A)
-  (xs_isSorted : isSorted compare xs = true)
-  : isSorted compare (insert x xs) = true.
+Definition In (x : A) (X : fset A) : Prop :=
+  InA eqProp x (FSet.data X).
+
+Theorem eq_spec (X : fset A) (Y : fset A)
+  : X == Y <-> (forall x, In x X <-> In x Y).
 Proof.
-  revert xs_isSorted. induction xs as [ | y ys IH]; intros xs_isSorted; simpl; trivial.
-  rewrite isSorted_cons_iff in xs_isSorted. destruct xs_isSorted as [y_lt_ys ys_isSorted].
-  destruct (compare x y) as [ | | ] eqn: H_OBS.
-  - rewrite isSorted_cons_iff. split; assumption.
-  - rewrite isSorted_cons_iff. split.
-    + intros z [y_eq_z | z_in_ys]; [congruence | ].
-      exact (compare_Lt_trans x y z H_OBS (y_lt_ys z z_in_ys)).
-    + rewrite isSorted_cons_iff. split; assumption.
-  - rewrite isSorted_cons_iff. split.
-    + intros z z_in. rewrite in_insert_iff in z_in. destruct z_in as [x_eq_z | z_in_ys].
-      * subst z. exact (compare_Gt_flip x y H_OBS).
-      * exact (y_lt_ys z z_in_ys).
-    + exact (IH ys_isSorted).
+  eapply fset_eq_spec.
 Qed.
 
-Lemma length_insert (x : A) (xs : list A)
-  (NOT_IN : ~ x ∈ xs)
-  : length (insert x xs) = S (length xs).
-Proof.
-  revert NOT_IN. induction xs as [ | y ys IH]; intros NOT_IN; simpl; trivial.
-  destruct (compare x y) as [ | | ] eqn: H_OBS; simpl.
-  - rewrite compare_eq_iff in H_OBS. subst y. contradiction NOT_IN. now left.
-  - reflexivity.
-  - f_equal. eapply IH. intros z_in. contradiction NOT_IN. now right.
-Qed.
-
-Lemma isSorted_fold_right_insert (xs : list A) (ys : list A)
-  (ys_isSorted : isSorted compare ys = true)
-  : isSorted compare (L.fold_right insert ys xs) = true.
-Proof.
-  induction xs as [ | x xs IH]; simpl; trivial.
-  exact (isSorted_insert x (L.fold_right insert ys xs) IH).
-Qed.
-
-Lemma in_fold_right_insert_iff (xs : list A) (ys : list A)
-  : forall z : A, z ∈ L.fold_right insert ys xs <-> (z ∈ xs \/ z ∈ ys).
-Proof.
-  induction xs as [ | x xs IH]; intros z; simpl.
-  - tauto.
-  - rewrite in_insert_iff, IH. tauto.
-Qed.
+Definition isSubsetOf (X : fset A) (Y : fset A) : Prop :=
+  forall x, In x X -> In x Y.
 
 Definition empty : fset A :=
   FSet.mk [] eq_refl.
 
-Definition add (x : A) (X : fset A) : fset A :=
-  FSet.mk (insert x X.(FSet.data)) (isSorted_insert x X.(FSet.data) X.(FSet.data_isSorted)).
-
-Definition fromList (xs : list A) : fset A :=
-  FSet.mk (L.fold_right insert [] xs) (isSorted_fold_right_insert xs [] eq_refl).
-
-Definition union (X : fset A) (X' : fset A) : fset A :=
-  FSet.mk (L.fold_right insert X'.(FSet.data) X.(FSet.data)) (isSorted_fold_right_insert X.(FSet.data) X'.(FSet.data) X'.(FSet.data_isSorted)).
-
-Definition unions (Xs : fset (fset A)) : fset A :=
-  L.fold_right union empty Xs.(FSet.data).
-
-Fixpoint mem' (x : A) (xs : list A) {struct xs} : bool :=
-  match xs with
-  | [] => false
-  | y :: ys =>
-    match compare x y with
-    | Eq => true
-    | _ => mem' x ys
-    end
-  end.
-
-Fixpoint memSorted' (x : A) (xs : list A) {struct xs} : bool :=
-  match xs with
-  | [] => false
-  | y :: ys =>
-    match compare x y with
-    | Lt => false
-    | Eq => true
-    | Gt => memSorted' x ys
-    end
-  end.
-
-Lemma mem'_all_lt_false (x : A) (xs : list A)
-  (ALL_LT : forall y : A, y ∈ xs -> compare x y = Lt)
-  : mem' x xs = false.
+Theorem in_empty_iff (x : A)
+  : In x empty <-> False.
 Proof.
-  induction xs as [ | y ys IH]; trivial.
-  cbn [mem']. rewrite (ALL_LT y (or_introl eq_refl)).
-  eapply IH. intros z z_in. eapply ALL_LT. now right.
+  unfold In, empty. rewrite FSet.data_mk. eapply InA_nil.
 Qed.
 
-Lemma memSorted'_eq_mem' (x : A) (xs : list A)
-  (SORTED : isSorted compare xs = true)
-  : memSorted' x xs = mem' x xs.
+Lemma sorted_data (X : fset A)
+  : isSorted compare (map (fun x : A => x) (FSet.data X)) = true.
 Proof.
-  revert SORTED. induction xs as [ | y ys IH]; intros SORTED; trivial.
-  rewrite isSorted_cons_iff in SORTED.
-  destruct SORTED as [y_lt_ys ys_isSorted].
-  cbn [memSorted' mem'].
-  destruct (compare x y) as [ | | ] eqn: OBS; trivial.
-  - symmetry. eapply mem'_all_lt_false. intros z z_in.
-    exact (compare_Lt_trans x y z OBS (y_lt_ys z z_in)).
-  - exact (IH ys_isSorted).
+  rewrite map_id. exact X.(FSet.data_isSorted).
 Qed.
+
+#[local] Hint Resolve sorted_data : core.
 
 Definition mem (x : A) (X : fset A) : bool :=
-  memSorted' x X.(FSet.data).
+  match BalancedTree.lookup (compare x) X.(FSet.tree) with
+  | Some _ => true
+  | None => false
+  end.
 
-Definition isSubsetOf (X : fset A) (X' : fset A) : Prop :=
-  forall z : A, z ∈ X.(FSet.data) -> z ∈ X'.(FSet.data).
-
-Theorem in_empty_iff
-  : forall z : A, z ∈ empty.(FSet.data) <-> False.
+Lemma lookup_data (x : A) (X : fset A)
+  : BalancedTree.lookup (compare x) X.(FSet.tree) = OrderedList.lookup (fun y : A => y) x (FSet.data X).
 Proof.
-  intros z. reflexivity.
-Qed.
-
-Theorem in_add_iff (x : A) (X : fset A)
-  : forall z : A, z ∈ (add x X).(FSet.data) <-> (x = z \/ z ∈ X.(FSet.data)).
-Proof.
-  exact (in_insert_iff x X.(FSet.data)).
-Qed.
-
-Theorem in_fromList_iff (xs : list A)
-  : forall z : A, z ∈ (fromList xs).(FSet.data) <-> z ∈ xs.
-Proof.
-  intros z. unfold fromList. simpl. rewrite in_fold_right_insert_iff. simpl. tauto.
-Qed.
-
-Lemma length_fromList (xs : list A)
-  (NO_DUP : L.NoDup xs)
-  : length (fromList xs).(FSet.data) = length xs.
-Proof.
-  induction NO_DUP as [ | x xs NOT_IN NO_DUP IH]; trivial.
-  change (length (insert x (fromList xs).(FSet.data)) = S (length xs)).
-  rewrite length_insert.
-  - f_equal. exact IH.
-  - rewrite in_fromList_iff. exact NOT_IN.
-Qed.
-
-Theorem in_union_iff (X : fset A) (X' : fset A)
-  : forall z : A, z ∈ (union X X').(FSet.data) <-> (z ∈ X.(FSet.data) \/ z ∈ X'.(FSet.data)).
-Proof.
-  exact (in_fold_right_insert_iff X.(FSet.data) X'.(FSet.data)).
-Qed.
-
-Theorem in_unions_iff (Xs : fset (fset A))
-  : forall z : A, z ∈ (unions Xs).(FSet.data) <-> (exists X : fset A, X ∈ Xs.(FSet.data) /\ z ∈ X.(FSet.data)).
-Proof.
-  unfold unions. generalize Xs.(FSet.data) as Ys. clear Xs.
-  induction Ys as [ | Y Ys IH]; intros z; cbn [L.fold_right].
-  - simpl. split; [tauto | intros (X & [] & _)].
-  - rewrite in_union_iff, IH. simpl. split.
-    + intros [z_in_Y | (X & X_in & z_in_X)].
-      * exists Y. split; [now left | exact z_in_Y].
-      * exists X. split; [now right | exact z_in_X].
-    + intros (X & [Y_eq_X | X_in] & z_in_X).
-      * left. subst X. exact z_in_X.
-      * right. exists X. split; assumption.
+  eapply BalancedTree.lookup_data. eapply sorted_data.
 Qed.
 
 Theorem mem_spec (x : A) (X : fset A)
-  : forall b : bool, mem x X = b <-> (if b then x ∈ X.(FSet.data) else ~ x ∈ X.(FSet.data)).
+  : forall b : bool, mem x X = b <-> (if b then In x X else ~ In x X).
 Proof.
-  assert (claim : mem x X = true <-> x ∈ X.(FSet.data)).
-  { unfold mem. rewrite (memSorted'_eq_mem' x X.(FSet.data) X.(FSet.data_isSorted)).
-    generalize X.(FSet.data) as xs. clear X.
-    induction xs as [ | y ys IH]; simpl.
-    - split; [congruence | tauto].
-    - destruct (compare x y) as [ | | ] eqn: H_OBS.
-      + rewrite compare_eq_iff in H_OBS. subst y. split; [intros _; now left | reflexivity].
-      + rewrite IH. split; [now right | ].
-        intros [y_eq_x | x_in_ys]; trivial.
-        subst y. rewrite compare_refl in H_OBS. discriminate H_OBS.
-      + rewrite IH. split; [now right | ].
-        intros [y_eq_x | x_in_ys]; trivial.
-        subst y. rewrite compare_refl in H_OBS. discriminate H_OBS.
+  assert (SPEC : mem x X = true <-> In x X).
+  { unfold mem. rewrite lookup_data. unfold In. rewrite InA_alt.
+    destruct (OrderedList.lookup _ _ _) as [y | ] eqn: OBS.
+    - rewrite OrderedList.lookup_spec in OBS by apply sorted_data. firstorder.
+    - split; [ss | intros (y & EQ & IN)].
+      assert (HIT : OrderedList.lookup (fun y : A => y) x (FSet.data X) = Some y).
+      { rewrite OrderedList.lookup_spec by apply sorted_data. auto. }
+      congruence.
   }
-  intros [ | ].
-  - exact claim.
-  - split.
-    + intros H_eq x_in. rewrite <- claim in x_in. congruence.
-    + intros NOT_IN. destruct (mem x X) as [ | ] eqn: H_OBS; trivial.
-      contradiction NOT_IN. now rewrite <- claim.
+  intros [ | ]; [exact SPEC | split].
+  - intros EQ IN. apply SPEC in IN. congruence.
+  - intros NOT_IN. destruct (mem x X); auto.
+    exfalso. apply NOT_IN. apply SPEC. reflexivity.
+Qed.
+
+Lemma in_insert_iff (x : A) (xs : list A) (y : A)
+  : InA eqProp y (OrderedList.insert (fun z : A => z) x xs) <-> (y == x \/ InA eqProp y xs).
+Proof.
+  induction xs as [ | z xs IH]; cbn [OrderedList.insert].
+  - rewrite InA_cons, InA_nil. tauto.
+  - destruct (compare x z) eqn: OBS.
+    + rewrite !InA_cons.
+      enough (EQ : y == x <-> y == z) by tauto.
+      rewrite compare_Eq_iff in OBS. split; intros EQ; etransitivity; eauto with *.
+    + rewrite !InA_cons. tauto.
+    + rewrite !InA_cons, IH. tauto.
+Qed.
+
+#[refine]
+Definition add (x : A) (X : fset A) : fset A :=
+  {| FSet.tree := BalancedTree.add compare x X.(FSet.tree); FSet.data_isSorted := _ |}.
+Proof.
+  rewrite BalancedTree.data_add with (key := fun y : A => y) by eapply sorted_data.
+  find* SORTED by (OrderedList.insert_sorted (fun y : A => y) x (FSet.data X) (sorted_data X)).
+  now rewrite map_id in SORTED.
+Defined.
+
+Lemma data_add (x : A) (X : fset A)
+  : FSet.data (add x X) = OrderedList.insert (fun y : A => y) x (FSet.data X).
+Proof.
+  unfold add, FSet.data. cbn [FSet.tree].
+  now rewrite BalancedTree.data_add with (key := fun y : A => y) by eapply sorted_data.
+Qed.
+
+Theorem in_add_iff (x : A) (X : fset A) (y : A)
+  : In y (add x X) <-> y == x \/ In y X.
+Proof.
+  unfold In. rewrite data_add. eapply in_insert_iff.
+Qed.
+
+Theorem length_add (x : A) (X : fset A)
+  (FRESH : ~ In x X)
+  : length (FSet.data (add x X)) = S (length (FSet.data X)).
+Proof.
+  rewrite data_add. eapply OrderedList.length_insert.
+  destruct (OrderedList.lookup _ _ _) as [y | ] eqn: OBS; auto.
+  contradiction FRESH. unfold In. rewrite InA_alt.
+  rewrite OrderedList.lookup_spec in OBS by eapply sorted_data. firstorder.
+Qed.
+
+Definition fromList (xs : list A) : fset A :=
+  L.fold_left (fun X => fun x => add x X) (L.rev_append xs []) empty.
+
+Lemma fromList_spec (xs : list A)
+  : fromList xs = L.fold_right add empty xs.
+Proof.
+  unfold fromList. rewrite <- L.fold_left_rev_right, <- L.rev_alt, L.rev_involutive. reflexivity.
+Qed.
+
+Lemma fromList_cons (x : A) (xs : list A)
+  : fromList (x :: xs) = add x (fromList xs).
+Proof.
+  rewrite !fromList_spec. reflexivity.
+Qed.
+
+Theorem in_fromList_iff (xs : list A) (x : A)
+  : In x (fromList xs) <-> InA eqProp x xs.
+Proof.
+  rewrite fromList_spec. induction xs as [ | y ys IH]; cbn [fold_right].
+  - rewrite in_empty_iff, InA_nil. reflexivity.
+  - rewrite in_add_iff, IH, InA_cons. reflexivity.
+Qed.
+
+Definition union (X : fset A) : fset A -> fset A :=
+  L.fold_left (fun Y => fun x => add x Y) (L.rev_append (FSet.data X) []).
+
+Lemma union_spec (X : fset A) (Y : fset A)
+  : union X Y = L.fold_right add Y (FSet.data X).
+Proof.
+  unfold union. now rewrite <- L.fold_left_rev_right, <- L.rev_alt, L.rev_involutive.
+Qed.
+
+Theorem in_union_iff (X : fset A) (Y : fset A) (x : A)
+  : In x (union X Y) <-> In x X \/ In x Y.
+Proof.
+  rewrite union_spec. unfold In at 2. generalize (FSet.data X) as xs. clear X.
+  induction xs as [ | y ys IH]; cbn [fold_right].
+  - rewrite InA_nil. tauto.
+  - rewrite in_add_iff, IH, InA_cons. tauto.
+Qed.
+
+#[refine]
+Definition remove (x : A) (X : fset A) : fset A :=
+  {| FSet.tree := BalancedTree.remove (compare x) X.(FSet.tree); FSet.data_isSorted := _ |}.
+Proof.
+  rewrite BalancedTree.data_remove with (key := fun y : A => y) by eapply sorted_data.
+  find* SORTED by (OrderedList.remove_sorted (fun y : A => y) x (FSet.data X) (sorted_data X)).
+  now rewrite map_id in SORTED.
+Defined.
+
+Lemma data_remove (x : A) (X : fset A)
+  : FSet.data (remove x X) = OrderedList.remove (fun y : A => y) x (FSet.data X).
+Proof.
+  unfold remove, FSet.data. cbn [FSet.tree].
+  now rewrite BalancedTree.data_remove with (key := fun y : A => y) by eapply sorted_data.
+Qed.
+
+Lemma In_compat (x : A) (y : A) (X : fset A) (Y : fset A)
+  (EQ_x : x == y)
+  (EQ_X : X == Y)
+  : In x X <-> In y Y.
+Proof.
+  rewrite eq_spec in EQ_X. rewrite EQ_X. unfold In.
+  eapply InA_compat; [eapply eqProp_Equivalence | exact EQ_x | reflexivity].
+Qed.
+
+#[global]
+Instance In_eqPropCompatible2
+  : eqPropCompatible2 In.
+Proof.
+  ii; eapply In_compat; eauto.
+Qed.
+
+#[global]
+Instance add_eqPropCompatible2
+  : eqPropCompatible2 add.
+Proof.
+  intros x y X Y EQ_x EQ_X. eapply eq_spec. intros z.
+  rewrite eq_spec in EQ_X. rewrite !in_add_iff, EQ_X.
+  assert (EQ : z == x <-> z == y).
+  { split; ii; etransitivity; eauto with *. }
+  tauto.
+Qed.
+
+#[global]
+Instance union_eqPropCompatible2
+  : eqPropCompatible2 union.
+Proof.
+  intros X X' Y Y' EQ_X EQ_Y. eapply eq_spec. intros z.
+  rewrite eq_spec in EQ_X, EQ_Y. rewrite !in_union_iff, EQ_X, EQ_Y.
+  reflexivity.
+Qed.
+
+Lemma mem_remove_same (x : A) (X : fset A)
+  : mem x (remove x X) = false.
+Proof.
+  unfold mem. rewrite lookup_data, data_remove.
+  now rewrite OrderedList.lookup_remove_eq by eapply sorted_data.
+Qed.
+
+Lemma mem_remove_other (x : A) (z : A) (X : fset A)
+  (NE : ~ z == x)
+  : mem z (remove x X) = mem z X.
+Proof.
+  unfold mem. rewrite !lookup_data, data_remove.
+  rewrite OrderedList.lookup_remove_ne by (eauto; eapply sorted_data). reflexivity.
+Qed.
+
+#[global]
+Instance mem_eqPropCompatible2
+  : @eqPropCompatible2 A (fset A) bool PROSET.(Proset_isSetoid) fset_isSetoid mkSetoid_from_eq mem.
+Proof.
+  intros x y X Y EQ_x EQ_X. change (mem x X = mem y Y).
+  destruct (mem y Y) eqn: OBS.
+  - apply mem_spec. apply (proj2 (In_compat x y X Y EQ_x EQ_X)). now apply mem_spec in OBS.
+  - apply mem_spec. intros IN. apply mem_spec in OBS. apply OBS.
+    apply (proj1 (In_compat x y X Y EQ_x EQ_X)). exact IN.
+Qed.
+
+Theorem in_remove_iff (x : A) (X : fset A) (z : A)
+  : In z (remove x X) <-> (In z X /\ ~ z == x).
+Proof.
+  destruct (compare z x) eqn: OBS.
+  - apply compare_Eq_iff in OBS.
+    rewrite In_compat with (y := x) (Y := remove x X) by (try exact OBS; reflexivity).
+    assert (NOT_IN : ~ In x (remove x X)).
+    { apply (proj1 (mem_spec x (remove x X) false)). apply mem_remove_same. }
+    tauto.
+  - assert (NE : ~ z == x).
+    { intros EQ. rewrite <- compare_Eq_iff in EQ. congruence. }
+    rewrite <- mem_spec with (x := z) (X := remove x X) (b := true).
+    rewrite mem_remove_other by exact NE.
+    rewrite mem_spec. tauto.
+  - assert (NE : ~ z == x).
+    { intros EQ. rewrite <- compare_Eq_iff in EQ. congruence. }
+    rewrite <- mem_spec with (x := z) (X := remove x X) (b := true).
+    rewrite mem_remove_other by exact NE.
+    rewrite mem_spec. tauto.
+Qed.
+
+#[global]
+Instance remove_eqPropCompatible2
+  : eqPropCompatible2 remove.
+Proof.
+  intros x y X Y EQ_x EQ_X. apply eq_spec. intros z.
+  rewrite eq_spec in EQ_X. rewrite !in_remove_iff, EQ_X.
+  assert (EQ : z == x <-> z == y) by (split; ii; etransitivity; eauto with *).
+  tauto.
+Qed.
+
+#[global]
+Instance isSubsetOf_eqPropCompatible2
+  : eqPropCompatible2 isSubsetOf.
+Proof.
+  intros X X' Y Y' EQ_X EQ_Y. unfold isSubsetOf.
+  rewrite eq_spec in EQ_X, EQ_Y.
+  setoid_rewrite EQ_X. setoid_rewrite EQ_Y. reflexivity.
+Qed.
+
+Lemma isSorted_filter (p : A -> bool) (xs : list A)
+  (SORTED : isSorted compare xs = true)
+  : isSorted compare (L.filter p xs) = true.
+Proof.
+  revert SORTED. induction xs as [ | x xs IH]; i; cbn; auto.
+  rewrite isSorted_cons_iff in SORTED. des.
+  destruct (p x); auto. rewrite isSorted_cons_iff. split; eauto.
+  i. rewrite L.filter_In in H. des; eauto.
+Qed.
+
+Definition filter (p : A -> bool) (X : fset A) : fset A :=
+  FSet.mk (L.filter p (FSet.data X)) (isSorted_filter p (FSet.data X) X.(FSet.data_isSorted)).
+
+Theorem in_filter_iff (p : A -> bool) (X : fset A)
+  (COMPAT : forall x, forall y, x == y -> p x = p y)
+  (z : A)
+  : In z (filter p X) <-> In z X /\ p z = true.
+Proof.
+  unfold In, filter. rewrite FSet.data_mk, !InA_alt.
+  setoid_rewrite L.filter_In. split.
+  - intros (y & EQ & IN & P). split; eauto.
+  - intros [(y & EQ & IN) P]. exists y. split; auto.
+    split; auto. rewrite <- COMPAT with (x := z) by exact EQ. exact P.
+Qed.
+
+#[global]
+Instance filter_eqPropCompatible1 (p : A -> bool)
+  (COMPAT : Proper (eqProp ==> eq) p)
+  : eqPropCompatible1 (filter p).
+Proof.
+  intros X Y EQ. apply eq_spec. intros z.
+  rewrite !in_filter_iff by exact COMPAT.
+  rewrite eq_spec in EQ. rewrite EQ. reflexivity.
+Qed.
+
+Lemma in_fold_left_add {B : Type} (f : B -> A) (xs : list B) (X : fset A) (y : A)
+  : In y (L.fold_left (fun Y => fun x => add (f x) Y) xs X) <-> In y X \/ (exists x, L.In x xs /\ y == f x).
+Proof.
+  revert X. induction xs as [ | x xs IH]; i; cbn [L.fold_left].
+  - cbn. firstorder.
+  - rewrite IH, in_add_iff. split.
+    + intros [[EQ | IN] | (z & IN & EQ)]; eauto.
+      * right. exists x. split; auto. now left.
+      * right. exists z. split; auto. now right.
+    + intros [IN | (z & [EQ | IN] & EQ')]; subst; eauto.
 Qed.
 
 End BASICS.
 
 Section MAP_and_BIND.
 
-Context {A : Type} {POSET_A : isPoset A} {HS_ORD_A : HsOrd A (POSET := POSET_A)}.
-Context {B : Type} {POSET_B : isPoset B} {HS_ORD_B : HsOrd B (POSET := POSET_B)}.
+Context {A : Type} {PROSET_A : isProset A} {ORD_A : hsOrd A}.
+Context {B : Type} {PROSET_B : isProset B} {ORD_B : hsOrd B}.
 
 Definition map (f : A -> B) (X : fset A) : fset B :=
-  fromList (L.map f X.(FSet.data)).
+  fold (fun Y => fun x => add (f x) Y) X empty.
+
+Lemma in_map_raw_iff (f : A -> B) (X : fset A) (y : B)
+  : In y (map f X) <-> (exists x, L.In x (FSet.data X) /\ y == f x).
+Proof.
+  unfold map. rewrite fold_spec, in_fold_left_add, in_empty_iff. tauto.
+Qed.
 
 Theorem in_map_iff (f : A -> B) (X : fset A)
-  : forall y : B, y ∈ (map f X).(FSet.data) <-> (exists x : A, f x = y /\ x ∈ X.(FSet.data)).
+  (COMPAT : forall x, forall y, x == y -> f x == f y)
+  (z : B)
+  : In z (map f X) <-> (exists x, In x X /\ z == f x).
 Proof.
-  intros y. unfold map. rewrite in_fromList_iff. eapply L.in_map_iff.
+  rewrite in_map_raw_iff. split.
+  - intros (x & IN & EQ). exists x. split; auto.
+    apply In_InA; [apply eqProp_Equivalence | exact IN].
+  - intros (x & IN & EQ). unfold In in IN. rewrite InA_alt in IN.
+    find* (y & EQ' & IN') by IN. exists y. split; auto.
+    transitivity (f x); auto.
 Qed.
 
 Definition bind (X : fset A) (k : A -> fset B) : fset B :=
-  L.fold_right (fun x : A => fun Y : fset B => union (k x) Y) empty X.(FSet.data).
+  L.fold_left (fun Y => fun x => union (k x) Y) (L.rev_append (FSet.data X) []) empty.
+
+Lemma bind_spec (X : fset A) (k : A -> fset B)
+  : bind X k = L.fold_right (fun x => union (k x)) empty (FSet.data X).
+Proof.
+  unfold bind. rewrite <- L.fold_left_rev_right, <- L.rev_alt, L.rev_involutive. reflexivity.
+Qed.
+
+Lemma in_bind_raw_iff (X : fset A) (k : A -> fset B) (z : B)
+  : In z (bind X k) <-> (exists x, L.In x (FSet.data X) /\ In z (k x)).
+Proof.
+  rewrite bind_spec. generalize (FSet.data X) as xs. clear X.
+  induction xs as [ | x xs IH]; cbn [fold_right].
+  - rewrite in_empty_iff. cbn. firstorder.
+  - rewrite in_union_iff, IH. split.
+    + intros [IN | (y & IN & IN')].
+      * exists x. split; auto. now left.
+      * exists y. split; auto. now right.
+    + intros (y & [EQ | IN] & IN'); subst; eauto.
+Qed.
 
 Theorem in_bind_iff (X : fset A) (k : A -> fset B)
-  : forall y : B, y ∈ (bind X k).(FSet.data) <-> (exists x : A, x ∈ X.(FSet.data) /\ y ∈ (k x).(FSet.data)).
+  (COMPAT : forall x, forall y, x == y -> k x == k y)
+  (z : B)
+  : In z (bind X k) <-> (exists x, In x X /\ In z (k x)).
 Proof.
-  unfold bind. generalize X.(FSet.data) as xs. clear X.
-  induction xs as [ | x xs IH]; intros y; cbn [L.fold_right].
-  - simpl. split; [tauto | intros (? & [] & _)].
-  - rewrite in_union_iff, IH. simpl. split.
-    + intros [y_in_kx | (x' & x'_in & y_in)].
-      * exists x. split; [now left | exact y_in_kx].
-      * exists x'. split; [now right | exact y_in].
-    + intros (x' & [x_eq_x' | x'_in] & y_in).
-      * left. subst x'. exact y_in.
-      * right. exists x'. split; assumption.
+  rewrite in_bind_raw_iff. split.
+  - intros (x & IN & IN'). exists x. split; auto. apply In_InA; [apply eqProp_Equivalence | exact IN].
+  - intros (x & IN & IN'). unfold In in IN. rewrite InA_alt in IN.
+    find* (y & EQ & IN_y) by IN. exists y. split; auto.
+    apply (proj1 (eq_spec (k x) (k y)) (COMPAT x y EQ) z). exact IN'.
+Qed.
+
+#[global]
+Instance map_eqPropCompatible1 (f : A -> B)
+  (COMPAT : forall x, forall y, x == y -> f x == f y)
+  : eqPropCompatible1 (map f).
+Proof.
+  intros X Y EQ. apply eq_spec. intros z. rewrite !in_map_iff by exact COMPAT.
+  rewrite eq_spec in EQ. setoid_rewrite EQ. reflexivity.
+Qed.
+
+#[global]
+Instance bind_eqPropCompatible1 (k : A -> fset B)
+  (COMPAT : forall x, forall y, x == y -> k x == k y)
+  : eqPropCompatible1 (fun X => bind X k).
+Proof.
+  intros X Y EQ. apply eq_spec. intros z. rewrite !in_bind_iff by exact COMPAT.
+  rewrite eq_spec in EQ. setoid_rewrite EQ. reflexivity.
+Qed.
+
+#[global]
+Instance map_compat
+  : Proper ((eqProp ==> eqProp) ==> eqProp ==> eqProp) map.
+Proof.
+  intros f g EQ_fg X Y EQ_X. apply eq_spec. intros z.
+  assert (COMPAT_f : forall x, forall y, x == y -> f x == f y).
+  { intros x y EQ. transitivity (g y); [apply EQ_fg; exact EQ | symmetry; apply EQ_fg; reflexivity]. }
+  assert (COMPAT_g : forall x, forall y, x == y -> g x == g y).
+  { intros x y EQ. transitivity (f x); [symmetry; apply EQ_fg; reflexivity | apply EQ_fg; exact EQ]. }
+  rewrite !in_map_iff by assumption. split.
+  - intros (x & IN & EQ). exists x. split.
+    + apply (proj1 (eq_spec X Y) EQ_X). exact IN.
+    + transitivity (f x); [exact EQ | apply EQ_fg; reflexivity].
+  - intros (x & IN & EQ). exists x. split.
+    + apply (proj1 (eq_spec X Y) EQ_X). exact IN.
+    + transitivity (g x); [exact EQ | symmetry; apply EQ_fg; reflexivity].
+Qed.
+
+#[global]
+Instance bind_compat
+  : Proper (eqProp ==> (eqProp ==> eqProp) ==> eqProp) bind.
+Proof.
+  intros X Y EQ_X k k' EQ_k. apply eq_spec. intros z.
+  rewrite !in_bind_raw_iff. split.
+  - intros (x & IN & IN_z).
+    assert (IN_Y : In x Y).
+    { apply (proj1 (eq_spec X Y) EQ_X). apply In_InA; [apply eqProp_Equivalence | exact IN]. }
+    unfold In in IN_Y. rewrite InA_alt in IN_Y. find* (y & EQ & IN_y) by IN_Y.
+    exists y. split; auto. apply (proj1 (eq_spec (k x) (k' y)) (EQ_k x y EQ) z). exact IN_z.
+  - intros (y & IN & IN_z).
+    assert (IN_X : In y X).
+    { apply (proj1 (eq_spec X Y) EQ_X). apply In_InA; [apply eqProp_Equivalence | exact IN]. }
+    unfold In in IN_X. rewrite InA_alt in IN_X. find* (x & EQ & IN_x) by IN_X.
+    exists x. split; auto. apply (proj1 (eq_spec (k x) (k' y)) (EQ_k x y (symmetry EQ)) z). exact IN_z.
 Qed.
 
 End MAP_and_BIND.
 
 Section PRODUCT.
 
-Context {A : Type} {POSET_A : isPoset A} {HS_ORD_A : HsOrd A (POSET := POSET_A)}.
-Context {B : Type} {POSET_B : isPoset B} {HS_ORD_B : HsOrd B (POSET := POSET_B)}.
+Context {A : Type} {PROSET_A : isProset A} {ORD_A : hsOrd A}.
+Context {B : Type} {PROSET_B : isProset B} {ORD_B : hsOrd B}.
+#[local] Existing Instances pair_isProset pair_hsOrd.
 
 Definition product (X : fset A) (Y : fset B) : fset (A * B) :=
-  bind X (fun x : A => map (fun y : B => (x, y)) Y).
+  fromList (L.list_prod (FSet.data X) (FSet.data Y)).
 
-Theorem product_iff (X : fset A) (Y : fset B)
-  : forall x : A, forall y : B, (x, y) ∈ (product X Y).(FSet.data) <-> (x ∈ X.(FSet.data) /\ y ∈ Y.(FSet.data)).
+Theorem product_iff (X : fset A) (Y : fset B) (x : A) (y : B)
+  : In (x, y) (product X Y) <-> In x X /\ In y Y.
 Proof.
-  intros x y. unfold product. rewrite in_bind_iff. split.
-  - intros (x' & x'_in_X & xy_in). rewrite in_map_iff in xy_in.
-    destruct xy_in as (y' & H_eq & y'_in_Y). inversion H_eq; subst x' y'.
-    split; assumption.
-  - intros [x_in_X y_in_Y]. exists x. split; trivial.
-    rewrite in_map_iff. exists y. split; trivial.
+  unfold product. rewrite in_fromList_iff. unfold In. rewrite !InA_alt.
+  split.
+  - intros ([x' y'] & [EQ_x EQ_y] & IN).
+    rewrite L.in_prod_iff in IN. des. split; eauto.
+  - intros [(x' & EQ_x & IN_x) (y' & EQ_y & IN_y)].
+    exists (x', y'). split; [split; auto | apply L.in_prod_iff; auto].
+Qed.
+
+#[global]
+Instance product_eqPropCompatible2
+  : eqPropCompatible2 product.
+Proof.
+  intros X X' Y Y' EQ_X EQ_Y. apply eq_spec. intros [x y].
+  rewrite eq_spec in EQ_X. rewrite eq_spec in EQ_Y. rewrite !product_iff, EQ_X, EQ_Y.
+  reflexivity.
 Qed.
 
 End PRODUCT.
 
-Section POWERSET.
+Section UNIONS.
 
-Context {A : Type} {POSET : isPoset A} {HS_ORD : HsOrd A (POSET := POSET)}.
+Context {A : Type} {PROSET : isProset A} {ORD : hsOrd A}.
 
-Lemma isSorted_filter (p : A -> bool) (xs : list A)
-  (xs_isSorted : isSorted compare xs = true)
-  : isSorted compare (L.filter p xs) = true.
+Definition unions (Xs : fset (fset A)) : fset A :=
+  bind Xs (fun X => X).
+
+Theorem in_unions_iff (Xs : fset (fset A)) (x : A)
+  : In x (unions Xs) <-> (exists X, In X Xs /\ In x X).
 Proof.
-  revert xs_isSorted. induction xs as [ | x xs IH]; intros xs_isSorted; simpl; trivial.
-  rewrite isSorted_cons_iff in xs_isSorted. destruct xs_isSorted as [x_lt_xs xs_isSorted].
-  destruct (p x) as [ | ]; [ | exact (IH xs_isSorted)].
-  rewrite isSorted_cons_iff. split; [ | exact (IH xs_isSorted)].
-  intros z z_in. rewrite L.filter_In in z_in. exact (x_lt_xs z (proj1 z_in)).
+  unfold unions. apply in_bind_iff. auto.
 Qed.
 
-Definition filter (p : A -> bool) (X : fset A) : fset A :=
-  FSet.mk (L.filter p X.(FSet.data)) (isSorted_filter p X.(FSet.data) X.(FSet.data_isSorted)).
-
-Theorem in_filter_iff (p : A -> bool) (X : fset A)
-  : forall z : A, z ∈ (filter p X).(FSet.data) <-> (z ∈ X.(FSet.data) /\ p z = true).
+#[global]
+Instance unions_eqPropCompatible1
+  : eqPropCompatible1 unions.
 Proof.
-  intros z. exact (L.filter_In p z X.(FSet.data)).
+  apply bind_eqPropCompatible1. auto.
+Qed.
+
+Definition Similarity_fset_ensemble {B : Type} (Sim : Similarity A B) : Similarity (fset A) (ensemble B) :=
+  fun X => fun Y => forall x, forall y, x =~= y -> (In x X <-> E.In y Y).
+
+#[global]
+Instance fset_corresponds_to_ensemble : Similarity (fset A) (ensemble A) :=
+  Similarity_fset_ensemble eq.
+
+Theorem fset_corresponds_to_ensemble_iff (X : fset A) (Y : ensemble A)
+  : X =~= Y <-> (forall z, In z X <-> E.In z Y).
+Proof.
+  unfold is_similar_to, fset_corresponds_to_ensemble, Similarity_fset_ensemble. firstorder congruence.
+Qed.
+
+End UNIONS.
+
+Section DISCRETE.
+
+Context {A : Type} {POSET : isPoset A} {ORD : HsOrd A}.
+
+Lemma In_eq_iff (x : A) (X : fset A)
+  : In x X <-> L.In x (FSet.data X).
+Proof.
+  apply InA_eqProp_iff.
+Qed.
+
+Lemma in_empty_eq_iff (x : A)
+  : L.In x (FSet.data empty) <-> False.
+Proof.
+  rewrite <- In_eq_iff. apply in_empty_iff.
+Qed.
+
+Lemma in_add_eq_iff (x : A) (X : fset A) (y : A)
+  : L.In y (FSet.data (add x X)) <-> x = y \/ L.In y (FSet.data X).
+Proof.
+  rewrite <- !In_eq_iff, in_add_iff, Poset_eqProp_spec. intuition congruence.
+Qed.
+
+Lemma mem_eq_spec (x : A) (X : fset A) (b : bool)
+  : mem x X = b <-> (if b then L.In x (FSet.data X) else ~ L.In x (FSet.data X)).
+Proof.
+  rewrite mem_spec. destruct b; now rewrite In_eq_iff.
+Qed.
+
+Lemma in_fromList_eq_iff (xs : list A) (x : A)
+  : L.In x (FSet.data (fromList xs)) <-> L.In x xs.
+Proof.
+  rewrite <- In_eq_iff, in_fromList_iff. apply InA_eqProp_iff.
+Qed.
+
+Lemma in_union_eq_iff (X : fset A) (Y : fset A) (x : A)
+  : L.In x (FSet.data (union X Y)) <-> L.In x (FSet.data X) \/ L.In x (FSet.data Y).
+Proof.
+  rewrite <- !In_eq_iff. apply in_union_iff.
+Qed.
+
+End DISCRETE.
+
+Section DISCRETE_MAP.
+
+Context {A : Type} {POSET_A : isPoset A} {ORD_A : HsOrd A}.
+Context {B : Type} {POSET_B : isPoset B} {ORD_B : HsOrd B}.
+
+Lemma in_map_eq_iff (f : A -> B) (X : fset A) (y : B)
+  : L.In y (FSet.data (map f X)) <-> (exists x, f x = y /\ L.In x (FSet.data X)).
+Proof.
+  rewrite <- In_eq_iff, in_map_raw_iff. setoid_rewrite Poset_eqProp_spec. firstorder congruence.
+Qed.
+
+Lemma product_eq_iff (X : fset A) (Y : fset B) (x : A) (y : B)
+  : L.In (x, y) (FSet.data (product X Y)) <-> L.In x (FSet.data X) /\ L.In y (FSet.data Y).
+Proof.
+  rewrite <- InA_eqProp_iff with (x := (x, y)) (xs := FSet.data (product X Y)).
+  change (In (x, y) (product X Y) <-> L.In x (FSet.data X) /\ L.In y (FSet.data Y)).
+  rewrite product_iff, !In_eq_iff. reflexivity.
+Qed.
+
+End DISCRETE_MAP.
+
+Section CARDINALITY.
+
+Context {A : Type} {PROSET : isProset A} {ORD : hsOrd A}.
+
+Lemma length_fromList (xs : list A)
+  (NO_DUP : NoDupA eqProp xs)
+  : length (FSet.data (fromList xs)) = length xs.
+Proof.
+  induction NO_DUP as [ | x xs NOT_IN NO_DUP IH].
+  - unfold fromList, empty. cbn [L.fold_left L.rev_append]. rewrite FSet.data_mk. reflexivity.
+  - rewrite fromList_cons. cbn [length].
+    rewrite length_add; auto. rewrite in_fromList_iff. exact NOT_IN.
+Qed.
+
+Lemma NoDupA_data (X : fset A)
+  : NoDupA eqProp (FSet.data X).
+Proof.
+  apply sorted_NoDupA. apply FSet.data_isSorted.
+Qed.
+
+#[global]
+Instance cardinality_eqPropCompatible1
+  : @eqPropCompatible1 (fset A) nat fset_isSetoid mkSetoid_from_eq (fun X : fset A => length (FSet.data X)).
+Proof.
+  intros X Y EQ. eapply eqlistA_length. apply list_eqProp_eqlistA. exact EQ.
+Qed.
+
+#[global]
+Instance fromList_compat
+  : Proper (equivlistA eqProp ==> eqProp) fromList.
+Proof.
+  intros xs ys EQ. apply eq_spec. intros z. rewrite !in_fromList_iff. apply EQ.
+Qed.
+
+End CARDINALITY.
+
+Section POWERSET.
+
+Context {A : Type} {PROSET : isProset A} {ORD : hsOrd A}.
+
+#[local]
+Lemma InA_map_fset {B : Type} (f : B -> fset A) (Y : fset A) (xs : list B)
+  : InA eqProp Y (L.map f xs) <-> (exists x, L.In x xs /\ Y == f x).
+Proof.
+  rewrite InA_alt. split.
+  - intros (Z & EQ & IN). rewrite L.in_map_iff in IN.
+    find* (x & <- & IN') by IN. eauto.
+  - intros (x & IN & EQ). exists (f x). split; eauto using L.in_map.
 Qed.
 
 Fixpoint powerset' (xs : list A) {struct xs} : list (fset A) :=
   match xs with
   | [] => [empty]
-  | x :: xs' =>
-    let ps := powerset' xs' in
-    ps ++ L.map (add x) ps
+  | x :: xs' => let ps := powerset' xs' in ps ++ L.map (add x) ps
   end.
 
 Definition powerset (X : fset A) : fset (fset A) :=
-  fromList (powerset' X.(FSet.data)).
+  fromList (powerset' (FSet.data X)).
 
 Lemma in_powerset'_iff (xs : list A)
-  (xs_isSorted : isSorted compare xs = true)
-  : forall Y : fset A, Y ∈ powerset' xs <-> (forall z : A, z ∈ Y.(FSet.data) -> z ∈ xs).
+  : forall Y : fset A, InA eqProp Y (powerset' xs) <-> (forall z : A, In z Y -> InA eqProp z xs).
 Proof.
-  revert xs_isSorted. induction xs as [ | x xs IH]; intros xs_isSorted Y.
-  - simpl. split.
-    + intros [empty_eq_Y | []]. subst Y. simpl. tauto.
-    + intros NO_MEM. left. symmetry. rewrite FSet.t_eq_iff.
-      destruct Y as [ys ys_isSorted]. simpl in *.
-      destruct ys as [ | y ys]; trivial.
-      exfalso. exact (NO_MEM y (or_introl eq_refl)).
-  - rewrite isSorted_cons_iff in xs_isSorted. destruct xs_isSorted as [x_lt_xs xs_isSorted].
-    pose proof (IH xs_isSorted) as SPEC. clear IH.
-    cbn [powerset']. rewrite L.in_app_iff, L.in_map_iff. split.
-    + intros [Y_in_ps | (Z & add_eq_Y & Z_in_ps)] z z_in_Y.
-      * right. exact (proj1 (SPEC Y) Y_in_ps z z_in_Y).
-      * subst Y. rewrite in_add_iff in z_in_Y. destruct z_in_Y as [x_eq_z | z_in_Z].
-        { now left. }
-        { right. exact (proj1 (SPEC Z) Z_in_ps z z_in_Z). }
-    + intros Y_sub. destruct (mem x Y) as [ | ] eqn: H_mem.
-      * right. rewrite mem_spec in H_mem.
-        exists (filter (fun z : A => match compare x z with Eq => false | _ => true end) Y). split.
-        { rewrite fset_eq_spec. intros w. rewrite in_add_iff, in_filter_iff. split.
-          - intros [x_eq_w | [w_in _]]; [subst w; exact H_mem | exact w_in].
-          - intros w_in_Y. cbv beta. destruct (compare x w) as [ | | ] eqn: H_OBS.
-            + left. exact (proj1 (compare_eq_iff x w) H_OBS).
-            + right. split; [exact w_in_Y | reflexivity].
-            + right. split; [exact w_in_Y | reflexivity].
+  induction xs as [ | x xs IH]; intros Y.
+  - cbn [powerset']. rewrite InA_cons, InA_nil. split.
+    + intros [EQ | []] z IN. rewrite eq_spec in EQ.
+      apply EQ in IN. rewrite in_empty_iff in IN. contradiction.
+    + intros SUBSET. left. apply eq_spec. intros z.
+      rewrite in_empty_iff. split; [intros IN | tauto].
+      specialize (SUBSET z IN). now rewrite InA_nil in SUBSET.
+  - cbn [powerset']. rewrite InA_app_iff, InA_map_fset. split.
+    + intros [IN | (Z & IN & EQ)] z IN_z.
+      * rewrite IH in IN. apply InA_cons_tl. eauto.
+      * rewrite eq_spec in EQ. apply EQ in IN_z.
+        rewrite in_add_iff in IN_z. rewrite InA_cons.
+        find* [EQ_z | IN_z'] by IN_z; auto. right.
+        eapply (proj1 (IH Z)); eauto. eapply In_InA; [apply eqProp_Equivalence | eauto].
+    + intros SUBSET. destruct (mem x Y) eqn: OBS.
+      * rewrite mem_spec in OBS.
+        set (Z := remove x Y).
+        assert (SUBSET_Z : forall z, In z Z -> InA eqProp z xs).
+        { intros z IN. unfold Z in IN. rewrite in_remove_iff in IN.
+          find* [IN' NE] by IN. specialize (SUBSET z IN'). rewrite InA_cons in SUBSET. tauto.
         }
-        { rewrite SPEC. intros z z_in. rewrite in_filter_iff in z_in.
-          destruct z_in as [z_in_Y H_p]. cbv beta in H_p.
-          pose proof (Y_sub z z_in_Y) as [x_eq_z | z_in_xs]; trivial.
-          subst z. rewrite compare_refl in H_p. discriminate H_p.
+        assert (IN_Z : InA eqProp Z (powerset' xs)) by (apply IH; exact SUBSET_Z).
+        rewrite InA_alt in IN_Z. find* (Z' & EQ_Z & IN_Z') by IN_Z. right.
+        exists Z'. split; auto. apply eq_spec. intros z.
+        rewrite eq_spec in EQ_Z. rewrite in_add_iff, <- EQ_Z.
+        unfold Z. rewrite in_remove_iff. split.
+        { intros IN. destruct (compare z x) eqn: EQ.
+          - left. now apply compare_Eq_iff.
+          - right. split; auto. intros E. apply compare_Eq_iff in E. congruence.
+          - right. split; auto. intros E. apply compare_Eq_iff in E. congruence.
         }
-      * left. rewrite SPEC. intros z z_in_Y.
-        pose proof (Y_sub z z_in_Y) as [x_eq_z | z_in_xs]; trivial.
-        subst z. exfalso. rewrite mem_spec in H_mem. contradiction (H_mem z_in_Y).
+        { intros [EQ | [IN _]]; auto.
+          eapply (proj2 (In_compat z x Y Y EQ (reflexivity _))). exact OBS.
+        }
+      * rewrite mem_spec in OBS. left. apply IH.
+        intros z IN. specialize (SUBSET z IN). rewrite InA_cons in SUBSET.
+        find* [EQ | IN_xs] by SUBSET; auto. exfalso. apply OBS.
+        eapply (proj1 (In_compat z x Y Y EQ (reflexivity _))). exact IN.
 Qed.
 
-Theorem in_powerset_iff (X : fset A)
-  : forall Y : fset A, Y ∈ (powerset X).(FSet.data) <-> isSubsetOf Y X.
+Theorem in_powerset_iff (X : fset A) (Y : fset A)
+  : In Y (powerset X) <-> isSubsetOf Y X.
 Proof.
-  intros Y. unfold powerset. rewrite in_fromList_iff.
-  exact (in_powerset'_iff X.(FSet.data) X.(FSet.data_isSorted) Y).
+  unfold powerset. rewrite in_fromList_iff, in_powerset'_iff.
+  unfold isSubsetOf, In. reflexivity.
 Qed.
 
 Theorem filter_in_powerset (p : A -> bool) (X : fset A)
-  : filter p X ∈ (powerset X).(FSet.data).
+  (COMPAT : forall x, forall y, x == y -> p x = p y)
+  : In (filter p X) (powerset X).
 Proof.
-  rewrite in_powerset_iff. intros z z_in.
-  rewrite in_filter_iff in z_in. exact (proj1 z_in).
+  rewrite in_powerset_iff. intros z IN.
+  rewrite in_filter_iff in IN by exact COMPAT. tauto.
+Qed.
+
+#[local]
+Lemma add_fresh_injective (x : A) (Y : fset A) (Z : fset A)
+  (FRESH_Y : ~ In x Y)
+  (FRESH_Z : ~ In x Z)
+  (EQ : add x Y == add x Z)
+  : Y == Z.
+Proof.
+  apply eq_spec. intros z. rewrite eq_spec in EQ.
+  specialize (EQ z). rewrite !in_add_iff in EQ.
+  destruct (compare z x) eqn: OBS.
+  - apply compare_Eq_iff in OBS.
+    rewrite In_compat with (y := x) (Y := Y) by (try exact OBS; reflexivity).
+    rewrite In_compat with (x := z) (y := x) (X := Z) (Y := Z) by (try exact OBS; reflexivity). tauto.
+  - assert (NE : ~ z == x) by (intros E; apply compare_Eq_iff in E; congruence). tauto.
+  - assert (NE : ~ z == x) by (intros E; apply compare_Eq_iff in E; congruence). tauto.
+Qed.
+
+#[local]
+Lemma NoDupA_add_map (x : A) (ps : list (fset A))
+  (NO_DUP : NoDupA eqProp ps)
+  (FRESH : forall Y, L.In Y ps -> ~ In x Y)
+  : NoDupA eqProp (L.map (add x) ps).
+Proof.
+  revert FRESH. induction NO_DUP as [ | Y ps NOT_IN NO_DUP IH]; intros FRESH; cbn [L.map]; econs.
+  - rewrite InA_map_fset. intros (Z & IN & EQ). apply NOT_IN.
+    rewrite InA_alt. exists Z. split; auto.
+    eapply add_fresh_injective; [eapply FRESH; now left | eapply FRESH; now right | exact EQ].
+  - eapply IH. i. eapply FRESH. now right.
 Qed.
 
 Lemma NoDup_powerset' (xs : list A)
-  (xs_isSorted : isSorted compare xs = true)
-  : L.NoDup (powerset' xs).
+  (NO_DUP : NoDupA eqProp xs)
+  : NoDupA eqProp (powerset' xs).
 Proof.
-  revert xs_isSorted. induction xs as [ | x xs IH]; intros xs_isSorted.
-  - simpl. econstructor; [intros [] | econstructor].
-  - rewrite isSorted_cons_iff in xs_isSorted. destruct xs_isSorted as [x_lt_xs xs_isSorted].
-    pose proof (IH xs_isSorted) as NO_DUP. clear IH.
-    pose proof (in_powerset'_iff xs xs_isSorted) as SPEC.
-    assert (x_not_in_xs : ~ x ∈ xs).
-    { intros x_in. pose proof (x_lt_xs x x_in) as LT.
-      rewrite compare_refl in LT. discriminate LT.
-    }
-    assert (claim : forall Y : fset A, Y ∈ powerset' xs -> ~ x ∈ Y.(FSet.data)).
-    { intros Y Y_in x_in_Y. contradiction x_not_in_xs. exact (proj1 (SPEC Y) Y_in x x_in_Y). }
-    cbn [powerset']. eapply L.NoDup_app; trivial.
-    + eapply NoDup_map_inj; trivial. intros Y Z Y_in Z_in H_eq.
-      rewrite fset_eq_spec. intros w. rewrite fset_eq_spec in H_eq.
-      specialize (H_eq w). rewrite !in_add_iff in H_eq.
-      destruct (compare x w) as [ | | ] eqn: H_OBS.
-      * rewrite compare_eq_iff in H_OBS. subst w. split.
-        { intros w_in. contradiction (claim Y Y_in w_in). }
-        { intros w_in. contradiction (claim Z Z_in w_in). }
-      * split.
-        { intros w_in. pose proof (proj1 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
-          subst w. rewrite compare_refl in H_OBS. discriminate H_OBS.
-        }
-        { intros w_in. pose proof (proj2 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
-          subst w. rewrite compare_refl in H_OBS. discriminate H_OBS.
-        }
-      * split.
-        { intros w_in. pose proof (proj1 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
-          subst w. rewrite compare_refl in H_OBS. discriminate H_OBS.
-        }
-        { intros w_in. pose proof (proj2 H_eq (or_intror w_in)) as [x_eq_w | H]; trivial.
-          subst w. rewrite compare_refl in H_OBS. discriminate H_OBS.
-        }
-    + intros Y Y_in Y_in'. rewrite L.in_map_iff in Y_in'.
-      destruct Y_in' as (Z & add_eq_Y & Z_in). contradiction (claim Y Y_in).
-      rewrite <- add_eq_Y. rewrite in_add_iff. now left.
+  induction NO_DUP as [ | x xs NOT_IN NO_DUP IH].
+  - cbn [powerset']. apply NoDupA_singleton.
+  - assert (FRESH : forall Y, InA eqProp Y (powerset' xs) -> ~ In x Y).
+    { intros Y IN H_x. apply NOT_IN. eapply (proj1 (in_powerset'_iff xs Y)); eauto. }
+    cbn [powerset']. eapply NoDupA_app; [apply eqProp_Equivalence | exact IH | | ].
+    + eapply NoDupA_add_map; auto. intros Y IN. eapply FRESH. eapply In_InA; [apply eqProp_Equivalence | eauto].
+    + intros Y IN IN'. rewrite InA_map_fset in IN'.
+      find* (Z & IN_Z & EQ) by IN'. eapply FRESH; [exact IN | ].
+      rewrite eq_spec in EQ. apply EQ. rewrite in_add_iff. left. reflexivity.
 Qed.
 
 Lemma length_powerset' (xs : list A)
   : length (powerset' xs) = pow2 (length xs).
 Proof.
-  induction xs as [ | x xs IH]; trivial.
+  induction xs as [ | x xs IH]; [reflexivity | ].
   cbn [powerset' length pow2]. rewrite length_app, length_map, IH. lia.
 Qed.
 
 Theorem powerset_length (X : fset A)
-  : length (powerset X).(FSet.data) = pow2 (length X.(FSet.data)).
+  : length (FSet.data (powerset X)) = pow2 (length (FSet.data X)).
 Proof.
   unfold powerset. rewrite length_fromList.
-  - exact (length_powerset' X.(FSet.data)).
-  - exact (NoDup_powerset' X.(FSet.data) X.(FSet.data_isSorted)).
+  - apply length_powerset'.
+  - apply NoDup_powerset'. apply NoDupA_data.
+Qed.
+
+#[global]
+Instance powerset_eqPropCompatible1
+  : eqPropCompatible1 powerset.
+Proof.
+  intros X Y EQ. apply eq_spec. intros Z. rewrite !in_powerset_iff.
+  apply isSubsetOf_eqPropCompatible2; [reflexivity | exact EQ].
 Qed.
 
 End POWERSET.
 
-#[global] Hint Rewrite @in_empty_iff @in_add_iff @in_fromList_iff @in_union_iff @in_unions_iff @in_filter_iff @in_map_iff @in_bind_iff @product_iff @in_powerset_iff @mem_spec : simplication_hints.
+#[global] Hint Rewrite @in_empty_iff @in_add_iff @in_fromList_iff @in_union_iff @in_unions_iff @in_remove_iff @product_iff @in_powerset_iff @mem_spec : simplication_hints.
 
 End FS.
 
-Lemma fset_NoDup {A : Type} {POSET_A : isPoset A} {HsOrd_A : HsOrd A} (X : fset A)
-  : L.NoDup X.(FSet.data).
+Lemma fset_NoDup {A : Type} {PROSET : isProset A} {ORD : hsOrd A} (X : fset A)
+  : NoDup (FSet.data X).
 Proof.
-  destruct X as [xs SORTED]. cbn [FSet.data]. revert SORTED.
-  induction xs as [ | x xs IH]; intros SORTED; [econstructor | ].
-  rewrite isSorted_cons_iff in SORTED. destruct SORTED as [LT SORTED].
-  econstructor; [intros IN | exact (IH SORTED)].
-  pose proof (LT x IN) as CONTRA.
-  now rewrite compare_refl in CONTRA.
+  assert (SORTED : isSorted compare (FSet.data X) = true) by apply FSet.data_isSorted.
+  remember (FSet.data X) as xs eqn: DEF.
+  clear DEF X. induction xs as [ | x xs IH]; [econs | ].
+  rewrite isSorted_cons_iff in SORTED. des. econs; eauto.
+  ii. find ? by SORTED. rewrite compare_refl in *. congruence.
 Qed.
