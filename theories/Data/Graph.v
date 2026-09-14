@@ -305,17 +305,17 @@ Proof.
   split.
   - intros REACHABLE. unfold reachables in REACHABLE.
     destruct (Bool.bool_dec (FS.mem v nodes) true) as [OBS | OBS].
-    2: { contradiction OBS. now rewrite FS.mem_eq_spec. }
-    enough (exists w, v ~~~[ w ]~~> v') as [w H_walk] by now exists (v :: w); econs.
-    eapply Worklist.closure_sound with (P := fun x => exists w, v ~~~[ w ]~~> x); [ | | exact REACHABLE].
-    + intros x y [w WALK] EDGE. rewrite adjacency_correct in EDGE.
-      exists (w ++ [y]). eapply walk_app; eauto.
-    + intros x H_x. rewrite FS.in_add_eq_iff, FS.in_empty_eq_iff in H_x.
-      find* [EQ | []] by H_x. subst x. exists []. econs.
+    + enough (exists w, v ~~~[ w ]~~> v') as [w H_walk] by now exists (v :: w); econs.
+      eapply Worklist.closure_sound with (P := fun v' => exists w, v ~~~[ w ]~~> v'); eauto.
+      * intros x y [w WALK] EDGE. rewrite adjacency_correct in EDGE.
+        exists (w ++ [y]). eapply walk_app; eauto.
+      * intros x H_x. rewrite FS.in_add_eq_iff, FS.in_empty_eq_iff in H_x.
+        find* [EQ | []] by H_x. subst x. exists []. econs.
+    + contradiction OBS. now rewrite FS.mem_eq_spec.
   - intros [w WALK]. inv WALK.
     obtain [INIT STEP] with IN by reachables_closed.
     set (reached := reachables v) in *. clearbody reached. clear IN.
-    revert INIT. induction H_walk; i; eauto.
+    induction H_walk; eauto.
 Qed.
 
 End REACHABILITY.
