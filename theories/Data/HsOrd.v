@@ -868,7 +868,7 @@ Proof.
       eapply compare_Lt_trans; [exact OBS | eapply HEAD; exact IN].
     + rewrite sorted_cons_iff. auto.
   - rewrite sorted_cons_iff. split; auto. intros p IN.
-    find* [EQ | IN'] by (in_insert_incl x xs p IN).
+    obtain [EQ | IN'] with IN by in_insert_incl.
     + subst p. now eapply compare_Gt_flip.
     + now eapply HEAD.
 Qed.
@@ -977,9 +977,9 @@ Proof.
   split.
   - revert ys. induction xs as [ | x xs IH]; intros [ | y ys] EQ.
     + econs.
-    + find* CONTRA by (EQ 0). inv CONTRA.
-    + find* CONTRA by (EQ 0). inv CONTRA.
-    + find* HEAD by (EQ 0). inv HEAD. econs; eauto.
+    + obtain CONTRA with 0 by EQ. inv CONTRA.
+    + obtain CONTRA with 0 by EQ. inv CONTRA.
+    + obtain HEAD with 0 by EQ. inv HEAD. econs; eauto.
       eapply IH. intros n. exact (EQ (S n)).
   - intros EQ. induction EQ as [ | x y xs ys EQ_xy EQ_xs IH]; intros [ | n]; cbn.
     + constructor.

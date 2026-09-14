@@ -256,7 +256,7 @@ Definition add (x : A) (X : fset A) : fset A :=
   {| FSet.tree := BalancedTree.add compare x X.(FSet.tree); FSet.data_isSorted := _ |}.
 Proof.
   rewrite BalancedTree.data_add with (key := fun y : A => y) by eapply sorted_data.
-  find* SORTED by (OrderedList.insert_sorted (fun y : A => y) x (FSet.data X) (sorted_data X)).
+  obtain SORTED with x (sorted_data X) by OrderedList.insert_sorted.
   now rewrite map_id in SORTED.
 Defined.
 
@@ -329,7 +329,7 @@ Definition remove (x : A) (X : fset A) : fset A :=
   {| FSet.tree := BalancedTree.remove (compare x) X.(FSet.tree); FSet.data_isSorted := _ |}.
 Proof.
   rewrite BalancedTree.data_remove with (key := fun y : A => y) by eapply sorted_data.
-  find* SORTED by (OrderedList.remove_sorted (fun y : A => y) x (FSet.data X) (sorted_data X)).
+  obtain SORTED with x (sorted_data X) by OrderedList.remove_sorted.
   now rewrite map_id in SORTED.
 Defined.
 
@@ -408,7 +408,7 @@ Proof.
   - rewrite compare_Eq_iff in OBS.
     rewrite In_compat with (y := x) (Y := remove x X) by (try exact OBS; reflexivity).
     assert (NOT_IN : ~ In x (remove x X)).
-    { obtain MEM with x X by mem_remove_same. rewrite mem_spec in MEM. exact MEM. }
+    { obtain MEM with (mem_remove_same x X) by mem_spec. exact MEM. }
     tauto.
   - assert (NE : ~ z == x).
     { intros EQ. rewrite <- compare_Eq_iff in EQ. congruence. }
@@ -597,12 +597,12 @@ Proof.
     assert (IN_Y : In x Y).
     { rewrite <- EQ_X. eapply In_InA; [eapply eqProp_Equivalence | exact IN]. }
     unfold In in IN_Y. rewrite InA_alt in IN_Y. find* (y & EQ & IN_y) by IN_Y.
-    exists y. split; auto. find* EXT by (EQ_k x y EQ). rewrite eq_spec in EXT. rewrite <- EXT. exact IN_z.
+    exists y. split; auto. obtain EXT with EQ by EQ_k. rewrite eq_spec in EXT. rewrite <- EXT. exact IN_z.
   - intros (y & IN & IN_z).
     assert (IN_X : In y X).
     { rewrite EQ_X. eapply In_InA; [eapply eqProp_Equivalence | exact IN]. }
     unfold In in IN_X. rewrite InA_alt in IN_X. find* (x & EQ & IN_x) by IN_X.
-    exists x. split; auto. find* EXT by (EQ_k x y (symmetry EQ)). rewrite eq_spec in EXT. rewrite EXT. exact IN_z.
+    exists x. split; auto. obtain EXT with (symmetry EQ) by EQ_k. rewrite eq_spec in EXT. rewrite EXT. exact IN_z.
 Qed.
 
 End MAP_and_BIND.

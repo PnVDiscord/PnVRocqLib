@@ -183,7 +183,7 @@ Proof.
   - inv WALK. exists []. econstructor 1.
   - rewrite -> walk_app_iff in WALK. destruct WALK as (v1 & WALK1 & WALK2).
     inv WALK2. inv H_walk. find* [p PATH] by IH.
-    find* [ELEM | NOT_IN] by (In_dec v' (v0 :: p)).
+    obtain [ELEM | NOT_IN] with v' (v0 :: p) by In_dec.
     + inv ELEM.
       * exists []. econstructor 1.
       * find* (p' & PATH' & _) by mk_subpath. ss!.
@@ -292,7 +292,7 @@ Lemma reachables_closed (v : V)
 Proof.
   assert (MEM : FS.mem v nodes = true) by now rewrite FS.mem_eq_spec.
   unfold reachables. destruct (Bool.bool_dec (FS.mem v nodes) true) as [OBS | OBS]; [ | contradiction].
-  find* [INIT STEP] by (Worklist.closure_complete adjacency (fun x => x ∈ nodes) reachables_domain_closed reachables_domain_finite (FS.add v FS.empty) (reachables_initial_in_domain v OBS)).
+  obtain [INIT STEP] with reachables_domain_closed reachables_domain_finite (reachables_initial_in_domain v OBS) by Worklist.closure_complete.
   split.
   - eapply INIT. rewrite FS.in_add_eq_iff. auto.
   - i. eapply STEP; eauto. now rewrite adjacency_correct.

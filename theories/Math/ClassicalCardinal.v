@@ -25,8 +25,8 @@ Proof.
   destruct NAT_LE as [f f_cong f_inj].
   eapply Cardinal2.Cardinality_ofType_le_ofType with (f := fun b : bool => if b then f O else f (S O)).
   intros [ | ] [ | ] EQ; try reflexivity.
-  - pose proof (f_inj O (S O) EQ) as H. discriminate H.
-  - pose proof (f_inj (S O) O EQ) as H. discriminate H.
+  - obtain H with EQ by f_inj. discriminate H.
+  - obtain H with EQ by f_inj. discriminate H.
 Qed.
 
 Definition option_pair_code {A : Type@{Set_u}} (tag : nat -> A) (pair : A * A -> A) (xy : option A * option A) : A :=
@@ -43,35 +43,35 @@ Lemma option_pair_code_inj {A : Type@{Set_u}} (tag : nat -> A) (pair : A * A -> 
   : forall p : option A * option A, forall q : option A * option A, option_pair_code tag pair p = option_pair_code tag pair q -> p = q.
 Proof.
   intros [[x | ] [y | ]] [[x' | ] [y' | ]] EQ; unfold option_pair_code in EQ.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (PAIR_INJ _ _ H0) as EQ_xy. inv EQ_xy. reflexivity.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ (S (S (S O))) (S (S O)) H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ (S (S (S O))) (S O) H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ (S (S (S O))) O H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ (S (S O)) (S (S (S O))) H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair. reflexivity.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ (S (S O)) (S O) H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ (S (S O)) O H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ (S O) (S (S (S O))) H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ (S O) (S (S O)) H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair. reflexivity.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ (S O) O H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ O (S (S (S O))) H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ O (S (S O)) H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair.
-    pose proof (TAG_INJ O (S O) H0) as Htag. discriminate Htag.
-  - pose proof (PAIR_INJ _ _ EQ) as EQ_pair. inv EQ_pair. reflexivity.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    find* EQ_xy by (PAIR_INJ _ _ H0). inv EQ_xy. reflexivity.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair. reflexivity.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair. reflexivity.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair.
+    obtain Htag with H0 by TAG_INJ. discriminate Htag.
+  - find* EQ_pair by (PAIR_INJ _ _ EQ). inv EQ_pair. reflexivity.
 Qed.
 
 Lemma Cardinality_ofType_option_prod_le_self_of_nat_le_square_le (A : Type@{Set_u})
@@ -101,7 +101,7 @@ Proof.
   - reflexivity.
   - discriminate EQ.
   - discriminate EQ.
-  - injection EQ as EQ_code. pose proof (PAIR_INJ _ _ EQ_code) as EQ_pair.
+  - injection EQ as EQ_code. find* EQ_pair by (PAIR_INJ _ _ EQ_code).
     injection EQ_pair as EQ_x EQ_pack. subst y. f_equal. eapply IH. eapply PACK_INJ. exact EQ_pack.
 Qed.
 
@@ -111,8 +111,8 @@ Lemma Cardinality_ofType_list_le_self_of_nat_le_square_le (A : Type@{Set_u})
   : Cardinality.ofType (list A) =< Cardinality.ofType A.
 Proof.
   destruct SQUARE_LE as [pair pair_cong pair_inj].
-  pose proof (Cardinal2.Cardinality_ofType_option_le_self_of_nat_le A NAT_LE) as OPTION_LE.
-  pose proof OPTION_LE as OPTION_LE'.
+  obtain OPTION_LE with NAT_LE by Cardinal2.Cardinality_ofType_option_le_self_of_nat_le.
+  find* OPTION_LE' by OPTION_LE.
   destruct OPTION_LE as [pack pack_cong pack_inj].
   transitivity (Cardinality.ofType (option A)).
   - eapply Cardinal2.Cardinality_ofType_le_ofType with (f := encode_list_by_pair pair pack).
@@ -169,7 +169,7 @@ Lemma Cardinality_ofType_rose_lt_of_lt_uncountable_square_le (A : Type@{Set_u}) 
   (SQUARE : forall B : Type@{Set_u}, Cardinality.ofType nat =< Cardinality.ofType B -> Cardinality.ofType (B * B) =< Cardinality.ofType B)
   : Cardinality.ofType (B.rose A) ≨ kappa.
 Proof.
-  pose proof (Cardinal1.Cardinality_le_total (Cardinality.ofType A) (Cardinality.ofType nat)) as [A_LE_NAT | NAT_LE_A].
+  find* [A_LE_NAT | NAT_LE_A] by (Cardinal1.Cardinality_le_total (Cardinality.ofType A) (Cardinality.ofType nat)).
   - eapply Cardinal1.Cardinality_le_lt_lt.
     + transitivity (Cardinality.ofType (list (nat + nat))).
       * destruct A_LE_NAT as [f f_cong f_inj].
@@ -197,7 +197,7 @@ Theorem Cardinality_ofType_rank_strict_initial_segment_lt (A : Type@{Set_u}) (ka
   : forall a : A, Cardinality.ofType { x : A | Aczel.isElemOf kappa (rank x) (rank a) } ≨ Cardinality.ofType A.
 Proof.
   i.
-  pose proof (Cardinal1.hasCardinality_isOrdinal _ _ K_CARD) as K_ORD.
+  find* K_ORD by (Cardinal1.hasCardinality_isOrdinal _ _ K_CARD).
   set (alpha := Aczel.childnodes kappa (rank a)).
   assert (ALPHA_ORD : Aczel.isOrdinal alpha).
   { eapply Aczel.isOrdinal_member_isOrdinal.
@@ -209,7 +209,7 @@ Proof.
   assert (STRICT_LE : Cardinality.ofType { x : A | Aczel.isElemOf kappa (rank x) (rank a) } =< card alpha).
   { assert (Hchoice : forall i : { x : A | Aczel.isElemOf kappa (rank x) (rank a) }, exists c : Aczel.children alpha, Aczel.childnodes alpha c == Aczel.childnodes kappa (rank (proj1_sig i))).
     { intros [x Hx]. unfold alpha. unfold Aczel.isElemOf in Hx. destruct Hx as [c EQ]. exists c. symmetry. exact EQ. }
-    pose proof (Axiom_of_Choice { x : A | Aczel.isElemOf kappa (rank x) (rank a) } (fun _ : { x : A | Aczel.isElemOf kappa (rank x) (rank a) } => Aczel.children alpha) (fun i : { x : A | Aczel.isElemOf kappa (rank x) (rank a) } => fun c : Aczel.children alpha => Aczel.childnodes alpha c == Aczel.childnodes kappa (rank (proj1_sig i))) Hchoice) as [pick PICK].
+    obtain [pick PICK] with (fun i : { x : A | Aczel.isElemOf kappa (rank x) (rank a) } => fun c : Aczel.children alpha => Aczel.childnodes alpha c == Aczel.childnodes kappa (rank (proj1_sig i))) Hchoice by Axiom_of_Choice.
     exists pick.
     - intros i j EQ. change (i = j) in EQ. subst j. reflexivity.
     - intros [x Hx] [y Hy] EQ. eapply Cardinal2.sig_eq_from_proj1. simpl.
@@ -221,13 +221,13 @@ Proof.
           + exact EQ.
           + exact (PICK (@exist A (fun z : A => Aczel.isElemOf kappa (rank z) (rank a)) y Hy)).
       }
-      pose proof (proj1 (enum_inj (rank x) (rank y)) RANK_EQ) as ENUM_EQ. now rewrite 2 RANK in ENUM_EQ.
+      obtain ENUM_EQ with RANK_EQ by enum_inj. now rewrite 2 RANK in ENUM_EQ.
   }
   assert (K_CARDINAL : Cardinal1.isCardinal kappa).
   { exists (Cardinality.ofType A). exact K_CARD. }
-  pose proof (Cardinal1.card_children_lt_card_of_rLt alpha kappa ALPHA_ORD K_CARDINAL ALPHA_LT) as CARD_ALPHA_LT_KAPPA.
+  obtain CARD_ALPHA_LT_KAPPA with ALPHA_ORD K_CARDINAL ALPHA_LT by Cardinal1.card_children_lt_card_of_rLt.
   assert (CARD_KAPPA_LE : card kappa =< Cardinality.ofType A).
-  { pose proof (Cardinal1.isCardinal_elim kappa K_CARDINAL) as CARD_KAPPA.
+  { obtain CARD_KAPPA with K_CARDINAL by Cardinal1.isCardinal_elim.
     rewrite Cardinal1.Cardinality_le_iff. rewrite (Cardinal1.Cardinality_toTree_eq_intro (card kappa) kappa CARD_KAPPA).
     rewrite (Cardinal1.Cardinality_toTree_eq_intro (Cardinality.ofType A) kappa K_CARD). reflexivity.
   }
@@ -256,12 +256,12 @@ Proof.
       - exists (Some (@exist A (fun z : A => Aczel.isElemOf kappa (rank z) (rank a)) x LT)). reflexivity.
       - exists None. exact EQ.
     }
-    pose proof (Axiom_of_Choice Idx (fun _ : Idx => option StrictIdx) (fun i : Idx => fun oi : option StrictIdx => match oi with | Some j => proj1_sig j = proj1_sig i | None => rank (proj1_sig i) == rank a end) Hchoice) as [pick PICK].
+    obtain [pick PICK] with (fun i : Idx => fun oi : option StrictIdx => match oi with | Some j => proj1_sig j = proj1_sig i | None => rank (proj1_sig i) == rank a end) Hchoice by Axiom_of_Choice.
     exists pick.
     - intros i j EQ. change (i = j) in EQ. subst j. reflexivity.
     - intros [x Hx] [y Hy] EQ. unfold Idx in *. simpl in *.
-      pose proof (PICK (@exist A (fun z : A => Aczel.isElemOf kappa (rank z) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank z)) (Aczel.childnodes kappa (rank a))) x Hx)) as PICKx.
-      pose proof (PICK (@exist A (fun z : A => Aczel.isElemOf kappa (rank z) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank z)) (Aczel.childnodes kappa (rank a))) y Hy)) as PICKy.
+      find* PICKx by (PICK (@exist A (fun z : A => Aczel.isElemOf kappa (rank z) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank z)) (Aczel.childnodes kappa (rank a))) x Hx)).
+      find* PICKy by (PICK (@exist A (fun z : A => Aczel.isElemOf kappa (rank z) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank z)) (Aczel.childnodes kappa (rank a))) y Hy)).
       destruct (pick (@exist A (fun z : A => Aczel.isElemOf kappa (rank z) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank z)) (Aczel.childnodes kappa (rank a))) x Hx)) as [[x' Hx'] | ] eqn:PICK_X; destruct (pick (@exist A (fun z : A => Aczel.isElemOf kappa (rank z) (rank a) \/ Aczel.eqTree (Aczel.childnodes kappa (rank z)) (Aczel.childnodes kappa (rank a))) y Hy)) as [[y' Hy'] | ] eqn:PICK_Y; simpl in *.
       + injection EQ as STRICT_EQ. eapply Cardinal2.sig_eq_from_proj1. simpl.
         rewrite <- PICKx. rewrite <- PICKy. exact STRICT_EQ.
@@ -270,7 +270,7 @@ Proof.
       + eapply Cardinal2.sig_eq_from_proj1. simpl.
         assert (RANK_EQ : rank x == rank y).
         { transitivity (rank a); [exact PICKx | symmetry; exact PICKy]. }
-        pose proof (proj1 (enum_inj (rank x) (rank y)) RANK_EQ) as ENUM_EQ. now rewrite 2 RANK in ENUM_EQ.
+        obtain ENUM_EQ with RANK_EQ by enum_inj. now rewrite 2 RANK in ENUM_EQ.
   }
   eapply Cardinal1.Cardinality_le_lt_lt.
   - unfold Idx in IDX_LE. exact IDX_LE.
@@ -407,12 +407,12 @@ Lemma state_encode_sum_inj (s : square_state)
   : forall x : st_carrier s + st_carrier s, forall y : st_carrier s + st_carrier s, @eqProp (st_carrier s) (st_isSetoid s) (state_encode_sum s x) (state_encode_sum s y) -> @eqProp (st_carrier s + st_carrier s) (state_sum_isSetoid s) x y.
 Proof.
   intros [x | x] [y | y] EQ; simpl in EQ.
-  - pose proof (st_code_inj s (st_nat s O) (st_nat s O) x y EQ) as [_ EQ_xy]. econs. exact EQ_xy.
-  - pose proof (st_code_inj s (st_nat s O) (st_nat s (S O)) x y EQ) as [EQ_tag _].
-    pose proof (st_nat_inj s O (S O) EQ_tag) as BAD. discriminate BAD.
-  - pose proof (st_code_inj s (st_nat s (S O)) (st_nat s O) x y EQ) as [EQ_tag _].
-    pose proof (st_nat_inj s (S O) O EQ_tag) as BAD. discriminate BAD.
-  - pose proof (st_code_inj s (st_nat s (S O)) (st_nat s (S O)) x y EQ) as [_ EQ_xy]. econs. exact EQ_xy.
+  - obtain [_ EQ_xy] with EQ by st_code_inj. econs. exact EQ_xy.
+  - obtain [EQ_tag _] with EQ by st_code_inj.
+    obtain BAD with EQ_tag by st_nat_inj. discriminate BAD.
+  - obtain [EQ_tag _] with EQ by st_code_inj.
+    obtain BAD with EQ_tag by st_nat_inj. discriminate BAD.
+  - obtain [_ EQ_xy] with EQ by st_code_inj. econs. exact EQ_xy.
 Qed.
 
 Definition state_encode_pair (s : square_state) (xy : (st_carrier s + st_carrier s) * (st_carrier s + st_carrier s)) : st_carrier s :=
@@ -429,7 +429,7 @@ Lemma state_encode_pair_inj (s : square_state)
   : forall p : (st_carrier s + st_carrier s) * (st_carrier s + st_carrier s), forall q : (st_carrier s + st_carrier s) * (st_carrier s + st_carrier s), @eqProp (st_carrier s) (st_isSetoid s) (state_encode_pair s p) (state_encode_pair s q) -> @eqProp ((st_carrier s + st_carrier s) * (st_carrier s + st_carrier s)) (state_sum_prod_isSetoid s) p q.
 Proof.
   intros [x1 y1] [x2 y2] EQ. simpl in EQ.
-  pose proof (st_code_inj s (state_encode_sum s x1) (state_encode_sum s x2) (state_encode_sum s y1) (state_encode_sum s y2) EQ) as [EQ_x EQ_y].
+  obtain [EQ_x EQ_y] with (state_encode_sum s x1) (state_encode_sum s x2) (state_encode_sum s y1) (state_encode_sum s y2) EQ by st_code_inj.
   split; eapply state_encode_sum_inj; assumption.
 Qed.
 
@@ -470,16 +470,16 @@ Proof.
     + econs. eapply state_encode_pair_cong. split; econs; eauto.
     + econs. eapply state_encode_pair_cong. split; econs; eauto.
   - intros [x1 | x1] [x2 | x2] [y1 | y1] [y2 | y2] EQ; simpl in EQ; inv EQ.
-    + pose proof (st_code_inj s x1 x2 y1 y2 x_corres) as [EQ_x EQ_y]. split; econs; assumption.
-    + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
-    + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
-    + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
-    + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
-    + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
-    + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
-    + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
-    + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
-    + pose proof (state_encode_pair_inj s _ _ y_corres) as [EQ_x EQ_y]. split; assumption.
+    + obtain [EQ_x EQ_y] with x_corres by st_code_inj. split; econs; assumption.
+    + find* [EQ_x EQ_y] by (state_encode_pair_inj s _ _ y_corres). split; assumption.
+    + find* [EQ_x EQ_y] by (state_encode_pair_inj s _ _ y_corres). split; assumption.
+    + find* [EQ_x EQ_y] by (state_encode_pair_inj s _ _ y_corres). split; assumption.
+    + find* [EQ_x EQ_y] by (state_encode_pair_inj s _ _ y_corres). split; assumption.
+    + find* [EQ_x EQ_y] by (state_encode_pair_inj s _ _ y_corres). split; assumption.
+    + find* [EQ_x EQ_y] by (state_encode_pair_inj s _ _ y_corres). split; assumption.
+    + find* [EQ_x EQ_y] by (state_encode_pair_inj s _ _ y_corres). split; assumption.
+    + find* [EQ_x EQ_y] by (state_encode_pair_inj s _ _ y_corres). split; assumption.
+    + find* [EQ_x EQ_y] by (state_encode_pair_inj s _ _ y_corres). split; assumption.
 Defined.
 
 Lemma square_state_extend_exists (s : square_state) (fresh : st_carrier s -> A)
@@ -573,7 +573,7 @@ Proof.
     assert (m1 = m2) by now eapply nat_embed_inj.
     now subst n2 m2.
   - intros x1 y1 z1 x2 y2 z2 (n1 & m1 & Hx1 & Hy1 & Hz1) (n2 & m2 & Hx2 & Hy2 & Hz2) Hz. subst.
-    pose proof (nat_embed_inj _ _ Hz) as Hpair. pose proof (cpInv_inj _ _ _ _ Hpair) as [Hn Hm]. subst n2 m2. split; reflexivity.
+    find* Hpair by (nat_embed_inj _ _ Hz). find* [Hn Hm] by (cpInv_inj _ _ _ _ Hpair). subst n2 m2. split; reflexivity.
 Defined.
 
 Definition graph_state_chain_upperbound (C : ensemble graph_state)
@@ -594,14 +594,14 @@ Proof.
       |}
     ).
     - intros n. exists s0. split; [exact IN0 | exact (gs_nat s0 n)].
-    - intros x y z (s & INs & Hcode). pose proof (gs_code_dom s x y z Hcode) as (Hx & Hy & Hz). splits; exists s; split; assumption.
-    - intros x y (sx & INx & Hx) (sy & INy & Hy). pose proof (CHAIN sx sy INx INy) as [LE | LE].
-      + pose proof (gs_code_total sy x y (proj1 LE x Hx) Hy) as [z Hcode]. exists z. exists sy. split; assumption.
-      + pose proof (gs_code_total sx x y Hx (proj1 LE y Hy)) as [z Hcode]. exists z. exists sx. split; assumption.
-    - intros x y z1 z2 (s1 & IN1 & Hcode1) (s2 & IN2 & Hcode2). pose proof (CHAIN s1 s2 IN1 IN2) as [LE | LE].
+    - intros x y z (s & INs & Hcode). obtain (Hx & Hy & Hz) with Hcode by gs_code_dom. splits; exists s; split; assumption.
+    - intros x y (sx & INx & Hx) (sy & INy & Hy). obtain [LE | LE] with INx INy by CHAIN.
+      + obtain [z Hcode] with (proj1 LE x Hx) Hy by gs_code_total. exists z. exists sy. split; assumption.
+      + obtain [z Hcode] with Hx (proj1 LE y Hy) by gs_code_total. exists z. exists sx. split; assumption.
+    - intros x y z1 z2 (s1 & IN1 & Hcode1) (s2 & IN2 & Hcode2). obtain [LE | LE] with IN1 IN2 by CHAIN.
       + eapply gs_code_functional; [exact (proj2 LE x y z1 Hcode1) | exact Hcode2].
       + eapply gs_code_functional; [exact Hcode1 | exact (proj2 LE x y z2 Hcode2)].
-    - intros x1 y1 z1 x2 y2 z2 (s1 & IN1 & Hcode1) (s2 & IN2 & Hcode2) Hz. pose proof (CHAIN s1 s2 IN1 IN2) as [LE | LE].
+    - intros x1 y1 z1 x2 y2 z2 (s1 & IN1 & Hcode1) (s2 & IN2 & Hcode2) Hz. obtain [LE | LE] with IN1 IN2 by CHAIN.
       + eapply gs_code_inj; [exact (proj2 LE x1 y1 z1 Hcode1) | exact Hcode2 | exact Hz].
       + eapply gs_code_inj; [exact Hcode1 | exact (proj2 LE x2 y2 z2 Hcode2) | exact Hz].
   }
@@ -649,10 +649,10 @@ Lemma graph_sum_code_total (s : graph_state) (x : graph_sum_type s)
   : exists b : graph_state_type s, graph_sum_code s x b.
 Proof.
   destruct x as [x | x].
-  - pose proof (gs_code_total s (nat_embed O) (proj1_sig x) (gs_nat s O) (proj2_sig x)) as [b Hcode].
-    pose proof (gs_code_dom s _ _ _ Hcode) as (_ & _ & Hb). exists (@exist A (gs_carrier s) b Hb). econs. exact Hcode.
-  - pose proof (gs_code_total s (nat_embed (S O)) (proj1_sig x) (gs_nat s (S O)) (proj2_sig x)) as [b Hcode].
-    pose proof (gs_code_dom s _ _ _ Hcode) as (_ & _ & Hb). exists (@exist A (gs_carrier s) b Hb). econs. exact Hcode.
+  - obtain [b Hcode] with (gs_nat s O) (proj2_sig x) by gs_code_total.
+    find* (_ & _ & Hb) by (gs_code_dom s _ _ _ Hcode). exists (@exist A (gs_carrier s) b Hb). econs. exact Hcode.
+  - obtain [b Hcode] with (gs_nat s (S O)) (proj2_sig x) by gs_code_total.
+    find* (_ & _ & Hb) by (gs_code_dom s _ _ _ Hcode). exists (@exist A (gs_carrier s) b Hb). econs. exact Hcode.
 Qed.
 
 Lemma graph_sum_code_functional (s : graph_state) (x : graph_sum_type s) (b1 : graph_state_type s) (b2 : graph_state_type s)
@@ -671,12 +671,12 @@ Lemma graph_sum_code_inj (s : graph_state) (x1 : graph_sum_type s) (x2 : graph_s
 Proof.
   subst b2.
   destruct x1 as [x1 | x1], x2 as [x2 | x2]; inv CODE1; inv CODE2.
-  - pose proof (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl) as [_ EQ_x]. f_equal. eapply Cardinal2.sig_eq_from_proj1. exact EQ_x.
-  - pose proof (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl) as [EQ_tag _].
-    pose proof (nat_embed_inj O (S O) EQ_tag) as BAD. discriminate BAD.
-  - pose proof (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl) as [EQ_tag _].
-    pose proof (nat_embed_inj (S O) O EQ_tag) as BAD. discriminate BAD.
-  - pose proof (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl) as [_ EQ_x]. f_equal. eapply Cardinal2.sig_eq_from_proj1. exact EQ_x.
+  - find* [_ EQ_x] by (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl). f_equal. eapply Cardinal2.sig_eq_from_proj1. exact EQ_x.
+  - find* [EQ_tag _] by (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl).
+    obtain BAD with EQ_tag by nat_embed_inj. discriminate BAD.
+  - find* [EQ_tag _] by (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl).
+    obtain BAD with EQ_tag by nat_embed_inj. discriminate BAD.
+  - find* [_ EQ_x] by (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl). f_equal. eapply Cardinal2.sig_eq_from_proj1. exact EQ_x.
 Qed.
 
 Inductive graph_pair_code (s : graph_state) : graph_pair_type s -> graph_state_type s -> Prop :=
@@ -689,9 +689,9 @@ Inductive graph_pair_code (s : graph_state) : graph_pair_type s -> graph_state_t
 Lemma graph_pair_code_total (s : graph_state) (p : graph_pair_type s)
   : exists b : graph_state_type s, graph_pair_code s p b.
 Proof.
-  destruct p as [x y]. pose proof (graph_sum_code_total s x) as [bx CODE_x]. pose proof (graph_sum_code_total s y) as [by0 CODE_y].
-  pose proof (gs_code_total s (proj1_sig bx) (proj1_sig by0) (proj2_sig bx) (proj2_sig by0)) as [b CODE].
-  pose proof (gs_code_dom s _ _ _ CODE) as (_ & _ & Hb). exists (@exist A (gs_carrier s) b Hb). econs; eauto.
+  destruct p as [x y]. find* [bx CODE_x] by (graph_sum_code_total s x). find* [by0 CODE_y] by (graph_sum_code_total s y).
+  obtain [b CODE] with (proj2_sig bx) (proj2_sig by0) by gs_code_total.
+  find* (_ & _ & Hb) by (gs_code_dom s _ _ _ CODE). exists (@exist A (gs_carrier s) b Hb). econs; eauto.
 Qed.
 
 Lemma graph_pair_code_functional (s : graph_state) (p : graph_pair_type s) (b1 : graph_state_type s) (b2 : graph_state_type s)
@@ -699,8 +699,8 @@ Lemma graph_pair_code_functional (s : graph_state) (p : graph_pair_type s) (b1 :
   (CODE2 : graph_pair_code s p b2)
   : b1 = b2.
 Proof.
-  inv CODE1. inv CODE2. pose proof (graph_sum_code_functional s _ _ _ CODE_x CODE_x0). subst bx0.
-  pose proof (graph_sum_code_functional s _ _ _ CODE_y CODE_y0). subst by0.
+  inv CODE1. inv CODE2. obtain ? with CODE_x CODE_x0 by graph_sum_code_functional. subst bx0.
+  obtain ? with CODE_y CODE_y0 by graph_sum_code_functional. subst by0.
   eapply Cardinal2.sig_eq_from_proj1. eapply gs_code_functional; eauto.
 Qed.
 
@@ -711,9 +711,9 @@ Lemma graph_pair_code_inj (s : graph_state) (p1 : graph_pair_type s) (p2 : graph
   : p1 = p2.
 Proof.
   subst b2. inv CODE1. inv CODE2.
-  pose proof (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl) as [EQ_bx EQ_by].
-  pose proof (graph_sum_code_inj s _ _ _ _ CODE_x CODE_x0 (Cardinal2.sig_eq_from_proj1 _ _ EQ_bx)) as EQ_x.
-  pose proof (graph_sum_code_inj s _ _ _ _ CODE_y CODE_y0 (Cardinal2.sig_eq_from_proj1 _ _ EQ_by)) as EQ_y.
+  find* [EQ_bx EQ_by] by (gs_code_inj s _ _ _ _ _ _ CODE CODE0 eq_refl).
+  find* EQ_x by (graph_sum_code_inj s _ _ _ _ CODE_x CODE_x0 (Cardinal2.sig_eq_from_proj1 _ _ EQ_bx)).
+  find* EQ_y by (graph_sum_code_inj s _ _ _ _ CODE_y CODE_y0 (Cardinal2.sig_eq_from_proj1 _ _ EQ_by)).
   subst. reflexivity.
 Qed.
 
@@ -793,7 +793,7 @@ Proof.
   - intros n. exists (inl (graph_state_nat s n)).
     change (graph_extend_repr s fresh (proj1_sig (graph_state_nat s n)) (inl (graph_state_nat s n))). eapply graph_extend_repr_old.
   - intros x y z Hcode. inv Hcode.
-    + pose proof (gs_code_dom s x y z CODE) as (Hx & Hy & Hz). splits.
+    + obtain (Hx & Hy & Hz) with CODE by gs_code_dom. splits.
       * exists (inl (@exist A (gs_carrier s) x Hx)). change (graph_extend_repr s fresh (proj1_sig (@exist A (gs_carrier s) x Hx)) (inl (@exist A (gs_carrier s) x Hx))). eapply graph_extend_repr_old.
       * exists (inl (@exist A (gs_carrier s) y Hy)). change (graph_extend_repr s fresh (proj1_sig (@exist A (gs_carrier s) y Hy)) (inl (@exist A (gs_carrier s) y Hy))). eapply graph_extend_repr_old.
       * exists (inl (@exist A (gs_carrier s) z Hz)). change (graph_extend_repr s fresh (proj1_sig (@exist A (gs_carrier s) z Hz)) (inl (@exist A (gs_carrier s) z Hz))). eapply graph_extend_repr_old.
@@ -803,36 +803,36 @@ Proof.
       { inv REPR_x. exact (proj2_sig bx). }
       { inv REPR_y. exact (proj2_sig by0). }
       exists z. econs. exact CODE.
-    + pose proof (graph_pair_code_total s (inl bx, inr by0)) as [b CODE]. exists (proj1_sig (fresh b)).
+    + find* [b CODE] by (graph_pair_code_total s (inl bx, inr by0)). exists (proj1_sig (fresh b)).
       eapply graph_extend_code_new with (sx := inl bx) (sy := inr by0) (b := b); eauto.
       simpl. exact I.
-    + pose proof (graph_pair_code_total s (inr bx, inl by0)) as [b CODE]. exists (proj1_sig (fresh b)).
+    + find* [b CODE] by (graph_pair_code_total s (inr bx, inl by0)). exists (proj1_sig (fresh b)).
       eapply graph_extend_code_new with (sx := inr bx) (sy := inl by0) (b := b); eauto.
       simpl. exact I.
-    + pose proof (graph_pair_code_total s (inr bx, inr by0)) as [b CODE]. exists (proj1_sig (fresh b)).
+    + find* [b CODE] by (graph_pair_code_total s (inr bx, inr by0)). exists (proj1_sig (fresh b)).
       eapply graph_extend_code_new with (sx := inr bx) (sy := inr by0) (b := b); eauto.
       simpl. exact I.
   - intros x y z1 z2 CODE1 CODE2. inv CODE1; inv CODE2.
     + eapply gs_code_functional; eauto.
-    + pose proof (gs_code_dom s x y z1 CODE) as (Hx & Hy & _).
-      pose proof (graph_extend_repr_unique s fresh x sx (inl (@exist A (gs_carrier s) x Hx)) fresh_inj REPR_x (graph_extend_repr_old s fresh (@exist A (gs_carrier s) x Hx))) as EQ_x.
-      pose proof (graph_extend_repr_unique s fresh y sy (inl (@exist A (gs_carrier s) y Hy)) fresh_inj REPR_y (graph_extend_repr_old s fresh (@exist A (gs_carrier s) y Hy))) as EQ_y.
+    + obtain (Hx & Hy & _) with CODE by gs_code_dom.
+      find* EQ_x by (graph_extend_repr_unique s fresh x sx (inl (@exist A (gs_carrier s) x Hx)) fresh_inj REPR_x (graph_extend_repr_old s fresh (@exist A (gs_carrier s) x Hx))).
+      find* EQ_y by (graph_extend_repr_unique s fresh y sy (inl (@exist A (gs_carrier s) y Hy)) fresh_inj REPR_y (graph_extend_repr_old s fresh (@exist A (gs_carrier s) y Hy))).
       subst sx sy. contradiction.
-    + pose proof (gs_code_dom s x y z2 CODE0) as (Hx & Hy & _).
-      pose proof (graph_extend_repr_unique s fresh x sx (inl (@exist A (gs_carrier s) x Hx)) fresh_inj REPR_x (graph_extend_repr_old s fresh (@exist A (gs_carrier s) x Hx))) as EQ_x.
-      pose proof (graph_extend_repr_unique s fresh y sy (inl (@exist A (gs_carrier s) y Hy)) fresh_inj REPR_y (graph_extend_repr_old s fresh (@exist A (gs_carrier s) y Hy))) as EQ_y.
+    + obtain (Hx & Hy & _) with CODE0 by gs_code_dom.
+      find* EQ_x by (graph_extend_repr_unique s fresh x sx (inl (@exist A (gs_carrier s) x Hx)) fresh_inj REPR_x (graph_extend_repr_old s fresh (@exist A (gs_carrier s) x Hx))).
+      find* EQ_y by (graph_extend_repr_unique s fresh y sy (inl (@exist A (gs_carrier s) y Hy)) fresh_inj REPR_y (graph_extend_repr_old s fresh (@exist A (gs_carrier s) y Hy))).
       subst sx sy. contradiction.
-    + pose proof (graph_extend_repr_unique s fresh x sx sx0 fresh_inj REPR_x REPR_x0) as EQ_x.
-      pose proof (graph_extend_repr_unique s fresh y sy sy0 fresh_inj REPR_y REPR_y0) as EQ_y.
-      subst sx0 sy0. pose proof (graph_pair_code_functional s _ _ _ CODE CODE0) as EQ_b. subst b0. reflexivity.
+    + find* EQ_x by (graph_extend_repr_unique s fresh x sx sx0 fresh_inj REPR_x REPR_x0).
+      find* EQ_y by (graph_extend_repr_unique s fresh y sy sy0 fresh_inj REPR_y REPR_y0).
+      subst sx0 sy0. find* EQ_b by (graph_pair_code_functional s _ _ _ CODE CODE0). subst b0. reflexivity.
   - intros x1 y1 z1 x2 y2 z2 CODE1 CODE2 EQ_z. inv CODE1; inv CODE2.
     + eapply gs_code_inj; eauto.
-    + pose proof (gs_code_dom s _ _ _ CODE) as (_ & _ & Hz_old).
+    + find* (_ & _ & Hz_old) by (gs_code_dom s _ _ _ CODE).
       destruct (fresh b) as [fb Hfb]. simpl in *. subst. contradiction.
-    + pose proof (gs_code_dom s _ _ _ CODE0) as (_ & _ & Hz_old).
+    + find* (_ & _ & Hz_old) by (gs_code_dom s _ _ _ CODE0).
       destruct (fresh b) as [fb Hfb]. simpl in *. subst. contradiction.
-    + pose proof (fresh_inj b b0 EQ_z) as EQ_b. subst b0.
-      pose proof (graph_pair_code_inj s _ _ _ _ CODE CODE0 eq_refl) as EQ_pair. inv EQ_pair.
+    + obtain EQ_b with EQ_z by fresh_inj. subst b0.
+      find* EQ_pair by (graph_pair_code_inj s _ _ _ _ CODE CODE0 eq_refl). inv EQ_pair.
       split; eapply graph_extend_repr_same; eauto.
 Defined.
 
@@ -857,14 +857,14 @@ Lemma graph_state_type_prod_le (s : graph_state)
   : Cardinality.ofType (graph_state_type s * graph_state_type s) =< Cardinality.ofType (graph_state_type s).
 Proof.
   assert (Hchoice : forall p : graph_state_type s * graph_state_type s, exists b : graph_state_type s, gs_code s (proj1_sig (Datatypes.fst p)) (proj1_sig (Datatypes.snd p)) (proj1_sig b)).
-  { intros [x y]. pose proof (gs_code_total s (proj1_sig x) (proj1_sig y) (proj2_sig x) (proj2_sig y)) as [z CODE].
-    pose proof (gs_code_dom s _ _ _ CODE) as (_ & _ & Hz). exists (@exist A (gs_carrier s) z Hz). exact CODE.
+  { intros [x y]. obtain [z CODE] with (proj2_sig x) (proj2_sig y) by gs_code_total.
+    find* (_ & _ & Hz) by (gs_code_dom s _ _ _ CODE). exists (@exist A (gs_carrier s) z Hz). exact CODE.
   }
   pose proof (Axiom_of_Choice (graph_state_type s * graph_state_type s) (fun _ : graph_state_type s * graph_state_type s => graph_state_type s) (fun p : graph_state_type s * graph_state_type s => fun b : graph_state_type s => gs_code s (proj1_sig (Datatypes.fst p)) (proj1_sig (Datatypes.snd p)) (proj1_sig b)) Hchoice) as [code CODE].
   eapply Cardinal2.Cardinality_ofType_le_ofType with (f := code).
   intros [x1 y1] [x2 y2] EQ. change (code (x1, y1) = code (x2, y2)) in EQ.
   assert (EQ_proj : proj1_sig (code (x1, y1)) = proj1_sig (code (x2, y2))) by now rewrite EQ.
-  pose proof (gs_code_inj s _ _ _ _ _ _ (CODE (x1, y1)) (CODE (x2, y2)) EQ_proj) as [EQ_x EQ_y].
+  find* [EQ_x EQ_y] by (gs_code_inj s _ _ _ _ _ _ (CODE (x1, y1)) (CODE (x2, y2)) EQ_proj).
   f_equal; eapply Cardinal2.sig_eq_from_proj1; assumption.
 Qed.
 
@@ -881,11 +881,11 @@ Lemma graph_state_cover_le_sum (s : graph_state)
   : Cardinality.ofType A =< Cardinality.ofType (graph_cover_sum_type s).
 Proof.
   assert (Hchoice : forall a : A, exists x : graph_cover_sum_type s, graph_sum_proj s x = a).
-  { intros a. pose proof (classic (gs_carrier s a)) as [Ha | Ha].
+  { intros a. find* [Ha | Ha] by (classic (gs_carrier s a)).
     - exists (inl (@exist A (gs_carrier s) a Ha)). reflexivity.
     - exists (inr (@exist A (fun x : A => ~ gs_carrier s x) a Ha)). reflexivity.
   }
-  pose proof (Axiom_of_Choice A (fun _ : A => graph_cover_sum_type s) (fun a : A => fun x : graph_cover_sum_type s => graph_sum_proj s x = a) Hchoice) as [pick PICK].
+  obtain [pick PICK] with (fun a : A => fun x : graph_cover_sum_type s => graph_sum_proj s x = a) Hchoice by Axiom_of_Choice.
   eapply Cardinal2.Cardinality_ofType_le_ofType with (f := pick).
   intros a1 a2 EQ. change (pick a1 = pick a2) in EQ. rewrite <- (PICK a1). rewrite <- (PICK a2). now rewrite EQ.
 Qed.
@@ -894,11 +894,11 @@ Lemma graph_state_complement_le_carrier (m : graph_state)
   (MAX : forall t : graph_state, graph_state_le m t -> graph_state_le t m)
   : Cardinality.ofType (graph_state_complement_type m) =< Cardinality.ofType (graph_state_type m).
 Proof.
-  pose proof (Cardinal1.Cardinality_le_total (Cardinality.ofType (graph_state_type m)) (Cardinality.ofType (graph_state_complement_type m))) as [LE | LE].
+  find* [LE | LE] by (Cardinal1.Cardinality_le_total (Cardinality.ofType (graph_state_type m)) (Cardinality.ofType (graph_state_complement_type m))).
   - destruct LE as [fresh fresh_cong fresh_inj].
     assert (fresh_inj_proj : forall b1 : graph_state_type m, forall b2 : graph_state_type m, proj1_sig (fresh b1) = proj1_sig (fresh b2) -> b1 = b2).
     { intros b1 b2 EQ. eapply fresh_inj. change (fresh b1 = fresh b2). eapply Cardinal2.sig_eq_from_proj1. exact EQ. }
-    pose proof (MAX (graph_state_extend m fresh fresh_inj_proj) (graph_state_extend_le m fresh fresh_inj_proj)) as BACK.
+    obtain BACK with (graph_state_extend_le m fresh fresh_inj_proj) by MAX.
     pose (b0 := graph_state_nat m O).
     pose proof (proj1 BACK (proj1_sig (fresh b0))) as IN_BACK.
     assert (IN_EXT : gs_carrier (graph_state_extend m fresh fresh_inj_proj) (proj1_sig (fresh b0))).
@@ -916,10 +916,10 @@ Proof.
   destruct NAT_LE as [nat_emb nat_emb_cong nat_emb_inj].
   assert (nat_emb_inj_raw : forall n : nat, forall m : nat, nat_emb n = nat_emb m -> n = m).
   { intros n m EQ. eapply nat_emb_inj. change (nat_emb n = nat_emb m). exact EQ. }
-  pose proof (@graph_state_maximal_exists A nat_emb nat_emb_inj_raw) as [m MAX].
-  pose proof (@graph_state_type_nat_le A nat_emb nat_emb_inj_raw m) as NAT_LE_B.
-  pose proof (@graph_state_type_prod_le A nat_emb m) as PROD_B_LE_B.
-  pose proof (@graph_state_complement_le_carrier A nat_emb nat_emb_inj_raw m MAX) as COMP_LE_B.
+  obtain [m MAX] with A nat_emb_inj_raw by @graph_state_maximal_exists.
+  obtain NAT_LE_B with A nat_emb_inj_raw m by @graph_state_type_nat_le.
+  find* PROD_B_LE_B by (@graph_state_type_prod_le A nat_emb m).
+  obtain COMP_LE_B with A nat_emb_inj_raw MAX by @graph_state_complement_le_carrier.
   assert (B_LE_A : Cardinality.ofType (graph_state_type A nat_emb m) =< Cardinality.ofType A).
   { eapply Cardinal2.Cardinality_ofType_sig_le. }
   assert (A_LE_B : Cardinality.ofType A =< Cardinality.ofType (graph_state_type A nat_emb m)).
@@ -930,7 +930,7 @@ Proof.
         * reflexivity.
         * exact COMP_LE_B.
       + transitivity (Cardinality.ofType (graph_state_type A nat_emb m * graph_state_type A nat_emb m)).
-        * pose proof (Cardinal2.Cardinality_ofType_prod_eq bool (graph_state_type A nat_emb m)) as PROD_EQ. rewrite <- PROD_EQ.
+        * find* PROD_EQ by (Cardinal2.Cardinality_ofType_prod_eq bool (graph_state_type A nat_emb m)). rewrite <- PROD_EQ.
           eapply Cardinal2.Cardinality_ofType_prod_le.
           { eapply Cardinality_ofType_bool_le_of_nat_le. exact NAT_LE_B. }
           { reflexivity. }
@@ -991,7 +991,7 @@ Proof.
     + eapply H_next. exact H_rLt.
     + eapply H_inaccessible. exact H_rLt.
   - intros os H_rLt. eapply rLe_rLt_rLt with (y := Ord.sup X1 (fun x1 : X1 => os (f x1))).
-    + eapply Ord_sup_rLe_intro. intros x0. pose proof (H_surj x0) as [x1 H_eq]. subst x0.
+    + eapply Ord_sup_rLe_intro. intros x0. find* [x1 H_eq] by (H_surj x0). subst x0.
       change ((fun x1 : X1 => os (f x1)) x1 ≦ᵣ Ord.sup X1 (fun x2 : X1 => os (f x2))). eapply Ord_rLe_sup_intro.
     + eapply H_inaccessible. intros x1. eapply H_rLt.
   - intros alpha beta H_rLt0 H_rLt1. eapply H_inaccessible; assumption.
@@ -1123,7 +1123,7 @@ Lemma tree_top_join (X : Type@{Set_u}) (os : X -> Ord.t)
   : Ord.sup X os <ᵣ tree_top X.
 Proof.
   exploit (Axiom_of_Choice X (fun _ : X => tree X) (fun x : X => fun tr : tree X => os x ≦ᵣ @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr)).
-  { intros x. pose proof (H_rLt x) as [[tr H_rLe]]. exists tr. exact H_rLe. }
+  { intros x. find* [[tr H_rLe]] by (H_rLt x). exists tr. exact H_rLe. }
   intros [f H_f]. eapply rLe_rLt_rLt with (y := @fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_join f)).
   - eapply Ord_sup_rLe_intro. intros x. transitivity (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (f x)).
     + eapply H_f.
@@ -1154,13 +1154,13 @@ Proof.
   { destruct H_rLt as [[tr H_rLe]]. eapply rLe_rLt_rLt; [eapply Ord_orec_rLe; eauto; exact H_rLe | eapply H_recs]. }
   intros tr. induction tr as [ | tr IH | trs IH | tr0 IH0 tr1 IH1].
   - eapply rLe_rLt_rLt with (y := base1).
-    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tree_O) Ord.zer H_next_le H_next_mon (tree_O_rEq X)) as H_eq.
-      pose proof (Ord_orec_zer base1 next) as H_eq0. transitivity (Ord.orec base1 next Ord.zer).
+    + find* H_eq by (Ord_orec_rEq_r base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tree_O) Ord.zer H_next_le H_next_mon (tree_O_rEq X)).
+      find* H_eq0 by (Ord_orec_zer base1 next). transitivity (Ord.orec base1 next Ord.zer).
       * eapply H_eq.
       * exact (proj1 H_eq0).
     + exact H_base1.
   - eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
-    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_S tr)) (Ord.suc (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr)) H_next_le H_next_mon (tree_S_rEq X tr)) as H_eq.
+    + find* H_eq by (Ord_orec_rEq_r base1 next (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) (tree_S tr)) (Ord.suc (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr)) H_next_le H_next_mon (tree_S_rEq X tr)).
       transitivity (Ord.orec base1 next (Ord.suc (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
       * eapply H_eq.
       * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (@fromWf (tree X) (@tree_lt X) (tree_lt_well_founded X) tr))).
@@ -1401,7 +1401,7 @@ Lemma gtree_top_join (X : Type@{Set_u}) (P : X -> Prop) (os : @sig X P -> Ord.t)
   : Ord.sup (@sig X P) os <ᵣ gtree_top X.
 Proof.
   pose proof (Axiom_of_Choice (@sig X P) (fun _ : @sig X P => gtree X) (fun x : @sig X P => fun tr : gtree X => os x ≦ᵣ @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr)) as [f H_f].
-  { intros x. pose proof (H_rLt x) as [[tr H_rLe]]. exists tr. exact H_rLe. }
+  { intros x. find* [[tr H_rLe]] by (H_rLt x). exists tr. exact H_rLe. }
   eapply rLe_rLt_rLt with (y := @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_join P f)).
   - eapply Ord_sup_rLe_intro. intros x. transitivity (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (f x)).
     + eapply H_f.
@@ -1431,19 +1431,19 @@ Proof.
   { destruct H_rLt as [[tr H_rLe]]. eapply rLe_rLt_rLt; [eapply Ord_orec_rLe; eauto; exact H_rLe | eapply H_recs]. }
   intros tr. induction tr as [ | tr IH | P trs IH | tr0 IH0 tr1 IH1].
   - eapply rLe_rLt_rLt with (y := base1).
-    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) gtree_O) Ord.zer H_next_le H_next_mon (gtree_O_rEq X)) as H_eq.
-      pose proof (Ord_orec_zer base1 next) as H_eq0. transitivity (Ord.orec base1 next Ord.zer).
+    + find* H_eq by (Ord_orec_rEq_r base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) gtree_O) Ord.zer H_next_le H_next_mon (gtree_O_rEq X)).
+      find* H_eq0 by (Ord_orec_zer base1 next). transitivity (Ord.orec base1 next Ord.zer).
       * eapply H_eq.
       * exact (proj1 H_eq0).
     + exact H_base1.
   - eapply rLe_rLt_rLt with (y := next (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr))).
-    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_S tr)) (Ord.suc (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr)) H_next_le H_next_mon (gtree_S_rEq X tr)) as H_eq.
+    + find* H_eq by (Ord_orec_rEq_r base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_S tr)) (Ord.suc (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr)) H_next_le H_next_mon (gtree_S_rEq X tr)).
       transitivity (Ord.orec base1 next (Ord.suc (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr))).
       * eapply H_eq.
       * exact (proj1 (Ord_orec_suc base1 next H_next_le H_next_mon (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) tr))).
     + eapply H_inaccessible. exact IH.
   - eapply rLe_rLt_rLt with (y := Ord_join base1 (Ord.sup (@sig X P) (fun x : @sig X P => next (Ord.orec base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x)))))).
-    + pose proof (Ord_orec_rEq_r base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_join P trs)) (mkNode (@sig X P) (fun x : @sig X P => @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x))) H_next_le H_next_mon (gtree_join_rEq X P trs)) as H_eq.
+    + find* H_eq by (Ord_orec_rEq_r base1 next (@fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (gtree_join P trs)) (mkNode (@sig X P) (fun x : @sig X P => @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x))) H_next_le H_next_mon (gtree_join_rEq X P trs)).
       transitivity (Ord.orec base1 next (mkNode (@sig X P) (fun x : @sig X P => @fromWf (gtree X) (@gtree_lt X) (gtree_lt_well_founded X) (trs x)))).
       * eapply H_eq.
       * rewrite Ord_orec_unfold. reflexivity.
@@ -1595,7 +1595,7 @@ Qed.
 Lemma kappa_inaccessible_cardinality (A : Type)
   : Cardinality.toTree (Cardinality.ofType A) <ᵣ kappa.
 Proof.
-  pose proof (well_ordering_thm A (@mkSetoid_from_eq A)) as (R & R_wf & R_total & R_trans & R_compat).
+  find* (R & R_wf & R_total & R_trans & R_compat) by (well_ordering_thm A (@mkSetoid_from_eq A)).
   eapply rLe_rLt_rLt with (y := @fromWfSet A R R_wf).
   - eapply Cardinal1.Cardinality_lowerbound; eauto.
   - eapply kappa_inaccessible_from_wf_set.
@@ -1614,7 +1614,7 @@ Lemma kappa_inaccessible_is_S (alpha : Ord.t) (beta : Ord.t)
   (H_rLt : alpha <ᵣ kappa)
   : beta <ᵣ kappa.
 Proof.
-  rewrite H_succ. pose proof (kappa_complete alpha H_rLt) as (A & R & R_wf & H_rLe).
+  rewrite H_succ. obtain (A & R & R_wf & H_rLe) with H_rLt by kappa_complete.
   set (Ropt := fun x : option A => fun y : option A =>
     match x, y with
     | Some x', Some y' => R x' y'
@@ -1669,7 +1669,7 @@ Lemma kappa_inaccessible_join (A : Type) (os : A -> Ord.t)
   : Ord.sup A os <ᵣ kappa.
 Proof.
   pose proof (Axiom_of_Choice A (fun _ : A => { B : Type & { R : B -> B -> Prop | well_founded R } }) (fun a : A => fun RWF : { B : Type & { R : B -> B -> Prop | well_founded R } } => os a ≦ᵣ @fromWfSet (projT1 RWF) (proj1_sig (projT2 RWF)) (proj2_sig (projT2 RWF)))) as [f H_f].
-  { intros a. pose proof (kappa_complete (os a) (H_rLt a)) as (B & R & R_wf & H_rLe). exists (@existT Type (fun B : Type => { R : B -> B -> Prop | well_founded R }) B (@exist (B -> B -> Prop) (@well_founded B) R R_wf)). exact H_rLe. }
+  { intros a. obtain (B & R & R_wf & H_rLe) with (H_rLt a) by kappa_complete. exists (@existT Type (fun B : Type => { R : B -> B -> Prop | well_founded R }) B (@exist (B -> B -> Prop) (@well_founded B) R R_wf)). exact H_rLe. }
   set (B := fun a : A => projT1 (f a)).
   set (R := fun a : A => proj1_sig (projT2 (f a))).
   set (R_wf := fun a : A => proj2_sig (projT2 (f a))).
@@ -1732,7 +1732,7 @@ Lemma kappa_inaccessible_orec (base : Ord.t) (next : Ord.t -> Ord.t)
   : forall alpha : Ord.t, alpha <ᵣ kappa -> Ord.orec base next alpha <ᵣ kappa.
 Proof.
   intros alpha H_rLt.
-  pose proof (kappa_complete alpha H_rLt) as (A & R & R_wf & H_rLe).
+  obtain (A & R & R_wf & H_rLe) with H_rLt by kappa_complete.
   assert (H_rec : forall a : A, Ord.orec base next (@fromWf A R R_wf a) <ᵣ kappa).
   { intros a. induction (R_wf a) as [a H_Acc_inv IH].
     eapply rLe_rLt_rLt with (y := Ord.orec base next (Ord.suc (Ord.sup (@sig A (fun b : A => R b a)) (fun b : @sig A (fun b : A => R b a) => @fromWf A R R_wf (proj1_sig b))))).

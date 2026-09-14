@@ -340,7 +340,7 @@ Proof.
   - reflexivity.
   - specialize (EQ 0). inv EQ.
   - specialize (EQ 0). inv EQ.
-  - find* HEAD by (EQ 0). inversion HEAD as [ | p p' [KEY VALUE]]; subst.
+  - obtain HEAD with 0 by EQ. inversion HEAD as [ | p p' [KEY VALUE]]; subst.
     change (q == q') in KEY. change (v == v') in VALUE.
     assert (TAIL : @eqProp _ list_setoid xs ys) by exact (fun n => EQ (S n)).
     unfold lookup'. cbn [OrderedList.lookup fst].
@@ -440,11 +440,11 @@ Defined.
 Instance fpmap_hsOrd : hsOrd (fpmap K V) (PROSET := fpmap_isProset) :=
   { compare (m : fpmap K V) (m' : fpmap K V) := lex_compare (FinitePartialMap.data m) (FinitePartialMap.data m') }.
 Proof.
-  - intros m m' OBS. find* [LE NE] by (@compare_Lt _ entries_proset entries_ord (FinitePartialMap.data m) (FinitePartialMap.data m') OBS).
+  - intros m m' OBS. obtain [LE NE] with OBS by (@compare_Lt _ entries_proset entries_ord).
     split; [exact LE | intros EQ; eapply NE]. now eapply data_eq_spec.
   - intros m m' OBS. eapply data_eq_spec.
     exact (@compare_Eq _ entries_proset entries_ord (FinitePartialMap.data m) (FinitePartialMap.data m') OBS).
-  - intros m m' OBS. find* [LE NE] by (@compare_Gt _ entries_proset entries_ord (FinitePartialMap.data m) (FinitePartialMap.data m') OBS).
+  - intros m m' OBS. obtain [LE NE] with OBS by (@compare_Gt _ entries_proset entries_ord).
     split; [exact LE | intros EQ; eapply NE]. now eapply data_eq_spec.
 Defined.
 

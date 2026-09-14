@@ -309,7 +309,7 @@ Lemma grow_height (l : Z) (r : Z) (l' : Z) (r' : Z) (b : Z)
   (EXACT : (-2 <= l' - r' <= 2)%Z -> b = (Z.max l' r' + 1)%Z)
   : (0 <= b - (Z.max l r + 1) <= 1)%Z.
 Proof.
-  find* [HH1 | HH1] by (Z_le_dec (-2)%Z (l' - r')%Z); find* [HH2 | HH2] by (Z_le_dec (l' - r')%Z 2%Z); lia.
+  obtain [HH1 | HH1] with (-2)%Z (l' - r')%Z by Z_le_dec; obtain [HH2 | HH2] with (l' - r')%Z 2%Z by Z_le_dec; lia.
 Qed.
 
 Lemma shrink_height (l : Z) (r : Z) (l' : Z) (r' : Z) (b : Z)
@@ -320,7 +320,7 @@ Lemma shrink_height (l : Z) (r : Z) (l' : Z) (r' : Z) (b : Z)
   (EXACT : (-2 <= l' - r' <= 2)%Z -> b = (Z.max l' r' + 1)%Z)
   : (0 <= (Z.max l r + 1) - b <= 1)%Z.
 Proof.
-  find* [HH1 | HH1] by (Z_le_dec (-2)%Z (l' - r')%Z); find* [HH2 | HH2] by (Z_le_dec (l' - r')%Z 2%Z); lia.
+  obtain [HH1 | HH1] with (-2)%Z (l' - r')%Z by Z_le_dec; obtain [HH2 | HH2] with (l' - r')%Z 2%Z by Z_le_dec; lia.
 Qed.
 
 Lemma remove_min_balanced_height (l : tree A) (x : A) (r : tree A) (h : Z) (tr : tree A) (m : A)
@@ -333,7 +333,7 @@ Proof.
     find* NONNEG by balanced_height_nonnegative. lia.
   - rewrite balanced_node_iff in BALANCED. find* (LEFT & RIGHT & RANGE & CACHE) by BALANCED.
     des_ifs. obtain [LEFT' DELTA] with LEFT by IH_ll. simpl height in *.
-    find* (AVL & BOUND & EXACT) by (bal_balanced_height t x r); [lia | split; auto].
+    obtain (AVL & BOUND & EXACT) with x LEFT' RIGHT by bal_balanced_height. split; auto.
     eapply shrink_height with (l := lh) (r := height r); eauto; lia.
 Qed.
 
@@ -468,7 +468,7 @@ Lemma size_balanced_depth_lower (tr : tree A)
 Proof.
   induction tr as [ | l IH_l x r IH_r cache]; simpl; i; try congruence.
   find* (LEFT & RIGHT & SIZES) by BALANCE. inv H.
-  find* [LE | GE] by (Nat.le_ge_cases (depth l) (depth r)).
+  obtain [LE | GE] with (depth l) (depth r) by Nat.le_ge_cases.
   - rewrite Nat.max_r by exact LE.
     destruct (depth r) as [ | h] eqn: HEIGHT.
     + simpl; lia.
@@ -486,7 +486,7 @@ Lemma size_balanced_depth_log (tr : tree A)
   (POS : 0 < size tr)
   : depth tr = S (Nat.log2 (size tr)).
 Proof.
-  find* UPPER by (size_below_depth_power tr).
+  obtain UPPER with tr by size_below_depth_power.
   destruct (depth tr) as [ | h] eqn: HEIGHT.
   - simpl in *; lia.
   - obtain LOWER with BALANCE HEIGHT by size_balanced_depth_lower.
@@ -501,7 +501,7 @@ Lemma size_balanced_depth_step (tr1 : tree A) (tr2 : tree A)
   (SIZES : size tr1 <= size tr2 <= S (size tr1))
   : depth tr1 <= depth tr2 <= S (depth tr1).
 Proof.
-  find* [ZERO | NONZERO] by (Nat.eq_dec (size tr1) O).
+  obtain [ZERO | NONZERO] with (size tr1) O by Nat.eq_dec.
   - destruct tr1; [ | simpl in ZERO; lia].
     destruct tr2 as [ | l x r h]; [simpl; lia | simpl size in SIZES].
     assert (EMPTY_l : l = Leaf).
@@ -632,7 +632,7 @@ Lemma balanced_height_min_depth (tr : tree A)
   : (height tr <= 3 * Z.of_nat (min_depth tr))%Z.
 Proof.
   induction BALANCED; cbn [height min_depth]; [lia | ].
-  find* [LE | GE] by (Nat.le_ge_cases (min_depth l) (min_depth r)).
+  obtain [LE | GE] with (min_depth l) (min_depth r) by Nat.le_ge_cases.
   - rewrite Nat.min_l by exact LE. rewrite Nat2Z.inj_succ. des_ifs; lia.
   - rewrite Nat.min_r by exact GE. rewrite Nat2Z.inj_succ. des_ifs; lia.
 Qed.

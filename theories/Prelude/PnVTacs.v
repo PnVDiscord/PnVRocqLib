@@ -68,14 +68,17 @@ Ltac unify_arg_type expected actual :=
     isSort actual
   ].
 
+Ltac all_consumed idx :=
+  match goal with
+  | [ TAG_cnt : _Tag ?total |- _ ] => constr_eq idx total
+  end.
+
 Ltac xapply idx prf :=
   lazymatch type of prf with
   | forall x : ?A, _ =>
     first
     [ lazymatch goal with
       | [ Shelf := @_mkTaggedLock _ ?A' ?arg : _TaggedLock idx _ |- _ ] =>
-        (* Infer an unknown binder type from later premises before consuming
-           an argument that could otherwise unify with any type. *)
         tryif is_evar A then fail else unify_arg_type A A';
         xapply constr:(S idx) (prf arg)
       end
@@ -102,28 +105,48 @@ Ltac xapply idx prf :=
     cbv zeta in _RET_;
     xapply idx _RET_;
     clear _RET_
-  | _ =>
-    match goal with
-    | [ TAG_cnt : _Tag ?total |- _ ] =>
+  | ?T =>
+    tryif all_consumed idx then (
+      let _RET_ := fresh "_RET_" in
+      epose proof (_RET_ := prf);
+      revert _RET_
+    ) else (
+      xapply_hidden idx prf T
+    )
+  end
+with xapply_hidden idx prf T :=
+  first
+  [ lazymatch T with
+    | ?P <-> ?Q =>
+      lazymatch goal with
+      | [ Shelf := @_mkTaggedLock _ ?A' _ : _TaggedLock idx _ |- _ ] =>
+        first
+        [ unify P A'; xapply idx constr:(@proj1 (P -> Q) (Q -> P) prf)
+        | unify Q A'; xapply idx constr:(@proj2 (P -> Q) (Q -> P) prf)
+        | xapply idx constr:(@proj1 (P -> Q) (Q -> P) prf)
+        | xapply idx constr:(@proj2 (P -> Q) (Q -> P) prf)
+        ]
+      end
+    | ?L /\ ?R =>
       first
-      [ constr_eq idx total
-      | fail 1 "obtain: not all supplied arguments were consumed"
+      [ xapply idx constr:(@proj1 L R prf)
+      | xapply idx constr:(@proj2 L R prf)
       ]
-    end;
-    let _RET_ := fresh "_RET_" in
-    epose proof (_RET_ := prf);
-    revert _RET_
-  end.
+    end
+  | let T' := eval red in T in
+    tryif constr_eq T T' then fail else xapply idx constr:(prf : T')
+  | let T' := eval hnf in T in
+    tryif constr_eq T T' then fail else xapply idx constr:(prf : T')
+  | fail 1 "obtain: not all supplied arguments were consumed"
+  ].
 
 Ltac prepare func :=
   unshelve (
     let _RET_ := fresh "_RET_" in
-    (* Defer typeclass search until the supplied arguments determine types. *)
     let func := open_constr:(func) in
     epose proof func as _RET_;
     xapply constr:(0) _RET_;
     (try clear _RET_);
-    (* Expose the remaining obligations before the result continuation. *)
     shelve
   );
   free_all.
@@ -148,9 +171,6 @@ Ltac infer_premise :=
   end.
 
 Ltac fire func :=
-  (* Let premises determine missing data arguments before trying to construct
-     inhabitants of their types. Keep the result continuation last when any
-     remaining data or typeclass obligations are exposed again. *)
   unshelve (
     prepare func;
     [ infer_premise.. | shelve ]
