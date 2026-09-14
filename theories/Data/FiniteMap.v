@@ -141,13 +141,13 @@ Proof.
     + intros EQ'. inv EQ'. now exists k'.
     + intros (q & EQ' & IN').
       assert (LOOK : OrderedList.lookup fst k (FinitePartialMap.data m) = Some (q, v)).
-      { eapply OrderedList.lookup_spec; [eapply FinitePartialMap.data_isSorted | auto]. }
+      { rewrite OrderedList.lookup_spec by eapply FinitePartialMap.data_isSorted. auto. }
       assert (LOOK' : OrderedList.lookup fst k (FinitePartialMap.data m) = Some (k', v')).
-      { eapply OrderedList.lookup_spec; [eapply FinitePartialMap.data_isSorted | auto]. }
+      { rewrite OrderedList.lookup_spec by eapply FinitePartialMap.data_isSorted. auto. }
       congruence.
   - split; [congruence | intros (q & EQ & IN)].
     assert (LOOK : OrderedList.lookup fst k (FinitePartialMap.data m) = Some (q, v)).
-    { eapply OrderedList.lookup_spec; [eapply FinitePartialMap.data_isSorted | auto]. }
+    { rewrite OrderedList.lookup_spec by eapply FinitePartialMap.data_isSorted. auto. }
     congruence.
 Qed.
 
@@ -216,20 +216,20 @@ Theorem lookup_remove_ne (k : K) (m : fpmap K V) (k0 : K)
   : lookup k0 (remove k m) = lookup k0 m.
 Proof.
   rewrite !lookup_data, data_remove. unfold lookup'.
-  now rewrite OrderedList.lookup_remove_ne by (try exact NE; apply FinitePartialMap.data_isSorted).
+  now rewrite OrderedList.lookup_remove_ne by (try exact NE; eapply FinitePartialMap.data_isSorted).
 Qed.
 
 #[refine]
 Definition keys (m : fpmap K V) : fset K :=
   {| FSet.tree := BalancedTree.map (@fst K V) m.(FinitePartialMap.tree); FSet.data_isSorted := _ |}.
 Proof.
-  rewrite BalancedTree.data_map. apply FinitePartialMap.data_isSorted.
+  rewrite BalancedTree.data_map. eapply FinitePartialMap.data_isSorted.
 Defined.
 
 Lemma data_keys (m : fpmap K V)
   : FSet.data (keys m) = L.map fst (FinitePartialMap.data m).
 Proof.
-  unfold keys, FSet.data, FinitePartialMap.data. cbn [FSet.tree]. apply BalancedTree.data_map.
+  unfold keys, FSet.data, FinitePartialMap.data. cbn [FSet.tree]. eapply BalancedTree.data_map.
 Qed.
 
 Theorem in_keys_iff (m : fpmap K V) (k : K)
@@ -237,9 +237,9 @@ Theorem in_keys_iff (m : fpmap K V) (k : K)
 Proof.
   unfold FS.In. rewrite data_keys, InA_alt. split.
   - intros (q & EQ & IN). rewrite L.in_map_iff in IN. find* ([q' v] & EQ' & IN') by IN.
-    cbn [fst] in EQ'. subst q'. exists v. apply lookup_spec. exists q. auto.
+    cbn [fst] in EQ'. subst q'. exists v. rewrite lookup_spec. exists q. auto.
   - intros [v LOOK]. rewrite lookup_spec in LOOK. find* [q [EQ IN]] by LOOK. exists q. split; auto.
-    apply L.in_map_iff. exists (q, v). auto.
+    rewrite L.in_map_iff. exists (q, v). auto.
 Qed.
 
 End BASICS.
@@ -286,11 +286,11 @@ Theorem lookup_setoid_spec (m : fpmap K V) (k : K) (v : V)
 Proof.
   split.
   - intros LOOK. inversion LOOK as [ | v' v'' EQ]; subst.
-    symmetry in H. rewrite lookup_spec in H. find* [q [KEY IN]] by H. apply InA_alt. exists (q, v'). split; auto.
+    symmetry in H. rewrite lookup_spec in H. find* [q [KEY IN]] by H. unfold In. rewrite InA_alt. exists (q, v'). split; auto.
     split; [exact KEY | symmetry; exact EQ].
-  - intros IN. apply InA_alt in IN. find* ([q v'] & [KEY VALUE] & IN') by IN. cbn [fst snd] in KEY, VALUE.
+  - intros IN. unfold In in IN. rewrite InA_alt in IN. find* ([q v'] & [KEY VALUE] & IN') by IN. cbn [fst snd] in KEY, VALUE.
     assert (LOOK : lookup k m = Some v').
-    { apply lookup_spec. exists q. auto. }
+    { rewrite lookup_spec. exists q. auto. }
     rewrite LOOK. constructor. symmetry. exact VALUE.
 Qed.
 
@@ -300,16 +300,16 @@ Instance insert_compat
 Proof.
   intros k k' KEY v v' VALUE m m' EXT q.
   destruct (compare q k) eqn: OBS.
-  - assert (QK : q == k) by now apply compare_Eq_iff.
+  - assert (QK : q == k) by now rewrite <- compare_Eq_iff.
     assert (QK' : q == k') by (transitivity k; assumption).
     rewrite lookup_compat_key with (m := insert k v m) (k' := k) by exact QK.
     rewrite lookup_compat_key with (m := insert k' v' m') (k' := k') by exact QK'.
     rewrite !lookup_insert_eq. constructor. exact VALUE.
   - assert (NE : ~ q == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
-    assert (NE' : ~ q == k') by (intros EQ; apply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
+    assert (NE' : ~ q == k') by (intros EQ; eapply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
     rewrite !lookup_insert_ne by assumption. exact (EXT q).
   - assert (NE : ~ q == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
-    assert (NE' : ~ q == k') by (intros EQ; apply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
+    assert (NE' : ~ q == k') by (intros EQ; eapply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
     rewrite !lookup_insert_ne by assumption. exact (EXT q).
 Qed.
 
@@ -319,16 +319,16 @@ Instance remove_eqPropCompatible2
 Proof.
   intros k k' m m' KEY EXT q.
   destruct (compare q k) eqn: OBS.
-  - assert (QK : q == k) by now apply compare_Eq_iff.
+  - assert (QK : q == k) by now rewrite <- compare_Eq_iff.
     assert (QK' : q == k') by (transitivity k; assumption).
     rewrite lookup_compat_key with (m := remove k m) (k' := k) by exact QK.
     rewrite lookup_compat_key with (m := remove k' m') (k' := k') by exact QK'.
     rewrite !lookup_remove_eq. reflexivity.
   - assert (NE : ~ q == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
-    assert (NE' : ~ q == k') by (intros EQ; apply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
+    assert (NE' : ~ q == k') by (intros EQ; eapply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
     rewrite !lookup_remove_ne by assumption. exact (EXT q).
   - assert (NE : ~ q == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
-    assert (NE' : ~ q == k') by (intros EQ; apply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
+    assert (NE' : ~ q == k') by (intros EQ; eapply NE; transitivity k'; [exact EQ | symmetry; exact KEY]).
     rewrite !lookup_remove_ne by assumption. exact (EXT q).
 Qed.
 
@@ -346,7 +346,7 @@ Proof.
     unfold lookup'. cbn [OrderedList.lookup fst].
     rewrite compare_compatWith_eqProp with (x' := k) (y' := q') by (assumption || reflexivity).
     destruct (compare k q'); simpl; [constructor; exact VALUE | reflexivity | ].
-    apply IH. exact TAIL.
+    eapply IH. exact TAIL.
 Qed.
 
 Lemma lookup'_extensionality (xs : list (K * V)) (ys : list (K * V))
@@ -364,7 +364,7 @@ Proof.
   - rewrite OrderedList.sorted_cons_iff in SX, SY.
     find* [HX TX] by SX. find* [HY TY] by SY. cbn [fst] in HX, HY.
     assert (KEY : q == q').
-    { destruct (compare q q') eqn: OBS; [now apply compare_Eq_iff | | ].
+    { destruct (compare q q') eqn: OBS; [now rewrite <- compare_Eq_iff | | ].
       - specialize (EXT q). unfold lookup' in EXT. cbn [OrderedList.lookup fst] in EXT.
         rewrite compare_refl, OBS in EXT. inv EXT.
       - specialize (EXT q'). unfold lookup' in EXT. cbn [OrderedList.lookup fst] in EXT.
@@ -377,21 +377,21 @@ Proof.
     assert (TAIL : forall k, lookup' k xs == lookup' k ys).
     { intros k. destruct (compare k q) eqn: OBS.
       - assert (LX : OrderedList.lookup (@fst K V) k xs = None).
-        { apply OrderedList.lookup_lt_None. intros p IN.
-          rewrite compare_compatWith_eqProp with (x' := q) (y' := fst p) by (reflexivity || now apply compare_Eq_iff).
-          now apply HX.
+        { eapply OrderedList.lookup_lt_None. intros p IN.
+          rewrite compare_compatWith_eqProp with (x' := q) (y' := fst p) by (reflexivity || now rewrite <- compare_Eq_iff).
+          now eapply HX.
         }
         assert (LY : OrderedList.lookup (@fst K V) k ys = None).
-        { apply OrderedList.lookup_lt_None. intros p IN.
-          assert (KQ : k == q') by (transitivity q; [now apply compare_Eq_iff | exact KEY]).
+        { eapply OrderedList.lookup_lt_None. intros p IN.
+          assert (KQ : k == q') by (transitivity q; [now rewrite <- compare_Eq_iff | exact KEY]).
           rewrite compare_compatWith_eqProp with (x' := q') (y' := fst p) by (assumption || reflexivity).
-          now apply HY.
+          now eapply HY.
         }
         unfold lookup'. rewrite LX, LY. reflexivity.
       - assert (LX : OrderedList.lookup (@fst K V) k xs = None).
-        { apply OrderedList.lookup_lt_None. intros p IN. eapply compare_Lt_trans; [exact OBS | now apply HX]. }
+        { eapply OrderedList.lookup_lt_None. intros p IN. eapply compare_Lt_trans; [exact OBS | now eapply HX]. }
         assert (LY : OrderedList.lookup (@fst K V) k ys = None).
-        { apply OrderedList.lookup_lt_None. i. eapply compare_Lt_trans; [ | now apply HY].
+        { eapply OrderedList.lookup_lt_None. i. eapply compare_Lt_trans; [ | now eapply HY].
           rewrite <- compare_compatWith_eqProp with (x := k) (x' := k) (y := q) (y' := q') by (assumption || reflexivity). exact OBS.
         }
         unfold lookup'. rewrite LX, LY. reflexivity.
@@ -407,9 +407,9 @@ Theorem data_eq_spec (m : fpmap K V) (m' : fpmap K V)
   : m == m' <-> @eqProp _ list_setoid (FinitePartialMap.data m) (FinitePartialMap.data m').
 Proof.
   split.
-  - intros EXT. apply lookup'_extensionality; try apply FinitePartialMap.data_isSorted.
+  - intros EXT. eapply lookup'_extensionality; try eapply FinitePartialMap.data_isSorted.
     intros k. rewrite <- !lookup_data. exact (EXT k).
-  - intros EQ k. rewrite !lookup_data. now apply lookup'_compat.
+  - intros EQ k. rewrite !lookup_data. now eapply lookup'_compat.
 Qed.
 
 End SETOID.
@@ -433,7 +433,7 @@ Proof.
   - exact (relation_on_image_liftsPreOrder (@lex_le_PreOrder (K * V) (@pair_isProset K V PK PV OK OV) (@pair_hsOrd K V PK PV OK OV)) (@FinitePartialMap.data K V _)).
   - intros m m'. change (m == m' <-> lex_le (FinitePartialMap.data m) (FinitePartialMap.data m') /\ lex_le (FinitePartialMap.data m') (FinitePartialMap.data m)).
     rewrite data_eq_spec. rewrite <- @lex_eq_iff with (PROSET := @pair_isProset K V PK PV OK OV) (ORD := @pair_hsOrd K V PK PV OK OV).
-    apply lex_le_PartialOrder.
+    eapply lex_le_PartialOrder.
 Defined.
 
 #[global, refine]
@@ -441,11 +441,11 @@ Instance fpmap_hsOrd : hsOrd (fpmap K V) (PROSET := fpmap_isProset) :=
   { compare (m : fpmap K V) (m' : fpmap K V) := lex_compare (FinitePartialMap.data m) (FinitePartialMap.data m') }.
 Proof.
   - intros m m' OBS. find* [LE NE] by (@compare_Lt _ entries_proset entries_ord (FinitePartialMap.data m) (FinitePartialMap.data m') OBS).
-    split; [exact LE | intros EQ; apply NE]. now apply data_eq_spec.
-  - intros m m' OBS. apply data_eq_spec.
+    split; [exact LE | intros EQ; eapply NE]. now eapply data_eq_spec.
+  - intros m m' OBS. eapply data_eq_spec.
     exact (@compare_Eq _ entries_proset entries_ord (FinitePartialMap.data m) (FinitePartialMap.data m') OBS).
   - intros m m' OBS. find* [LE NE] by (@compare_Gt _ entries_proset entries_ord (FinitePartialMap.data m) (FinitePartialMap.data m') OBS).
-    split; [exact LE | intros EQ; apply NE]. now apply data_eq_spec.
+    split; [exact LE | intros EQ; eapply NE]. now eapply data_eq_spec.
 Defined.
 
 End ORDERED_MAP.
@@ -458,13 +458,13 @@ Context {K : Type} {V : Type} {W : Type} {PROSET : isProset K} {ORD : hsOrd K}.
 Definition map (f : V -> W) (m : fpmap K V) : fpmap K W :=
   {| FinitePartialMap.tree := BalancedTree.map (fun p => (fst p, f (snd p))) m.(FinitePartialMap.tree); FinitePartialMap.data_isSorted := _ |}.
 Proof.
-  rewrite BalancedTree.data_map, L.map_map. cbn [fst]. apply FinitePartialMap.data_isSorted.
+  rewrite BalancedTree.data_map, L.map_map. cbn [fst]. eapply FinitePartialMap.data_isSorted.
 Defined.
 
 Lemma data_map (f : V -> W) (m : fpmap K V)
   : FinitePartialMap.data (map f m) = L.map (fun p => (fst p, f (snd p))) (FinitePartialMap.data m).
 Proof.
-  unfold map, FinitePartialMap.data. cbn [FinitePartialMap.tree]. apply BalancedTree.data_map.
+  unfold map, FinitePartialMap.data. cbn [FinitePartialMap.tree]. eapply BalancedTree.data_map.
 Qed.
 
 Lemma lookup_map (f : V -> W) (m : fpmap K V) (k : K)
@@ -488,7 +488,7 @@ Instance map_compat
 Proof.
   intros f g FG m m' EXT k. rewrite !lookup_map.
   specialize (EXT k). destruct (lookup k m), (lookup k m'); inv EXT; simpl; constructor.
-  now apply FG.
+  now eapply FG.
 Qed.
 
 End MAP_SETOID.
@@ -514,7 +514,7 @@ Proof.
   - intros A m k. change (option_eqProp eq (lookup k (map id m)) (lookup k m)).
     rewrite lookup_map. destruct (lookup k m); reflexivity.
   - intros A B f g EQ m k. change (option_eqProp eq (lookup k (map f m)) (lookup k (map g m))).
-    rewrite !lookup_map. destruct (lookup k m); simpl; constructor. apply EQ.
+    rewrite !lookup_map. destruct (lookup k m); simpl; constructor. eapply EQ.
 Qed.
 
 Section SIMILARITY.
@@ -554,14 +554,14 @@ Theorem lookup_insert_ne_eq (k : K) (v : V) (m : fpmap K V) (k0 : K)
   (NE : k0 <> k)
   : lookup k0 (insert k v m) = lookup k0 m.
 Proof.
-  apply lookup_insert_ne. now rewrite Poset_eqProp_spec.
+  eapply lookup_insert_ne. now rewrite Poset_eqProp_spec.
 Qed.
 
 Theorem lookup_remove_ne_eq (k : K) (m : fpmap K V) (k0 : K)
   (NE : k0 <> k)
   : lookup k0 (remove k m) = lookup k0 m.
 Proof.
-  apply lookup_remove_ne. now rewrite Poset_eqProp_spec.
+  eapply lookup_remove_ne. now rewrite Poset_eqProp_spec.
 Qed.
 
 End DISCRETE.
@@ -606,15 +606,15 @@ Instance add_compat
   : Proper (eqProp ==> eqProp ==> eqProp ==> eqProp) (@add).
 Proof.
   intros k k' KEY y y' VALUE table table' EXT. unfold add.
-  apply insert_compat; auto. apply FS.add_eqPropCompatible2; auto.
-  now apply lookup_set_eqPropCompatible2.
+  eapply insert_compat; auto. eapply FS.add_eqPropCompatible2; auto.
+  now eapply lookup_set_eqPropCompatible2.
 Qed.
 
 Lemma in_add_iff (k : K) (y : Y) (table : fpmap K (fset Y)) (k' : K) (y' : Y)
   : FS.In y' (lookup_set (add k y table) k') <-> (k' == k /\ y' == y) \/ FS.In y' (lookup_set table k').
 Proof.
   unfold add. destruct (compare k' k) eqn: OBS.
-  - assert (EQ : k' == k) by now apply compare_Eq_iff.
+  - assert (EQ : k' == k) by now rewrite <- compare_Eq_iff.
     unfold lookup_set at 1. rewrite lookup_compat_key with (k' := k) by exact EQ. rewrite lookup_insert_eq.
     rewrite FS.in_add_iff. rewrite lookup_set_compat_key with (k := k') (k' := k) by exact EQ. tauto.
   - assert (NE : ~ k' == k) by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
@@ -651,13 +651,13 @@ Proof.
   induction facts as [ | [q y] facts IH]; cbn [fold_right fst snd]; intros LOOK.
   - rewrite lookup_empty in LOOK. discriminate.
   - unfold add in LOOK. destruct (compare k q) eqn: OBS.
-    + rewrite lookup_compat_key with (k' := q) in LOOK by now apply compare_Eq_iff.
+    + rewrite lookup_compat_key with (k' := q) in LOOK by now rewrite <- compare_Eq_iff.
       rewrite lookup_insert_eq in LOOK.
-      inv LOOK. exists y. apply FS.in_add_iff. left. reflexivity.
+      inv LOOK. exists y. rewrite FS.in_add_iff. left. reflexivity.
     + rewrite lookup_insert_ne in LOOK by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
-      now apply IH.
+      now eapply IH.
     + rewrite lookup_insert_ne in LOOK by (intros EQ; rewrite <- compare_Eq_iff in EQ; congruence).
-      now apply IH.
+      now eapply IH.
 Qed.
 
 #[global]
@@ -666,9 +666,9 @@ Instance fromList_compat
 Proof.
   intros facts facts' EXT k.
   assert (MEM : forall y, FS.In y (lookup_set (fromList facts) k) <-> FS.In y (lookup_set (fromList facts') k)).
-  { intros y. rewrite !fromList_correct. apply EXT. }
+  { intros y. rewrite !fromList_correct. eapply EXT. }
   destruct (lookup k (fromList facts)) as [ys | ] eqn: LOOK; destruct (lookup k (fromList facts')) as [ys' | ] eqn: LOOK'; constructor || idtac.
-  - apply FS.eq_spec. intros y. specialize (MEM y). unfold lookup_set in MEM.
+  - rewrite FS.eq_spec. intros y. specialize (MEM y). unfold lookup_set in MEM.
     now rewrite LOOK, LOOK' in MEM.
   - obtain (y & IN) with LOOK by fromList_nonempty.
     specialize (MEM y). unfold lookup_set in MEM. rewrite LOOK, LOOK', FS.in_empty_iff in MEM. tauto.
@@ -683,7 +683,7 @@ Lemma fromFSet_spec (facts : fset (K * Y))
   : fromFSet facts = fromList (rev (FSet.data facts)).
 Proof.
   unfold fromFSet. rewrite FS.fold_spec, fromList_spec.
-  symmetry. apply fold_left_rev_right.
+  symmetry. eapply fold_left_rev_right.
 Qed.
 
 Theorem fromFSet_correct (facts : fset (K * Y)) (k : K) (y : Y)
@@ -696,7 +696,7 @@ Qed.
 Instance fromFSet_compat
   : Proper (eqProp ==> eqProp) (@fromFSet).
 Proof.
-  intros facts facts' EXT. rewrite !fromFSet_spec. apply fromList_compat. intros p.
+  intros facts facts' EXT. rewrite !fromFSet_spec. eapply fromList_compat. intros p.
   rewrite !InA_rev.
   exact (proj1 (@FS.eq_spec (K * Y) (@pair_isProset K Y PK PY OK OY) (@pair_hsOrd K Y PK PY OK OY) facts facts') EXT p).
 Qed.
@@ -743,7 +743,7 @@ Proof.
     rewrite lookup_set_compat_key with (k' := q) in IN_Y by exact KEY.
     find* (w & VALUE & IN_W) by IN_Y.
     exists (q, w). split; [split; assumption | ].
-    apply in_flat_map. exists q. split; auto. apply L.in_map_iff. exists w. auto.
+    rewrite in_flat_map. exists q. split; auto. rewrite L.in_map_iff. exists w. auto.
 Qed.
 
 Lemma in_fold_values (q : K) (ys : list Y) (acc : fset (K * Y)) (p : K * Y)
@@ -784,10 +784,10 @@ Context {K : Type} {Y : Type} {PK : isProset K} {OK : hsOrd K} {PY : isProset Y}
 Instance initial_facts_eqPropCompatible2
   : eqPropCompatible2 (@initial_facts K Y PK OK PY OY).
 Proof.
-  intros nodes nodes' seed seed' EQ_N EQ_S. apply FS.eq_spec. intros [k y].
+  intros nodes nodes' seed seed' EQ_N EQ_S. rewrite FS.eq_spec. intros [k y].
   rewrite !in_initial_facts_iff.
   rewrite FS.In_compat with (x := k) (y := k) (X := nodes) (Y := nodes') by (reflexivity || exact EQ_N).
-  rewrite FS.In_compat with (x := y) (y := y) (X := lookup_set seed k) (Y := lookup_set seed' k) by (reflexivity || now apply lookup_set_eqPropCompatible2).
+  rewrite FS.In_compat with (x := y) (y := y) (X := lookup_set seed k) (Y := lookup_set seed' k) by (reflexivity || now eapply lookup_set_eqPropCompatible2).
   reflexivity.
 Qed.
 
@@ -800,19 +800,19 @@ Context {K : Type} {Y : Type} {PK : isPoset K} {OK : HsOrd K} {PY : isPoset Y} {
 Theorem fromList_correct_eq (facts : list (K * Y)) (k : K) (y : Y)
   : L.In y (FSet.data (lookup_set (fromList facts) k)) <-> L.In (k, y) facts.
 Proof.
-  rewrite <- !InA_eqProp_iff. apply fromList_correct.
+  rewrite <- !InA_eqProp_iff. eapply fromList_correct.
 Qed.
 
 Theorem fromFSet_correct_eq (facts : fset (K * Y)) (k : K) (y : Y)
   : L.In y (FSet.data (lookup_set (fromFSet facts) k)) <-> L.In (k, y) (FSet.data facts).
 Proof.
-  rewrite <- !InA_eqProp_iff. apply fromFSet_correct.
+  rewrite <- !InA_eqProp_iff. eapply fromFSet_correct.
 Qed.
 
 Theorem in_initial_facts_eq_iff (nodes : fset K) (seed : fpmap K (fset Y)) (k : K) (y : Y)
   : L.In (k, y) (FSet.data (initial_facts nodes seed)) <-> L.In k (FSet.data nodes) /\ L.In y (FSet.data (lookup_set seed k)).
 Proof.
-  rewrite <- !InA_eqProp_iff. apply in_initial_facts_iff.
+  rewrite <- !InA_eqProp_iff. eapply in_initial_facts_iff.
 Qed.
 
 End FSET_MAP_DISCRETE.

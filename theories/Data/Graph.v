@@ -259,7 +259,7 @@ Lemma reachables_domain_finite
   : exists bound, forall xs : fset V, (forall x, x ∈ xs -> x ∈ nodes) -> length (FSet.data xs) <= bound.
 Proof.
   exists (length (FSet.data nodes)). intros xs SUBSET.
-  eapply NoDup_incl_length; [apply fset_NoDup | exact SUBSET].
+  eapply NoDup_incl_length; [eapply fset_NoDup | exact SUBSET].
 Qed.
 
 Lemma reachables_initial_in_domain (v : V)
@@ -392,7 +392,7 @@ Definition propagation_initial : fset (V * X) :=
 Lemma in_propagation_initial_iff (v : V) (x : X)
   : (v, x) ∈ propagation_initial <-> v ∈ nodes /\ x ∈ lookup_seed v.
 Proof.
-  apply FPM.in_initial_facts_eq_iff.
+  eapply FPM.in_initial_facts_eq_iff.
 Qed.
 
 Definition propagation_values : fset X :=
@@ -427,7 +427,7 @@ Lemma propagation_domain_finite
 Proof.
   exists (length (FSet.data nodes) * length (FSet.data propagation_values)).
   intros facts H_facts. rewrite <- length_prod.
-  eapply NoDup_incl_length; [apply fset_NoDup | ].
+  eapply NoDup_incl_length; [eapply fset_NoDup | ].
   intros [v x] H_in. rewrite in_prod_iff. exact (H_facts (v, x) H_in).
 Qed.
 
@@ -460,7 +460,7 @@ Proof.
   assert (SPEC : (forall p, p ∈ propagation_initial -> p ∈ propagation_facts) /\ (forall p, forall q, p ∈ propagation_facts -> L.In q (propagation_next reverse_adjacency p) -> q ∈ propagation_facts)).
   { unfold propagation_facts. destruct (FS.is_empty propagation_initial) eqn: EMPTY.
     - rewrite FS.is_empty_spec in EMPTY. rewrite EMPTY. simpl. tauto.
-    - apply Worklist.closure_complete.
+    - eapply Worklist.closure_complete.
   }
   find* [INITIAL CLOSED] by SPEC. split; i.
   - eapply INITIAL. rewrite in_propagation_initial_iff; auto.

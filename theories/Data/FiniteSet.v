@@ -226,16 +226,16 @@ Proof.
   assert (SPEC : mem x X = true <-> In x X).
   { unfold mem. rewrite lookup_data. unfold In. rewrite InA_alt.
     destruct (OrderedList.lookup _ _ _) as [y | ] eqn: OBS.
-    - rewrite OrderedList.lookup_spec in OBS by apply sorted_data. firstorder.
+    - rewrite OrderedList.lookup_spec in OBS by eapply sorted_data. firstorder.
     - split; [ss | intros (y & EQ & IN)].
       assert (HIT : OrderedList.lookup (fun y : A => y) x (FSet.data X) = Some y).
-      { rewrite OrderedList.lookup_spec by apply sorted_data. auto. }
+      { rewrite OrderedList.lookup_spec by eapply sorted_data. auto. }
       congruence.
   }
   intros [ | ]; [exact SPEC | split].
-  - intros EQ IN. apply SPEC in IN. congruence.
+  - intros EQ IN. rewrite <- SPEC in IN. congruence.
   - intros NOT_IN. destruct (mem x X); auto.
-    exfalso. apply NOT_IN. apply SPEC. reflexivity.
+    exfalso. eapply NOT_IN. rewrite <- SPEC. reflexivity.
 Qed.
 
 Lemma in_insert_iff (x : A) (xs : list A) (y : A)
@@ -360,7 +360,7 @@ Qed.
 Instance add_eqPropCompatible2
   : eqPropCompatible2 add.
 Proof.
-  intros x y X Y EQ_x EQ_X. eapply eq_spec. intros z.
+  intros x y X Y EQ_x EQ_X. rewrite eq_spec. intros z.
   rewrite eq_spec in EQ_X. rewrite !in_add_iff, EQ_X.
   assert (EQ : z == x <-> z == y).
   { split; ii; etransitivity; eauto with *. }
@@ -371,7 +371,7 @@ Qed.
 Instance union_eqPropCompatible2
   : eqPropCompatible2 union.
 Proof.
-  intros X X' Y Y' EQ_X EQ_Y. eapply eq_spec. intros z.
+  intros X X' Y Y' EQ_X EQ_Y. rewrite eq_spec. intros z.
   rewrite eq_spec in EQ_X, EQ_Y. rewrite !in_union_iff, EQ_X, EQ_Y.
   reflexivity.
 Qed.
@@ -397,19 +397,18 @@ Instance mem_eqPropCompatible2
 Proof.
   intros x y X Y EQ_x EQ_X. change (mem x X = mem y Y).
   destruct (mem y Y) eqn: OBS.
-  - apply mem_spec. apply (proj2 (In_compat x y X Y EQ_x EQ_X)). now apply mem_spec in OBS.
-  - apply mem_spec. intros IN. apply mem_spec in OBS. apply OBS.
-    apply (proj1 (In_compat x y X Y EQ_x EQ_X)). exact IN.
+  - rewrite mem_spec in OBS |- *. rewrite In_compat with (y := y) (Y := Y) by assumption. exact OBS.
+  - rewrite mem_spec in OBS |- *. rewrite In_compat with (y := y) (Y := Y) by assumption. exact OBS.
 Qed.
 
 Theorem in_remove_iff (x : A) (X : fset A) (z : A)
   : In z (remove x X) <-> (In z X /\ ~ z == x).
 Proof.
   destruct (compare z x) eqn: OBS.
-  - apply compare_Eq_iff in OBS.
+  - rewrite compare_Eq_iff in OBS.
     rewrite In_compat with (y := x) (Y := remove x X) by (try exact OBS; reflexivity).
     assert (NOT_IN : ~ In x (remove x X)).
-    { apply (proj1 (mem_spec x (remove x X) false)). apply mem_remove_same. }
+    { obtain MEM with x X by mem_remove_same. rewrite mem_spec in MEM. exact MEM. }
     tauto.
   - assert (NE : ~ z == x).
     { intros EQ. rewrite <- compare_Eq_iff in EQ. congruence. }
@@ -427,7 +426,7 @@ Qed.
 Instance remove_eqPropCompatible2
   : eqPropCompatible2 remove.
 Proof.
-  intros x y X Y EQ_x EQ_X. apply eq_spec. intros z.
+  intros x y X Y EQ_x EQ_X. rewrite eq_spec. intros z.
   rewrite eq_spec in EQ_X. rewrite !in_remove_iff, EQ_X.
   assert (EQ : z == x <-> z == y) by (split; ii; etransitivity; eauto with *).
   tauto.
@@ -472,7 +471,7 @@ Instance filter_eqPropCompatible1 (p : A -> bool)
   (COMPAT : Proper (eqProp ==> eq) p)
   : eqPropCompatible1 (filter p).
 Proof.
-  intros X Y EQ. apply eq_spec. intros z.
+  intros X Y EQ. rewrite eq_spec. intros z.
   rewrite !in_filter_iff by exact COMPAT.
   rewrite eq_spec in EQ. rewrite EQ. reflexivity.
 Qed.
@@ -512,7 +511,7 @@ Theorem in_map_iff (f : A -> B) (X : fset A)
 Proof.
   rewrite in_map_raw_iff. split.
   - intros (x & IN & EQ). exists x. split; auto.
-    apply In_InA; [apply eqProp_Equivalence | exact IN].
+    eapply In_InA; [eapply eqProp_Equivalence | exact IN].
   - intros (x & IN & EQ). unfold In in IN. rewrite InA_alt in IN.
     find* (y & EQ' & IN') by IN. exists y. split; auto.
     transitivity (f x); auto.
@@ -546,10 +545,10 @@ Theorem in_bind_iff (X : fset A) (k : A -> fset B)
   : In z (bind X k) <-> (exists x, In x X /\ In z (k x)).
 Proof.
   rewrite in_bind_raw_iff. split.
-  - intros (x & IN & IN'). exists x. split; auto. apply In_InA; [apply eqProp_Equivalence | exact IN].
+  - intros (x & IN & IN'). exists x. split; auto. eapply In_InA; [eapply eqProp_Equivalence | exact IN].
   - intros (x & IN & IN'). unfold In in IN. rewrite InA_alt in IN.
     find* (y & EQ & IN_y) by IN. exists y. split; auto.
-    apply (proj1 (eq_spec (k x) (k y)) (COMPAT x y EQ) z). exact IN'.
+    obtain EXT with EQ by COMPAT. rewrite eq_spec in EXT. rewrite <- EXT. exact IN'.
 Qed.
 
 #[global]
@@ -557,7 +556,7 @@ Instance map_eqPropCompatible1 (f : A -> B)
   (COMPAT : forall x, forall y, x == y -> f x == f y)
   : eqPropCompatible1 (map f).
 Proof.
-  intros X Y EQ. apply eq_spec. intros z. rewrite !in_map_iff by exact COMPAT.
+  intros X Y EQ. rewrite eq_spec. intros z. rewrite !in_map_iff by exact COMPAT.
   rewrite eq_spec in EQ. setoid_rewrite EQ. reflexivity.
 Qed.
 
@@ -566,7 +565,7 @@ Instance bind_eqPropCompatible1 (k : A -> fset B)
   (COMPAT : forall x, forall y, x == y -> k x == k y)
   : eqPropCompatible1 (fun X => bind X k).
 Proof.
-  intros X Y EQ. apply eq_spec. intros z. rewrite !in_bind_iff by exact COMPAT.
+  intros X Y EQ. rewrite eq_spec. intros z. rewrite !in_bind_iff by exact COMPAT.
   rewrite eq_spec in EQ. setoid_rewrite EQ. reflexivity.
 Qed.
 
@@ -574,36 +573,36 @@ Qed.
 Instance map_compat
   : Proper ((eqProp ==> eqProp) ==> eqProp ==> eqProp) map.
 Proof.
-  intros f g EQ_fg X Y EQ_X. apply eq_spec. intros z.
+  intros f g EQ_fg X Y EQ_X. rewrite eq_spec. rewrite eq_spec in EQ_X. intros z.
   assert (COMPAT_f : forall x, forall y, x == y -> f x == f y).
-  { intros x y EQ. transitivity (g y); [apply EQ_fg; exact EQ | symmetry; apply EQ_fg; reflexivity]. }
+  { intros x y EQ. transitivity (g y); [eapply EQ_fg; exact EQ | symmetry; eapply EQ_fg; reflexivity]. }
   assert (COMPAT_g : forall x, forall y, x == y -> g x == g y).
-  { intros x y EQ. transitivity (f x); [symmetry; apply EQ_fg; reflexivity | apply EQ_fg; exact EQ]. }
+  { intros x y EQ. transitivity (f x); [symmetry; eapply EQ_fg; reflexivity | eapply EQ_fg; exact EQ]. }
   rewrite !in_map_iff by assumption. split.
   - intros (x & IN & EQ). exists x. split.
-    + apply (proj1 (eq_spec X Y) EQ_X). exact IN.
-    + transitivity (f x); [exact EQ | apply EQ_fg; reflexivity].
+    + rewrite <- EQ_X. exact IN.
+    + transitivity (f x); [exact EQ | eapply EQ_fg; reflexivity].
   - intros (x & IN & EQ). exists x. split.
-    + apply (proj1 (eq_spec X Y) EQ_X). exact IN.
-    + transitivity (g x); [exact EQ | symmetry; apply EQ_fg; reflexivity].
+    + rewrite EQ_X. exact IN.
+    + transitivity (g x); [exact EQ | symmetry; eapply EQ_fg; reflexivity].
 Qed.
 
 #[global]
 Instance bind_compat
   : Proper (eqProp ==> (eqProp ==> eqProp) ==> eqProp) bind.
 Proof.
-  intros X Y EQ_X k k' EQ_k. apply eq_spec. intros z.
+  intros X Y EQ_X k k' EQ_k. rewrite eq_spec. rewrite eq_spec in EQ_X. intros z.
   rewrite !in_bind_raw_iff. split.
   - intros (x & IN & IN_z).
     assert (IN_Y : In x Y).
-    { apply (proj1 (eq_spec X Y) EQ_X). apply In_InA; [apply eqProp_Equivalence | exact IN]. }
+    { rewrite <- EQ_X. eapply In_InA; [eapply eqProp_Equivalence | exact IN]. }
     unfold In in IN_Y. rewrite InA_alt in IN_Y. find* (y & EQ & IN_y) by IN_Y.
-    exists y. split; auto. apply (proj1 (eq_spec (k x) (k' y)) (EQ_k x y EQ) z). exact IN_z.
+    exists y. split; auto. find* EXT by (EQ_k x y EQ). rewrite eq_spec in EXT. rewrite <- EXT. exact IN_z.
   - intros (y & IN & IN_z).
     assert (IN_X : In y X).
-    { apply (proj1 (eq_spec X Y) EQ_X). apply In_InA; [apply eqProp_Equivalence | exact IN]. }
+    { rewrite EQ_X. eapply In_InA; [eapply eqProp_Equivalence | exact IN]. }
     unfold In in IN_X. rewrite InA_alt in IN_X. find* (x & EQ & IN_x) by IN_X.
-    exists x. split; auto. apply (proj1 (eq_spec (k x) (k' y)) (EQ_k x y (symmetry EQ)) z). exact IN_z.
+    exists x. split; auto. find* EXT by (EQ_k x y (symmetry EQ)). rewrite eq_spec in EXT. rewrite EXT. exact IN_z.
 Qed.
 
 End MAP_and_BIND.
@@ -625,14 +624,14 @@ Proof.
   - intros ([x' y'] & [EQ_x EQ_y] & IN).
     rewrite L.in_prod_iff in IN. des. split; eauto.
   - intros [(x' & EQ_x & IN_x) (y' & EQ_y & IN_y)].
-    exists (x', y'). split; [split; auto | apply L.in_prod_iff; auto].
+    exists (x', y'). split; [split; auto | rewrite L.in_prod_iff; auto].
 Qed.
 
 #[global]
 Instance product_eqPropCompatible2
   : eqPropCompatible2 product.
 Proof.
-  intros X X' Y Y' EQ_X EQ_Y. apply eq_spec. intros [x y].
+  intros X X' Y Y' EQ_X EQ_Y. rewrite eq_spec. intros [x y].
   rewrite eq_spec in EQ_X. rewrite eq_spec in EQ_Y. rewrite !product_iff, EQ_X, EQ_Y.
   reflexivity.
 Qed.
@@ -649,14 +648,14 @@ Definition unions (Xs : fset (fset A)) : fset A :=
 Theorem in_unions_iff (Xs : fset (fset A)) (x : A)
   : In x (unions Xs) <-> (exists X, In X Xs /\ In x X).
 Proof.
-  unfold unions. apply in_bind_iff. auto.
+  unfold unions. eapply in_bind_iff. auto.
 Qed.
 
 #[global]
 Instance unions_eqPropCompatible1
   : eqPropCompatible1 unions.
 Proof.
-  apply bind_eqPropCompatible1. auto.
+  eapply bind_eqPropCompatible1. auto.
 Qed.
 
 Definition Similarity_fset_ensemble {B : Type} (Sim : Similarity A B) : Similarity (fset A) (ensemble B) :=
@@ -681,13 +680,13 @@ Context {A : Type} {POSET : isPoset A} {ORD : HsOrd A}.
 Lemma In_eq_iff (x : A) (X : fset A)
   : In x X <-> L.In x (FSet.data X).
 Proof.
-  apply InA_eqProp_iff.
+  eapply InA_eqProp_iff.
 Qed.
 
 Lemma in_empty_eq_iff (x : A)
   : L.In x (FSet.data empty) <-> False.
 Proof.
-  rewrite <- In_eq_iff. apply in_empty_iff.
+  rewrite <- In_eq_iff. eapply in_empty_iff.
 Qed.
 
 Lemma in_add_eq_iff (x : A) (X : fset A) (y : A)
@@ -705,13 +704,13 @@ Qed.
 Lemma in_fromList_eq_iff (xs : list A) (x : A)
   : L.In x (FSet.data (fromList xs)) <-> L.In x xs.
 Proof.
-  rewrite <- In_eq_iff, in_fromList_iff. apply InA_eqProp_iff.
+  rewrite <- In_eq_iff, in_fromList_iff. eapply InA_eqProp_iff.
 Qed.
 
 Lemma in_union_eq_iff (X : fset A) (Y : fset A) (x : A)
   : L.In x (FSet.data (union X Y)) <-> L.In x (FSet.data X) \/ L.In x (FSet.data Y).
 Proof.
-  rewrite <- !In_eq_iff. apply in_union_iff.
+  rewrite <- !In_eq_iff. eapply in_union_iff.
 Qed.
 
 End DISCRETE.
@@ -754,21 +753,21 @@ Qed.
 Lemma NoDupA_data (X : fset A)
   : NoDupA eqProp (FSet.data X).
 Proof.
-  apply sorted_NoDupA. apply FSet.data_isSorted.
+  eapply sorted_NoDupA. eapply FSet.data_isSorted.
 Qed.
 
 #[global]
 Instance cardinality_eqPropCompatible1
   : @eqPropCompatible1 (fset A) nat fset_isSetoid mkSetoid_from_eq (fun X : fset A => length (FSet.data X)).
 Proof.
-  intros X Y EQ. eapply eqlistA_length. apply list_eqProp_eqlistA. exact EQ.
+  intros X Y EQ. eapply eqlistA_length. rewrite <- list_eqProp_eqlistA. exact EQ.
 Qed.
 
 #[global]
 Instance fromList_compat
   : Proper (equivlistA eqProp ==> eqProp) fromList.
 Proof.
-  intros xs ys EQ. apply eq_spec. intros z. rewrite !in_fromList_iff. apply EQ.
+  intros xs ys EQ. rewrite eq_spec. intros z. rewrite !in_fromList_iff. eapply EQ.
 Qed.
 
 End CARDINALITY.
@@ -802,17 +801,18 @@ Proof.
   induction xs as [ | x xs IH]; intros Y.
   - cbn [powerset']. rewrite InA_cons, InA_nil. split.
     + intros [EQ | []] z IN. rewrite eq_spec in EQ.
-      apply EQ in IN. rewrite in_empty_iff in IN. contradiction.
-    + intros SUBSET. left. apply eq_spec. intros z.
+      rewrite EQ in IN. rewrite in_empty_iff in IN. contradiction.
+    + intros SUBSET. left. rewrite eq_spec. intros z.
       rewrite in_empty_iff. split; [intros IN | tauto].
       specialize (SUBSET z IN). now rewrite InA_nil in SUBSET.
   - cbn [powerset']. rewrite InA_app_iff, InA_map_fset. split.
     + intros [IN | (Z & IN & EQ)] z IN_z.
-      * rewrite IH in IN. apply InA_cons_tl. eauto.
-      * rewrite eq_spec in EQ. apply EQ in IN_z.
+      * rewrite IH in IN. eapply InA_cons_tl. eauto.
+      * rewrite eq_spec in EQ. rewrite EQ in IN_z.
         rewrite in_add_iff in IN_z. rewrite InA_cons.
         find* [EQ_z | IN_z'] by IN_z; auto. right.
-        eapply (proj1 (IH Z)); eauto. eapply In_InA; [apply eqProp_Equivalence | eauto].
+        assert (IN_Z : InA eqProp Z (powerset' xs)) by (eapply In_InA; [eapply eqProp_Equivalence | exact IN]).
+        rewrite IH in IN_Z. eauto.
     + intros SUBSET. destruct (mem x Y) eqn: OBS.
       * rewrite mem_spec in OBS.
         set (Z := remove x Y).
@@ -820,23 +820,23 @@ Proof.
         { intros z IN. unfold Z in IN. rewrite in_remove_iff in IN.
           find* [IN' NE] by IN. specialize (SUBSET z IN'). rewrite InA_cons in SUBSET. tauto.
         }
-        assert (IN_Z : InA eqProp Z (powerset' xs)) by (apply IH; exact SUBSET_Z).
+        assert (IN_Z : InA eqProp Z (powerset' xs)) by (rewrite IH; exact SUBSET_Z).
         rewrite InA_alt in IN_Z. find* (Z' & EQ_Z & IN_Z') by IN_Z. right.
-        exists Z'. split; auto. apply eq_spec. intros z.
+        exists Z'. split; auto. rewrite eq_spec. intros z.
         rewrite eq_spec in EQ_Z. rewrite in_add_iff, <- EQ_Z.
         unfold Z. rewrite in_remove_iff. split.
         { intros IN. destruct (compare z x) eqn: EQ.
-          - left. now apply compare_Eq_iff.
-          - right. split; auto. intros E. apply compare_Eq_iff in E. congruence.
-          - right. split; auto. intros E. apply compare_Eq_iff in E. congruence.
+          - left. now rewrite <- compare_Eq_iff.
+          - right. split; auto. intros E. rewrite <- compare_Eq_iff in E. congruence.
+          - right. split; auto. intros E. rewrite <- compare_Eq_iff in E. congruence.
         }
         { intros [EQ | [IN _]]; auto.
-          eapply (proj2 (In_compat z x Y Y EQ (reflexivity _))). exact OBS.
+          rewrite In_compat with (y := x) (Y := Y) by (try exact EQ; reflexivity). exact OBS.
         }
-      * rewrite mem_spec in OBS. left. apply IH.
+      * rewrite mem_spec in OBS. left. rewrite IH.
         intros z IN. specialize (SUBSET z IN). rewrite InA_cons in SUBSET.
-        find* [EQ | IN_xs] by SUBSET; auto. exfalso. apply OBS.
-        eapply (proj1 (In_compat z x Y Y EQ (reflexivity _))). exact IN.
+        find* [EQ | IN_xs] by SUBSET; auto. exfalso. eapply OBS.
+        rewrite <- In_compat with (x := z) (X := Y) by (try exact EQ; reflexivity). exact IN.
 Qed.
 
 Theorem in_powerset_iff (X : fset A) (Y : fset A)
@@ -861,14 +861,14 @@ Lemma add_fresh_injective (x : A) (Y : fset A) (Z : fset A)
   (EQ : add x Y == add x Z)
   : Y == Z.
 Proof.
-  apply eq_spec. intros z. rewrite eq_spec in EQ.
+  rewrite eq_spec. intros z. rewrite eq_spec in EQ.
   specialize (EQ z). rewrite !in_add_iff in EQ.
   destruct (compare z x) eqn: OBS.
-  - apply compare_Eq_iff in OBS.
+  - rewrite compare_Eq_iff in OBS.
     rewrite In_compat with (y := x) (Y := Y) by (try exact OBS; reflexivity).
     rewrite In_compat with (x := z) (y := x) (X := Z) (Y := Z) by (try exact OBS; reflexivity). tauto.
-  - assert (NE : ~ z == x) by (intros E; apply compare_Eq_iff in E; congruence). tauto.
-  - assert (NE : ~ z == x) by (intros E; apply compare_Eq_iff in E; congruence). tauto.
+  - assert (NE : ~ z == x) by (intros E; rewrite <- compare_Eq_iff in E; congruence). tauto.
+  - assert (NE : ~ z == x) by (intros E; rewrite <- compare_Eq_iff in E; congruence). tauto.
 Qed.
 
 #[local]
@@ -878,7 +878,7 @@ Lemma NoDupA_add_map (x : A) (ps : list (fset A))
   : NoDupA eqProp (L.map (add x) ps).
 Proof.
   revert FRESH. induction NO_DUP as [ | Y ps NOT_IN NO_DUP IH]; intros FRESH; cbn [L.map]; econs.
-  - rewrite InA_map_fset. intros (Z & IN & EQ). apply NOT_IN.
+  - rewrite InA_map_fset. intros (Z & IN & EQ). eapply NOT_IN.
     rewrite InA_alt. exists Z. split; auto.
     eapply add_fresh_injective; [eapply FRESH; now left | eapply FRESH; now right | exact EQ].
   - eapply IH. i. eapply FRESH. now right.
@@ -889,14 +889,14 @@ Lemma NoDup_powerset' (xs : list A)
   : NoDupA eqProp (powerset' xs).
 Proof.
   induction NO_DUP as [ | x xs NOT_IN NO_DUP IH].
-  - cbn [powerset']. apply NoDupA_singleton.
+  - cbn [powerset']. eapply NoDupA_singleton.
   - assert (FRESH : forall Y, InA eqProp Y (powerset' xs) -> ~ In x Y).
-    { intros Y IN H_x. apply NOT_IN. eapply (proj1 (in_powerset'_iff xs Y)); eauto. }
-    cbn [powerset']. eapply NoDupA_app; [apply eqProp_Equivalence | exact IH | | ].
-    + eapply NoDupA_add_map; auto. intros Y IN. eapply FRESH. eapply In_InA; [apply eqProp_Equivalence | eauto].
+    { intros Y IN H_x. eapply NOT_IN. rewrite in_powerset'_iff in IN. eauto. }
+    cbn [powerset']. eapply NoDupA_app; [eapply eqProp_Equivalence | exact IH | | ].
+    + eapply NoDupA_add_map; auto. intros Y IN. eapply FRESH. eapply In_InA; [eapply eqProp_Equivalence | eauto].
     + intros Y IN IN'. rewrite InA_map_fset in IN'.
       find* (Z & IN_Z & EQ) by IN'. eapply FRESH; [exact IN | ].
-      rewrite eq_spec in EQ. apply EQ. rewrite in_add_iff. left. reflexivity.
+      rewrite eq_spec in EQ. rewrite EQ. rewrite in_add_iff. left. reflexivity.
 Qed.
 
 Lemma length_powerset' (xs : list A)
@@ -910,16 +910,16 @@ Theorem powerset_length (X : fset A)
   : length (FSet.data (powerset X)) = pow2 (length (FSet.data X)).
 Proof.
   unfold powerset. rewrite length_fromList.
-  - apply length_powerset'.
-  - apply NoDup_powerset'. apply NoDupA_data.
+  - eapply length_powerset'.
+  - eapply NoDup_powerset'. eapply NoDupA_data.
 Qed.
 
 #[global]
 Instance powerset_eqPropCompatible1
   : eqPropCompatible1 powerset.
 Proof.
-  intros X Y EQ. apply eq_spec. intros Z. rewrite !in_powerset_iff.
-  apply isSubsetOf_eqPropCompatible2; [reflexivity | exact EQ].
+  intros X Y EQ. rewrite eq_spec. intros Z. rewrite !in_powerset_iff.
+  eapply isSubsetOf_eqPropCompatible2; [reflexivity | exact EQ].
 Qed.
 
 End POWERSET.
@@ -931,7 +931,7 @@ End FS.
 Lemma fset_NoDup {A : Type} {PROSET : isProset A} {ORD : hsOrd A} (X : fset A)
   : NoDup (FSet.data X).
 Proof.
-  assert (SORTED : isSorted compare (FSet.data X) = true) by apply FSet.data_isSorted.
+  assert (SORTED : isSorted compare (FSet.data X) = true) by eapply FSet.data_isSorted.
   remember (FSet.data X) as xs eqn: DEF.
   clear DEF X. induction xs as [ | x xs IH]; [econs | ].
   rewrite isSorted_cons_iff in SORTED. des. econs; eauto.

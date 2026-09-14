@@ -561,7 +561,7 @@ Proof.
   - destruct n as [ | p].
     + simpl. splits; auto. eapply balanced_leaf.
     + cbn [build].
-      assert (POS : 0 < N.to_nat (Npos p)) by apply Pos2Nat.is_pos.
+      assert (POS : 0 < N.to_nat (Npos p)) by eapply Pos2Nat.is_pos.
       obtain [SUM BALANCE] with POS by binary_split.
       obtain SPEC_l with (N.div2 (Npos p)) xs by IH.
       destruct (build fuel (N.div2 (Npos p)) xs) as [l middle].
@@ -601,7 +601,7 @@ Definition of_list (xs : list A) : BalancedTree.t A :=
   let n := L.fold_left (fun n : N => fun _ => N.succ n) xs 0%N in
   BalancedTree.mk (fst (build fuel n xs)) _.
 Proof.
-  assert (FUEL : fuel = length xs) by apply L.fold_left_S_0.
+  assert (FUEL : fuel = length xs) by eapply L.fold_left_S_0.
   assert (SIZE : N.to_nat n = length xs).
   { unfold n. rewrite binary_length_spec. cbn. lia. }
   obtain SPEC with fuel n xs by build_spec.
@@ -754,7 +754,7 @@ Qed.
 Lemma data_map (X : BalancedTree.t A)
   : data (map X) = L.map f (data X).
 Proof.
-  rewrite !data_elements. unfold map. cbn [root]. apply elements_map.
+  rewrite !data_elements. unfold map. cbn [root]. eapply elements_map.
 Qed.
 
 End map.
@@ -787,8 +787,8 @@ Lemma compare_ge_gt_left (k : K) (x : A) (y : A)
 Proof.
   destruct (compare k (key y)) eqn: OBS; [ | congruence | ].
   - rewrite compare_compatWith_eqProp with (x' := key y) (y' := key x) by now try reflexivity; now rewrite <- compare_Eq_iff.
-    now apply compare_Lt_flip.
-  - apply compare_Lt_flip. eapply compare_Lt_trans; [exact LT | now apply compare_Gt_flip].
+    now eapply compare_Lt_flip.
+  - eapply compare_Lt_flip. eapply compare_Lt_trans; [exact LT | now eapply compare_Gt_flip].
 Qed.
 
 Lemma lookup_app_gt (k : K) (xs : list A) (ys : list A)
@@ -796,7 +796,7 @@ Lemma lookup_app_gt (k : K) (xs : list A) (ys : list A)
   : OrderedList.lookup key k (xs ++ ys) = OrderedList.lookup key k ys.
 Proof.
   revert GT. induction xs as [ | x xs IH]; i; [reflexivity | ].
-  cbn [app OrderedList.lookup]. rewrite GT by now left. eapply IH. ii. apply GT. now right.
+  cbn [app OrderedList.lookup]. rewrite GT by now left. eapply IH. ii. eapply GT. now right.
 Qed.
 
 Lemma lookup_app_lt (k : K) (xs : list A) (y : A) (ys : list A)
@@ -813,7 +813,7 @@ Lemma insert_app_gt (x : A) (xs : list A) (ys : list A)
   : OrderedList.insert key x (xs ++ ys) = xs ++ OrderedList.insert key x ys.
 Proof.
   revert GT. induction xs as [ | y xs IH]; i; [reflexivity | ].
-  cbn [app OrderedList.insert]. rewrite GT by now left. f_equal. eapply IH. ii. apply GT. now right.
+  cbn [app OrderedList.insert]. rewrite GT by now left. f_equal. eapply IH. ii. eapply GT. now right.
 Qed.
 
 Lemma insert_app_lt (x : A) (xs : list A) (y : A) (ys : list A)
@@ -830,7 +830,7 @@ Lemma remove_app_gt (k : K) (xs : list A) (ys : list A)
   : OrderedList.remove key k (xs ++ ys) = xs ++ OrderedList.remove key k ys.
 Proof.
   revert GT. induction xs as [ | x xs IH]; i; [reflexivity | ].
-  cbn [app OrderedList.remove]. rewrite GT by now left. f_equal. eapply IH. ii. apply GT. now right.
+  cbn [app OrderedList.remove]. rewrite GT by now left. f_equal. eapply IH. ii. eapply GT. now right.
 Qed.
 
 Lemma remove_app_lt (k : K) (xs : list A) (y : A) (ys : list A)

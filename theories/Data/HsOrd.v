@@ -795,9 +795,9 @@ Lemma sorted_cons_iff (x : A) (xs : list A)
   : isSorted compare (map key (x :: xs)) = true <-> ((forall y : A, L.In y xs -> compare (key x) (key y) = Lt) /\ isSorted compare (map key xs) = true).
 Proof.
   cbn [map]. rewrite isSorted_cons_iff. split.
-  - intros [HEAD TAIL]. split; auto. intros y IN. apply HEAD. now apply L.in_map.
+  - intros [HEAD TAIL]. split; auto. intros y IN. eapply HEAD. now eapply L.in_map.
   - intros [HEAD TAIL]. split; auto. intros y IN.
-    rewrite L.in_map_iff in IN. find* [x' [EQ IN']] by IN. subst y. now apply HEAD.
+    rewrite L.in_map_iff in IN. find* [x' [EQ IN']] by IN. subst y. now eapply HEAD.
 Qed.
 
 Lemma lookup_lt_None (k : K) (xs : list A)
@@ -818,11 +818,11 @@ Proof.
   - rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
     destruct (compare k (key x)) eqn: OBS.
     + split.
-      * intros EQ. inv EQ. split; auto. now apply compare_Eq_iff.
+      * intros EQ. inv EQ. split; auto. now rewrite <- compare_Eq_iff.
       * intros [[EQ | IN] EQ']; [congruence | ].
         obtain LT with p IN by HEAD.
         assert (key x == key p) as EQ.
-        { transitivity k; [symmetry; now apply compare_Eq_iff | exact EQ']. }
+        { transitivity k; [symmetry; now rewrite <- compare_Eq_iff | exact EQ']. }
         rewrite <- compare_Eq_iff in EQ. rewrite EQ in LT. discriminate.
     + split; [discriminate | intros [[EQ | IN] EQ']].
       * subst p. rewrite <- compare_Eq_iff in EQ'. rewrite EQ' in OBS. discriminate.
@@ -861,16 +861,16 @@ Proof.
   rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
   destruct (compare (key x) (key y)) eqn: OBS.
   - rewrite sorted_cons_iff. split; auto. intros p IN.
-    rewrite compare_compatWith_eqProp with (x' := key y) (y' := key p) by (try reflexivity; now apply compare_Eq_iff).
-    now apply HEAD.
+    rewrite compare_compatWith_eqProp with (x' := key y) (y' := key p) by (try reflexivity; now rewrite <- compare_Eq_iff).
+    now eapply HEAD.
   - rewrite sorted_cons_iff. split.
     + intros p [EQ | IN]; [subst p; exact OBS | ].
-      eapply compare_Lt_trans; [exact OBS | apply HEAD; exact IN].
+      eapply compare_Lt_trans; [exact OBS | eapply HEAD; exact IN].
     + rewrite sorted_cons_iff. auto.
   - rewrite sorted_cons_iff. split; auto. intros p IN.
     find* [EQ | IN'] by (in_insert_incl x xs p IN).
-    + subst p. now apply compare_Gt_flip.
-    + now apply HEAD.
+    + subst p. now eapply compare_Gt_flip.
+    + now eapply HEAD.
 Qed.
 
 Lemma lookup_insert_eq (x : A) (xs : list A)
@@ -887,13 +887,13 @@ Lemma lookup_insert_ne (x : A) (xs : list A) (k : K)
 Proof.
   induction xs as [ | y xs IH]; simpl.
   - destruct (compare k (key x)) eqn: OBS; auto.
-    exfalso. apply NE. now apply compare_Eq_iff.
+    exfalso. eapply NE. now rewrite <- compare_Eq_iff.
   - destruct (compare (key x) (key y)) eqn: OBS; simpl.
-    + rewrite <- compare_compatWith_eqProp with (x := k) (x' := k) (y := key x) (y' := key y) by (reflexivity || now apply compare_Eq_iff).
+    + rewrite <- compare_compatWith_eqProp with (x := k) (x' := k) (y := key x) (y' := key y) by (reflexivity || now rewrite <- compare_Eq_iff).
       destruct (compare k (key x)) eqn: OBS'; auto.
-      exfalso. apply NE. now apply compare_Eq_iff.
+      exfalso. eapply NE. now rewrite <- compare_Eq_iff.
     + destruct (compare k (key x)) eqn: OBS'; auto.
-      * exfalso. apply NE. now apply compare_Eq_iff.
+      * exfalso. eapply NE. now rewrite <- compare_Eq_iff.
       * now rewrite compare_Lt_trans with (y := key x) by assumption.
     + destruct (compare k (key y)); auto.
 Qed.
@@ -931,7 +931,7 @@ Proof.
   revert SORTED. induction xs as [ | x xs IH]; intros SORTED; simpl; auto.
   rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
   destruct (compare k (key x)); auto; rewrite sorted_cons_iff; split; auto.
-  intros p IN. apply HEAD. now apply in_remove_incl in IN.
+  intros p IN. eapply HEAD. now apply in_remove_incl in IN.
 Qed.
 
 Lemma lookup_remove_eq (k : K) (xs : list A)
@@ -941,9 +941,9 @@ Proof.
   revert SORTED. induction xs as [ | x xs IH]; intros SORTED; simpl; auto.
   rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
   destruct (compare k (key x)) eqn: OBS; simpl; rewrite ?OBS; auto.
-  apply lookup_lt_None. intros p IN.
-  rewrite compare_compatWith_eqProp with (x' := key x) (y' := key p) by (try reflexivity; now apply compare_Eq_iff).
-  now apply HEAD.
+  eapply lookup_lt_None. intros p IN.
+  rewrite compare_compatWith_eqProp with (x' := key x) (y' := key p) by (try reflexivity; now rewrite <- compare_Eq_iff).
+  now eapply HEAD.
 Qed.
 
 Lemma lookup_remove_ne (k : K) (xs : list A) (k0 : K)
@@ -955,11 +955,11 @@ Proof.
   rewrite sorted_cons_iff in SORTED. find* [HEAD TAIL] by SORTED.
   destruct (compare k (key x)) eqn: OBS; simpl; auto.
   - destruct (compare k0 (key x)) eqn: OBS'; auto.
-    + exfalso. apply NE. transitivity (key x).
-      * now apply compare_Eq_iff.
-      * symmetry. now apply compare_Eq_iff.
-    + apply lookup_lt_None. intros p IN.
-      eapply compare_Lt_trans; [exact OBS' | apply HEAD; exact IN].
+    + exfalso. eapply NE. transitivity (key x).
+      * now rewrite <- compare_Eq_iff.
+      * symmetry. now rewrite <- compare_Eq_iff.
+    + eapply lookup_lt_None. intros p IN.
+      eapply compare_Lt_trans; [exact OBS' | eapply HEAD; exact IN].
   - destruct (compare k0 (key x)); auto.
 Qed.
 
@@ -985,14 +985,14 @@ Proof.
     + constructor.
     + constructor.
     + constructor. exact EQ_xy.
-    + apply IH.
+    + eapply IH.
 Qed.
 
 Lemma InA_list_compat (xs : list A) (ys : list A)
   (EQ : @eqProp (list A) (L.list_isSetoid SETOID) xs ys)
   : equivlistA eqProp xs ys.
 Proof.
-  apply list_eqProp_eqlistA in EQ. eapply eqlistA_equivlistA; eauto with typeclass_instances.
+  rewrite list_eqProp_eqlistA in EQ. eapply eqlistA_equivlistA; eauto with typeclass_instances.
 Qed.
 
 End SETOID_LIST_BRIDGE.
@@ -1015,7 +1015,7 @@ Instance compare_lt_StrictOrder
 Proof.
   split.
   - intros x LT. rewrite compare_refl in LT. congruence.
-  - intros x y z. apply compare_Lt_trans.
+  - intros x y z. eapply compare_Lt_trans.
 Qed.
 
 #[local]
@@ -1033,11 +1033,11 @@ Proof.
   { intros ys. induction ys as [ | y ys IH].
     - split; intros; [econs | reflexivity].
     - rewrite isSorted_cons_iff. split.
-      + intros [HEAD TAIL]. econs; [now apply IH | now rewrite Forall_forall].
-      + intros SORTED. inv SORTED. rewrite Forall_forall in *. split; eauto. now apply IH.
+      + intros [HEAD TAIL]. econs; [now rewrite <- IH | now rewrite Forall_forall].
+      + intros SORTED. inv SORTED. rewrite Forall_forall in *. split; eauto. now rewrite IH.
   }
-  rewrite STRONG. split; [apply StronglySorted_Sorted | ].
-  apply Sorted_StronglySorted. intros x y z. apply compare_Lt_trans.
+  rewrite STRONG. split; [eapply StronglySorted_Sorted | ].
+  eapply Sorted_StronglySorted. intros x y z. eapply compare_Lt_trans.
 Qed.
 
 Theorem sorted_NoDupA (xs : list A)
@@ -1045,7 +1045,7 @@ Theorem sorted_NoDupA (xs : list A)
   : NoDupA eqProp xs.
 Proof.
   eapply SortA_NoDupA with (ltA := fun x : A => fun y : A => compare x y = Lt) (ltA_compat := @compatibleWith_eqProp_2' A A Prop _ _ _ _ compare_lt_eqPropCompatible2); eauto with typeclass_instances.
-  now apply isSorted_iff_Sorted.
+  now rewrite <- isSorted_iff_Sorted.
 Qed.
 
 Theorem sorted_eqProp_iff (xs : list A) (ys : list A)
@@ -1055,7 +1055,7 @@ Theorem sorted_eqProp_iff (xs : list A) (ys : list A)
 Proof.
   rewrite list_eqProp_eqlistA. split.
   - eapply eqlistA_equivlistA; eauto with typeclass_instances.
-  - intros EXT. eapply SortA_equivlistA_eqlistA with (ltA := fun x : A => fun y : A => compare x y = Lt) (ltA_compat := @compatibleWith_eqProp_2' A A Prop _ _ _ _ compare_lt_eqPropCompatible2); eauto with typeclass_instances; now apply isSorted_iff_Sorted.
+  - intros EXT. eapply SortA_equivlistA_eqlistA with (ltA := fun x : A => fun y : A => compare x y = Lt) (ltA_compat := @compatibleWith_eqProp_2' A A Prop _ _ _ _ compare_lt_eqPropCompatible2); eauto with typeclass_instances; now rewrite <- isSorted_iff_Sorted.
 Qed.
 
 End SORTED_LIST_BRIDGE.
