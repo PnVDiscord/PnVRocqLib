@@ -298,7 +298,7 @@ Record square_state : Type :=
   ; st_nat_emb : forall n : nat, st_emb (st_nat n) = nat_embed n
   ; st_code : st_carrier * st_carrier -> st_carrier
   ; st_code_cong : forall x1 : st_carrier, forall x2 : st_carrier, forall y1 : st_carrier, forall y2 : st_carrier, @eqProp st_carrier st_isSetoid x1 x2 -> @eqProp st_carrier st_isSetoid y1 y2 -> @eqProp st_carrier st_isSetoid (st_code (x1, y1)) (st_code (x2, y2))
-  ; st_code_inj : forall x1 : st_carrier, forall x2 : st_carrier, forall y1 : st_carrier, forall y2 : st_carrier, @eqProp st_carrier st_isSetoid (st_code (x1, y1)) (st_code (x2, y2)) -> @eqProp st_carrier st_isSetoid x1 x2 /\ @eqProp st_carrier st_isSetoid y1 y2
+  ; st_code_inj : forall x1 : st_carrier, forall x2 : st_carrier, forall y1 : st_carrier, forall y2 : st_carrier, @eqProp st_carrier st_isSetoid (st_code (x1, y1)) (st_code (x2, y2)) -> (@eqProp st_carrier st_isSetoid x1 x2 /\ @eqProp st_carrier st_isSetoid y1 y2)
   }.
 
 Definition state_card (s : square_state) : Cardinality.t :=
@@ -520,10 +520,10 @@ Record graph_state : Type@{Set_u} :=
   { gs_carrier : A -> Prop
   ; gs_nat : forall n : nat, gs_carrier (nat_embed n)
   ; gs_code : A -> A -> A -> Prop
-  ; gs_code_dom : forall x : A, forall y : A, forall z : A, gs_code x y z -> gs_carrier x /\ gs_carrier y /\ gs_carrier z
-  ; gs_code_total : forall x : A, forall y : A, gs_carrier x -> gs_carrier y -> exists z : A, gs_code x y z
+  ; gs_code_dom : forall x : A, forall y : A, forall z : A, gs_code x y z -> (gs_carrier x /\ gs_carrier y /\ gs_carrier z)
+  ; gs_code_total : forall x : A, forall y : A, gs_carrier x -> gs_carrier y -> (exists z : A, gs_code x y z)
   ; gs_code_functional : forall x : A, forall y : A, forall z1 : A, forall z2 : A, gs_code x y z1 -> gs_code x y z2 -> z1 = z2
-  ; gs_code_inj : forall x1 : A, forall y1 : A, forall z1 : A, forall x2 : A, forall y2 : A, forall z2 : A, gs_code x1 y1 z1 -> gs_code x2 y2 z2 -> z1 = z2 -> x1 = x2 /\ y1 = y2
+  ; gs_code_inj : forall x1 : A, forall y1 : A, forall z1 : A, forall x2 : A, forall y2 : A, forall z2 : A, gs_code x1 y1 z1 -> gs_code x2 y2 z2 -> z1 = z2 -> (x1 = x2 /\ y1 = y2)
   }.
 
 Definition graph_state_le (s : graph_state) (t : graph_state) : Prop :=
@@ -578,7 +578,7 @@ Defined.
 
 Definition graph_state_chain_upperbound (C : ensemble graph_state)
   (NONEMPTY : exists s : graph_state, s \in C)
-  (CHAIN : forall s1 : graph_state, forall s2 : graph_state, s1 \in C -> s2 \in C -> graph_state_le s1 s2 \/ graph_state_le s2 s1)
+  (CHAIN : forall s1 : graph_state, forall s2 : graph_state, s1 \in C -> s2 \in C -> (graph_state_le s1 s2 \/ graph_state_le s2 s1))
   : exists u : graph_state, forall s : graph_state, s \in C -> graph_state_le s u.
 Proof.
   destruct NONEMPTY as [s0 IN0]. unshelve eexists.

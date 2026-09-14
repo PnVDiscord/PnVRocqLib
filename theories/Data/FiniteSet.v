@@ -268,7 +268,7 @@ Proof.
 Qed.
 
 Theorem in_add_iff (x : A) (X : fset A) (y : A)
-  : In y (add x X) <-> y == x \/ In y X.
+  : In y (add x X) <-> (y == x \/ In y X).
 Proof.
   unfold In. rewrite data_add. eapply in_insert_iff.
 Qed.
@@ -316,7 +316,7 @@ Proof.
 Qed.
 
 Theorem in_union_iff (X : fset A) (Y : fset A) (x : A)
-  : In x (union X Y) <-> In x X \/ In x Y.
+  : In x (union X Y) <-> (In x X \/ In x Y).
 Proof.
   rewrite union_spec. unfold In at 2. generalize (FSet.data X) as xs. clear X.
   induction xs as [ | y ys IH]; cbn [fold_right].
@@ -457,7 +457,7 @@ Definition filter (p : A -> bool) (X : fset A) : fset A :=
 Theorem in_filter_iff (p : A -> bool) (X : fset A)
   (COMPAT : forall x, forall y, x == y -> p x = p y)
   (z : A)
-  : In z (filter p X) <-> In z X /\ p z = true.
+  : In z (filter p X) <-> (In z X /\ p z = true).
 Proof.
   unfold In, filter. rewrite FSet.data_mk, !InA_alt.
   setoid_rewrite L.filter_In. split.
@@ -477,7 +477,7 @@ Proof.
 Qed.
 
 Lemma in_fold_left_add {B : Type} (f : B -> A) (xs : list B) (X : fset A) (y : A)
-  : In y (L.fold_left (fun Y => fun x => add (f x) Y) xs X) <-> In y X \/ (exists x, L.In x xs /\ y == f x).
+  : In y (L.fold_left (fun Y => fun x => add (f x) Y) xs X) <-> (In y X \/ (exists x, L.In x xs /\ y == f x)).
 Proof.
   revert X. induction xs as [ | x xs IH]; i; cbn [L.fold_left].
   - cbn. firstorder.
@@ -617,7 +617,7 @@ Definition product (X : fset A) (Y : fset B) : fset (A * B) :=
   fromList (L.list_prod (FSet.data X) (FSet.data Y)).
 
 Theorem product_iff (X : fset A) (Y : fset B) (x : A) (y : B)
-  : In (x, y) (product X Y) <-> In x X /\ In y Y.
+  : In (x, y) (product X Y) <-> (In x X /\ In y Y).
 Proof.
   unfold product. rewrite in_fromList_iff. unfold In. rewrite !InA_alt.
   split.
@@ -690,7 +690,7 @@ Proof.
 Qed.
 
 Lemma in_add_eq_iff (x : A) (X : fset A) (y : A)
-  : L.In y (FSet.data (add x X)) <-> x = y \/ L.In y (FSet.data X).
+  : L.In y (FSet.data (add x X)) <-> (x = y \/ L.In y (FSet.data X)).
 Proof.
   rewrite <- !In_eq_iff, in_add_iff, Poset_eqProp_spec. intuition congruence.
 Qed.
@@ -708,7 +708,7 @@ Proof.
 Qed.
 
 Lemma in_union_eq_iff (X : fset A) (Y : fset A) (x : A)
-  : L.In x (FSet.data (union X Y)) <-> L.In x (FSet.data X) \/ L.In x (FSet.data Y).
+  : L.In x (FSet.data (union X Y)) <-> (L.In x (FSet.data X) \/ L.In x (FSet.data Y)).
 Proof.
   rewrite <- !In_eq_iff. eapply in_union_iff.
 Qed.
@@ -727,10 +727,10 @@ Proof.
 Qed.
 
 Lemma product_eq_iff (X : fset A) (Y : fset B) (x : A) (y : B)
-  : L.In (x, y) (FSet.data (product X Y)) <-> L.In x (FSet.data X) /\ L.In y (FSet.data Y).
+  : L.In (x, y) (FSet.data (product X Y)) <-> (L.In x (FSet.data X) /\ L.In y (FSet.data Y)).
 Proof.
   rewrite <- InA_eqProp_iff with (x := (x, y)) (xs := FSet.data (product X Y)).
-  change (In (x, y) (product X Y) <-> L.In x (FSet.data X) /\ L.In y (FSet.data Y)).
+  change (In (x, y) (product X Y) <-> (L.In x (FSet.data X) /\ L.In y (FSet.data Y))).
   rewrite product_iff, !In_eq_iff. reflexivity.
 Qed.
 

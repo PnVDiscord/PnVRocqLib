@@ -53,13 +53,13 @@ Proof.
   subst x. eapply IH with (y := f (S O)); eauto. exists (fun n : N => f (S n)); eauto.
 Qed.
 
-Lemma nonaccessibility_implies_existence_of_decr_seq {classic : forall P : Prop, P \/ ~ P} {DC : forall X : Type, forall step : X -> X -> Prop, forall x0 : X, (forall x, exists x', step x x') -> exists seq : nat -> X, seq O = x0 /\ ⟪ STEP : forall n : nat, step (seq n) (seq (S n)) ⟫} {A : Type} (R : A -> A -> Prop) (x : A)
+Lemma nonaccessibility_implies_existence_of_decr_seq {classic : forall P : Prop, P \/ ~ P} {DC : forall X : Type, forall step : X -> X -> Prop, forall x0 : X, (forall x, exists x', step x x') -> (exists seq : nat -> X, seq O = x0 /\ ⟪ STEP : forall n : nat, step (seq n) (seq (S n)) ⟫)} {A : Type} (R : A -> A -> Prop) (x : A)
   (NOT_ACC : ~ Acc R x)
   : exists f : nat -> A, f O = x /\ ⟪ DECR : forall n : nat, R (f (S n)) (f n) ⟫.
 Proof.
   assert (NNPP : forall P : Prop, (~ (~ P)) -> P).
   { ii. pose proof (classic P). tauto. }
-  assert (not_Acc_step : forall a, ~ Acc R a -> exists b, R b a /\ ~ Acc R b).
+  assert (not_Acc_step : forall a, ~ Acc R a -> (exists b, R b a /\ ~ Acc R b)).
   { intros a Hna. eapply NNPP.
     intro Hnone. eapply Hna. econs.
     intros b Hb. eapply NNPP.
@@ -393,7 +393,7 @@ Qed.
 #[local] Hint Resolve supremum_of_map_suprema_ge_suprema : poset_hints.
 
 Theorem supremum_of_map_suprema_is_supremum_of_unions (Xs : ensemble (ensemble D)) (sup : D)
-  (SUPS_EXIST : forall X, X \in Xs -> exists sup_X, is_supremum_of sup_X X)
+  (SUPS_EXIST : forall X, X \in Xs -> (exists sup_X, is_supremum_of sup_X X))
   : is_supremum_of sup (map_suprema Xs) <-> is_supremum_of sup (E.unions Xs).
 Proof.
   split; intros H_supremum z; split; ii.
@@ -601,7 +601,7 @@ Record Ord : Type :=
 #[global] Existing Instance carrier_isWoset.
 
 Lemma infinite_descent {A : Type} {WPOSET : isWellPoset A} (P : A -> Prop)
-  (DESCENT : forall n, P n -> exists m, m ⪵ n /\ P m)
+  (DESCENT : forall n, P n -> (exists m, m ⪵ n /\ P m))
   : forall n, ~ P n.
 Proof.
   intros n. induction (wltProp_well_founded n) as [n H_Acc_inv IH]. intros P_n.
@@ -1110,7 +1110,7 @@ Context {D : Type} `{PROSET : isProset D}.
 Variant isOpen_Scott (O : ensemble D) : Prop :=
   | isOpen_Scott_intro
     (UPWARD_CLOSED : forall x, forall y, x \in O -> x =< y -> y \in O)
-    (LIMIT : forall X, forall sup_X, isDirected X -> is_supremum_of sup_X X -> sup_X \in O -> exists x, x \in X /\ x \in O)
+    (LIMIT : forall X, forall sup_X, isDirected X -> is_supremum_of sup_X X -> sup_X \in O -> (exists x, x \in X /\ x \in O))
     : isOpen_Scott O.
 
 #[local] Hint Constructors isDirected : core.

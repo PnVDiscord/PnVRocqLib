@@ -667,7 +667,7 @@ Hypothesis AC : forall A : Type, forall B : Type, forall P : A -> B -> Prop, (fo
 Theorem AxiomOfChoice_implies_StrongCollection (P : Tree -> Tree -> Prop)
   (COMPAT1 : forall y, isCompatibleWith_eqProp (fun x => P x y))
   (COMPAT2 : forall x, isCompatibleWith_eqProp (fun y => P x y))
-  : forall X, (forall x, x \in X -> exists y, P x y) -> exists Y, (forall x, x \in X -> exists y, y \in Y /\ P x y) /\ (forall y, y \in Y -> exists x, x \in X /\ P x y).
+  : forall X, (forall x, x \in X -> (exists y, P x y)) -> (exists Y, (forall x, x \in X -> (exists y, y \in Y /\ P x y)) /\ (forall y, y \in Y -> (exists x, x \in X /\ P x y))).
 Proof.
   intros X NONEMPTY. set (base_set := children X).
   assert (claim : exists f : base_set -> Tree, forall x : base_set, P (childnodes X x) (f x)).

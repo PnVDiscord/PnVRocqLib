@@ -508,7 +508,7 @@ Proof.
 Qed.
 
 Lemma maxs_lt_iff (ns : list nat)
-  : forall z, maxs ns > z <-> exists i, In i ns /\ i > z.
+  : forall z, maxs ns > z <-> (exists i, In i ns /\ i > z).
 Proof.
   unfold maxs. induction ns as [ | n1 ns1 IH]; simpl; try now (lia || firstorder; eauto). intros n.
   destruct (le_gt_dec n1 (fold_right Init.Nat.max 0 ns1)); split.
@@ -537,7 +537,7 @@ Proof.
 Qed.
 
 Lemma maxs_sim ns1 ns2
-  (SIM : forall n, In n ns1 -> exists n', In n' ns2 /\ n <= n')
+  (SIM : forall n, In n ns1 -> (exists n', In n' ns2 /\ n <= n'))
   : maxs ns1 <= maxs ns2.
 Proof.
   revert ns2 SIM. induction ns1 as [ | n1 ns1 IH]; simpl; ii.

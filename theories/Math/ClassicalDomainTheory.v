@@ -137,7 +137,7 @@ Proof.
 Qed.
 
 Definition preserves_supremum {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (f : D -> D') : Prop :=
-  forall X, isDirected X -> exists sup_X, exists sup_Y, is_supremum_of sup_X X /\ is_supremum_of sup_Y (E.image f X) /\ f sup_X == sup_Y.
+  forall X, isDirected X -> (exists sup_X, exists sup_Y, is_supremum_of sup_X X /\ is_supremum_of sup_Y (E.image f X) /\ f sup_X == sup_Y).
 
 Lemma isMonotonic_if_preserves_supremum {D : Type} {D' : Type} {PROSET : isProset D} {PROSET' : isProset D'} {CPO : isCpo D} {CPO' : isCpo D'} (f : D -> D')
   (COMPAT_WITH_eqProp : eqPropCompatible1 f)
@@ -1021,7 +1021,7 @@ Proof.
 Qed.
 
 Lemma sup_from_chain_cover_exists (X : ensemble D) (A : Type@{U_small}) (Xs : A -> ensemble D) (IPO : is_ipo D)
-  (COVER : forall x : D, x \in X <-> exists a : A, x \in Xs a)
+  (COVER : forall x : D, x \in X <-> (exists a : A, x \in Xs a))
   (CHAIN_SUB : forall a : A, forall b : A, Xs a \subseteq Xs b \/ Xs b \subseteq Xs a)
   (SUPS : forall a : A, exists s : D, is_supremum_of s (Xs a))
   : exists s : D, is_supremum_of s X.
@@ -1059,17 +1059,17 @@ Qed.
 
 Lemma choose_finite_ub (X : ensemble D)
   (DIRECTED : isDirected X)
-  : exists ub : list D -> D, forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs.
+  : exists ub : list D -> D, forall xs : list D, L.is_finsubset_of xs X -> (ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs).
 Proof.
   pose proof DIRECTED as [X_nonempty X_directed].
   destruct X_nonempty as [x0 x0_in].
-  assert (H : forall xs : list D, exists u : D, L.is_finsubset_of xs X -> u \in X /\ forall x : D, L.In x xs -> x =< u).
+  assert (H : forall xs : list D, exists u : D, L.is_finsubset_of xs X -> (u \in X /\ forall x : D, L.In x xs -> x =< u)).
   { intros xs. pose proof (classic (L.is_finsubset_of xs X)) as [SUB | NOT_SUB].
     - pose proof (proj1 (isDirected_iff X) DIRECTED xs SUB) as [u [u_in u_upper]].
       exists u. intros SUB'. split; [exact u_in | exact u_upper].
     - exists x0. intros SUB. contradiction.
   }
-  pose proof (Axiom_of_Choice (list D) (fun _ : list D => D) (fun xs : list D => fun u : D => L.is_finsubset_of xs X -> u \in X /\ forall x : D, L.In x xs -> x =< u) H) as [ub UB].
+  pose proof (Axiom_of_Choice (list D) (fun _ : list D => D) (fun xs : list D => fun u : D => L.is_finsubset_of xs X -> (u \in X /\ forall x : D, L.In x xs -> x =< u)) H) as [ub UB].
   exists ub. exact UB.
 Qed.
 
@@ -1271,7 +1271,7 @@ Proof.
 Qed.
 
 Lemma eval_rose_image_directed (A : Type) (X : ensemble D) (ub : list D -> D) (seed : A -> D)
-  (UB : forall xs : list D, L.is_finsubset_of xs X -> ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs)
+  (UB : forall xs : list D, L.is_finsubset_of xs X -> (ub xs \in X /\ forall x : D, L.In x xs -> x =< ub xs))
   (SEED : forall i : A, seed i \in X)
   : isDirected { z : D | exists t : B.rose A, z = B.eval_rose ub seed t }.
 Proof.
@@ -1536,7 +1536,7 @@ Import CpoDef.
 Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)} {D : Type@{U_small}} {PROSET : isProset D}.
 
 Lemma chain_sup_from_lfp_exists (I : Type@{U_small}) (ds : I -> D)
-  (LFP : forall f : D -> D, isMonotonic1 f -> exists mu : D, is_lfpOf mu f)
+  (LFP : forall f : D -> D, isMonotonic1 f -> (exists mu : D, is_lfpOf mu f))
   (CHAIN : forall i1 : I, forall i2 : I, ds i1 =< ds i2 \/ ds i2 =< ds i1)
   : exists s : D, is_supremum_of s { d : D | exists i : I, d = ds i }.
 Proof.
@@ -1587,7 +1587,7 @@ Proof.
 Qed.
 
 Theorem dcpo_iff_every_monotonic_function_has_lfp
-  : inhabited (isCpo D) <-> ⟪ every_monotonic_function_has_lfp : forall f : D -> D, isMonotonic1 f -> exists mu_f : D, is_lfpOf mu_f f ⟫.
+  : inhabited (isCpo D) <-> ⟪ every_monotonic_function_has_lfp : forall f : D -> D, isMonotonic1 f -> (exists mu_f : D, is_lfpOf mu_f f) ⟫.
 Proof.
   split.
   - intros CPO f MONOTONIC.

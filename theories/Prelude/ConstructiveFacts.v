@@ -231,7 +231,7 @@ Defined.
 
 Definition nullary_mu (f : nat -> nat)
   (EXISTENCE : exists n : nat, f n = 0)
-  : { n : nat | (forall i, i < n -> exists y, y > 0 /\ f i = y) /\ f n = 0 }.
+  : { n : nat | (forall i, i < n -> (exists y, y > 0 /\ f i = y)) /\ f n = 0 }.
 Proof.
   pose (p := fun n : nat => Nat.eqb (f n) 0).
   assert (EXISTENCE' : exists n : nat, p n = true).
@@ -247,7 +247,7 @@ Proof.
 Defined.
 
 Theorem infinite_descent (P : nat -> Prop)
-  (DESCENT : forall n, P n -> exists m, m < n /\ P m)
+  (DESCENT : forall n, P n -> (exists m, m < n /\ P m))
   : forall n, ~ P n.
 Proof.
   intros n. induction (lt_wf n) as [n H_Acc_inv IH]. intros P_n.

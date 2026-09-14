@@ -1341,7 +1341,7 @@ Proof.
   revert p lhs rhs Gamma y PROVE.
   enough (WTS : forall p, forall lhs, forall rhs, forall Gamma, forall x,
     Gamma \proves Eqn_frm lhs rhs ->
-    Gamma \proves Imp_frm (subst1 x lhs p) (subst1 x rhs p) /\ Gamma \proves Imp_frm (subst1 x rhs p) (subst1 x lhs p)
+    (Gamma \proves Imp_frm (subst1 x lhs p) (subst1 x rhs p) /\ Gamma \proves Imp_frm (subst1 x rhs p) (subst1 x lhs p))
   ).
   { ii. apply WTS with (x := y) (p := p) in PROVE. destruct PROVE as [PROVE PROVE'].
     do 2 rewrite subst1_nice in PROVE. exact PROVE.

@@ -72,7 +72,7 @@ Definition umin s y : Prop :=
   F y 0 /\ Between (fun n => exists k, F n (S k)) s y.
 
 Definition umin' y : Prop
-  := F y 0 /\ forall n, n < y -> exists k, F n (S k).
+  := F y 0 /\ forall n, n < y -> (exists k, F n (S k)).
 
 Variable Ffun : forall x, forall y1, forall y2, F x y1 -> F x y2 -> y1 = y2.
 
@@ -249,7 +249,7 @@ Inductive MuRecSpec : forall n : Arity, MuRec n -> Vector.t Value n -> Value -> 
     : MuRecSpec (S n) (MR_primRec g h) (S a :: xs) z
   | MR_mu_spec n g xs z
     (g_spec : MuRecSpec (S n) g (z :: xs) 0)
-    (MIN : forall y, y < z -> exists p, p > 0 /\ MuRecSpec (S n) g (y :: xs) p)
+    (MIN : forall y, y < z -> (exists p, p > 0 /\ MuRecSpec (S n) g (y :: xs) p))
     : MuRecSpec n (MR_mu g) xs z
 with MuRecsSpec : forall n : Arity, forall m : Arity, MuRecs n m -> Vector.t Value n -> Vector.t Value m -> Prop :=
   | MRs_nil_spec n xs
@@ -266,7 +266,7 @@ Fixpoint MuRecGraph {n : Arity} (f : MuRec n) : Vector.t nat n -> nat -> Prop :=
   | MR_proj i => fun xs => fun z => xs !! i = z
   | MR_compose g h => fun xs => fun z => exists ys, MuRecsGraph g xs ys /\ MuRecGraph h ys z
   | MR_primRec g h => fun xs => nat_rect _ (fun z => MuRecGraph g (V.tail xs) z) (fun a => fun ACC => fun z => exists y, ACC y /\ MuRecGraph h (a :: y :: V.tail xs) z) (V.head xs)
-  | MR_mu g => fun xs => fun z => (forall y, y < z -> exists p, p > 0 /\ MuRecGraph g (y :: xs) p) /\ MuRecGraph g (z :: xs) 0
+  | MR_mu g => fun xs => fun z => (forall y, y < z -> (exists p, p > 0 /\ MuRecGraph g (y :: xs) p)) /\ MuRecGraph g (z :: xs) 0
   end
 with MuRecsGraph {n : Arity} {m : Arity} (fs : MuRecs n m) : Vector.t nat n -> Vector.t nat m -> Prop :=
   match fs with

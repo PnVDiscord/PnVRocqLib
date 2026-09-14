@@ -2084,8 +2084,8 @@ Qed.
 
 Variant frms_similarity (Gamma : ensemble (frm L)) (Gamma' : ensemble (frm L')) : Prop :=
   | frms_similarity_intro
-    (FWD : forall p : frm L, p \in Gamma -> exists p' : frm L', p =~= p' /\ p' \in Gamma')
-    (BWD : forall p' : frm L', p' \in Gamma' -> exists p : frm L, p =~= p' /\ p \in Gamma)
+    (FWD : forall p : frm L, p \in Gamma -> (exists p' : frm L', p =~= p' /\ p' \in Gamma'))
+    (BWD : forall p' : frm L', p' \in Gamma' -> (exists p : frm L, p =~= p' /\ p \in Gamma))
     : frms_similarity Gamma Gamma'.
 
 #[local]

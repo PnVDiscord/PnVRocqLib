@@ -364,7 +364,7 @@ Definition reverse_adjacency : fpmap V (fset V) :=
   FS.fold (fun table => fun v => fold_left (fun table => fun v' => FPM.add v' v table) (adjacency v) table) nodes FPM.empty.
 
 Lemma lookup_reverse_edges (v : V) (vs : list V) (table : fpmap V (fset V)) (x : V) (y : V)
-  : FS.In x (FPM.lookup_set (fold_left (fun table => fun v' => FPM.add v' v table) vs table) y) <-> FS.In x (FPM.lookup_set table y) \/ (x = v /\ L.In y vs).
+  : FS.In x (FPM.lookup_set (fold_left (fun table => fun v' => FPM.add v' v table) vs table) y) <-> (FS.In x (FPM.lookup_set table y) \/ (x = v /\ L.In y vs)).
 Proof.
   revert table. induction vs as [ | v' vs IH]; cbn [fold_left]; i.
   - simpl. tauto.
@@ -372,7 +372,7 @@ Proof.
 Qed.
 
 Lemma lookup_reverse_nodes (vs : list V) (table : fpmap V (fset V)) (x : V) (y : V)
-  : FS.In x (FPM.lookup_set (fold_left (fun table => fun v => fold_left (fun table => fun v' => FPM.add v' v table) (adjacency v) table) vs table) y) <-> FS.In x (FPM.lookup_set table y) \/ (L.In x vs /\ L.In y (adjacency x)).
+  : FS.In x (FPM.lookup_set (fold_left (fun table => fun v => fold_left (fun table => fun v' => FPM.add v' v table) (adjacency v) table) vs table) y) <-> (FS.In x (FPM.lookup_set table y) \/ (L.In x vs /\ L.In y (adjacency x))).
 Proof.
   revert table. induction vs as [ | v vs IH]; cbn [fold_left]; i.
   - simpl. tauto.
@@ -380,7 +380,7 @@ Proof.
 Qed.
 
 Lemma lookup_reverse_correct (v : V) (v' : V)
-  : v ∈ FPM.lookup_set reverse_adjacency v' <-> v ∈ nodes /\ L.In v' (adjacency v).
+  : v ∈ FPM.lookup_set reverse_adjacency v' <-> (v ∈ nodes /\ L.In v' (adjacency v)).
 Proof.
   unfold reverse_adjacency. rewrite FS.fold_spec, <- FS.In_eq_iff, lookup_reverse_nodes.
   unfold FPM.lookup_set. rewrite FPM.lookup_empty, FS.in_empty_iff. tauto.
@@ -390,7 +390,7 @@ Definition propagation_initial : fset (V * X) :=
   FPM.initial_facts nodes seed.
 
 Lemma in_propagation_initial_iff (v : V) (x : X)
-  : (v, x) ∈ propagation_initial <-> v ∈ nodes /\ x ∈ lookup_seed v.
+  : (v, x) ∈ propagation_initial <-> (v ∈ nodes /\ x ∈ lookup_seed v).
 Proof.
   eapply FPM.in_initial_facts_eq_iff.
 Qed.
@@ -402,10 +402,10 @@ Definition propagation_next (reversed : fpmap V (fset V)) (p : V * X) : fin_ense
   FS.fold (fun next => fun v => (v, snd p) :: next) (FPM.lookup_set reversed (fst p)) [].
 
 Lemma in_propagation_next_iff (v : V) (v' : V) (x : X) (x' : X)
-  : L.In (v, x) (propagation_next reverse_adjacency (v', x')) <-> v ∈ nodes /\ L.In v' (adjacency v) /\ x' = x.
+  : L.In (v, x) (propagation_next reverse_adjacency (v', x')) <-> (v ∈ nodes /\ L.In v' (adjacency v) /\ x' = x).
 Proof.
   unfold propagation_next. rewrite FS.fold_spec, <- fold_left_rev_right.
-  change (L.In (v, x) (map (fun u => (u, x')) (rev (FSet.data (FPM.lookup_set reverse_adjacency v')))) <-> v ∈ nodes /\ L.In v' (adjacency v) /\ x' = x).
+  change (L.In (v, x) (map (fun u => (u, x')) (rev (FSet.data (FPM.lookup_set reverse_adjacency v')))) <-> (v ∈ nodes /\ L.In v' (adjacency v) /\ x' = x)).
   rewrite in_map_iff. split.
   - intros (u & EQ & H_u). inv EQ. rewrite <- In_rev, lookup_reverse_correct in H_u. tauto.
   - intros (H_v & H_edge & EQ). subst x'. exists v. split; auto.

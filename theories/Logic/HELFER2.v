@@ -106,7 +106,7 @@ Proof.
 Qed.
 
 Lemma MaxCS_neg_iff (p : frm L')
-  : p \in MaxCS <-> ~ Neg_frm p \in MaxCS.
+  : p \in MaxCS <-> (~ Neg_frm p \in MaxCS).
 Proof.
   split.
   - intros IN NEG. eapply MaxCS_consistent. eapply ContradictionI with (A := p).
@@ -379,7 +379,7 @@ Proof.
   }
   clear INCL PF. induction ps as [ | q ps IH]; simpl in *.
   - destruct NONEMPTY as [d0 Hd0]. exists d0. split; trivial. intros p [].
-  - assert (IHok : forall p : frm L', In p ps -> exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d).
+  - assert (IHok : forall p : frm L', In p ps -> (exists d : ConsistentExtension, d \in C /\ p \in proj1_sig d)).
     { intros p Hp. eapply EACH. right. exact Hp. }
     pose proof (IH IHok) as [d_tail [Hd_tail Htail]].
     pose proof (EACH q (or_introl eq_refl)) as [d_q [Hd_q Hq_in]].

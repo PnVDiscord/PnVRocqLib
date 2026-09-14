@@ -268,7 +268,7 @@ Proof.
 Qed.
 
 Lemma rLt_iff_not_rGe (lhs : Tree) (rhs : Tree)
-  : lhs <ᵣ rhs <-> ~ rhs ≦ᵣ lhs.
+  : lhs <ᵣ rhs <-> (~ rhs ≦ᵣ lhs).
 Proof.
   split.
   - intros H_rLt H_rLe. contradiction (rLt_StrictOrder.(StrictOrder_Irreflexive) lhs).
@@ -2591,7 +2591,7 @@ End NEXT.
 Lemma choice_and_pred_exts_imply_well_ordering `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext := true)}
   : exists R : X -> X -> Prop, well_founded R /\ (forall x1, forall x2, x1 == x2 \/ R x1 x2 \/ R x2 x1) /\ Transitive R /\ eqPropCompatible2 R.
 Proof.
-  assert (exists next : pair -> pair, (forall s : pair, good s -> s =< next s) /\ (forall s : pair, good s -> good (next s)) /\ (forall s : pair, good s -> (forall x : X, s.(P) x) \/ (exists x : X, (next s).(P) x /\ ~ s.(P) x))) as [next H_next].
+  assert (exists next : pair -> pair, (forall s : pair, good s -> s =< next s) /\ (forall s : pair, good s -> good (next s)) /\ (forall s : pair, good s -> ((forall x : X, s.(P) x) \/ (exists x : X, (next s).(P) x /\ ~ s.(P) x)))) as [next H_next].
   { hexploit (Axiom_of_Choice pair (fun _ => pair) (fun x => fun y => forall GOOD : good x, good y /\ x =< y /\ ((forall a, x.(P) a) \/ (exists a, y.(P) a /\ ~ x.(P) a)))).
     - intros d1. pose proof (classic (forall x, P d1 x)) as [YES | NO].
       { exists d1. i. now splits; eauto. }
@@ -3947,7 +3947,7 @@ Lemma Fin_choose_top_aux (n : nat) (m : nat) (R : Fin.t (S n) -> Fin.t (S n) -> 
   (Hm : m < S n)
   (R_total : forall x : Fin.t (S n), forall x' : Fin.t (S n), x == x' \/ R x x' \/ R x' x)
   (R_Transitive : Transitive R)
-  : exists top : Fin.t (S n), Fin.evalFin top <= m /\ ⟪ TOP : forall x : Fin.t (S n), Fin.evalFin x <= m -> x == top \/ R x top ⟫.
+  : exists top : Fin.t (S n), Fin.evalFin top <= m /\ ⟪ TOP : forall x : Fin.t (S n), Fin.evalFin x <= m -> (x == top \/ R x top) ⟫.
 Proof.
   revert n Hm R R_total R_Transitive. induction m as [ | m IH]; intros ? ? R ? ?.
   - exists (Fin.getFin 0 Hm). split.
@@ -4079,7 +4079,7 @@ Proof.
     + destruct Hz as [x _]. simpl in *. exact (Fin.case0 x).
     + now rewrite empty_spec in Hz.
   - pose proof (Fin_choose_top n R R_total R_Transitive) as [top Htop].
-    assert (Hpred : forall x : Fin.t (S n), R x top <-> ~ x == top).
+    assert (Hpred : forall x : Fin.t (S n), R x top <-> (~ x == top)).
     { intros x; split.
       - intros Hlt Heq. refine (well_founded_implies_Irreflexive' R R_wf _ x top Heq Hlt).
         ii. now rewrite <- H.
@@ -5869,7 +5869,7 @@ Proof.
   - discriminate EQ.
   - discriminate EQ.
   - inv EQ.
-    assert (LIST : forall ts1' : list (B.rose A), forall ts2' : list (B.rose A), forall rest1' : list (A + nat), forall rest2' : list (A + nat), roses_size ts1' <= roses_size ts1 -> length ts1' = length ts2' -> encode_roses ts1' ++ rest1' = encode_roses ts2' ++ rest2' -> ts1' = ts2' /\ rest1' = rest2').
+    assert (LIST : forall ts1' : list (B.rose A), forall ts2' : list (B.rose A), forall rest1' : list (A + nat), forall rest2' : list (A + nat), roses_size ts1' <= roses_size ts1 -> length ts1' = length ts2' -> encode_roses ts1' ++ rest1' = encode_roses ts2' ++ rest2' -> (ts1' = ts2' /\ rest1' = rest2')).
     { induction ts1' as [ | t1' ts1' IHlist]; intros [ | t2' ts2'] rest1' rest2' BOUND EQ_length EQ'; simpl in *.
       - split; [reflexivity | exact EQ'].
       - discriminate EQ_length.
@@ -6094,7 +6094,7 @@ Let chain : Type@{U_discourse} :=
   ensemble B.
 
 Let chain_le (c : chain) (c' : chain) : Prop :=
-  c \subseteq c' /\ (forall b, b \in c' -> b \in c \/ b \in upperboundsOf c).
+  c \subseteq c' /\ (forall b, b \in c' -> (b \in c \/ b \in upperboundsOf c)).
 
 Lemma chain_le_refl (c : chain)
   (CHAIN : isChain c)

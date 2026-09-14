@@ -233,7 +233,7 @@ Proof.
 Qed.
 
 Theorem in_keys_iff (m : fpmap K V) (k : K)
-  : FS.In k (keys m) <-> exists v, lookup k m = Some v.
+  : FS.In k (keys m) <-> (exists v, lookup k m = Some v).
 Proof.
   unfold FS.In. rewrite data_keys, InA_alt. split.
   - intros (q & EQ & IN). rewrite L.in_map_iff in IN. find* ([q' v] & EQ' & IN') by IN.
@@ -259,7 +259,7 @@ Instance fpmap_isSetoid : isSetoid (fpmap K V) | 0 :=
   }.
 
 Theorem fpmap_eq_spec (m : fpmap K V) (m' : fpmap K V)
-  : m == m' <-> forall k, lookup k m == lookup k m'.
+  : m == m' <-> (forall k, lookup k m == lookup k m').
 Proof.
   reflexivity.
 Qed.
@@ -431,7 +431,7 @@ Instance fpmap_isProset : isProset (fpmap K V) :=
   }.
 Proof.
   - exact (relation_on_image_liftsPreOrder (@lex_le_PreOrder (K * V) (@pair_isProset K V PK PV OK OV) (@pair_hsOrd K V PK PV OK OV)) (@FinitePartialMap.data K V _)).
-  - intros m m'. change (m == m' <-> lex_le (FinitePartialMap.data m) (FinitePartialMap.data m') /\ lex_le (FinitePartialMap.data m') (FinitePartialMap.data m)).
+  - intros m m'. change (m == m' <-> (lex_le (FinitePartialMap.data m) (FinitePartialMap.data m') /\ lex_le (FinitePartialMap.data m') (FinitePartialMap.data m))).
     rewrite data_eq_spec. rewrite <- @lex_eq_iff with (PROSET := @pair_isProset K V PK PV OK OV) (ORD := @pair_hsOrd K V PK PV OK OV).
     eapply lex_le_PartialOrder.
 Defined.
@@ -531,7 +531,7 @@ Instance fpmap_corresponds_to_partial_map : Similarity (fpmap K V) (K -> option 
   fun m => fun f => forall k, option_eqProp eqProp (lookup k m) (f k).
 
 Theorem fpmap_corresponds_to_partial_map_iff (m : fpmap K V) (f : K -> option V)
-  : m =~= f <-> forall k, option_eqProp eqProp (lookup k m) (f k).
+  : m =~= f <-> (forall k, option_eqProp eqProp (lookup k m) (f k)).
 Proof.
   reflexivity.
 Qed.
@@ -611,7 +611,7 @@ Proof.
 Qed.
 
 Lemma in_add_iff (k : K) (y : Y) (table : fpmap K (fset Y)) (k' : K) (y' : Y)
-  : FS.In y' (lookup_set (add k y table) k') <-> (k' == k /\ y' == y) \/ FS.In y' (lookup_set table k').
+  : FS.In y' (lookup_set (add k y table) k') <-> ((k' == k /\ y' == y) \/ FS.In y' (lookup_set table k')).
 Proof.
   unfold add. destruct (compare k' k) eqn: OBS.
   - assert (EQ : k' == k) by now rewrite <- compare_Eq_iff.
@@ -730,7 +730,7 @@ Proof.
 Qed.
 
 Lemma in_seed_facts_iff (k : K) (y : Y)
-  : InA eqProp (k, y) seed_facts <-> FS.In k nodes /\ FS.In y (lookup_set seed k).
+  : InA eqProp (k, y) seed_facts <-> (FS.In k nodes /\ FS.In y (lookup_set seed k)).
 Proof.
   rewrite seed_facts_spec. unfold FS.In. rewrite !InA_alt. split.
   - intros ([q w] & [KEY VALUE] & IN). cbn [fst snd] in KEY, VALUE.
@@ -747,7 +747,7 @@ Proof.
 Qed.
 
 Lemma in_fold_values (q : K) (ys : list Y) (acc : fset (K * Y)) (p : K * Y)
-  : FS.In p (fold_left (fun facts => fun y => FS.add (q, y) facts) ys acc) <-> FS.In p acc \/ InA eqProp p (L.map (pair q) ys).
+  : FS.In p (fold_left (fun facts => fun y => FS.add (q, y) facts) ys acc) <-> (FS.In p acc \/ InA eqProp p (L.map (pair q) ys)).
 Proof.
   revert acc. induction ys as [ | y ys IH]; intros acc; cbn [fold_left L.map].
   - rewrite InA_nil. tauto.
@@ -755,7 +755,7 @@ Proof.
 Qed.
 
 Lemma in_fold_nodes (ks : list K) (acc : fset (K * Y)) (p : K * Y)
-  : FS.In p (fold_left (fun facts => fun k => FS.fold (fun facts => fun y => FS.add (k, y) facts) (lookup_set seed k) facts) ks acc) <-> FS.In p acc \/ InA eqProp p (flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) ks).
+  : FS.In p (fold_left (fun facts => fun k => FS.fold (fun facts => fun y => FS.add (k, y) facts) (lookup_set seed k) facts) ks acc) <-> (FS.In p acc \/ InA eqProp p (flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) ks)).
 Proof.
   revert acc. induction ks as [ | q ks IH]; intros acc; cbn [fold_left flat_map].
   - rewrite InA_nil. tauto.
@@ -766,7 +766,7 @@ Definition initial_facts : fset (K * Y) :=
   FS.fold (fun facts => fun k => FS.fold (fun facts => fun y => FS.add (k, y) facts) (lookup_set seed k) facts) nodes FS.empty.
 
 Lemma in_initial_facts_iff (k : K) (y : Y)
-  : FS.In (k, y) initial_facts <-> FS.In k nodes /\ FS.In y (lookup_set seed k).
+  : FS.In (k, y) initial_facts <-> (FS.In k nodes /\ FS.In y (lookup_set seed k)).
 Proof.
   unfold initial_facts. rewrite FS.fold_spec, in_fold_nodes, FS.in_empty_iff.
   rewrite <- seed_facts_spec, in_seed_facts_iff. tauto.
@@ -810,7 +810,7 @@ Proof.
 Qed.
 
 Theorem in_initial_facts_eq_iff (nodes : fset K) (seed : fpmap K (fset Y)) (k : K) (y : Y)
-  : L.In (k, y) (FSet.data (initial_facts nodes seed)) <-> L.In k (FSet.data nodes) /\ L.In y (FSet.data (lookup_set seed k)).
+  : L.In (k, y) (FSet.data (initial_facts nodes seed)) <-> (L.In k (FSet.data nodes) /\ L.In y (FSet.data (lookup_set seed k))).
 Proof.
   rewrite <- !InA_eqProp_iff. eapply in_initial_facts_iff.
 Qed.
