@@ -361,7 +361,7 @@ Definition recursive_equation (F : V -> ensemble X) : Prop :=
 Variable adjacency : V -> fin_ensemble V.
 
 Definition reverse_adjacency : fpmap V (fset V) :=
-  FS.fold (fun table => fun v => fold_left (fun table => fun v' => FPM.add v' v table) (adjacency v) table) nodes FPM.empty.
+  FS.fold_right (fun v => fold_left (fun table => fun v' => FPM.add v' v table) (adjacency v)) nodes FPM.empty.
 
 Lemma lookup_reverse_edges (v : V) (vs : list V) (table : fpmap V (fset V)) (x : V) (y : V)
   : FS.In x (FPM.lookup_set (fold_left (fun table => fun v' => FPM.add v' v table) vs table) y) <-> (FS.In x (FPM.lookup_set table y) \/ (x = v /\ L.In y vs)).
@@ -372,21 +372,21 @@ Proof.
 Qed.
 
 Lemma lookup_reverse_nodes (vs : list V) (table : fpmap V (fset V)) (x : V) (y : V)
-  : FS.In x (FPM.lookup_set (fold_left (fun table => fun v => fold_left (fun table => fun v' => FPM.add v' v table) (adjacency v) table) vs table) y) <-> (FS.In x (FPM.lookup_set table y) \/ (L.In x vs /\ L.In y (adjacency x))).
+  : FS.In x (FPM.lookup_set (L.fold_right (fun v => fold_left (fun table => fun v' => FPM.add v' v table) (adjacency v)) table vs) y) <-> (FS.In x (FPM.lookup_set table y) \/ (L.In x vs /\ L.In y (adjacency x))).
 Proof.
-  revert table. induction vs as [ | v vs IH]; cbn [fold_left]; i.
+  induction vs as [ | v vs IH]; cbn [L.fold_right].
   - simpl. tauto.
-  - rewrite IH, lookup_reverse_edges. simpl. intuition congruence.
+  - rewrite lookup_reverse_edges, IH. simpl. intuition congruence.
 Qed.
 
 Lemma lookup_reverse_correct (v : V) (v' : V)
   : v ∈ FPM.lookup_set reverse_adjacency v' <-> (v ∈ nodes /\ L.In v' (adjacency v)).
 Proof.
-  unfold reverse_adjacency. rewrite FS.fold_spec, <- FS.In_eq_iff, lookup_reverse_nodes.
+  unfold reverse_adjacency. rewrite FS.fold_right_spec, <- FS.In_eq_iff, lookup_reverse_nodes.
   unfold FPM.lookup_set. rewrite FPM.lookup_empty, FS.in_empty_iff. tauto.
 Qed.
 
-Definition propagation_initial : fset (V * X) :=
+Let propagation_initial : fset (V * X) :=
   FPM.initial_facts nodes seed.
 
 Lemma in_propagation_initial_iff (v : V) (x : X)
@@ -395,24 +395,24 @@ Proof.
   eapply FPM.in_initial_facts_eq_iff.
 Qed.
 
-Definition propagation_values : fset X :=
+Let propagation_values : fset X :=
   FS.map (@snd V X) propagation_initial.
 
 Definition propagation_next (reversed : fpmap V (fset V)) (p : V * X) : fin_ensemble (V * X) :=
-  FS.fold (fun next => fun v => (v, snd p) :: next) (FPM.lookup_set reversed (fst p)) [].
+  FS.fold_right (fun v => cons (v, snd p)) (FPM.lookup_set reversed (fst p)) [].
 
 Lemma in_propagation_next_iff (v : V) (v' : V) (x : X) (x' : X)
   : L.In (v, x) (propagation_next reverse_adjacency (v', x')) <-> (v ∈ nodes /\ L.In v' (adjacency v) /\ x' = x).
 Proof.
-  unfold propagation_next. rewrite FS.fold_spec, <- fold_left_rev_right.
-  change (L.In (v, x) (map (fun u => (u, x')) (rev (FSet.data (FPM.lookup_set reverse_adjacency v')))) <-> (v ∈ nodes /\ L.In v' (adjacency v) /\ x' = x)).
+  unfold propagation_next. rewrite FS.fold_right_spec.
+  change (L.In (v, x) (map (fun u => (u, x')) (FSet.data (FPM.lookup_set reverse_adjacency v'))) <-> (v ∈ nodes /\ L.In v' (adjacency v) /\ x' = x)).
   rewrite in_map_iff. split.
-  - intros (u & EQ & H_u). inv EQ. rewrite <- In_rev, lookup_reverse_correct in H_u. tauto.
+  - intros (u & EQ & H_u). inv EQ. rewrite lookup_reverse_correct in H_u. tauto.
   - intros (H_v & H_edge & EQ). subst x'. exists v. split; auto.
-    rewrite <- In_rev, lookup_reverse_correct; auto.
+    rewrite lookup_reverse_correct; auto.
 Qed.
 
-Definition propagation_domain (p : V * X) : Prop :=
+Let propagation_domain (p : V * X) : Prop :=
   fst p ∈ nodes /\ snd p ∈ propagation_values.
 
 Lemma propagation_domain_closed
@@ -440,19 +440,16 @@ Proof.
 Qed.
 
 Definition propagation_facts : fset (V * X) :=
-  let initial := propagation_initial in
-  if FS.is_empty initial then
-    initial
+  if FS.is_empty propagation_initial then
+    propagation_initial
   else
-    let reversed := reverse_adjacency in
-    Worklist.closure (propagation_next reversed) propagation_domain propagation_domain_closed propagation_domain_finite initial propagation_initial_in_domain.
+    Worklist.closure (propagation_next reverse_adjacency) propagation_domain propagation_domain_closed propagation_domain_finite propagation_initial propagation_initial_in_domain.
 
 Definition propagation : fpmap V (fset X) :=
   FPM.fromFSet propagation_facts.
 
 Definition least_solution : V -> fset X :=
-  let solution := propagation in
-  FPM.lookup_set solution.
+  FPM.lookup_set propagation.
 
 Lemma propagation_facts_complete
   : (forall v, forall x, v ∈ nodes -> x ∈ lookup_seed v -> (v, x) ∈ propagation_facts) /\ (forall v, forall v', forall x, v ∈ nodes -> L.In v' (adjacency v) -> (v', x) ∈ propagation_facts -> (v, x) ∈ propagation_facts).

@@ -677,19 +677,18 @@ Proof.
 Qed.
 
 Definition fromFSet (facts : fset (K * Y)) : fpmap K (fset Y) :=
-  FS.fold (fun table => fun p => add (fst p) (snd p) table) facts empty.
+  FS.fold_right (fun p => add (fst p) (snd p)) facts empty.
 
 Lemma fromFSet_spec (facts : fset (K * Y))
-  : fromFSet facts = fromList (rev (FSet.data facts)).
+  : fromFSet facts = fromList (FSet.data facts).
 Proof.
-  unfold fromFSet. rewrite FS.fold_spec, fromList_spec.
-  symmetry. eapply fold_left_rev_right.
+  unfold fromFSet. rewrite FS.fold_right_spec, fromList_spec. reflexivity.
 Qed.
 
 Theorem fromFSet_correct (facts : fset (K * Y)) (k : K) (y : Y)
   : FS.In y (lookup_set (fromFSet facts) k) <-> FS.In (k, y) facts.
 Proof.
-  rewrite fromFSet_spec, fromList_correct, InA_rev. reflexivity.
+  rewrite fromFSet_spec, fromList_correct. reflexivity.
 Qed.
 
 #[global]
@@ -697,7 +696,6 @@ Instance fromFSet_compat
   : Proper (eqProp ==> eqProp) (@fromFSet).
 Proof.
   intros facts facts' EXT. rewrite !fromFSet_spec. eapply fromList_compat. intros p.
-  rewrite !InA_rev.
   exact (proj1 (@FS.eq_spec (K * Y) (@pair_isProset K Y PK PY OK OY) (@pair_hsOrd K Y PK PY OK OY) facts facts') EXT p).
 Qed.
 
@@ -705,28 +703,26 @@ Variable nodes : fset K.
 
 Variable seed : fpmap K (fset Y).
 
-Lemma fold_values_rev (q : K) (ys : list Y) (acc : list (K * Y))
-  : fold_left (fun acc => fun y => (q, y) :: acc) ys acc = rev_append (L.map (pair q) ys) acc.
+Lemma fold_values_app (q : K) (ys : list Y) (acc : list (K * Y))
+  : L.fold_right (fun y => cons (q, y)) acc ys = L.map (pair q) ys ++ acc.
 Proof.
-  revert acc. induction ys as [ | y ys IH]; intros acc; cbn [fold_left L.map rev_append]; auto.
+  induction ys as [ | y ys IH]; cbn [L.fold_right L.map app]; congruence.
 Qed.
 
-Lemma fold_nodes_rev (ks : list K) (acc : list (K * Y))
-  : fold_left (fun acc => fun k => FS.fold (fun acc => fun y => (k, y) :: acc) (lookup_set seed k) acc) ks acc = rev_append (flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) ks) acc.
+Lemma fold_nodes_app (ks : list K) (acc : list (K * Y))
+  : L.fold_right (fun k => FS.fold_right (fun y => cons (k, y)) (lookup_set seed k)) acc ks = flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) ks ++ acc.
 Proof.
-  revert acc. induction ks as [ | k ks IH]; intros acc; cbn [fold_left flat_map rev_append]; auto.
-  rewrite IH, FS.fold_spec, fold_values_rev.
-  rewrite !rev_append_rev, rev_app_distr, app_assoc. reflexivity.
+  induction ks as [ | k ks IH]; cbn [L.fold_right flat_map]; auto.
+  rewrite FS.fold_right_spec, fold_values_app, IH, app_assoc. reflexivity.
 Qed.
 
 Definition seed_facts : list (K * Y) :=
-  rev_append (FS.fold (fun acc => fun k => FS.fold (fun acc => fun y => (k, y) :: acc) (lookup_set seed k) acc) nodes []) [].
+  FS.fold_right (fun k => FS.fold_right (fun y => cons (k, y)) (lookup_set seed k)) nodes [].
 
 Lemma seed_facts_spec
   : seed_facts = flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) (FSet.data nodes).
 Proof.
-  unfold seed_facts. rewrite FS.fold_spec, fold_nodes_rev.
-  rewrite !rev_append_rev, !app_nil_r, rev_involutive. reflexivity.
+  unfold seed_facts. rewrite FS.fold_right_spec, fold_nodes_app, app_nil_r. reflexivity.
 Qed.
 
 Lemma in_seed_facts_iff (k : K) (y : Y)
@@ -747,28 +743,28 @@ Proof.
 Qed.
 
 Lemma in_fold_values (q : K) (ys : list Y) (acc : fset (K * Y)) (p : K * Y)
-  : FS.In p (fold_left (fun facts => fun y => FS.add (q, y) facts) ys acc) <-> (FS.In p acc \/ InA eqProp p (L.map (pair q) ys)).
+  : FS.In p (L.fold_right (fun y => FS.add (q, y)) acc ys) <-> (FS.In p acc \/ InA eqProp p (L.map (pair q) ys)).
 Proof.
-  revert acc. induction ys as [ | y ys IH]; intros acc; cbn [fold_left L.map].
+  induction ys as [ | y ys IH]; cbn [L.fold_right L.map].
   - rewrite InA_nil. tauto.
-  - rewrite IH, FS.in_add_iff, InA_cons. tauto.
+  - rewrite FS.in_add_iff, IH, InA_cons. tauto.
 Qed.
 
 Lemma in_fold_nodes (ks : list K) (acc : fset (K * Y)) (p : K * Y)
-  : FS.In p (fold_left (fun facts => fun k => FS.fold (fun facts => fun y => FS.add (k, y) facts) (lookup_set seed k) facts) ks acc) <-> (FS.In p acc \/ InA eqProp p (flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) ks)).
+  : FS.In p (L.fold_right (fun k => FS.fold_right (fun y => FS.add (k, y)) (lookup_set seed k)) acc ks) <-> (FS.In p acc \/ InA eqProp p (flat_map (fun k => L.map (pair k) (FSet.data (lookup_set seed k))) ks)).
 Proof.
-  revert acc. induction ks as [ | q ks IH]; intros acc; cbn [fold_left flat_map].
+  induction ks as [ | q ks IH]; cbn [L.fold_right flat_map].
   - rewrite InA_nil. tauto.
-  - rewrite IH, FS.fold_spec, in_fold_values, InA_app_iff. tauto.
+  - rewrite FS.fold_right_spec, in_fold_values, IH, InA_app_iff. tauto.
 Qed.
 
 Definition initial_facts : fset (K * Y) :=
-  FS.fold (fun facts => fun k => FS.fold (fun facts => fun y => FS.add (k, y) facts) (lookup_set seed k) facts) nodes FS.empty.
+  FS.fold_right (fun k => FS.fold_right (fun y => FS.add (k, y)) (lookup_set seed k)) nodes FS.empty.
 
 Lemma in_initial_facts_iff (k : K) (y : Y)
   : FS.In (k, y) initial_facts <-> (FS.In k nodes /\ FS.In y (lookup_set seed k)).
 Proof.
-  unfold initial_facts. rewrite FS.fold_spec, in_fold_nodes, FS.in_empty_iff.
+  unfold initial_facts. rewrite FS.fold_right_spec, in_fold_nodes, FS.in_empty_iff.
   rewrite <- seed_facts_spec, in_seed_facts_iff. tauto.
 Qed.
 

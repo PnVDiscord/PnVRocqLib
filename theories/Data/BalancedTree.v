@@ -691,33 +691,33 @@ End steps.
 
 End METHODS.
 
-Section fold.
+Section fold_right.
 
-Context {A : Type} {B : Type} (f : B -> A -> B).
+Context {A : Type} {B : Type} (f : A -> B -> B).
 
-Fixpoint fold_raw (tr : tree A) (acc : B) : B :=
+Fixpoint fold_right_raw (tr : tree A) (acc : B) : B :=
   match tr with
   | Leaf => acc
-  | Node l x r _ => fold_raw r (f (fold_raw l acc) x)
+  | Node l x r _ => fold_right_raw l (f x (fold_right_raw r acc))
   end.
 
-Lemma fold_raw_spec (tr : tree A) (acc : B)
-  : fold_raw tr acc = L.fold_left f (elements tr) acc.
+Lemma fold_right_raw_spec (tr : tree A) (acc : B)
+  : fold_right_raw tr acc = L.fold_right f acc (elements tr).
 Proof.
-  revert acc. induction tr; i; cbn [fold_raw elements]; auto.
-  rewrite L.fold_left_app. cbn [L.fold_left]. now rewrite IHtr1, IHtr2.
+  revert acc. induction tr; i; cbn [fold_right_raw elements]; auto.
+  rewrite L.fold_right_app. cbn [L.fold_right]. now rewrite IHtr1, IHtr2.
 Qed.
 
-Definition fold (X : t A) : B -> B :=
-  fold_raw X.(root).
+Definition fold_right (X : t A) : B -> B :=
+  fold_right_raw X.(root).
 
-Lemma fold_spec (X : t A) (acc : B)
-  : fold X acc = L.fold_left f (data X) acc.
+Lemma fold_right_spec (X : t A) (acc : B)
+  : fold_right X acc = L.fold_right f acc (data X).
 Proof.
-  unfold fold. rewrite fold_raw_spec, data_elements. reflexivity.
+  unfold fold_right. rewrite fold_right_raw_spec, data_elements. reflexivity.
 Qed.
 
-End fold.
+End fold_right.
 
 Section map.
 

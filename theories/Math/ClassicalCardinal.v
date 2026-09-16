@@ -301,7 +301,7 @@ Record square_state : Type :=
   ; st_code_inj : forall x1 : st_carrier, forall x2 : st_carrier, forall y1 : st_carrier, forall y2 : st_carrier, @eqProp st_carrier st_isSetoid (st_code (x1, y1)) (st_code (x2, y2)) -> (@eqProp st_carrier st_isSetoid x1 x2 /\ @eqProp st_carrier st_isSetoid y1 y2)
   }.
 
-Definition state_card (s : square_state) : Cardinality.t :=
+Let state_card (s : square_state) : Cardinality.t :=
   Cardinality.mk (st_carrier s) (st_isSetoid s).
 
 Lemma st_nat_inj (s : square_state) (n : nat) (m : nat)
@@ -389,10 +389,10 @@ Definition state_encode_sum (s : square_state) (x : st_carrier s + st_carrier s)
   | inr a => st_code s (st_nat s (S O), a)
   end.
 
-Definition state_sum_isSetoid (s : square_state) : isSetoid (st_carrier s + st_carrier s) :=
+Let state_sum_isSetoid (s : square_state) : isSetoid (st_carrier s + st_carrier s) :=
   @sum_isSetoid (st_carrier s) (st_carrier s) (st_isSetoid s) (st_isSetoid s).
 
-Definition state_sum_prod_isSetoid (s : square_state) : isSetoid ((st_carrier s + st_carrier s) * (st_carrier s + st_carrier s)) :=
+Let state_sum_prod_isSetoid (s : square_state) : isSetoid ((st_carrier s + st_carrier s) * (st_carrier s + st_carrier s)) :=
   @prod_isSetoid _ _ (state_sum_isSetoid s) (state_sum_isSetoid s).
 
 Lemma state_encode_sum_cong (s : square_state)
@@ -415,7 +415,7 @@ Proof.
   - obtain [_ EQ_xy] with EQ by st_code_inj. econs. exact EQ_xy.
 Qed.
 
-Definition state_encode_pair (s : square_state) (xy : (st_carrier s + st_carrier s) * (st_carrier s + st_carrier s)) : st_carrier s :=
+Let state_encode_pair (s : square_state) (xy : (st_carrier s + st_carrier s) * (st_carrier s + st_carrier s)) : st_carrier s :=
   st_code s (state_encode_sum s (Datatypes.fst xy), state_encode_sum s (Datatypes.snd xy)).
 
 Lemma state_encode_pair_cong (s : square_state)
@@ -621,7 +621,7 @@ Qed.
 Definition graph_state_type (s : graph_state) : Type@{Set_u} :=
   { a : A | gs_carrier s a }.
 
-Definition graph_state_nat (s : graph_state) (n : nat) : graph_state_type s :=
+Let graph_state_nat (s : graph_state) (n : nat) : graph_state_type s :=
   @exist A (gs_carrier s) (nat_embed n) (gs_nat s n).
 
 Lemma graph_state_nat_inj (s : graph_state) (n : nat) (m : nat)
@@ -631,10 +631,10 @@ Proof.
   eapply nat_embed_inj. injection EQ as EQ_proj. exact EQ_proj.
 Qed.
 
-Definition graph_sum_type (s : graph_state) : Type@{Set_u} :=
+Let graph_sum_type (s : graph_state) : Type@{Set_u} :=
   (graph_state_type s + graph_state_type s)%type.
 
-Definition graph_pair_type (s : graph_state) : Type@{Set_u} :=
+Let graph_pair_type (s : graph_state) : Type@{Set_u} :=
   (graph_sum_type s * graph_sum_type s)%type.
 
 Inductive graph_sum_code (s : graph_state) : graph_sum_type s -> graph_state_type s -> Prop :=
@@ -717,7 +717,7 @@ Proof.
   subst. reflexivity.
 Qed.
 
-Definition graph_state_complement_type (s : graph_state) : Type@{Set_u} :=
+Let graph_state_complement_type (s : graph_state) : Type@{Set_u} :=
   { a : A | ~ gs_carrier s a }.
 
 Inductive graph_extend_repr (s : graph_state) (fresh : graph_state_type s -> graph_state_complement_type s) : A -> graph_sum_type s -> Prop :=
@@ -1038,7 +1038,7 @@ Proof.
   - econs. intros y H_rLt. simpl in H_rLt. destruct H_rLt as [-> | ->]; assumption.
 Qed.
 
-Definition tree_top (X : Type@{Set_u}) : Ord.t :=
+Let tree_top (X : Type@{Set_u}) : Ord.t :=
   @fromWfSet (tree X) (@tree_lt X) (tree_lt_well_founded X).
 
 Lemma tree_O_rEq (X : Type@{Set_u})
@@ -1316,7 +1316,7 @@ Proof.
   - econs. intros y H_rLt. simpl in H_rLt. destruct H_rLt as [-> | ->]; assumption.
 Qed.
 
-Definition gtree_top (X : Type@{Set_u}) : Ord.t :=
+Let gtree_top (X : Type@{Set_u}) : Ord.t :=
   @fromWfSet (gtree X) (@gtree_lt X) (gtree_lt_well_founded X).
 
 Lemma gtree_O_rEq (X : Type@{Set_u})

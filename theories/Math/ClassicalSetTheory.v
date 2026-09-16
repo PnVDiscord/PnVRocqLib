@@ -4829,7 +4829,7 @@ Context `{Axms : ClassicalAxioms (b_AC := true) (b_fun_ext := true) (b_prop_ext 
 
 #[local] Existing Instance Ord_isProset.
 
-Definition powerCard (o : Tree) : Cardinality.t :=
+Let powerCard (o : Tree) : Cardinality.t :=
   card (power o).
 
 Definition beth0 : Tree :=
@@ -5802,7 +5802,7 @@ Fixpoint encode_rose {A : Type} (t : B.rose A) {struct t} : list (A + nat) :=
   | B.node ts => inr (length ts) :: concat (map encode_rose ts)
   end.
 
-Definition encode_roses {A : Type} (ts : list (B.rose A)) : list (A + nat) :=
+Let encode_roses {A : Type} (ts : list (B.rose A)) : list (A + nat) :=
   concat (map encode_rose ts).
 
 Fixpoint rose_size {A : Type} (t : B.rose A) : nat :=

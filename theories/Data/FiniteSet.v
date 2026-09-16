@@ -148,20 +148,20 @@ Section BASICS.
 
 Context {A : Type} {PROSET : isProset A} {ORD : hsOrd A}.
 
-Section fold.
+Section fold_right.
 
-Context {B : Type} (f : B -> A -> B).
+Context {B : Type} (f : A -> B -> B).
 
-Definition fold (X : fset A) : B -> B :=
-  BalancedTree.fold f X.(FSet.tree).
+Definition fold_right (X : fset A) : B -> B :=
+  BalancedTree.fold_right f X.(FSet.tree).
 
-Lemma fold_spec (X : fset A) (acc : B)
-  : fold X acc = L.fold_left f (FSet.data X) acc.
+Lemma fold_right_spec (X : fset A) (acc : B)
+  : fold_right X acc = L.fold_right f acc (FSet.data X).
 Proof.
-  eapply BalancedTree.fold_spec.
+  eapply BalancedTree.fold_right_spec.
 Qed.
 
-End fold.
+End fold_right.
 
 Definition is_empty (X : fset A) : bool :=
   match BalancedTree.root X.(FSet.tree) with
@@ -301,7 +301,7 @@ Qed.
 Theorem in_fromList_iff (xs : list A) (x : A)
   : In x (fromList xs) <-> InA eqProp x xs.
 Proof.
-  rewrite fromList_spec. induction xs as [ | y ys IH]; cbn [fold_right].
+  rewrite fromList_spec. induction xs as [ | y ys IH]; cbn [L.fold_right].
   - rewrite in_empty_iff, InA_nil. reflexivity.
   - rewrite in_add_iff, IH, InA_cons. reflexivity.
 Qed.
@@ -319,7 +319,7 @@ Theorem in_union_iff (X : fset A) (Y : fset A) (x : A)
   : In x (union X Y) <-> (In x X \/ In x Y).
 Proof.
   rewrite union_spec. unfold In at 2. generalize (FSet.data X) as xs. clear X.
-  induction xs as [ | y ys IH]; cbn [fold_right].
+  induction xs as [ | y ys IH]; cbn [L.fold_right].
   - rewrite InA_nil. tauto.
   - rewrite in_add_iff, IH, InA_cons. tauto.
 Qed.
@@ -476,13 +476,13 @@ Proof.
   rewrite eq_spec in EQ. rewrite EQ. reflexivity.
 Qed.
 
-Lemma in_fold_left_add {B : Type} (f : B -> A) (xs : list B) (X : fset A) (y : A)
-  : In y (L.fold_left (fun Y => fun x => add (f x) Y) xs X) <-> (In y X \/ (exists x, L.In x xs /\ y == f x)).
+Lemma in_fold_right_add {B : Type} (f : B -> A) (xs : list B) (X : fset A) (y : A)
+  : In y (L.fold_right (fun x => add (f x)) X xs) <-> (In y X \/ (exists x, L.In x xs /\ y == f x)).
 Proof.
-  revert X. induction xs as [ | x xs IH]; i; cbn [L.fold_left].
+  induction xs as [ | x xs IH]; cbn [L.fold_right].
   - cbn. firstorder.
-  - rewrite IH, in_add_iff. split.
-    + intros [[EQ | IN] | (z & IN & EQ)]; eauto.
+  - rewrite in_add_iff, IH. split.
+    + intros [EQ | [IN | (z & IN & EQ)]]; eauto.
       * right. exists x. split; auto. now left.
       * right. exists z. split; auto. now right.
     + intros [IN | (z & [EQ | IN] & EQ')]; subst; eauto.
@@ -496,12 +496,12 @@ Context {A : Type} {PROSET_A : isProset A} {ORD_A : hsOrd A}.
 Context {B : Type} {PROSET_B : isProset B} {ORD_B : hsOrd B}.
 
 Definition map (f : A -> B) (X : fset A) : fset B :=
-  fold (fun Y => fun x => add (f x) Y) X empty.
+  fold_right (fun x => add (f x)) X empty.
 
 Lemma in_map_raw_iff (f : A -> B) (X : fset A) (y : B)
   : In y (map f X) <-> (exists x, L.In x (FSet.data X) /\ y == f x).
 Proof.
-  unfold map. rewrite fold_spec, in_fold_left_add, in_empty_iff. tauto.
+  unfold map. rewrite fold_right_spec, in_fold_right_add, in_empty_iff. tauto.
 Qed.
 
 Theorem in_map_iff (f : A -> B) (X : fset A)
@@ -530,7 +530,7 @@ Lemma in_bind_raw_iff (X : fset A) (k : A -> fset B) (z : B)
   : In z (bind X k) <-> (exists x, L.In x (FSet.data X) /\ In z (k x)).
 Proof.
   rewrite bind_spec. generalize (FSet.data X) as xs. clear X.
-  induction xs as [ | x xs IH]; cbn [fold_right].
+  induction xs as [ | x xs IH]; cbn [L.fold_right].
   - rewrite in_empty_iff. cbn. firstorder.
   - rewrite in_union_iff, IH. split.
     + intros [IN | (y & IN & IN')].
