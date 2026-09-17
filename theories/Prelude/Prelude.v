@@ -1183,13 +1183,17 @@ Definition isSome {A : Type@{option.u0}} (m : option A) : bool :=
   | None => false
   end.
 
-#[universes(polymorphic=yes)]
-Definition dollar@{u v | } {A : Type@{u}} {B : A -> Type@{v}} (f : forall x : A, B x) (x : A) : B x :=
-  f x.
+#[universes(template), projections(primitive)]
+Class callable (Arg : Type) (Ret : Arg -> Type) (Fun : Type) : Type :=
+  { call (fn : Fun) (arg : Arg) : Ret arg } as callable.
 
-#[global] Arguments dollar {A} {B} /.
+#[global] Arguments call {Arg} {Ret} {Fun} callable /.
 
-#[local] Infix "$" := dollar.
+#[global, universes(polymorphic=yes)]
+Instance dollar@{d c | } {A : Type@{d}} {B : A -> Type@{c}} : callable A B (forall x : A, B x) :=
+  { call (f : forall x : A, B x) (x : A) := f x }.
+
+#[local] Infix "$" := dollar.(call).
 #[local] Infix ">>=" := bind.
 
 #[universes(polymorphic=yes)]
@@ -1494,7 +1498,7 @@ Abbreviation StateT k := {| B.runStateT := k |}.
 
 Infix "+'" := B.sum1 (at level 50, left associativity) : type_scope.
 
-Infix "$" := B.dollar.
+Infix "$" := B.dollar.(B.call).
 Infix ">>=" := bind.
 Infix ">=>" := B.kcompose : program_scope.
 
